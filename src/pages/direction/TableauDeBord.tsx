@@ -74,10 +74,10 @@ function getStatutInfo(incident: Record<string, unknown>): { texte: string; tone
   const elapsed = (Date.now() - new Date(declareLe).getTime()) / 3_600_000;
 
   if (elapsed > slaH) {
-    return { texte: 'SLA depass\u00e9 \u00b7 escalade', tone: 'amber' };
+    return { texte: 'SLA dépassé · escalade', tone: 'amber' };
   }
   if (statut === 'assigne') {
-    return { texte: 'Assign\u00e9', tone: 'dim' };
+    return { texte: 'Assigné', tone: 'dim' };
   }
   if (statut === 'en_cours') {
     return { texte: 'En cours', tone: 'dim' };
@@ -189,9 +189,9 @@ export function TableauDeBord() {
       <div className="flex justify-between items-start mb-[18px]">
         <div>
           <div className="text-[11px] text-dim tracking-[1.5px] uppercase mb-1">
-            {formatDateLong(now)} \u00b7 {formatHeure(now)}
+            {formatDateLong(now)} · {formatHeure(now)}
           </div>
-          <h1 className="text-[22px] font-semibold m-0">Pilotage temps r\u00e9el</h1>
+          <h1 className="text-[22px] font-semibold m-0">Pilotage temps réel</h1>
         </div>
         <div className="flex gap-2">
           {(['7j', '30j', '90j'] as Periode[]).map((p) => (
@@ -220,7 +220,7 @@ export function TableauDeBord() {
             active={parcActif === (p.id as string)}
             onClick={() => setParcActif(p.id as string)}
           >
-            {p.code as string} \u00b7 {p.nom as string}
+            {p.code as string} · {p.nom as string}
           </Pill>
         ))}
       </div>
@@ -258,7 +258,7 @@ export function TableauDeBord() {
             label={kpiLabels.premierCoup}
             valeur={kpiAgreg.premierCoup}
             unite="%"
-            delta={{ texte: `cible 90% \u00b7 ${periode}`, tone: 'neutre' }}
+            delta={{ texte: `cible 90% · ${periode}`, tone: 'neutre' }}
             couleur="green"
           />
           <KpiCard
@@ -272,7 +272,7 @@ export function TableauDeBord() {
 
       <div className="grid grid-cols-[1.5fr_1fr] gap-3.5 mb-[18px]">
         <Card>
-          <CardHead titre={`Performance par parc \u00b7 ${periode === '7j' ? '7' : periode === '30j' ? '30' : '90'} derniers jours`} meta="% disponibilit\u00e9 bloquants" />
+          <CardHead titre={`Performance par parc · ${periode === '7j' ? '7' : periode === '30j' ? '30' : '90'} derniers jours`} meta="% disponibilité bloquants" />
           <div className="h-[200px]">
             {perfQ.isLoading ? (
               <div className="flex items-center justify-center h-full">
@@ -280,7 +280,7 @@ export function TableauDeBord() {
               </div>
             ) : perfFiltered.length === 0 ? (
               <div className="flex items-center justify-center h-full text-dim text-sm">
-                Aucune donn\u00e9e
+                Aucune donnée
               </div>
             ) : (
               <ResponsiveContainer width="100%" height="100%">
@@ -306,7 +306,7 @@ export function TableauDeBord() {
         </Card>
 
         <Card>
-          <CardHead titre="Tickets par criticit\u00e9 \u00b7 7j" meta={`${totalTickets} au total`} />
+          <CardHead titre="Tickets par criticité · 7j" meta={`${totalTickets} au total`} />
           <div className="h-[200px] flex items-center gap-4">
             {incidentsQ.isLoading ? (
               <div className="flex-1 flex items-center justify-center">
@@ -346,7 +346,7 @@ export function TableauDeBord() {
 
       <Card>
         <CardHead
-          titre="Alertes en cours \u00b7 \u00e0 arbitrer"
+          titre="Alertes en cours · à arbitrer"
           meta={`${alertes.length} active${alertes.length > 1 ? 's' : ''}`}
           metaTone={alertes.length > 0 ? 'red' : 'default'}
         />
@@ -384,7 +384,7 @@ export function TableauDeBord() {
                       {equip?.libelle as string ?? equip?.code as string ?? 'N/A'}
                     </div>
                     <div className="text-[11px] text-dim">
-                      {parc?.code as string ?? ''} \u00b7 {parc?.nom as string ?? ''}{zone ? ` \u00b7 ${zone.nom as string}` : ''}
+                      {parc?.code as string ?? ''} · {parc?.nom as string ?? ''}{zone ? ` · ${zone.nom as string}` : ''}
                     </div>
                   </div>
                   <span className="text-[11px] text-dim">depuis {formatDuree(declareLe)}</span>
