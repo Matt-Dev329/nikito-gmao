@@ -52,7 +52,7 @@ export function ModaleAjouterAttraction({
             type="text"
             value={recherche}
             onChange={(e) => setRecherche(e.target.value)}
-            placeholder="Rechercher une cat{'\u00e9'}gorie..."
+            placeholder="Rechercher une catégorie..."
             className="w-full bg-bg-deep border border-white/[0.08] rounded-xl px-4 py-2.5 text-[13px] text-text placeholder:text-faint outline-none focus:border-nikito-cyan/50"
           />
         </div>
@@ -67,8 +67,8 @@ export function ModaleAjouterAttraction({
           ) : disponibles.length === 0 ? (
             <div className="text-center py-8 text-dim text-sm">
               {recherche
-                ? 'Aucune cat\u00e9gorie trouv\u00e9e'
-                : 'Toutes les cat\u00e9gories sont d\u00e9j\u00e0 configur\u00e9es'}
+                ? 'Aucune catégorie trouvée'
+                : 'Toutes les catégories sont déjà configurées'}
             </div>
           ) : (
             disponibles.map((cat) => {
@@ -107,7 +107,7 @@ export function ModaleAjouterAttraction({
 
         <div className="px-6 py-4 border-t border-white/[0.06] flex items-center gap-4">
           <div className="flex items-center gap-2">
-            <span className="text-[12px] text-dim">Quantit{'\u00e9'}</span>
+            <span className="text-[12px] text-dim">Quantité</span>
             <button
               onClick={() => setQuantite((q) => Math.max(1, q - 1))}
               className="w-8 h-8 rounded-lg bg-bg-deep border border-white/[0.08] text-dim text-sm"

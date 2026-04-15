@@ -51,10 +51,10 @@ export function AttractionsParc() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-[22px] font-semibold m-0">
-              Attractions {parc?.code ? `\u00b7 ${parc.code}` : ''}
+              Attractions {parc?.code ? `· ${parc.code}` : ''}
             </h1>
             <p className="text-[13px] text-dim mt-1">
-              {attractions?.length ?? 0} cat{'\u00e9'}gorie{(attractions?.length ?? 0) > 1 ? 's' : ''} configur{'\u00e9'}e{(attractions?.length ?? 0) > 1 ? 's' : ''}
+              {attractions?.length ?? 0} catégorie{(attractions?.length ?? 0) > 1 ? 's' : ''} configurée{(attractions?.length ?? 0) > 1 ? 's' : ''}
             </p>
           </div>
           <button
@@ -75,13 +75,12 @@ export function AttractionsParc() {
           </div>
         ) : !attractions || attractions.length === 0 ? (
           <div className="text-center py-16">
-            <div className="text-4xl mb-3 opacity-40">&#127922;</div>
-            <p className="text-dim text-sm">Aucune attraction configur{'\u00e9'}e pour ce parc</p>
+            <p className="text-dim text-sm">Aucune attraction configurée pour ce parc</p>
             <button
               onClick={() => setShowAjouter(true)}
               className="mt-4 bg-gradient-cta text-text px-5 py-2.5 rounded-xl text-[13px] font-semibold"
             >
-              Ajouter la premi{'\u00e8'}re attraction
+              Ajouter la première attraction
             </button>
           </div>
         ) : (

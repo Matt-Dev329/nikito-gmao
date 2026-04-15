@@ -27,9 +27,9 @@ export function useParc(parcId: string | undefined) {
       if (!parcId) return null;
       const { data, error } = await supabase
         .from('parcs')
-        .select('*, zones(*), parc_attractions(*, categories_equipement(*))')
+        .select('*')
         .eq('id', parcId)
-        .single();
+        .maybeSingle();
       if (error) throw error;
       return data;
     },

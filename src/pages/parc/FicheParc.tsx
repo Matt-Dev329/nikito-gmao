@@ -30,7 +30,7 @@ export function FicheParc() {
               {parc?.nom ?? 'Chargement...'}
             </h1>
             <div className="text-[13px] text-dim mt-1">
-              {parc?.adresse} {'\u00b7'} {parc?.ville} ({parc?.code_postal})
+              {parc?.adresse} · {parc?.ville} ({parc?.code_postal})
             </div>
           </div>
           {parc?.ouvert_7j7 && (
@@ -51,13 +51,13 @@ export function FicheParc() {
             Configuration
           </OngletButton>
           <OngletButton actif={onglet === 'controles'} onClick={() => setOnglet('controles')}>
-            Contr{'\u00f4'}les
+            Contrôles
           </OngletButton>
           <OngletButton actif={onglet === 'equipements'} onClick={() => setOnglet('equipements')}>
-            {'\u00c9'}quipements
+            Équipements
           </OngletButton>
           <OngletButton actif={onglet === 'equipe'} onClick={() => setOnglet('equipe')}>
-            {'\u00c9'}quipe
+            Équipe
           </OngletButton>
           <OngletButton actif={onglet === 'notes'} onClick={() => setOnglet('notes')}>
             Notes chantier
@@ -88,7 +88,7 @@ function OngletButton({
     <button
       onClick={onClick}
       className={cn(
-        'px-4 py-2.5 text-[13px]',
+        'px-4 py-2.5 text-[13px] whitespace-nowrap',
         actif ? 'text-text font-semibold border-b-2 border-nikito-pink' : 'text-dim'
       )}
     >
@@ -98,11 +98,11 @@ function OngletButton({
 }
 
 function OngletApercu() {
-  return <div className="p-6 px-7 text-dim text-sm">Vue d'ensemble {'\u00b7'} KPI parc, alertes du jour</div>;
+  return <div className="p-6 px-7 text-dim text-sm">Vue d'ensemble · KPI parc, alertes du jour</div>;
 }
 
 function OngletConfiguration() {
-  return <div className="p-6 px-7 text-dim text-sm">{'\u00c9'}dition identit{'\u00e9'}, plan, zones, attractions</div>;
+  return <div className="p-6 px-7 text-dim text-sm">Édition identité, plan, zones, attractions</div>;
 }
 
 function OngletControles({ parcId }: { parcId: string | undefined }) {
@@ -146,26 +146,26 @@ function OngletControles({ parcId }: { parcId: string | undefined }) {
         </div>
         <div className="bg-bg-card rounded-xl p-4 border border-white/[0.06]">
           <div className="text-[11px] text-dim uppercase tracking-wider mb-1">Mensuel</div>
-          <div className="text-2xl font-bold text-nikito-violet">{statsParType.mensuel}</div>
+          <div className="text-2xl font-bold text-amber">{statsParType.mensuel}</div>
           <div className="text-[11px] text-dim">points actifs</div>
         </div>
       </div>
 
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-[15px] font-semibold">
-          Attractions configur{'\u00e9'}es ({attractions?.length ?? 0})
+          Attractions configurées ({attractions?.length ?? 0})
         </h3>
         <Link
           to={`/admin/parcs/${parcId}/attractions`}
           className="text-nikito-cyan text-[12px] hover:underline"
         >
-          G{'\u00e9'}rer les attractions
+          Gérer les attractions
         </Link>
       </div>
 
       {!attractions || attractions.length === 0 ? (
         <div className="bg-bg-card rounded-xl p-8 text-center border border-white/[0.06]">
-          <p className="text-dim text-sm mb-3">Aucune attraction configur{'\u00e9'}e</p>
+          <p className="text-dim text-sm mb-3">Aucune attraction configurée</p>
           <Link
             to={`/admin/parcs/${parcId}/attractions`}
             className="inline-block bg-gradient-cta text-text px-5 py-2.5 rounded-xl text-[13px] font-semibold"
@@ -202,9 +202,9 @@ function OngletControles({ parcId }: { parcId: string | undefined }) {
 }
 
 function OngletEquipements() {
-  return <div className="p-6 px-7 text-dim text-sm">Liste d{'\u00e9'}taill{'\u00e9'}e des {'\u00e9'}quipements de ce parc</div>;
+  return <div className="p-6 px-7 text-dim text-sm">Liste détaillée des équipements de ce parc</div>;
 }
 
 function OngletEquipe() {
-  return <div className="p-6 px-7 text-dim text-sm">Utilisateurs assign{'\u00e9'}s {'\u00e0'} ce parc</div>;
+  return <div className="p-6 px-7 text-dim text-sm">Utilisateurs assignés à ce parc</div>;
 }

@@ -75,7 +75,7 @@ export function PersonnaliserPointsParc() {
           <span className="text-nikito-cyan">{categorieNom}</span>
         </div>
         <h1 className="text-[22px] font-semibold m-0 mb-2">
-          Points de contr{'\u00f4'}le {'\u00b7'} {categorieNom}
+          Points de contrôle · {categorieNom}
         </h1>
 
         <div className="flex items-center gap-6 text-[12px]">
@@ -100,7 +100,7 @@ export function PersonnaliserPointsParc() {
                 className={cn(
                   'px-3.5 py-1.5 rounded-full text-[12px] transition-colors',
                   filtre === f
-                    ? 'bg-gradient-to-r from-nikito-pink to-nikito-violet text-text font-semibold'
+                    ? 'bg-nikito-cyan text-text font-semibold'
                     : 'bg-bg-deep text-dim border border-white/[0.06]'
                 )}
               >
@@ -120,7 +120,7 @@ export function PersonnaliserPointsParc() {
           </div>
         ) : pointsFiltres.length === 0 ? (
           <div className="text-center py-16 text-dim text-sm">
-            Aucun point trouv{'\u00e9'} pour ce filtre
+            Aucun point trouvé pour ce filtre
           </div>
         ) : (
           Array.from(groupes.entries()).map(([typeControle, pts]) => (
@@ -131,7 +131,7 @@ export function PersonnaliserPointsParc() {
                     'px-2.5 py-1 rounded-md text-[10px] font-bold uppercase',
                     typeControle === 'quotidien' && 'bg-nikito-cyan/15 text-nikito-cyan',
                     typeControle === 'hebdo' && 'bg-nikito-pink/15 text-nikito-pink',
-                    typeControle === 'mensuel' && 'bg-nikito-violet/15 text-nikito-violet'
+                    typeControle === 'mensuel' && 'bg-amber/15 text-amber'
                   )}
                 >
                   {typeControle}
@@ -176,7 +176,7 @@ export function PersonnaliserPointsParc() {
                           <span className="text-[10px] text-dim">photo obligatoire</span>
                         )}
                         {p.assigne_a && (
-                          <span className="text-[10px] text-dim">assign{'\u00e9'} {p.assigne_a}</span>
+                          <span className="text-[10px] text-dim">assigné {p.assigne_a}</span>
                         )}
                       </div>
                     </div>
