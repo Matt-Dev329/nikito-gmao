@@ -8,6 +8,7 @@ interface TabletHeaderProps {
   user?: { initiales: string; prenom: string };
   enService?: boolean;
   showBack?: boolean;
+  onBack?: () => void;
   rightSlot?: React.ReactNode;
 }
 
@@ -18,21 +19,32 @@ export function TabletHeader({
   user,
   enService,
   showBack,
+  onBack,
   rightSlot,
 }: TabletHeaderProps) {
   const navigate = useNavigate();
+
+  const handleBack = () => {
+    if (onBack) {
+      onBack();
+    } else {
+      navigate(-1);
+    }
+  };
 
   return (
     <header className="px-[18px] py-3.5 bg-bg-sidebar flex items-center gap-3.5 border-b border-white/[0.06]">
       {showBack ? (
         <button
-          onClick={() => navigate(-1)}
+          onClick={handleBack}
           className="bg-bg-card border border-white/[0.08] w-[34px] h-[34px] rounded-[10px] text-base"
         >
           ‹
         </button>
       ) : (
-        <Logo withText={false} />
+        <button onClick={() => navigate('/operations')} className="appearance-none border-none bg-transparent cursor-pointer p-0">
+          <Logo withText={false} />
+        </button>
       )}
 
       <div className="flex-1 min-w-0">

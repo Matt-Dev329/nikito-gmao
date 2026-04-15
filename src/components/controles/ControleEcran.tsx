@@ -1,4 +1,3 @@
-import { useState as _useState } from 'react';
 import { cn } from '@/lib/utils';
 import type { EtatControleItem, TypeControle } from '@/types/database';
 
@@ -38,16 +37,17 @@ interface ControleEcranProps {
   type: TypeControle;
   parcCode: string;
   parcNom: string;
-  contexte: string; // "ouverture 10h" / "S16 hebdo" / "Avril mensuel"
+  contexte: string;
   zones: ZoneVue[];
   pointsZoneActive: PointControleVue[];
   zoneActiveCode: string;
   agentActuel: { initiales: string; prenom: string };
-  chrono?: string; // "2h 18min" pour quotidien, optionnel
+  chrono?: string;
   onChangeZone: (code: string) => void;
   onSetEtat: (pointId: string, etat: EtatControleItem) => void;
   onChangerAgent?: () => void;
   onValider?: () => void;
+  onRetour?: () => void;
   validationDisabled?: boolean;
   validationDisabledRaison?: string;
 }
@@ -71,6 +71,7 @@ export function ControleEcran({
   onSetEtat,
   onChangerAgent,
   onValider,
+  onRetour,
   validationDisabled,
   validationDisabledRaison,
 }: ControleEcranProps) {
@@ -80,9 +81,16 @@ export function ControleEcran({
 
   return (
     <div className="bg-bg-app text-text">
-      {/* Header */}
       <header className="px-[18px] py-3.5 bg-bg-sidebar flex items-center gap-3.5 border-b border-white/[0.06]">
-        <div className="w-9 h-9 rounded-[10px] bg-gradient-logo flex items-center justify-center font-bold text-bg-app">
+        {onRetour && (
+          <button
+            onClick={onRetour}
+            className="bg-bg-card border border-white/[0.08] w-[34px] h-[34px] rounded-[10px] text-base flex-shrink-0"
+          >
+            ‹
+          </button>
+        )}
+        <div className="w-9 h-9 rounded-[10px] bg-gradient-logo flex items-center justify-center font-bold text-bg-app flex-shrink-0">
           N
         </div>
         <div className="flex-1 min-w-0">
@@ -94,7 +102,7 @@ export function ControleEcran({
         <AgentPill agent={agentActuel} onChanger={onChangerAgent} />
         {chrono && (
           <div className="bg-gradient-danger text-text px-3 py-1.5 rounded-[14px] font-mono text-[13px] font-bold">
-            ⏱ {chrono}
+            {chrono}
           </div>
         )}
       </header>

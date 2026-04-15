@@ -1,7 +1,8 @@
-import { useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useState, useCallback } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { TabletHeader } from '@/components/layout/TabletHeader';
 import { CritTag } from '@/components/ui/CritTag';
+import { ModaleQuitterSansValider } from '@/components/ui/ModaleQuitterSansValider';
 import { useChrono } from '@/hooks/useChrono';
 import { formatChrono, cn } from '@/lib/utils';
 
@@ -28,18 +29,33 @@ const piecesMock: PieceUtilisee[] = [
 
 export function Intervention() {
   const { btNumero } = useParams();
-  // TODO · démarrer réellement à l'insert dans interventions (debut = NOW())
+  const navigate = useNavigate();
   const [debutISO] = useState('2026-04-15T14:09:00.000Z');
   const secondes = useChrono(debutISO);
 
   const [etapeActive, setEtapeActive] = useState<Etape>('actions');
   const [diagnostic] = useState(
-    'Carte mère HS suite à coupure secteur. Pas de signal au démarrage, voyant alim éteint malgré secteur OK testé multimètre.'
+    'Carte m\u00e8re HS suite \u00e0 coupure secteur. Pas de signal au d\u00e9marrage, voyant alim \u00e9teint malgr\u00e9 secteur OK test\u00e9 multim\u00e8tre.'
   );
   const [actions, setActions] = useState(
-    'Démontage capot arrière, remplacement carte mère, application pâte thermique sur dissipateur CPU, test boot OK, test cycle complet ride OK.'
+    'D\u00e9montage capot arri\u00e8re, remplacement carte m\u00e8re, application p\u00e2te thermique sur dissipateur CPU, test boot OK, test cycle complet ride OK.'
   );
   const [premierCoup, setPremierCoup] = useState<boolean | null>(true);
+  const [dirty, setDirty] = useState(false);
+  const [showModale, setShowModale] = useState(false);
+
+  const handleBack = useCallback(() => {
+    if (dirty) {
+      setShowModale(true);
+    } else {
+      navigate(-1);
+    }
+  }, [dirty, navigate]);
+
+  const confirmerQuitter = () => {
+    setShowModale(false);
+    navigate(-1);
+  };
 
   const etapeIndex = etapes.findIndex((e) => e.code === etapeActive);
 
@@ -50,6 +66,7 @@ export function Intervention() {
         parcCode="INTERVENTION EN COURS"
         titre={`${btNumero} · Submarine`}
         showBack
+        onBack={handleBack}
         rightSlot={
           <div className="bg-gradient-danger text-text px-3.5 py-2 rounded-xl font-mono text-lg font-bold tracking-wider">
             ⏱ {formatChrono(secondes)}
@@ -143,7 +160,7 @@ export function Intervention() {
           </div>
           <textarea
             value={actions}
-            onChange={(e) => setActions(e.target.value)}
+            onChange={(e) => { setActions(e.target.value); setDirty(true); }}
             className="w-full bg-bg-deep border border-white/[0.08] rounded-lg text-text p-3 text-[13px] resize-y min-h-[90px] outline-none focus:border-nikito-cyan"
           />
           <div className="mt-3.5">
@@ -161,7 +178,7 @@ export function Intervention() {
           <div className="text-[13px] font-semibold mb-3">Résolu du 1er coup ?</div>
           <div className="flex gap-2.5">
             <button
-              onClick={() => setPremierCoup(true)}
+              onClick={() => { setPremierCoup(true); setDirty(true); }}
               className={cn(
                 'flex-1 py-3.5 rounded-[10px] text-sm font-bold',
                 premierCoup === true
@@ -172,7 +189,7 @@ export function Intervention() {
               ✓ Oui
             </button>
             <button
-              onClick={() => setPremierCoup(false)}
+              onClick={() => { setPremierCoup(false); setDirty(true); }}
               className={cn(
                 'flex-1 py-3.5 rounded-[10px] text-sm',
                 premierCoup === false
@@ -193,6 +210,12 @@ export function Intervention() {
           Mettre en pause · sauvegarder brouillon
         </button>
       </main>
+
+      <ModaleQuitterSansValider
+        open={showModale}
+        onConfirmer={confirmerQuitter}
+        onAnnuler={() => setShowModale(false)}
+      />
     </>
   );
 }
