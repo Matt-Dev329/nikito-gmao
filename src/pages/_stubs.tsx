@@ -13,7 +13,7 @@ import { useEquipements, useFournisseurs } from '@/hooks/queries/useReferentiel'
 // EQUIPEMENTS · CRUD page
 // ------------------------------------------------------------
 export function PageEquipements() {
-  const [parcFilter, setParcFilter] = useState<string | undefined>(undefined);
+  const [parcFilter, _setParcFilter] = useState<string | undefined>(undefined);
   const { data: equipements } = useEquipements(parcFilter);
 
   return (

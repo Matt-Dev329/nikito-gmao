@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { ModaleInviterUtilisateur } from '@/components/admin/ModaleInviterUtilisateur';
 import { useAuth } from '@/hooks/useAuth';
-import { roleLabels } from '@/lib/tokens';
+import { roleLabels as _roleLabels } from '@/lib/tokens';
 
 // ============================================================
 // Page Admin · Utilisateurs

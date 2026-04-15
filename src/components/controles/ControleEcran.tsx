@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState as _useState } from 'react';
 import { cn } from '@/lib/utils';
 import type { EtatControleItem, TypeControle } from '@/types/database';
 

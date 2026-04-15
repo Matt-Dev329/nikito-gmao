@@ -1,95 +1,140 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { TabletHeader } from '@/components/layout/TabletHeader';
 import { TicketCard, type TicketSummary } from '@/components/tickets/TicketCard';
-import { cn } from '@/lib/utils';
+import { cn, formatDateCourt, formatDuree } from '@/lib/utils';
+import { useIncidents } from '@/hooks/queries/useTickets';
+import { useAuth } from '@/hooks/useAuth';
+import { useParcs } from '@/hooks/queries/useReferentiel';
+import type { Criticite } from '@/types/database';
 
 type Onglet = 'a_faire' | 'en_cours' | 'controles' | 'preventif';
-type ZoneFiltre = 'toutes' | 'attractions' | 'arcade' | 'karting' | 'bowling';
 
-// TODO · alimenter via useQuery sur la table incidents avec join equipements
-const ticketsMock: TicketSummary[] = [
-  {
-    numeroBT: 'BT-2026-0412',
-    criticite: 'bloquant',
-    titre: 'Submarine · panne offline',
-    zone: 'Attractions',
-    description:
-      'DOM-ATR-SUB-01 · le système ne répond pas au boot. Signalé hier matin par le staff ouverture.',
-    badges: [
-      { label: '📍 Plan' },
-      { label: '📷 2 photos' },
-      { label: '📋 Historique 3 pannes/30j' },
-    ],
-    slaAlert: 'SLA dépassé · 2j 4h',
-  },
-  {
-    numeroBT: 'BT-2026-0418',
-    criticite: 'majeur',
-    titre: 'Tilt · badgeuse HS',
-    zone: 'Arcade',
-    badges: [{ label: '3e en 30j', tone: 'pink' }],
-    meta: 'Arcade · BT-2026-0418 · 6h',
-  },
-  {
-    numeroBT: 'BT-2026-0419',
-    criticite: 'majeur',
-    titre: 'Roof Top · badgeuse HS',
-    zone: 'Arcade',
-    meta: 'Arcade · BT-2026-0419 · 6h',
-  },
-  {
-    numeroBT: 'BT-2026-0415',
-    criticite: 'majeur',
-    titre: 'Basket · porte HS',
-    zone: 'Arcade',
-    badges: [{ label: '⏸ pièce' }],
-    meta: 'Arcade · BT-2026-0415 · livraison vendredi',
-    enAttente: true,
-  },
-  {
-    numeroBT: 'BT-2026-0421',
-    criticite: 'mineur',
-    titre: 'Karting · pack 7 · phare AV cassé',
-    zone: 'Karting',
-    meta: 'Karting · BT-2026-0421 · 35 min estimé',
-  },
-];
+function TicketSkeleton() {
+  return (
+    <div className="bg-bg-card rounded-xl p-[13px] px-4 flex items-center gap-3 animate-pulse">
+      <div className="h-5 w-[54px] bg-white/[0.06] rounded-md" />
+      <div className="flex-1 space-y-1.5">
+        <div className="h-4 w-48 bg-white/[0.06] rounded" />
+        <div className="h-3 w-32 bg-white/[0.06] rounded" />
+      </div>
+    </div>
+  );
+}
 
-const zones: { code: ZoneFiltre; label: string }[] = [
-  { code: 'toutes', label: 'Toutes' },
-  { code: 'attractions', label: 'Attractions' },
-  { code: 'arcade', label: 'Arcade' },
-  { code: 'karting', label: 'Karting' },
-  { code: 'bowling', label: 'Bowling' },
-];
+function mapCriticite(priorite: Record<string, unknown> | null): Criticite {
+  const code = (priorite?.code as string) ?? '';
+  if (code === 'bloquant') return 'bloquant';
+  if (code === 'majeur') return 'majeur';
+  return 'mineur';
+}
+
+function incidentToTicket(inc: Record<string, unknown>): TicketSummary {
+  const equip = inc.equipements as Record<string, unknown> | null;
+  const priorite = inc.niveaux_priorite as Record<string, unknown> | null;
+  const zone = equip?.zones as Record<string, unknown> | null;
+  const parc = equip?.parcs as Record<string, unknown> | null;
+  const cat = equip?.categories_equipement as Record<string, unknown> | null;
+  const criticite = mapCriticite(priorite);
+  const declareLe = inc.declare_le as string;
+  const slaH = (priorite?.sla_h as number) ?? 24;
+  const heuresDepuis = (Date.now() - new Date(declareLe).getTime()) / 3_600_000;
+
+  const badges: TicketSummary['badges'] = [];
+  if (cat?.nom) badges.push({ label: cat.nom as string });
+  if (heuresDepuis > slaH) {
+    badges.push({ label: `SLA depassé · ${formatDuree(declareLe)}`, tone: 'amber' });
+  }
+
+  return {
+    numeroBT: inc.numero_bt as string,
+    criticite,
+    titre: `${equip?.libelle as string ?? ''} · ${inc.description as string}`,
+    zone: (zone?.nom as string) ?? undefined,
+    description: inc.statut === 'ouvert' && criticite === 'bloquant'
+      ? `${equip?.code as string ?? ''} · signalé ${formatDuree(declareLe)}`
+      : undefined,
+    badges: badges.length > 0 ? badges : undefined,
+    slaAlert: heuresDepuis > slaH ? `SLA dépassé · ${formatDuree(declareLe)}` : undefined,
+    meta: `${parc?.code as string ?? ''} · ${inc.numero_bt as string} · ${formatDuree(declareLe)}`,
+    enAttente: inc.statut === 'assigne',
+  };
+}
 
 export function Operations() {
   const navigate = useNavigate();
+  const { utilisateur } = useAuth();
   const [onglet, setOnglet] = useState<Onglet>('a_faire');
-  const [zoneFiltre, setZoneFiltre] = useState<ZoneFiltre>('toutes');
+  const [zoneFiltre, setZoneFiltre] = useState<string>('toutes');
 
-  const ticketsFiltres = ticketsMock.filter((t) => {
-    if (zoneFiltre === 'toutes') return true;
-    return t.zone?.toLowerCase() === zoneFiltre;
+  const parcId = utilisateur?.parc_ids[0];
+  const parcsQ = useParcs();
+
+  const parcActuel = useMemo(() => {
+    if (!parcId || !parcsQ.data) return null;
+    return (parcsQ.data as Record<string, unknown>[]).find(
+      (p) => p.id === parcId
+    ) ?? null;
+  }, [parcId, parcsQ.data]);
+
+  const statutsFiltres = onglet === 'en_cours'
+    ? ['en_cours' as const]
+    : ['ouvert' as const, 'assigne' as const];
+
+  const incidentsQ = useIncidents({
+    parcId: parcId ?? undefined,
+    statuts: statutsFiltres,
   });
 
+  const tickets = useMemo(() => {
+    if (!incidentsQ.data) return [];
+    return (incidentsQ.data as Record<string, unknown>[]).map(incidentToTicket);
+  }, [incidentsQ.data]);
+
+  const zones = useMemo(() => {
+    const zoneSet = new Set<string>();
+    tickets.forEach((t) => {
+      if (t.zone) zoneSet.add(t.zone);
+    });
+    return ['toutes', ...Array.from(zoneSet).sort()];
+  }, [tickets]);
+
+  const ticketsFiltres = tickets.filter((t) => {
+    if (zoneFiltre === 'toutes') return true;
+    return t.zone === zoneFiltre;
+  });
+
+  const compteurs = useMemo(() => {
+    if (!incidentsQ.data) return { aFaire: 0, enCours: 0 };
+    const all = incidentsQ.data as Record<string, unknown>[];
+    return {
+      aFaire: all.filter((i) => i.statut === 'ouvert' || i.statut === 'assigne').length,
+      enCours: all.filter((i) => i.statut === 'en_cours').length,
+    };
+  }, [incidentsQ.data]);
+
   const [premier, ...autres] = ticketsFiltres;
+
+  const initiales = utilisateur
+    ? `${utilisateur.prenom.charAt(0)}${utilisateur.nom.charAt(0)}`
+    : '??';
+
+  const now = new Date();
 
   return (
     <>
       <TabletHeader
-        parc="Rosny Domus"
-        parcCode="DOM"
-        titre="Mes opérations · mer. 15 avril"
-        user={{ initiales: 'MS', prenom: 'Mamady' }}
-        enService
+        parc={(parcActuel?.nom as string) ?? 'Parc'}
+        parcCode={(parcActuel?.code as string) ?? '...'}
+        titre={`Mes opérations · ${formatDateCourt(now)}`}
+        user={utilisateur ? { initiales, prenom: utilisateur.prenom } : undefined}
+        enService={!!utilisateur}
       />
 
       <div className="px-[18px] pt-3 bg-bg-deep flex gap-2 overflow-x-auto">
         {[
-          { code: 'a_faire' as Onglet, label: 'À faire', badge: 5, badgeTone: 'white' },
-          { code: 'en_cours' as Onglet, label: 'En cours', badge: 1, badgeTone: 'amber' },
+          { code: 'a_faire' as Onglet, label: 'À faire', badge: compteurs.aFaire, badgeTone: 'white' },
+          { code: 'en_cours' as Onglet, label: 'En cours', badge: compteurs.enCours, badgeTone: 'amber' },
           { code: 'controles' as Onglet, label: 'Contrôles' },
           { code: 'preventif' as Onglet, label: 'Préventif' },
         ].map((o) => (
@@ -104,7 +149,7 @@ export function Operations() {
             )}
           >
             {o.label}
-            {o.badge && (
+            {o.badge != null && o.badge > 0 && (
               <span
                 className={cn(
                   'ml-1.5 px-2 py-0.5 rounded-lg text-[11px]',
@@ -126,79 +171,56 @@ export function Operations() {
         <span className="text-[11px] text-faint uppercase tracking-wider mr-1">Zone</span>
         {zones.map((z) => (
           <button
-            key={z.code}
-            onClick={() => setZoneFiltre(z.code)}
+            key={z}
+            onClick={() => setZoneFiltre(z)}
             className={cn(
               'px-3 py-1.5 rounded-[14px] text-[11px]',
-              zoneFiltre === z.code
+              zoneFiltre === z
                 ? 'bg-nikito-cyan text-bg-app font-semibold'
                 : 'bg-transparent border border-white/10 text-dim'
             )}
           >
-            {z.label}
+            {z === 'toutes' ? 'Toutes' : z}
           </button>
         ))}
       </div>
 
       <div className="p-3.5 px-[18px] flex flex-col gap-2.5 bg-bg-app">
-        {/* Plan SVG */}
-        <div className="bg-bg-deep rounded-xl p-2.5 px-3.5">
-          <div className="text-[10px] text-faint uppercase tracking-wider mb-2">
-            Plan du parc · touchez un point
+        {incidentsQ.isLoading ? (
+          <>
+            <TicketSkeleton />
+            <TicketSkeleton />
+            <TicketSkeleton />
+          </>
+        ) : onglet === 'controles' || onglet === 'preventif' ? (
+          <div className="text-center py-12 text-dim text-sm">
+            {onglet === 'controles' ? 'Contrôles à venir' : 'Préventif à venir'}
           </div>
-          <PlanRosny />
-        </div>
-
-        {premier && (
-          <TicketCard
-            ticket={premier}
-            variant="expanded"
-            onDemarrer={() => navigate(`/operations/${premier.numeroBT}`)}
-            onReassigner={() => alert('Réassigner à venir')}
-          />
+        ) : ticketsFiltres.length === 0 ? (
+          <div className="text-center py-12 text-dim text-sm">
+            Aucun ticket {onglet === 'en_cours' ? 'en cours' : 'à traiter'}
+          </div>
+        ) : (
+          <>
+            {premier && (
+              <TicketCard
+                ticket={premier}
+                variant="expanded"
+                onDemarrer={() => navigate(`/operations/${premier.numeroBT}`)}
+                onReassigner={() => {}}
+              />
+            )}
+            {autres.map((t) => (
+              <TicketCard
+                key={t.numeroBT}
+                ticket={t}
+                variant="compact"
+                onClick={() => navigate(`/operations/${t.numeroBT}`)}
+              />
+            ))}
+          </>
         )}
-
-        {autres.map((t) => (
-          <TicketCard
-            key={t.numeroBT}
-            ticket={t}
-            variant="compact"
-            onClick={() => navigate(`/operations/${t.numeroBT}`)}
-          />
-        ))}
       </div>
     </>
-  );
-}
-
-function PlanRosny() {
-  // TODO · récupérer dynamiquement les zones et incidents en cours
-  // Coordonnées zones depuis zones.coordonnees_plan (JSONB)
-  return (
-    <svg viewBox="0 0 760 180" className="w-full block">
-      <rect x="2" y="2" width="756" height="176" rx="8" fill="#0B0B2E" stroke="rgba(255,255,255,.08)" />
-      <rect x="20" y="20" width="200" height="140" rx="6" fill="#151547" stroke="rgba(93,229,255,.2)" />
-      <text x="120" y="95" textAnchor="middle" fill="#A8A8C8" fontSize="11">Attractions</text>
-      <rect x="240" y="20" width="280" height="80" rx="6" fill="#151547" stroke="rgba(93,229,255,.2)" />
-      <text x="380" y="65" textAnchor="middle" fill="#A8A8C8" fontSize="11">Arcade</text>
-      <rect x="240" y="115" width="280" height="45" rx="6" fill="#151547" stroke="rgba(93,229,255,.2)" />
-      <text x="380" y="142" textAnchor="middle" fill="#A8A8C8" fontSize="11">Bowling</text>
-      <rect x="540" y="20" width="200" height="140" rx="6" fill="#151547" stroke="rgba(93,229,255,.2)" />
-      <text x="640" y="95" textAnchor="middle" fill="#A8A8C8" fontSize="11">Karting</text>
-      {[
-        { x: 80, y: 60, color: '#FF4D6D' },
-        { x: 290, y: 50, color: '#FFB547' },
-        { x: 345, y: 75, color: '#FFB547' },
-        { x: 450, y: 60, color: '#FFB547' },
-        { x: 640, y: 80, color: '#5DE5FF' },
-      ].map((p, i) => (
-        <g key={i}>
-          <circle cx={p.x} cy={p.y} r="11" fill={p.color} stroke="#0B0B2E" strokeWidth="2" />
-          <text x={p.x} y={p.y + 4} textAnchor="middle" fill="#0B0B2E" fontSize="11" fontWeight="700">
-            1
-          </text>
-        </g>
-      ))}
-    </svg>
   );
 }
