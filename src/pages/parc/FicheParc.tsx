@@ -106,8 +106,12 @@ function OngletConfiguration() {
 }
 
 function OngletControles({ parcId }: { parcId: string | undefined }) {
-  const { data: attractions, isLoading: loadingAttr } = useAttractionsParc(parcId);
+  const { data: attractions, isLoading: loadingAttr, error } = useAttractionsParc(parcId);
   const { data: points, isLoading: loadingPts } = usePointsPourParc(parcId);
+
+  console.log('[Debug] attractions data:', attractions);
+  console.log('[Debug] attractions error:', error);
+  console.log('[Debug] attractions isLoading:', loadingAttr);
 
   const statsParType = useMemo(() => {
     if (!points) return { quotidien: 0, hebdo: 0, mensuel: 0 };
@@ -175,8 +179,8 @@ function OngletControles({ parcId }: { parcId: string | undefined }) {
         </div>
       ) : (
         <div className="flex flex-col gap-2">
-          {attractions.map((a) => {
-            const cat = a.categories_equipement;
+          {attractions.map((a: any) => {
+            const cat = a.categorie;
             const pts = points?.filter((p) => p.categorie_id === a.categorie_id) ?? [];
             const actifs = pts.filter((p) => p.actif_pour_parc).length;
 
@@ -187,7 +191,7 @@ function OngletControles({ parcId }: { parcId: string | undefined }) {
                 className="bg-bg-card rounded-xl p-3.5 px-5 border border-white/[0.06] flex items-center gap-4 hover:border-nikito-cyan/30 transition-colors"
               >
                 <div className="flex-1 min-w-0">
-                  <span className="text-[13px] font-medium">{cat.nom}</span>
+                  <span className="text-[13px] font-medium">{cat?.nom ?? '—'}</span>
                   <span className="text-[11px] text-dim ml-2">x{a.quantite}</span>
                 </div>
                 <span className="text-[12px] text-dim">{actifs}/{pts.length} points</span>

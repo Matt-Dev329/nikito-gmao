@@ -85,8 +85,8 @@ export function AttractionsParc() {
           </div>
         ) : (
           <div className="flex flex-col gap-3">
-            {attractions.map((a) => {
-              const cat = a.categories_equipement;
+            {attractions.map((a: any) => {
+              const cat = a.categorie;
               const pts = pointsParCategorie(a.categorie_id);
               const isConfirm = confirmSuppr === a.id;
 
@@ -97,17 +97,19 @@ export function AttractionsParc() {
                 >
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2.5 mb-1">
-                      <span className="text-[15px] font-semibold">{cat.nom}</span>
-                      <span
-                        className={cn(
-                          'px-2 py-0.5 rounded text-[10px] font-bold uppercase',
-                          cat.criticite_defaut === 'bloquant' && 'bg-red/15 text-red',
-                          cat.criticite_defaut === 'majeur' && 'bg-amber/15 text-amber',
-                          cat.criticite_defaut === 'mineur' && 'bg-green/15 text-green'
-                        )}
-                      >
-                        {cat.criticite_defaut}
-                      </span>
+                      <span className="text-[15px] font-semibold">{cat?.nom ?? '—'}</span>
+                      {cat?.criticite_defaut && (
+                        <span
+                          className={cn(
+                            'px-2 py-0.5 rounded text-[10px] font-bold uppercase',
+                            cat.criticite_defaut === 'bloquant' && 'bg-red/15 text-red',
+                            cat.criticite_defaut === 'majeur' && 'bg-amber/15 text-amber',
+                            cat.criticite_defaut === 'mineur' && 'bg-green/15 text-green'
+                          )}
+                        >
+                          {cat.criticite_defaut}
+                        </span>
+                      )}
                     </div>
                     <div className="flex items-center gap-4 text-[12px] text-dim">
                       <span>{pts.actifs}/{pts.total} points actifs</span>

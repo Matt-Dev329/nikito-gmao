@@ -3,30 +3,26 @@ import { supabase } from '@/lib/supabase';
 
 export function useAttractionsParc(parcId: string | undefined) {
   return useQuery({
-    queryKey: ['parc_attractions', parcId],
+    queryKey: ['attractions-parc', parcId],
+    enabled: !!parcId,
     queryFn: async () => {
-      if (!parcId) return [];
       const { data, error } = await supabase
         .from('parc_attractions')
-        .select('*, categories_equipement(id, code, nom, criticite_defaut)')
-        .eq('parc_id', parcId)
-        .order('cree_le', { ascending: true });
-      if (error) throw error;
-      return data as Array<{
-        id: string;
-        parc_id: string;
-        categorie_id: string;
-        quantite: number;
-        cree_le: string;
-        categories_equipement: {
-          id: string;
-          code: string;
-          nom: string;
-          criticite_defaut: string;
-        };
-      }>;
+        .select(`
+          id,
+          quantite,
+          categorie_id,
+          categorie:categories_equipement!parc_attractions_categorie_id_fkey(id, nom)
+        `)
+        .eq('parc_id', parcId!)
+        .order('categorie_id');
+
+      if (error) {
+        console.error('useAttractionsParc error:', error);
+        throw error;
+      }
+      return data ?? [];
     },
-    enabled: !!parcId,
   });
 }
 
@@ -47,7 +43,7 @@ export function useAjouterAttraction(parcId: string) {
       return data;
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['parc_attractions', parcId] });
+      qc.invalidateQueries({ queryKey: ['attractions-parc', parcId] });
       qc.invalidateQueries({ queryKey: ['points_parc', parcId] });
     },
   });
@@ -64,7 +60,7 @@ export function useSupprimerAttraction(parcId: string) {
       if (error) throw error;
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['parc_attractions', parcId] });
+      qc.invalidateQueries({ queryKey: ['attractions-parc', parcId] });
       qc.invalidateQueries({ queryKey: ['points_parc', parcId] });
     },
   });
@@ -81,7 +77,7 @@ export function useModifierQuantiteAttraction(parcId: string) {
       if (error) throw error;
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['parc_attractions', parcId] });
+      qc.invalidateQueries({ queryKey: ['attractions-parc', parcId] });
     },
   });
 }
