@@ -29,6 +29,8 @@ import { PageFournisseursAdmin } from '@/pages/admin/PageFournisseursAdmin';
 
 // Parc (fiche détail)
 import { FicheParc } from '@/pages/parc/FicheParc';
+import { AttractionsParc } from '@/pages/parc/AttractionsParc';
+import { PersonnaliserPointsParc } from '@/pages/parc/PersonnaliserPointsParc';
 
 // Stubs
 import {
@@ -76,6 +78,8 @@ export function App() {
         <Route path="/admin/parcs" element={<ListeParcs />} />
         <Route path="/admin/parcs/nouveau" element={<CreationParcWizard />} />
         <Route path="/admin/parcs/:id" element={<FicheParc />} />
+        <Route path="/admin/parcs/:id/attractions" element={<AttractionsParc />} />
+        <Route path="/admin/parcs/:id/points/:categorieId" element={<PersonnaliserPointsParc />} />
 
         {/* Admin · Utilisateurs et fournisseurs */}
         <Route path="/admin/utilisateurs" element={<UtilisateursAdmin />} />
