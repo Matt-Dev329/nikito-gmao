@@ -1,0 +1,50 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html, body {
+    @apply bg-bg-app text-text font-sans antialiased;
+    -webkit-tap-highlight-color: transparent;
+  }
+  body {
+    margin: 0;
+    min-height: 100vh;
+  }
+  /* Disable text selection on UI surfaces (tablette terrain) */
+  button, .nav-item {
+    user-select: none;
+    -webkit-user-select: none;
+  }
+}
+
+@layer components {
+  /* Texte gradient logo */
+  .text-gradient-logo {
+    @apply bg-gradient-logo bg-clip-text text-transparent;
+    -webkit-background-clip: text;
+  }
+
+  /* Card de base */
+  .card {
+    @apply bg-bg-card rounded-xl p-4;
+  }
+  .card-deep {
+    @apply bg-bg-deep rounded-lg p-3;
+  }
+
+  /* Pill */
+  .pill {
+    @apply inline-flex items-center gap-1.5 px-3 py-1.5 rounded-pill text-xs;
+  }
+
+  /* Numéro BT (monospace) */
+  .bt-num {
+    @apply bg-bg-deep text-dim px-2.5 py-1 rounded-md text-xs font-mono;
+  }
+
+  /* Tag criticité */
+  .crit-tag {
+    @apply px-2.5 py-0.5 rounded-md text-[11px] font-bold tracking-wide text-bg-app;
+  }
+}
