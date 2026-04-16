@@ -39,6 +39,8 @@ import {
   VueManagerParc,
   PageProfil,
   MesSignalements,
+  PageTechStock,
+  PageTechSignaler,
 } from '@/pages/_stubs';
 
 export function App() {
@@ -93,6 +95,8 @@ export function App() {
         <Route path="operations/:btNumero" element={<Intervention />} />
         <Route path="controle-hebdo" element={<ControleHebdo />} />
         <Route path="controle-mensuel" element={<ControleMensuel />} />
+        <Route path="stock" element={<PageTechStock />} />
+        <Route path="signaler" element={<PageTechSignaler />} />
       </Route>
 
       <Route path="/staff/controle-ouverture" element={<ControleOuverture />} />

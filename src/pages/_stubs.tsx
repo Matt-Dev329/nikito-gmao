@@ -227,6 +227,34 @@ export function PageProfil() {
 }
 
 // ------------------------------------------------------------
+// TECH STOCK (vue terrain)
+// ------------------------------------------------------------
+export function PageTechStock() {
+  return (
+    <div className="p-6 px-7">
+      <h1 className="text-[22px] font-semibold m-0">Stock</h1>
+      <div className="text-[13px] text-dim mt-1">
+        Vue stock terrain — bientôt disponible
+      </div>
+    </div>
+  );
+}
+
+// ------------------------------------------------------------
+// TECH SIGNALER (incident terrain)
+// ------------------------------------------------------------
+export function PageTechSignaler() {
+  return (
+    <div className="p-6 px-7">
+      <h1 className="text-[22px] font-semibold m-0">Signaler</h1>
+      <div className="text-[13px] text-dim mt-1">
+        Signalement d'incident — bientôt disponible
+      </div>
+    </div>
+  );
+}
+
+// ------------------------------------------------------------
 // MES SIGNALEMENTS (staff)
 // ------------------------------------------------------------
 export function MesSignalements() {
