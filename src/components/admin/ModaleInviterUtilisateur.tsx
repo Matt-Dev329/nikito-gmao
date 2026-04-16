@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { useParcs } from '@/hooks/queries/useReferentiel';
+import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/lib/supabase';
 import type { RoleUtilisateur } from '@/types/database';
 
@@ -36,6 +37,7 @@ export function ModaleInviterUtilisateur({
   roleInviteur,
   parcsInviteur,
 }: ModaleInviterProps) {
+  const { utilisateur } = useAuth();
   const { data: parcs } = useParcs();
   const [authMode, setAuthMode] = useState<AuthMode>('email_password');
   const [prenom, setPrenom] = useState('');
@@ -68,7 +70,7 @@ export function ModaleInviterUtilisateur({
     (authMode === 'pin_seul' || (email.length > 0 && emailValide));
 
   const envoyer = async () => {
-    if (!peutEnvoyer || !roleChoisi) return;
+    if (!peutEnvoyer || !roleChoisi || !utilisateur) return;
     setSubmitting(true);
 
     // Récupérer le role_id depuis le code
@@ -97,6 +99,7 @@ export function ModaleInviterUtilisateur({
       parcs_assignes: parcsChoisis,
       est_manager: estManager,
       auth_mode: authMode,
+      invite_par_id: utilisateur.id,
     });
 
     setSubmitting(false);
