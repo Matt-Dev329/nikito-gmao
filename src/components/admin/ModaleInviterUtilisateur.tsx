@@ -3,6 +3,7 @@ import { cn } from '@/lib/utils';
 import { useParcs } from '@/hooks/queries/useReferentiel';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/lib/supabase';
+import { roleLabels } from '@/lib/tokens';
 import type { RoleUtilisateur } from '@/types/database';
 
 // ============================================================
@@ -49,6 +50,8 @@ export function ModaleInviterUtilisateur({
   const [methodeEnvoi, setMethodeEnvoi] = useState<'email' | 'lien'>('email');
   const [submitting, setSubmitting] = useState(false);
   const [lienGenere, setLienGenere] = useState<string | null>(null);
+  const [emailStatus, setEmailStatus] = useState<'idle' | 'sending' | 'sent' | 'failed'>('idle');
+  const [emailDestinataire, setEmailDestinataire] = useState('');
 
   // Restrictions selon le rôle de l'inviteur
   const isManagerParc = roleInviteur === 'manager_parc';
@@ -73,7 +76,6 @@ export function ModaleInviterUtilisateur({
     if (!peutEnvoyer || !roleChoisi || !utilisateur) return;
     setSubmitting(true);
 
-    // Récupérer le role_id depuis le code
     const { data: role } = await supabase
       .from('roles')
       .select('id')
@@ -85,7 +87,6 @@ export function ModaleInviterUtilisateur({
       return;
     }
 
-    // Générer un token aléatoire
     const token =
       crypto.randomUUID().replace(/-/g, '') +
       Math.random().toString(36).slice(2, 10);
@@ -102,14 +103,42 @@ export function ModaleInviterUtilisateur({
       invite_par_id: utilisateur.id,
     });
 
-    setSubmitting(false);
-
-    if (!error) {
-      const lien = `${window.location.origin}/invitation/${token}`;
-      setLienGenere(lien);
-
-      // TODO Bolt · si methodeEnvoi === 'email', appeler une Edge Function envoyer_invitation_email
+    if (error) {
+      setSubmitting(false);
+      return;
     }
+
+    const lien = `${window.location.origin}/invitation/${token}`;
+    setLienGenere(lien);
+
+    if (methodeEnvoi === 'email' && email) {
+      setEmailDestinataire(email);
+      setEmailStatus('sending');
+
+      const parcsLabels = (parcs ?? [])
+        .filter((p) => parcsChoisis.includes(p.id))
+        .map((p) => p.code);
+
+      const { error: fnError } = await supabase.functions.invoke(
+        'send-invitation-email',
+        {
+          body: {
+            destinataire_email: email,
+            destinataire_prenom: prenom,
+            destinataire_nom: nom,
+            role_label: roleLabels[roleChoisi],
+            invitant_prenom: utilisateur.prenom,
+            invitant_nom: utilisateur.nom,
+            lien_invitation: lien,
+            parcs_labels: parcsLabels,
+          },
+        },
+      );
+
+      setEmailStatus(fnError ? 'failed' : 'sent');
+    }
+
+    setSubmitting(false);
   };
 
   return (
@@ -132,7 +161,13 @@ export function ModaleInviterUtilisateur({
         </div>
 
         {lienGenere ? (
-          <SuccessLien lien={lienGenere} onClose={onClose} authMode={authMode} />
+          <SuccessLien
+            lien={lienGenere}
+            onClose={onClose}
+            authMode={authMode}
+            emailStatus={emailStatus}
+            emailDestinataire={emailDestinataire}
+          />
         ) : (
           <>
             {/* Mode auth (caché si manager parc) */}
@@ -330,7 +365,11 @@ export function ModaleInviterUtilisateur({
                   (!peutEnvoyer || submitting) && 'opacity-40 cursor-not-allowed'
                 )}
               >
-                {submitting ? 'Envoi...' : "Envoyer l'invitation ›"}
+                {submitting
+                  ? emailStatus === 'sending'
+                    ? `Envoi de l'invitation à ${email}...`
+                    : 'Création...'
+                  : "Envoyer l'invitation \u203a"}
               </button>
             </div>
           </>
@@ -426,10 +465,14 @@ function SuccessLien({
   lien,
   onClose,
   authMode,
+  emailStatus,
+  emailDestinataire,
 }: {
   lien: string;
   onClose: () => void;
   authMode: AuthMode;
+  emailStatus: 'idle' | 'sending' | 'sent' | 'failed';
+  emailDestinataire: string;
 }) {
   const [copie, setCopie] = useState(false);
 
@@ -439,14 +482,34 @@ function SuccessLien({
     setTimeout(() => setCopie(false), 2000);
   };
 
+  const showEmailSent = emailStatus === 'sent';
+  const showEmailFailed = emailStatus === 'failed';
+
   return (
     <div className="text-center py-4">
-      <div className="text-5xl mb-3">✅</div>
-      <div className="text-base font-semibold mb-2">Invitation créée</div>
+      <div className="text-5xl mb-3">{showEmailFailed ? '\u26A0\uFE0F' : '\u2705'}</div>
+      <div className="text-base font-semibold mb-2">
+        {showEmailSent
+          ? `Invitation envoy\u00e9e \u00e0 ${emailDestinataire}`
+          : 'Invitation cr\u00e9\u00e9e'}
+      </div>
       <div className="text-sm text-dim mb-5">
-        {authMode === 'pin_seul'
-          ? "Communique ce lien à l'agent. Il pourra créer son code à 6 chiffres."
-          : "Le lien a été préparé. L'utilisateur définira son mot de passe."}
+        {showEmailSent && (
+          <>La personne va recevoir un email avec un lien pour accepter l'invitation.</>
+        )}
+        {showEmailFailed && (
+          <>
+            L'invitation a \u00e9t\u00e9 cr\u00e9\u00e9e mais l'email n'a pas pu \u00eatre envoy\u00e9.
+            Vous pouvez transmettre le lien manuellement :
+          </>
+        )}
+        {!showEmailSent && !showEmailFailed && (
+          <>
+            {authMode === 'pin_seul'
+              ? "Communique ce lien \u00e0 l'agent. Il pourra cr\u00e9er son code \u00e0 6 chiffres."
+              : "Le lien a \u00e9t\u00e9 pr\u00e9par\u00e9. L'utilisateur d\u00e9finira son mot de passe."}
+          </>
+        )}
       </div>
 
       <div className="bg-bg-deep rounded-lg p-3 mb-4 break-all text-[11px] text-nikito-cyan font-mono">
@@ -458,7 +521,7 @@ function SuccessLien({
           onClick={copier}
           className="bg-bg-deep border border-nikito-cyan/40 text-nikito-cyan px-5 py-2.5 rounded-lg text-xs font-semibold"
         >
-          {copie ? '✓ Copié !' : '📋 Copier le lien'}
+          {copie ? '\u2713 Copi\u00e9 !' : '\uD83D\uDCCB Copier le lien'}
         </button>
         <button
           onClick={onClose}
