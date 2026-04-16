@@ -162,8 +162,14 @@ Deno.serve(async (req: Request) => {
       const errBody = await resendRes.text();
       console.error("Resend error:", resendRes.status, errBody);
       return new Response(
-        JSON.stringify({ error: "Echec envoi email", detail: errBody }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        JSON.stringify({
+          error: "Echec envoi email",
+          resend_status: resendRes.status,
+          resend_response: errBody,
+          from_used: "noreply@nikito.tech",
+          to_used: payload.destinataire_email,
+        }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 

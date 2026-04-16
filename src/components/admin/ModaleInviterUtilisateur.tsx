@@ -52,6 +52,7 @@ export function ModaleInviterUtilisateur({
   const [lienGenere, setLienGenere] = useState<string | null>(null);
   const [emailStatus, setEmailStatus] = useState<'idle' | 'sending' | 'sent' | 'failed'>('idle');
   const [emailDestinataire, setEmailDestinataire] = useState('');
+  const [emailErreurDetail, setEmailErreurDetail] = useState<Record<string, unknown> | null>(null);
 
   // Restrictions selon le rôle de l'inviteur
   const isManagerParc = roleInviteur === 'manager_parc';
@@ -119,7 +120,7 @@ export function ModaleInviterUtilisateur({
         .filter((p) => parcsChoisis.includes(p.id))
         .map((p) => p.code);
 
-      const { error: fnError } = await supabase.functions.invoke(
+      const { data: fnData, error: fnError } = await supabase.functions.invoke(
         'send-invitation-email',
         {
           body: {
@@ -135,7 +136,13 @@ export function ModaleInviterUtilisateur({
         },
       );
 
-      setEmailStatus(fnError ? 'failed' : 'sent');
+      const hasResendError = fnData && typeof fnData === 'object' && 'error' in fnData;
+      if (fnError || hasResendError) {
+        setEmailStatus('failed');
+        setEmailErreurDetail(hasResendError ? fnData : { error: String(fnError) });
+      } else {
+        setEmailStatus('sent');
+      }
     }
 
     setSubmitting(false);
@@ -167,6 +174,7 @@ export function ModaleInviterUtilisateur({
             authMode={authMode}
             emailStatus={emailStatus}
             emailDestinataire={emailDestinataire}
+            erreurDetail={emailErreurDetail}
           />
         ) : (
           <>
@@ -467,12 +475,14 @@ function SuccessLien({
   authMode,
   emailStatus,
   emailDestinataire,
+  erreurDetail,
 }: {
   lien: string;
   onClose: () => void;
   authMode: AuthMode;
   emailStatus: 'idle' | 'sending' | 'sent' | 'failed';
   emailDestinataire: string;
+  erreurDetail: Record<string, unknown> | null;
 }) {
   const [copie, setCopie] = useState(false);
 
@@ -511,6 +521,29 @@ function SuccessLien({
           </>
         )}
       </div>
+
+      {showEmailFailed && erreurDetail && (
+        <div className="bg-[#1a1d2e] rounded-lg p-3 mb-3 text-left text-[10px] text-[#8b92b8] font-mono leading-relaxed">
+          <div className="text-[11px] text-[#6b7094] font-semibold mb-1.5">
+            Detail technique de l'erreur :
+          </div>
+          {erreurDetail.resend_status !== undefined && (
+            <div>Status: {String(erreurDetail.resend_status)}</div>
+          )}
+          {erreurDetail.resend_response !== undefined && (
+            <div>Reponse Resend: {String(erreurDetail.resend_response)}</div>
+          )}
+          {erreurDetail.from_used !== undefined && (
+            <div>Expediteur utilise: {String(erreurDetail.from_used)}</div>
+          )}
+          {erreurDetail.to_used !== undefined && (
+            <div>Destinataire: {String(erreurDetail.to_used)}</div>
+          )}
+          {erreurDetail.error !== undefined && !erreurDetail.resend_status && (
+            <div>Erreur: {String(erreurDetail.error)}</div>
+          )}
+        </div>
+      )}
 
       <div className="bg-bg-deep rounded-lg p-3 mb-4 break-all text-[11px] text-nikito-cyan font-mono">
         {lien}
