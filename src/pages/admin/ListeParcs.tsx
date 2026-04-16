@@ -29,7 +29,7 @@ export function ListeParcs() {
           {parcs?.map((p) => (
             <div
               key={p.id}
-              onClick={() => navigate(`/admin/parcs/${p.id}`)}
+              onClick={() => navigate(`/gmao/parcs/${p.id}`)}
               className="bg-bg-card rounded-2xl p-4 md:p-5 cursor-pointer hover:bg-bg-deep transition-colors"
             >
               <div className="flex justify-between items-start mb-3">
