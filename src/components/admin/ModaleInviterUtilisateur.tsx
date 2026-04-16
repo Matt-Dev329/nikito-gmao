@@ -109,7 +109,7 @@ export function ModaleInviterUtilisateur({
       return;
     }
 
-    const lien = `${window.location.origin}/invitation/${token}`;
+    const lien = `https://nikito.tech/invitation/${token}`;
     setLienGenere(lien);
 
     if (methodeEnvoi === 'email' && email) {
