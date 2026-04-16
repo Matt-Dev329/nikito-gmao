@@ -135,8 +135,8 @@ Deno.serve(async (req: Request) => {
     const apiKey = Deno.env.get("RESEND_API_KEY");
     if (!apiKey) {
       return new Response(
-        JSON.stringify({ error: "RESEND_API_KEY non configuree" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        JSON.stringify({ success: false, error: "RESEND_API_KEY non configuree" }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
@@ -163,6 +163,7 @@ Deno.serve(async (req: Request) => {
       console.error("Resend error:", resendRes.status, errBody);
       return new Response(
         JSON.stringify({
+          success: false,
           error: "Echec envoi email",
           resend_status: resendRes.status,
           resend_response: errBody,
@@ -182,8 +183,8 @@ Deno.serve(async (req: Request) => {
   } catch (err) {
     console.error("send-invitation-email error:", err);
     return new Response(
-      JSON.stringify({ error: "Erreur interne", detail: String(err) }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      JSON.stringify({ success: false, error: "Erreur interne", detail: String(err) }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   }
 });

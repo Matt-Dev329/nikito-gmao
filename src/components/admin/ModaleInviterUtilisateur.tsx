@@ -136,10 +136,12 @@ export function ModaleInviterUtilisateur({
         },
       );
 
-      const hasResendError = fnData && typeof fnData === 'object' && 'error' in fnData;
-      if (fnError || hasResendError) {
+      if (fnError) {
         setEmailStatus('failed');
-        setEmailErreurDetail(hasResendError ? fnData : { error: String(fnError) });
+        setEmailErreurDetail({ error: String(fnError) });
+      } else if (fnData && fnData.success === false) {
+        setEmailStatus('failed');
+        setEmailErreurDetail(fnData);
       } else {
         setEmailStatus('sent');
       }
