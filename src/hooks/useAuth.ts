@@ -2,10 +2,6 @@ import { useEffect, useState } from 'react';
 import type { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 
-// ============================================================
-// useAuth · session Supabase + user métier (utilisateurs.*)
-// ============================================================
-
 export interface UtilisateurMetier {
   id: string;
   email: string;
@@ -24,40 +20,45 @@ export function useAuth() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Session initiale
     supabase.auth.getSession().then(({ data }) => {
       setSession(data.session);
       setAuthUser(data.session?.user ?? null);
     });
 
-    // Listener changements
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      setAuthUser(session?.user ?? null);
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, newSession) => {
+      setSession((prev) => (prev?.access_token === newSession?.access_token ? prev : newSession));
+      setAuthUser((prev) => {
+        const next = newSession?.user ?? null;
+        if (prev?.id === next?.id) return prev; // ← évite la nouvelle référence
+        return next;
+      });
     });
 
     return () => listener.subscription.unsubscribe();
   }, []);
 
-  // Récupérer l'utilisateur métier (table utilisateurs)
+  // ⚠️ Dépendance sur authUser?.id (primitive), PAS sur authUser (objet)
   useEffect(() => {
-    if (!authUser) {
+    if (!authUser?.id) {
       setUtilisateur(null);
       setLoading(false);
       return;
     }
 
+    let cancelled = false;
     setLoading(true);
+
     supabase
       .from('utilisateurs')
       .select(
         `id, email, nom, prenom, trigramme, consentement_gps,
-        roles!inner(code),
-        parcs_utilisateurs(parc_id)`
+         roles!inner(code),
+         parcs_utilisateurs(parc_id)`
       )
       .eq('auth_user_id', authUser.id)
       .single()
       .then(({ data, error }) => {
+        if (cancelled) return;
         if (error || !data) {
           setUtilisateur(null);
         } else {
@@ -76,7 +77,11 @@ export function useAuth() {
         }
         setLoading(false);
       });
-  }, [authUser]);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [authUser?.id]); // ← ICI, la correction critique
 
   const signIn = async (email: string, password: string) => {
     return supabase.auth.signInWithPassword({ email, password });
