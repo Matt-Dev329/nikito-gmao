@@ -151,7 +151,7 @@ Deno.serve(async (req: Request) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: "Nikito GMAO <noreply@send.nikito.tech>",
+        from: "Nikito GMAO <noreply@nikito.tech>",
         to: [payload.destinataire_email],
         subject: "Vous êtes invité à rejoindre Nikito GMAO",
         html,
