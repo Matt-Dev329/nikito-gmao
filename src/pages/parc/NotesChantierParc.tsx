@@ -4,6 +4,7 @@ import { cn } from '@/lib/utils';
 import { useParc } from '@/hooks/queries/useReferentiel';
 import { supabase } from '@/lib/supabase';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useAuth } from '@/hooks/useAuth';
 
 // ============================================================
 // Page Notes chantier d'un parc · accessible :
@@ -43,8 +44,26 @@ const categorieColors: Record<Categorie, string> = {
 export function NotesChantierParc() {
   const { id: parcId } = useParams<{ id: string }>();
   const { data: parc } = useParc(parcId);
+  const { utilisateur } = useAuth();
+  const queryClient = useQueryClient();
   const [filtreCategorie, setFiltreCategorie] = useState<Categorie | null>(null);
   const [editeurOuvert, setEditeurOuvert] = useState(false);
+  const [noteASupprimer, setNoteASupprimer] = useState<string | null>(null);
+  const [suppEnCours, setSuppEnCours] = useState(false);
+
+  const peutSupprimer =
+    utilisateur?.role_code != null &&
+    ['direction', 'chef_maintenance', 'technicien', 'manager_parc'].includes(utilisateur.role_code);
+
+  const supprimerNote = async (noteId: string) => {
+    setSuppEnCours(true);
+    const { error } = await supabase.from('notes_chantier').delete().eq('id', noteId);
+    setSuppEnCours(false);
+    if (!error) {
+      setNoteASupprimer(null);
+      queryClient.invalidateQueries({ queryKey: ['notes_chantier', parcId] });
+    }
+  };
 
   const { data: notes } = useQuery({
     queryKey: ['notes_chantier', parcId, filtreCategorie],
@@ -147,7 +166,17 @@ export function NotesChantierParc() {
                   </div>
                   <div className="text-base font-semibold">{note.titre}</div>
                 </div>
-                <button className="text-dim hover:text-nikito-cyan text-base min-w-[44px] min-h-[44px] flex items-center justify-center flex-shrink-0">✎</button>
+                <div className="flex items-center gap-0.5 flex-shrink-0">
+                  <button className="text-dim hover:text-nikito-cyan text-base min-w-[44px] min-h-[44px] flex items-center justify-center">&#x270E;</button>
+                  {peutSupprimer && (
+                    <button
+                      onClick={() => setNoteASupprimer(note.id)}
+                      className="text-dim hover:text-red-400 text-base min-w-[44px] min-h-[44px] flex items-center justify-center transition-colors"
+                    >
+                      &#x2715;
+                    </button>
+                  )}
+                </div>
               </div>
 
               {note.participants?.length > 0 && (
@@ -193,6 +222,36 @@ export function NotesChantierParc() {
           );
         })}
       </div>
+
+      {noteASupprimer && (
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
+          <div className="bg-bg-card rounded-[18px] border border-white/10 p-5 md:p-6 w-full max-w-sm">
+            <div className="text-base font-semibold mb-2">Supprimer cette note ?</div>
+            <p className="text-[13px] text-dim mb-5 leading-relaxed">
+              Cette action est irr&eacute;versible. La note et son contenu seront d&eacute;finitivement supprim&eacute;s.
+            </p>
+            <div className="flex gap-2.5 justify-end">
+              <button
+                onClick={() => setNoteASupprimer(null)}
+                disabled={suppEnCours}
+                className="bg-transparent border border-white/15 text-dim px-4 py-2.5 rounded-[10px] text-xs min-h-[44px]"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={() => supprimerNote(noteASupprimer)}
+                disabled={suppEnCours}
+                className={cn(
+                  'bg-red-500/90 hover:bg-red-500 text-white px-5 py-2.5 rounded-[10px] text-[13px] font-bold min-h-[44px] transition-colors',
+                  suppEnCours && 'opacity-40 cursor-not-allowed'
+                )}
+              >
+                {suppEnCours ? 'Suppression...' : 'Supprimer'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {editeurOuvert && parcId && (
         <EditeurNoteChantier
