@@ -23,10 +23,10 @@ export function UtilisateursAdmin() {
     utilisateur?.role_code === 'manager_parc';
 
   return (
-    <div className="p-6 px-7">
-      <div className="flex justify-between items-start mb-5">
+    <div className="p-4 md:p-6 md:px-7">
+      <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-start mb-5">
         <div>
-          <h1 className="text-[22px] font-semibold m-0">Utilisateurs</h1>
+          <h1 className="text-xl md:text-[22px] font-semibold m-0">Utilisateurs</h1>
           <div className="text-[13px] text-dim mt-1">
             Gestion comptes · invitations · attribution rôles et parcs
           </div>
@@ -34,39 +34,38 @@ export function UtilisateursAdmin() {
         {peutInviter && (
           <button
             onClick={() => setModaleOuverte(true)}
-            className="bg-gradient-cta text-text px-5 py-2.5 rounded-[10px] text-[13px] font-bold flex items-center gap-2"
+            className="bg-gradient-cta text-text px-5 py-2.5 rounded-[10px] text-[13px] font-bold flex items-center gap-2 min-h-[44px] w-full sm:w-auto justify-center sm:justify-start"
           >
             <span className="text-base">+</span> Inviter un utilisateur
           </button>
         )}
       </div>
 
-      {/* Onglets */}
-      <div className="flex gap-1.5 mb-[18px] border-b border-white/[0.06]">
-        <TabButton actif={tab === 'a_valider'} onClick={() => setTab('a_valider')} badge={0}>
-          À valider
-        </TabButton>
-        <TabButton actif={tab === 'actifs'} onClick={() => setTab('actifs')}>
-          Actifs
-        </TabButton>
-        <TabButton actif={tab === 'invitations'} onClick={() => setTab('invitations')}>
-          Invitations envoyées
-        </TabButton>
-        <TabButton actif={tab === 'desactives'} onClick={() => setTab('desactives')}>
-          Désactivés
-        </TabButton>
+      <div className="overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0 mb-[18px] border-b border-white/[0.06]">
+        <div className="flex gap-1.5">
+          <TabButton actif={tab === 'a_valider'} onClick={() => setTab('a_valider')} badge={0}>
+            A valider
+          </TabButton>
+          <TabButton actif={tab === 'actifs'} onClick={() => setTab('actifs')}>
+            Actifs
+          </TabButton>
+          <TabButton actif={tab === 'invitations'} onClick={() => setTab('invitations')}>
+            Invitations
+          </TabButton>
+          <TabButton actif={tab === 'desactives'} onClick={() => setTab('desactives')}>
+            Désactivés
+          </TabButton>
+        </div>
       </div>
 
-      {/* Stats compactes */}
-      <div className="grid grid-cols-4 gap-2.5 mb-[18px]">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 md:gap-2.5 mb-[18px]">
         <StatBox label="Direction" value={1} />
         <StatBox label="Chef + Manager" value={5} />
         <StatBox label="Techniciens" value={5} />
         <StatBox label="Staff (PIN)" value={21} />
       </div>
 
-      {/* Contenu selon onglet */}
-      <div className="bg-bg-card rounded-2xl py-5 px-5">
+      <div className="bg-bg-card rounded-2xl py-4 px-4 md:py-5 md:px-5">
         {tab === 'a_valider' && <ListeAValider />}
         {tab === 'actifs' && <ListeActifs />}
         {tab === 'invitations' && <ListeInvitations />}
@@ -103,7 +102,7 @@ function TabButton({
     <button
       onClick={onClick}
       className={cn(
-        'px-4 py-2.5 text-[13px]',
+        'px-3 md:px-4 py-2.5 text-[13px] whitespace-nowrap min-h-[44px]',
         actif
           ? 'text-text font-semibold border-b-2 border-nikito-pink'
           : 'text-dim hover:text-text'

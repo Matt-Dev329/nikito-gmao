@@ -40,8 +40,8 @@ export function ModaleSignaler({ open, onClose, onSubmit, parc, user }: ModaleSi
   const peutEnvoyer = recherche.length > 0 && criticite !== null && description.length >= 10;
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/65 flex items-end justify-center p-6">
-      <div className="w-full max-w-[680px] bg-bg-card rounded-t-[18px] rounded-b-xl p-5 px-6 border border-nikito-violet/20">
+    <div className="fixed inset-0 z-50 bg-black/65 flex items-end justify-center p-0 md:p-6">
+      <div className="w-full md:max-w-[680px] bg-bg-card rounded-t-[18px] md:rounded-b-xl p-4 md:p-5 md:px-6 border border-nikito-violet/20 max-h-[90vh] overflow-y-auto">
         <div className="flex justify-between items-center mb-[18px]">
           <div>
             <div className="text-[11px] text-dim tracking-[1.2px] uppercase">Signalement rapide</div>
@@ -56,7 +56,7 @@ export function ModaleSignaler({ open, onClose, onSubmit, parc, user }: ModaleSi
         </div>
 
         {/* Détection auto */}
-        <div className="bg-bg-deep rounded-[10px] p-2.5 px-3.5 flex items-center gap-2.5 mb-4 text-[11px]">
+        <div className="bg-bg-deep rounded-[10px] p-2.5 px-3.5 flex items-center gap-2.5 mb-4 text-[11px] flex-wrap">
           <span className="text-nikito-cyan">📍</span>
           <span className="text-dim">Détecté auto :</span>
           <span className="font-medium">
@@ -186,7 +186,7 @@ export function ModaleSignaler({ open, onClose, onSubmit, parc, user }: ModaleSi
         <div className="flex gap-2.5">
           <button
             onClick={onClose}
-            className="bg-transparent border border-white/15 text-dim px-5 py-3.5 rounded-xl text-[13px]"
+            className="bg-transparent border border-white/15 text-dim px-5 py-3.5 rounded-xl text-[13px] min-h-[44px]"
           >
             Annuler
           </button>

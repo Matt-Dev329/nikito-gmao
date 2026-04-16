@@ -35,9 +35,9 @@ export function ModaleAjouterAttraction({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center md:p-4">
       <div className="absolute inset-0 bg-black/60" onClick={onClose} />
-      <div className="relative bg-bg-card rounded-2xl w-full max-w-[480px] border border-white/[0.08] shadow-2xl flex flex-col max-h-[80vh]">
+      <div className="relative bg-bg-card rounded-t-2xl md:rounded-2xl w-full md:max-w-[480px] border border-white/[0.08] shadow-2xl flex flex-col max-h-[90vh] md:max-h-[80vh]">
         <div className="px-6 pt-5 pb-4 border-b border-white/[0.06]">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-[17px] font-semibold">Ajouter une attraction</h2>
@@ -105,40 +105,41 @@ export function ModaleAjouterAttraction({
           )}
         </div>
 
-        <div className="px-6 py-4 border-t border-white/[0.06] flex items-center gap-4">
-          <div className="flex items-center gap-2">
+        <div className="px-4 md:px-6 py-4 border-t border-white/[0.06]">
+          <div className="flex items-center gap-2 mb-3 md:mb-0 md:inline-flex">
             <span className="text-[12px] text-dim">Quantité</span>
             <button
               onClick={() => setQuantite((q) => Math.max(1, q - 1))}
-              className="w-8 h-8 rounded-lg bg-bg-deep border border-white/[0.08] text-dim text-sm"
+              className="min-w-[44px] min-h-[44px] md:w-8 md:h-8 md:min-w-0 md:min-h-0 rounded-lg bg-bg-deep border border-white/[0.08] text-dim text-sm flex items-center justify-center"
             >
               -
             </button>
             <span className="w-8 text-center text-sm font-mono font-semibold">{quantite}</span>
             <button
               onClick={() => setQuantite((q) => q + 1)}
-              className="w-8 h-8 rounded-lg bg-bg-deep border border-white/[0.08] text-dim text-sm"
+              className="min-w-[44px] min-h-[44px] md:w-8 md:h-8 md:min-w-0 md:min-h-0 rounded-lg bg-bg-deep border border-white/[0.08] text-dim text-sm flex items-center justify-center"
             >
               +
             </button>
           </div>
-          <div className="flex-1" />
-          <button
-            onClick={onClose}
-            className="px-4 py-2.5 rounded-xl text-[13px] text-dim bg-bg-deep border border-white/[0.08]"
-          >
-            Annuler
-          </button>
-          <button
-            onClick={handleAjouter}
-            disabled={!selectedId || ajouter.isPending}
-            className={cn(
-              'px-5 py-2.5 rounded-xl text-[13px] font-semibold transition-opacity',
-              selectedId ? 'bg-gradient-cta text-text' : 'bg-bg-deep text-faint cursor-not-allowed'
-            )}
-          >
-            {ajouter.isPending ? 'Ajout...' : 'Ajouter'}
-          </button>
+          <div className="flex gap-2.5">
+            <button
+              onClick={onClose}
+              className="flex-1 md:flex-none px-4 py-2.5 rounded-xl text-[13px] text-dim bg-bg-deep border border-white/[0.08] min-h-[44px]"
+            >
+              Annuler
+            </button>
+            <button
+              onClick={handleAjouter}
+              disabled={!selectedId || ajouter.isPending}
+              className={cn(
+                'flex-1 md:flex-none px-5 py-2.5 rounded-xl text-[13px] font-semibold transition-opacity min-h-[44px]',
+                selectedId ? 'bg-gradient-cta text-text' : 'bg-bg-deep text-faint cursor-not-allowed'
+              )}
+            >
+              {ajouter.isPending ? 'Ajout...' : 'Ajouter'}
+            </button>
+          </div>
         </div>
       </div>
     </div>

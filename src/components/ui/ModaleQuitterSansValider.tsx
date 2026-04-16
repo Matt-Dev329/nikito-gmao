@@ -12,7 +12,7 @@ export function ModaleQuitterSansValider({ open, onConfirmer, onAnnuler }: Modal
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/60" onClick={onAnnuler} />
-      <div className="relative bg-bg-card rounded-2xl p-6 max-w-[340px] w-full border border-white/[0.08] shadow-2xl">
+      <div className="relative bg-bg-card rounded-2xl p-5 md:p-6 max-w-[340px] w-full border border-white/[0.08] shadow-2xl mx-4">
         <div className="text-center mb-5">
           <div className="w-12 h-12 rounded-full bg-amber/15 flex items-center justify-center mx-auto mb-3">
             <span className="text-amber text-xl">!</span>
@@ -26,7 +26,7 @@ export function ModaleQuitterSansValider({ open, onConfirmer, onAnnuler }: Modal
           <button
             onClick={onAnnuler}
             className={cn(
-              'flex-1 py-3 rounded-xl text-[13px] font-semibold',
+              'flex-1 py-3 rounded-xl text-[13px] font-semibold min-h-[44px]',
               'bg-bg-deep border border-white/[0.08] text-dim hover:text-text transition-colors'
             )}
           >
@@ -35,7 +35,7 @@ export function ModaleQuitterSansValider({ open, onConfirmer, onAnnuler }: Modal
           <button
             onClick={onConfirmer}
             className={cn(
-              'flex-1 py-3 rounded-xl text-[13px] font-semibold',
+              'flex-1 py-3 rounded-xl text-[13px] font-semibold min-h-[44px]',
               'bg-gradient-danger text-text'
             )}
           >

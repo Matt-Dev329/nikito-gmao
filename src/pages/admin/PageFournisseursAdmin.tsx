@@ -23,23 +23,23 @@ export function PageFournisseursAdmin() {
   const [editeurOuvert, setEditeurOuvert] = useState(false);
 
   return (
-    <div className="p-6 px-7">
-      <div className="flex justify-between items-start mb-5">
+    <div className="p-4 md:p-6 md:px-7">
+      <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-start mb-5">
         <div>
-          <h1 className="text-[22px] font-semibold m-0">Fournisseurs</h1>
+          <h1 className="text-xl md:text-[22px] font-semibold m-0">Fournisseurs</h1>
           <div className="text-[13px] text-dim mt-1">
             {fournisseurs?.length ?? 0} fournisseurs · contrats et SLA
           </div>
         </div>
         <button
           onClick={() => setEditeurOuvert(true)}
-          className="bg-gradient-cta text-text px-5 py-2.5 rounded-[10px] text-[13px] font-bold flex items-center gap-2"
+          className="bg-gradient-cta text-text px-5 py-2.5 rounded-[10px] text-[13px] font-bold flex items-center gap-2 min-h-[44px] w-full sm:w-auto justify-center sm:justify-start"
         >
           <span className="text-base">+</span> Nouveau fournisseur
         </button>
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         {fournisseurs?.map((f) => (
           <div key={f.id} className="bg-bg-card rounded-2xl p-4 px-5">
             <div className="flex justify-between items-start mb-2">
@@ -118,8 +118,8 @@ export function ModaleNouveauFournisseur({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
-      <div className="w-full max-w-[560px] bg-bg-card rounded-[18px] border border-nikito-violet/20 p-6 px-[26px]">
+    <div className="fixed inset-0 z-50 bg-black/60 flex items-end md:items-center justify-center md:p-4">
+      <div className="w-full md:max-w-[560px] bg-bg-card rounded-t-[18px] md:rounded-[18px] border border-nikito-violet/20 p-5 md:p-6 md:px-[26px] max-h-[90vh] overflow-y-auto">
         <div className="flex justify-between items-start mb-5">
           <div>
             <div className="text-[11px] text-dim tracking-[1.2px] uppercase">
@@ -135,7 +135,7 @@ export function ModaleNouveauFournisseur({
           </button>
         </div>
 
-        <div className="grid grid-cols-2 gap-3.5 mb-3.5">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 mb-3.5">
           <Field label="Nom" wide>
             <input
               type="text"
@@ -211,10 +211,10 @@ export function ModaleNouveauFournisseur({
           />
         </Field>
 
-        <div className="flex gap-2.5 justify-end mt-5">
+        <div className="flex flex-col-reverse sm:flex-row gap-2.5 sm:justify-end mt-5">
           <button
             onClick={onClose}
-            className="bg-transparent border border-white/15 text-dim px-4 py-2.5 rounded-[10px] text-xs"
+            className="bg-transparent border border-white/15 text-dim px-4 py-2.5 rounded-[10px] text-xs min-h-[44px]"
           >
             Annuler
           </button>
@@ -222,7 +222,7 @@ export function ModaleNouveauFournisseur({
             onClick={enregistrer}
             disabled={!nom || submitting}
             className={cn(
-              'bg-gradient-cta text-text px-6 py-2.5 rounded-[10px] text-[13px] font-bold',
+              'bg-gradient-cta text-text px-6 py-2.5 rounded-[10px] text-[13px] font-bold min-h-[44px]',
               (!nom || submitting) && 'opacity-40 cursor-not-allowed'
             )}
           >
@@ -244,7 +244,7 @@ function Field({
   wide?: boolean;
 }) {
   return (
-    <div className={wide ? 'col-span-2' : ''}>
+    <div className={wide ? 'md:col-span-2' : ''}>
       <label className="block text-[11px] text-dim uppercase tracking-wider mb-2">{label}</label>
       {children}
     </div>

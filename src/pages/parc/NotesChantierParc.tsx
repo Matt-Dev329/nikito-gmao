@@ -64,29 +64,28 @@ export function NotesChantierParc() {
   });
 
   return (
-    <div className="p-6 px-7">
-      <div className="flex justify-between items-start mb-5">
+    <div className="p-4 md:p-6 md:px-7">
+      <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-start mb-5">
         <div>
           <div className="text-[11px] text-dim mb-1">{parc?.code} · {parc?.nom}</div>
-          <h1 className="text-[22px] font-semibold m-0">Notes de chantier</h1>
+          <h1 className="text-xl md:text-[22px] font-semibold m-0">Notes de chantier</h1>
           <div className="text-[13px] text-dim mt-1">
             Décisions, comptes-rendus, audits · historique permanent
           </div>
         </div>
         <button
           onClick={() => setEditeurOuvert(true)}
-          className="bg-gradient-cta text-text px-5 py-2.5 rounded-[10px] text-[13px] font-bold flex items-center gap-2"
+          className="bg-gradient-cta text-text px-5 py-2.5 rounded-[10px] text-[13px] font-bold flex items-center gap-2 min-h-[44px] w-full sm:w-auto justify-center sm:justify-start"
         >
           <span className="text-base">+</span> Nouvelle note
         </button>
       </div>
 
-      {/* Filtres catégorie */}
       <div className="flex gap-1.5 mb-5 flex-wrap">
         <button
           onClick={() => setFiltreCategorie(null)}
           className={cn(
-            'px-3 py-1.5 rounded-lg text-[11px] font-semibold border',
+            'px-3 py-1.5 rounded-lg text-[11px] font-semibold border min-h-[44px] md:min-h-0',
             filtreCategorie === null
               ? 'bg-text text-bg-app border-text'
               : 'bg-bg-card text-dim border-white/[0.08]'
@@ -99,7 +98,7 @@ export function NotesChantierParc() {
             key={cat}
             onClick={() => setFiltreCategorie(cat)}
             className={cn(
-              'px-3 py-1.5 rounded-lg text-[11px] font-semibold border',
+              'px-3 py-1.5 rounded-lg text-[11px] font-semibold border min-h-[44px] md:min-h-0',
               filtreCategorie === cat ? categorieColors[cat] : 'bg-bg-card text-dim border-white/[0.08]'
             )}
           >
@@ -125,10 +124,10 @@ export function NotesChantierParc() {
           const note = n as any;
           const cat = note.categorie as Categorie;
           return (
-            <div key={note.id} className="bg-bg-card rounded-2xl p-5 px-6">
+            <div key={note.id} className="bg-bg-card rounded-2xl p-4 md:p-5 md:px-6">
               <div className="flex justify-between items-start mb-3">
-                <div>
-                  <div className="flex items-center gap-2 mb-1">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2 mb-1 flex-wrap">
                     <span
                       className={cn(
                         'px-2 py-0.5 rounded-md text-[10px] font-semibold border',
@@ -148,7 +147,7 @@ export function NotesChantierParc() {
                   </div>
                   <div className="text-base font-semibold">{note.titre}</div>
                 </div>
-                <button className="text-dim hover:text-nikito-cyan text-base">✎</button>
+                <button className="text-dim hover:text-nikito-cyan text-base min-w-[44px] min-h-[44px] flex items-center justify-center flex-shrink-0">✎</button>
               </div>
 
               {note.participants?.length > 0 && (
@@ -243,8 +242,8 @@ function EditeurNoteChantier({ parcId, onClose }: { parcId: string; onClose: () 
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
-      <div className="w-full max-w-[720px] bg-bg-card rounded-[18px] border border-nikito-violet/20 p-6 px-[26px] max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 z-50 bg-black/60 flex items-end md:items-center justify-center md:p-4">
+      <div className="w-full md:max-w-[720px] bg-bg-card rounded-t-[18px] md:rounded-[18px] border border-nikito-violet/20 p-5 md:p-6 md:px-[26px] max-h-[90vh] overflow-y-auto">
         <div className="flex justify-between items-start mb-5">
           <div>
             <div className="text-[11px] text-dim tracking-[1.2px] uppercase">Nouvelle note</div>
@@ -258,7 +257,7 @@ function EditeurNoteChantier({ parcId, onClose }: { parcId: string; onClose: () 
           </button>
         </div>
 
-        <div className="grid grid-cols-[1fr_180px] gap-3.5 mb-3.5">
+        <div className="grid grid-cols-1 md:grid-cols-[1fr_180px] gap-3.5 mb-3.5">
           <div>
             <label className="block text-[11px] text-dim uppercase tracking-wider mb-2">
               Titre de la réunion
@@ -286,7 +285,7 @@ function EditeurNoteChantier({ parcId, onClose }: { parcId: string; onClose: () 
           <label className="block text-[11px] text-dim uppercase tracking-wider mb-2">
             Catégorie
           </label>
-          <div className="grid grid-cols-3 gap-1.5">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-1.5">
             {(Object.keys(categorieLabels) as Categorie[]).map((cat) => (
               <button
                 key={cat}
@@ -343,10 +342,10 @@ function EditeurNoteChantier({ parcId, onClose }: { parcId: string; onClose: () 
 
         {/* TODO Bolt · ajout pièces jointes (PDF, photos) via Supabase Storage */}
 
-        <div className="flex gap-2.5 justify-end">
+        <div className="flex flex-col-reverse sm:flex-row gap-2.5 sm:justify-end">
           <button
             onClick={onClose}
-            className="bg-transparent border border-white/15 text-dim px-4 py-2.5 rounded-[10px] text-xs"
+            className="bg-transparent border border-white/15 text-dim px-4 py-2.5 rounded-[10px] text-xs min-h-[44px]"
           >
             Annuler
           </button>
@@ -354,7 +353,7 @@ function EditeurNoteChantier({ parcId, onClose }: { parcId: string; onClose: () 
             onClick={enregistrer}
             disabled={!titre || !contenu || submitting}
             className={cn(
-              'bg-gradient-cta text-text px-6 py-2.5 rounded-[10px] text-[13px] font-bold',
+              'bg-gradient-cta text-text px-6 py-2.5 rounded-[10px] text-[13px] font-bold min-h-[44px]',
               (!titre || !contenu || submitting) && 'opacity-40 cursor-not-allowed'
             )}
           >

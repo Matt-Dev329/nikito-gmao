@@ -58,27 +58,33 @@ export function PersonnaliserPointsParc() {
 
   return (
     <div>
-      <header className="bg-bg-card border-b border-white/[0.06] px-7 pt-5 pb-5">
-        <div className="flex items-center gap-2 text-[11px] text-dim mb-1">
+      <header className="bg-bg-card border-b border-white/[0.06] px-4 md:px-7 pt-4 md:pt-5 pb-4 md:pb-5">
+        <button
+          onClick={() => navigate(`/gmao/parcs/${parcId}/attractions`)}
+          className="md:hidden flex items-center gap-1.5 text-[13px] text-dim min-h-[44px] mb-1"
+        >
+          <span>&#8592;</span> Attractions
+        </button>
+        <div className="hidden md:flex items-center gap-2 text-[11px] text-dim mb-1">
           <button onClick={() => navigate('/gmao/parcs')} className="hover:text-nikito-cyan">
             Parcs
           </button>
-          <span>›</span>
+          <span>&#8250;</span>
           <button onClick={() => navigate(`/gmao/parcs/${parcId}`)} className="hover:text-nikito-cyan">
             {parc?.code ?? '...'}
           </button>
-          <span>›</span>
+          <span>&#8250;</span>
           <button onClick={() => navigate(`/gmao/parcs/${parcId}/attractions`)} className="hover:text-nikito-cyan">
             Attractions
           </button>
-          <span>›</span>
+          <span>&#8250;</span>
           <span className="text-nikito-cyan">{categorieNom}</span>
         </div>
-        <h1 className="text-[22px] font-semibold m-0 mb-2">
+        <h1 className="text-xl md:text-[22px] font-semibold m-0 mb-2">
           Points de contrôle · {categorieNom}
         </h1>
 
-        <div className="flex items-center gap-6 text-[12px]">
+        <div className="flex items-center gap-4 md:gap-6 text-[12px]">
           <span className="text-dim">
             <span className="text-text font-semibold">{stats.actifs}</span>/{stats.total} actifs
           </span>
@@ -87,7 +93,7 @@ export function PersonnaliserPointsParc() {
           </span>
         </div>
 
-        <div className="flex gap-1.5 mt-4">
+        <div className="flex gap-1.5 mt-4 overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0">
           {(Object.keys(filtreLabels) as FiltreType[]).map((f) => {
             const count =
               f === 'tous'
@@ -98,7 +104,7 @@ export function PersonnaliserPointsParc() {
                 key={f}
                 onClick={() => setFiltre(f)}
                 className={cn(
-                  'px-3.5 py-1.5 rounded-full text-[12px] transition-colors',
+                  'px-3.5 py-1.5 rounded-full text-[12px] transition-colors whitespace-nowrap min-h-[44px] md:min-h-0',
                   filtre === f
                     ? 'bg-nikito-cyan text-text font-semibold'
                     : 'bg-bg-deep text-dim border border-white/[0.06]'
@@ -111,7 +117,7 @@ export function PersonnaliserPointsParc() {
         </div>
       </header>
 
-      <div className="p-7">
+      <div className="p-4 md:p-7">
         {isLoading ? (
           <div className="flex flex-col gap-3">
             {[1, 2, 3, 4].map((i) => (
@@ -144,7 +150,7 @@ export function PersonnaliserPointsParc() {
                   <div
                     key={p.point_id}
                     className={cn(
-                      'bg-bg-card rounded-xl p-3.5 px-5 border flex items-center gap-4 transition-opacity',
+                      'bg-bg-card rounded-xl p-3 px-4 md:p-3.5 md:px-5 border flex items-center gap-3 md:gap-4 transition-opacity',
                       p.actif_pour_parc
                         ? 'border-white/[0.06]'
                         : 'border-white/[0.04] opacity-50'
@@ -154,7 +160,7 @@ export function PersonnaliserPointsParc() {
                       onClick={() => handleToggle(p.point_id, p.actif_pour_parc)}
                       disabled={toggle.isPending}
                       className={cn(
-                        'w-10 h-6 rounded-full relative transition-colors flex-shrink-0',
+                        'w-11 h-7 md:w-10 md:h-6 rounded-full relative transition-colors flex-shrink-0',
                         p.actif_pour_parc ? 'bg-green' : 'bg-faint/40'
                       )}
                     >

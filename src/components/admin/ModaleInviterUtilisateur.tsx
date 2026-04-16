@@ -110,8 +110,8 @@ export function ModaleInviterUtilisateur({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
-      <div className="w-full max-w-[680px] bg-bg-card rounded-[18px] border border-nikito-violet/20 p-6 px-[26px] max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 z-50 bg-black/60 flex items-end md:items-center justify-center md:p-4">
+      <div className="w-full md:max-w-[680px] bg-bg-card rounded-t-[18px] md:rounded-[18px] border border-nikito-violet/20 p-5 md:p-6 md:px-[26px] max-h-[90vh] overflow-y-auto">
         <div className="flex justify-between items-start mb-[22px]">
           <div>
             <div className="text-[11px] text-dim tracking-[1.2px] uppercase">Nouveau compte</div>
@@ -165,7 +165,7 @@ export function ModaleInviterUtilisateur({
             )}
 
             {/* Identité */}
-            <div className="grid grid-cols-2 gap-3.5 mb-3.5">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 mb-3.5">
               <Field label="Prénom">
                 <input
                   type="text"
@@ -219,7 +219,7 @@ export function ModaleInviterUtilisateur({
               <div
                 className={cn(
                   'grid gap-1.5',
-                  rolesDisponibles.length === 1 ? 'grid-cols-1' : 'grid-cols-4'
+                  rolesDisponibles.length === 1 ? 'grid-cols-1' : 'grid-cols-2 md:grid-cols-4'
                 )}
               >
                 {rolesDisponibles.map((r) => (
@@ -255,7 +255,7 @@ export function ModaleInviterUtilisateur({
               <label className="block text-[11px] text-dim uppercase tracking-wider mb-2">
                 Parcs assignés
               </label>
-              <div className="grid grid-cols-4 gap-1.5">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-1.5">
                 {parcsDisponibles.map((p) => {
                   const checked = parcsChoisis.includes(p.id);
                   return (
@@ -312,10 +312,10 @@ export function ModaleInviterUtilisateur({
               </div>
             </div>
 
-            <div className="flex gap-2.5 justify-end">
+            <div className="flex flex-col-reverse sm:flex-row gap-2.5 sm:justify-end">
               <button
                 onClick={onClose}
-                className="bg-transparent border border-white/15 text-dim px-4 py-2.5 rounded-[10px] text-xs"
+                className="bg-transparent border border-white/15 text-dim px-4 py-2.5 rounded-[10px] text-xs min-h-[44px]"
               >
                 Annuler
               </button>
@@ -323,7 +323,7 @@ export function ModaleInviterUtilisateur({
                 onClick={envoyer}
                 disabled={!peutEnvoyer || submitting}
                 className={cn(
-                  'bg-gradient-cta text-text px-6 py-2.5 rounded-[10px] text-[13px] font-bold',
+                  'bg-gradient-cta text-text px-6 py-2.5 rounded-[10px] text-[13px] font-bold min-h-[44px]',
                   (!peutEnvoyer || submitting) && 'opacity-40 cursor-not-allowed'
                 )}
               >

@@ -81,13 +81,13 @@ export function ControleEcran({
 
   return (
     <div className="bg-bg-app text-text">
-      <header className="px-[18px] py-3.5 bg-bg-sidebar flex items-center gap-3.5 border-b border-white/[0.06]">
+      <header className="px-3 md:px-[18px] py-3 md:py-3.5 bg-bg-sidebar flex items-center gap-2.5 md:gap-3.5 border-b border-white/[0.06]">
         {onRetour && (
           <button
             onClick={onRetour}
-            className="bg-bg-card border border-white/[0.08] w-[34px] h-[34px] rounded-[10px] text-base flex-shrink-0"
+            className="bg-bg-card border border-white/[0.08] min-w-[44px] min-h-[44px] md:w-[34px] md:h-[34px] md:min-w-0 md:min-h-0 rounded-[10px] text-base flex-shrink-0 flex items-center justify-center"
           >
-            ‹
+            &#8249;
           </button>
         )}
         <div className="w-9 h-9 rounded-[10px] bg-gradient-logo flex items-center justify-center font-bold text-bg-app flex-shrink-0">
@@ -119,7 +119,7 @@ export function ControleEcran({
       <ZonesTabs zones={zones} active={zoneActiveCode} onChange={onChangeZone} />
 
       {/* Liste points zone active */}
-      <main className="p-3.5 px-[18px] flex flex-col gap-2.5">
+      <main className="p-3 px-3 md:p-3.5 md:px-[18px] flex flex-col gap-2.5">
         <ZoneCard zoneActive={zones.find((z) => z.code === zoneActiveCode)} points={pointsZoneActive} onSetEtat={onSetEtat} />
 
         {type === 'quotidien' && (
@@ -132,7 +132,7 @@ export function ControleEcran({
           onClick={onValider}
           disabled={validationDisabled}
           className={cn(
-            'bg-gradient-cta text-text py-4 rounded-2xl text-[15px] font-bold mt-1',
+            'bg-gradient-cta text-text py-4 rounded-2xl text-[15px] font-bold mt-1 min-h-[56px]',
             validationDisabled && 'opacity-50 cursor-not-allowed'
           )}
         >
@@ -186,7 +186,7 @@ function ProgressBar({
   pctAvancement: number;
 }) {
   return (
-    <div className="bg-bg-deep px-[18px] py-3.5 border-b border-white/[0.04]">
+    <div className="bg-bg-deep px-3 md:px-[18px] py-3 md:py-3.5 border-b border-white/[0.04]">
       <div className="flex justify-between mb-2">
         <div className="text-xs text-dim">Avancement contrôle</div>
         <div className="text-[13px] font-semibold">
@@ -218,7 +218,7 @@ function ZonesTabs({
   onChange: (code: string) => void;
 }) {
   return (
-    <div className="bg-bg-deep px-[18px] pb-3.5 flex gap-1.5 overflow-x-auto border-b border-white/[0.04]">
+    <div className="bg-bg-deep px-3 md:px-[18px] pb-3.5 flex gap-1.5 overflow-x-auto border-b border-white/[0.04]">
       {zones.map((z) => {
         const fait = z.fait === z.count;
         const enCours = active === z.code;
@@ -229,7 +229,7 @@ function ZonesTabs({
             key={z.code}
             onClick={() => onChange(z.code)}
             className={cn(
-              'px-3.5 py-2 rounded-[14px] text-[11px] font-semibold whitespace-nowrap',
+              'px-3.5 py-2.5 md:py-2 rounded-[14px] text-[12px] md:text-[11px] font-semibold whitespace-nowrap min-h-[44px]',
               fait && !enCours && 'bg-green text-bg-app',
               enCours && 'bg-gradient-cta text-text',
               pasCommence && 'bg-bg-card border border-white/[0.08] text-dim'
@@ -359,19 +359,19 @@ function PointRow({
         <div className="flex gap-1.5">
           <button
             onClick={() => onSetEtat('ok')}
-            className="bg-green text-bg-app px-4 py-2 rounded-lg text-[13px] font-bold"
+            className="bg-green text-bg-app px-4 py-2 rounded-lg text-[13px] font-bold min-h-[44px] min-w-[48px]"
           >
             OK
           </button>
           <button
             onClick={() => onSetEtat('degrade')}
-            className="bg-transparent border border-amber text-amber px-3 py-2 rounded-lg text-xs font-semibold"
+            className="bg-transparent border border-amber text-amber px-3 py-2 rounded-lg text-xs font-semibold min-h-[44px] min-w-[48px]"
           >
-            DÉG
+            DEG
           </button>
           <button
             onClick={() => onSetEtat('hs')}
-            className="bg-transparent border border-red text-red px-3 py-2 rounded-lg text-xs font-semibold"
+            className="bg-transparent border border-red text-red px-3 py-2 rounded-lg text-xs font-semibold min-h-[44px] min-w-[48px]"
           >
             HS
           </button>
