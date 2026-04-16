@@ -80,7 +80,7 @@ export function CreationParcWizard() {
           </div>
         </div>
         <button
-          onClick={() => navigate('/admin/parcs')}
+          onClick={() => navigate('/gmao/parcs')}
           className="bg-transparent border border-white/15 text-dim px-3.5 py-2 rounded-lg text-xs"
         >
           Quitter
@@ -116,7 +116,7 @@ export function CreationParcWizard() {
           <button
             onClick={() => {
               if (etapeIndex < etapes.length - 1) setEtapeActive(etapes[etapeIndex + 1].code);
-              else navigate('/admin/parcs');
+              else navigate('/gmao/parcs');
             }}
             className="bg-gradient-cta text-text px-6 py-2.5 rounded-[10px] text-[13px] font-bold"
           >

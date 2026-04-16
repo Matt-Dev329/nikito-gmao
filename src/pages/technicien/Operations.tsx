@@ -206,7 +206,7 @@ export function Operations() {
               <TicketCard
                 ticket={premier}
                 variant="expanded"
-                onDemarrer={() => navigate(`/operations/${premier.numeroBT}`)}
+                onDemarrer={() => navigate(`/tech/operations/${premier.numeroBT}`)}
                 onReassigner={() => {}}
               />
             )}
@@ -215,7 +215,7 @@ export function Operations() {
                 key={t.numeroBT}
                 ticket={t}
                 variant="compact"
-                onClick={() => navigate(`/operations/${t.numeroBT}`)}
+                onClick={() => navigate(`/tech/operations/${t.numeroBT}`)}
               />
             ))}
           </>

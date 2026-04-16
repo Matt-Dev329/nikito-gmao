@@ -111,9 +111,9 @@ export function AcceptationInvitation() {
 
       // Redirection selon le mode
       if (invitation.auth_mode === 'pin_seul') {
-        navigate('/staff');
+        navigate('/staff/login');
       } else {
-        navigate('/login');
+        navigate('/');
       }
     } catch (e) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any

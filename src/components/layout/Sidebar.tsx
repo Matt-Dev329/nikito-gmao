@@ -8,6 +8,7 @@ interface NavItem {
   label: string;
   badge?: { count: number; tone: 'red' | 'amber' };
   roles: RoleUtilisateur[];
+  end?: boolean;
 }
 
 // Navigation conditionnelle selon le rôle de l'utilisateur connecté
@@ -15,41 +16,40 @@ const sections: { titre: string; items: NavItem[] }[] = [
   {
     titre: 'Pilotage',
     items: [
-      { to: '/tableau-de-bord', label: 'Tableau de bord', roles: ['direction', 'chef_maintenance'] },
-      { to: '/mon-parc', label: 'Mon parc', roles: ['manager_parc'] },
-      { to: '/operations', label: 'Opérations', roles: ['direction', 'chef_maintenance', 'technicien'] },
-      { to: '/controle-hebdo', label: 'Contrôles', roles: ['chef_maintenance', 'technicien'] },
-      { to: '/equipements', label: 'Équipements', roles: ['direction', 'chef_maintenance', 'technicien', 'manager_parc'] },
+      { to: '/gmao', label: 'Tableau de bord', roles: ['direction', 'chef_maintenance'], end: true },
+      { to: '/gmao/mon-parc', label: 'Mon parc', roles: ['manager_parc'] },
+      { to: '/gmao/operations', label: 'Opérations', roles: ['direction', 'chef_maintenance', 'technicien'] },
+      { to: '/gmao/equipements', label: 'Équipements', roles: ['direction', 'chef_maintenance', 'technicien', 'manager_parc'] },
       {
-        to: '/recurrences',
+        to: '/gmao/recurrences',
         label: 'Récurrences',
         badge: { count: 4, tone: 'red' },
         roles: ['direction', 'chef_maintenance'],
       },
       {
-        to: '/cinq-pourquoi',
+        to: '/gmao/cinq-pourquoi',
         label: '5 Pourquoi',
         badge: { count: 2, tone: 'amber' },
         roles: ['direction', 'chef_maintenance'],
       },
-      { to: '/stock', label: 'Stock', roles: ['direction', 'chef_maintenance', 'technicien'] },
-      { to: '/preventif', label: 'Préventif', roles: ['chef_maintenance', 'technicien'] },
-      { to: '/certifications', label: 'Certifications', roles: ['direction', 'chef_maintenance'] },
-      { to: '/plaintes', label: 'Plaintes clients', roles: ['direction', 'chef_maintenance', 'manager_parc'] },
+      { to: '/gmao/stock', label: 'Stock', roles: ['direction', 'chef_maintenance', 'technicien'] },
+      { to: '/gmao/preventif', label: 'Préventif', roles: ['chef_maintenance', 'technicien'] },
+      { to: '/gmao/certifications', label: 'Certifications', roles: ['direction', 'chef_maintenance'] },
+      { to: '/gmao/plaintes', label: 'Plaintes clients', roles: ['direction', 'chef_maintenance', 'manager_parc'] },
     ],
   },
   {
     titre: 'Configuration',
     items: [
-      { to: '/admin/parcs', label: 'Parcs', roles: ['direction'] },
+      { to: '/gmao/parcs', label: 'Parcs', roles: ['direction'] },
       {
-        to: '/admin/utilisateurs',
+        to: '/gmao/utilisateurs',
         label: 'Utilisateurs',
         badge: { count: 3, tone: 'amber' },
         roles: ['direction', 'chef_maintenance', 'manager_parc'],
       },
-      { to: '/admin/bibliotheque', label: 'Bibliothèque points', roles: ['direction', 'chef_maintenance'] },
-      { to: '/admin/fournisseurs', label: 'Fournisseurs', roles: ['direction', 'chef_maintenance'] },
+      { to: '/gmao/bibliotheque', label: 'Bibliothèque points', roles: ['direction', 'chef_maintenance'] },
+      { to: '/gmao/fournisseurs', label: 'Fournisseurs', roles: ['direction', 'chef_maintenance'] },
     ],
   },
 ];
@@ -79,6 +79,7 @@ export function Sidebar({ user, roleAffiche, roleCode }: SidebarProps) {
               <NavLink
                 key={item.to}
                 to={item.to}
+                end={item.end}
                 className={({ isActive }) =>
                   cn(
                     'flex items-center gap-2.5 px-3 py-2.5 rounded-[10px] text-[13px] transition-colors',

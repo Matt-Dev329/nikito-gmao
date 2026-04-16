@@ -38,11 +38,11 @@ export function AttractionsParc() {
     <div>
       <header className="bg-bg-card border-b border-white/[0.06] px-7 pt-5 pb-5">
         <div className="flex items-center gap-2 text-[11px] text-dim mb-1">
-          <button onClick={() => navigate('/admin/parcs')} className="hover:text-nikito-cyan">
+          <button onClick={() => navigate('/gmao/parcs')} className="hover:text-nikito-cyan">
             Parcs
           </button>
           <span>›</span>
-          <button onClick={() => navigate(`/admin/parcs/${parcId}`)} className="hover:text-nikito-cyan">
+          <button onClick={() => navigate(`/gmao/parcs/${parcId}`)} className="hover:text-nikito-cyan">
             {parc?.code ?? '...'}
           </button>
           <span>›</span>
@@ -114,7 +114,7 @@ export function AttractionsParc() {
                     <div className="flex items-center gap-4 text-[12px] text-dim">
                       <span>{pts.actifs}/{pts.total} points actifs</span>
                       <Link
-                        to={`/admin/parcs/${parcId}/points/${a.categorie_id}`}
+                        to={`/gmao/parcs/${parcId}/points/${a.categorie_id}`}
                         className="text-nikito-cyan hover:underline"
                       >
                         Personnaliser les points

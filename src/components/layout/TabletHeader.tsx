@@ -42,7 +42,7 @@ export function TabletHeader({
           ‹
         </button>
       ) : (
-        <button onClick={() => navigate('/operations')} className="appearance-none border-none bg-transparent cursor-pointer p-0">
+        <button onClick={() => navigate('/tech/operations')} className="appearance-none border-none bg-transparent cursor-pointer p-0">
           <Logo withText={false} />
         </button>
       )}

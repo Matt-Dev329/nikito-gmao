@@ -18,7 +18,7 @@ export function FicheParc() {
     <div>
       <header className="bg-bg-card border-b border-white/[0.06] px-7 pt-5 pb-0">
         <div className="flex items-center gap-2 text-[11px] text-dim mb-1">
-          <button onClick={() => navigate('/admin/parcs')} className="hover:text-nikito-cyan">
+          <button onClick={() => navigate('/gmao/parcs')} className="hover:text-nikito-cyan">
             Parcs
           </button>
           <span>›</span>
@@ -160,7 +160,7 @@ function OngletControles({ parcId }: { parcId: string | undefined }) {
           Attractions configurées ({attractions?.length ?? 0})
         </h3>
         <Link
-          to={`/admin/parcs/${parcId}/attractions`}
+          to={`/gmao/parcs/${parcId}/attractions`}
           className="text-nikito-cyan text-[12px] hover:underline"
         >
           Gérer les attractions
@@ -171,7 +171,7 @@ function OngletControles({ parcId }: { parcId: string | undefined }) {
         <div className="bg-bg-card rounded-xl p-8 text-center border border-white/[0.06]">
           <p className="text-dim text-sm mb-3">Aucune attraction configurée</p>
           <Link
-            to={`/admin/parcs/${parcId}/attractions`}
+            to={`/gmao/parcs/${parcId}/attractions`}
             className="inline-block bg-gradient-cta text-text px-5 py-2.5 rounded-xl text-[13px] font-semibold"
           >
             Configurer
@@ -187,7 +187,7 @@ function OngletControles({ parcId }: { parcId: string | undefined }) {
             return (
               <Link
                 key={a.id}
-                to={`/admin/parcs/${parcId}/points/${a.categorie_id}`}
+                to={`/gmao/parcs/${parcId}/points/${a.categorie_id}`}
                 className="bg-bg-card rounded-xl p-3.5 px-5 border border-white/[0.06] flex items-center gap-4 hover:border-nikito-cyan/30 transition-colors"
               >
                 <div className="flex-1 min-w-0">

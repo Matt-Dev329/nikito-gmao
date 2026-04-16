@@ -9,8 +9,8 @@ interface MenuDrawerProps {
 }
 
 const menuItems = [
-  { to: '/tableau-de-bord', label: 'Tableau de bord', icon: '📊' },
-  { to: '/profil', label: 'Mon profil', icon: '👤' },
+  { to: '/gmao', label: 'Tableau de bord', icon: '📊' },
+  { to: '/gmao/profil', label: 'Mon profil', icon: '👤' },
 ];
 
 export function MenuDrawer({ open, onClose }: MenuDrawerProps) {
@@ -25,7 +25,7 @@ export function MenuDrawer({ open, onClose }: MenuDrawerProps) {
   const handleSignOut = async () => {
     onClose();
     await signOut();
-    navigate('/login');
+    navigate('/', { replace: true });
   };
 
   return (

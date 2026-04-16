@@ -68,7 +68,7 @@ export function LoginStaff() {
         connecte_le: new Date().toISOString(),
       })
     );
-    navigate('/staff/controle-ouverture');
+    navigate('/staff/controle-ouverture', { replace: true });
   };
 
   if (etape === 'parc') {

@@ -36,13 +36,13 @@ export function ControleOuverture() {
     if (dirty) {
       setShowModale(true);
     } else {
-      navigate('/staff');
+      navigate('/staff/login');
     }
   }, [dirty, navigate]);
 
   const confirmerQuitter = () => {
     setShowModale(false);
-    navigate('/staff');
+    navigate('/staff/login');
   };
 
   const totalPoints = zonesMock.reduce((sum, z) => sum + z.count, 0);

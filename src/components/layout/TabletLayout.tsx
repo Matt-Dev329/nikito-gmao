@@ -4,10 +4,10 @@ import { cn } from '@/lib/utils';
 import { MenuDrawer } from '@/components/layout/MenuDrawer';
 
 const tabs = [
-  { to: '/operations', label: 'Opérations', icon: '⚙' },
-  { to: '/controle-hebdo', label: 'Contrôles', icon: '✓' },
-  { to: '/stock', label: 'Stock', icon: '📦' },
-  { to: '/signaler', label: 'Signaler', icon: '+' },
+  { to: '/tech/operations', label: 'Opérations', icon: '⚙' },
+  { to: '/tech/controle-hebdo', label: 'Contrôles', icon: '✓' },
+  { to: '/tech/stock', label: 'Stock', icon: '📦' },
+  { to: '/tech/signaler', label: 'Signaler', icon: '+' },
 ];
 
 export function TabletLayout() {

@@ -15,7 +15,7 @@ export function ListeParcs() {
           </div>
         </div>
         <button
-          onClick={() => navigate('/admin/parcs/nouveau')}
+          onClick={() => navigate('/gmao/parcs/nouveau')}
           className="bg-gradient-cta text-text px-4 py-2.5 rounded-lg text-[13px] font-bold"
         >
           + Créer un parc

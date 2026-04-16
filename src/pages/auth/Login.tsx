@@ -26,7 +26,7 @@ export function Login() {
       setError('Email ou mot de passe incorrect');
       setLoading(false);
     } else {
-      navigate('/tableau-de-bord');
+      navigate('/gmao', { replace: true });
     }
   };
 
@@ -89,7 +89,7 @@ export function Login() {
           </button>
 
           <a
-            href="/staff"
+            href="/staff/login"
             className="text-center text-xs text-dim hover:text-nikito-cyan mt-2"
           >
             Vous êtes staff opérationnel ? Connexion par PIN ›
