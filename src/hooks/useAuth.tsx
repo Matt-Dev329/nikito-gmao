@@ -29,11 +29,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [authUser, setAuthUser] = useState<User | null>(null);
   const [utilisateur, setUtilisateur] = useState<UtilisateurMetier | null>(null);
   const [loading, setLoading] = useState(true);
+  const [sessionChecked, setSessionChecked] = useState(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
       setSession(data.session);
       setAuthUser(data.session?.user ?? null);
+      setSessionChecked(true);
     });
 
     const { data: listener } = supabase.auth.onAuthStateChange((_event, newSession) => {
@@ -49,6 +51,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
+    if (!sessionChecked) return;
+
     if (!authUser?.id) {
       setUtilisateur(null);
       setLoading(false);
@@ -66,23 +70,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
          parcs_utilisateurs(parc_id)`
       )
       .eq('auth_user_id', authUser.id)
-      .single()
+      .maybeSingle()
       .then(({ data, error }) => {
         if (cancelled) return;
         if (error || !data) {
           setUtilisateur(null);
         } else {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const d = data as any;
+          const d = data as Record<string, unknown>;
+          const roles = d.roles as { code: string };
+          const pu = d.parcs_utilisateurs as { parc_id: string }[];
           setUtilisateur({
-            id: d.id,
-            email: d.email,
-            nom: d.nom,
-            prenom: d.prenom,
-            trigramme: d.trigramme,
-            consentement_gps: d.consentement_gps,
-            role_code: d.roles.code,
-            parc_ids: d.parcs_utilisateurs.map((pu: { parc_id: string }) => pu.parc_id),
+            id: d.id as string,
+            email: d.email as string,
+            nom: d.nom as string,
+            prenom: d.prenom as string,
+            trigramme: d.trigramme as string | null,
+            consentement_gps: d.consentement_gps as boolean,
+            role_code: roles.code as UtilisateurMetier['role_code'],
+            parc_ids: pu.map((p) => p.parc_id),
           });
         }
         setLoading(false);
@@ -91,7 +96,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, [authUser?.id]);
+  }, [sessionChecked, authUser?.id]);
 
   const signIn = async (email: string, password: string) => {
     return supabase.auth.signInWithPassword({ email, password });
