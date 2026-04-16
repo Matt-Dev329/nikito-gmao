@@ -78,21 +78,21 @@ export function Recurrences() {
   const parcs = (parcsQ.data ?? []) as Record<string, unknown>[];
 
   return (
-    <div className="p-6 px-7 overflow-hidden">
-      <div className="flex justify-between items-start mb-[18px]">
+    <div className="p-4 md:p-6 md:px-7 overflow-hidden">
+      <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-start mb-[18px]">
         <div>
           <div className="text-[11px] text-dim tracking-[1.5px] uppercase mb-1">
             Boucle d'apprentissage Lean
           </div>
-          <h1 className="text-[22px] font-semibold m-0">Récurrences actives · à arbitrer</h1>
+          <h1 className="text-xl md:text-[22px] font-semibold m-0">Récurrences actives · à arbitrer</h1>
         </div>
         <div className="flex gap-2">
           <button
             onClick={() => setSeuilPannes(seuilPannes === 2 ? 3 : 2)}
             className={
               seuilPannes === 2
-                ? 'bg-gradient-cta text-text px-3.5 py-1.5 rounded-lg text-xs font-medium'
-                : 'bg-bg-card border border-white/[0.08] text-text px-3.5 py-1.5 rounded-lg text-xs'
+                ? 'bg-gradient-cta text-text px-3.5 py-1.5 rounded-lg text-xs font-medium min-h-[44px] md:min-h-0'
+                : 'bg-bg-card border border-white/[0.08] text-text px-3.5 py-1.5 rounded-lg text-xs min-h-[44px] md:min-h-0'
             }
           >
             {seuilPannes === 2 ? '>=2 pannes/30j' : '>=3 pannes/30j'}
@@ -100,7 +100,7 @@ export function Recurrences() {
         </div>
       </div>
 
-      <div className="flex gap-2 mb-5 flex-wrap">
+      <div className="flex gap-2 mb-5 overflow-x-auto pb-1 -mx-4 px-4 md:mx-0 md:px-0 md:flex-wrap">
         <Pill active={parcActif === null} onClick={() => setParcActif(null)}>
           Tous les parcs
         </Pill>
@@ -117,7 +117,7 @@ export function Recurrences() {
 
       {loading ? (
         <>
-          <div className="grid grid-cols-4 gap-3 mb-[22px]">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-[22px]">
             {Array.from({ length: 4 }).map((_, i) => (
               <SkeletonBlock key={i} className="h-20" />
             ))}
@@ -127,7 +127,7 @@ export function Recurrences() {
         </>
       ) : (
         <>
-          <div className="grid grid-cols-4 gap-3 mb-[22px]">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-[22px]">
             <KpiCard label="Équipements à surveiller" valeur={kpi.aSurveiller.toString()} couleur="red" />
             <KpiCard label="5 Pourquoi en cours" valeur={kpi.fichesOuvertes.toString()} couleur="amber" />
             <KpiCard label="Audits 90j programmés" valeur={kpi.audits.toString()} couleur="cyan" />
@@ -202,7 +202,7 @@ export function Recurrences() {
                           Date audit : {f.date_audit as string ?? 'à planifier'}
                         </div>
                       </div>
-                      <button className="bg-transparent border border-nikito-cyan text-nikito-cyan py-2 px-3.5 rounded-lg text-xs">
+                      <button className="bg-transparent border border-nikito-cyan text-nikito-cyan py-2 px-3.5 rounded-lg text-xs min-h-[44px]">
                         Préparer audit
                       </button>
                     </Card>
@@ -254,7 +254,7 @@ function RecurrenceDetaillée({
         <CritTag niveau={criticite} />
         <span className="text-[15px] font-semibold">{rec.libelle as string}</span>
         <span className="bg-bg-deep text-dim px-2 py-0.5 rounded text-[11px]">{rec.code as string}</span>
-        <span className="ml-auto text-[11px] text-dim">{rec.parc_nom as string}</span>
+        <span className="sm:ml-auto text-[11px] text-dim">{rec.parc_nom as string}</span>
       </div>
 
       <div className="grid grid-cols-3 gap-2.5 mb-3.5">
@@ -302,13 +302,13 @@ function RecurrenceDetaillée({
       </div>
 
       <div className="flex gap-2.5 flex-wrap">
-        <button className="flex-1 min-w-[200px] bg-gradient-cta text-text py-3 px-4 rounded-[10px] text-[13px] font-semibold">
+        <button className="flex-1 min-w-[160px] bg-gradient-cta text-text py-3 px-4 rounded-[10px] text-[13px] font-semibold min-h-[44px]">
           Continuer le 5 Pourquoi
         </button>
-        <button className="bg-bg-deep border border-white/10 text-text py-3 px-4 rounded-[10px] text-[13px]">
+        <button className="bg-bg-deep border border-white/10 text-text py-3 px-4 rounded-[10px] text-[13px] min-h-[44px]">
           Voir historique pannes
         </button>
-        <button className="bg-bg-deep border border-white/10 text-text py-3 px-4 rounded-[10px] text-[13px]">
+        <button className="bg-bg-deep border border-white/10 text-text py-3 px-4 rounded-[10px] text-[13px] min-h-[44px]">
           Plaintes liées
         </button>
       </div>
@@ -345,10 +345,10 @@ function RecurrenceCompacte({
         </span>
       </div>
       <div className="mt-2.5 flex gap-2">
-        <button className="bg-gradient-cta text-text py-2 px-3.5 rounded-lg text-xs font-medium">
+        <button className="bg-gradient-cta text-text py-2 px-3.5 rounded-lg text-xs font-medium min-h-[44px]">
           {a5p ? 'Voir 5 Pourquoi' : 'Ouvrir 5 Pourquoi'}
         </button>
-        <button className="bg-bg-deep border border-white/10 text-dim py-2 px-3.5 rounded-lg text-xs">
+        <button className="bg-bg-deep border border-white/10 text-dim py-2 px-3.5 rounded-lg text-xs min-h-[44px]">
           Historique
         </button>
       </div>

@@ -11,7 +11,6 @@ interface NavItem {
   end?: boolean;
 }
 
-// Navigation conditionnelle selon le rôle de l'utilisateur connecté
 const sections: { titre: string; items: NavItem[] }[] = [
   {
     titre: 'Pilotage',
@@ -58,11 +57,12 @@ interface SidebarProps {
   user: { initiales: string; nom: string; role: string; couleurAvatar?: string };
   roleAffiche: string;
   roleCode: RoleUtilisateur;
+  onNavClick?: () => void;
 }
 
-export function Sidebar({ user, roleAffiche, roleCode }: SidebarProps) {
+export function Sidebar({ user, roleAffiche, roleCode, onNavClick }: SidebarProps) {
   return (
-    <aside className="bg-bg-sidebar p-5 px-3.5 flex flex-col gap-1.5 border-r border-white/5 min-w-[240px]">
+    <div className="h-full flex flex-col p-5 px-3.5 gap-1.5 overflow-y-auto">
       <div className="px-2.5 pt-2 pb-4">
         <Logo subtitle={`GMAO · ${roleAffiche}`} />
       </div>
@@ -80,9 +80,10 @@ export function Sidebar({ user, roleAffiche, roleCode }: SidebarProps) {
                 key={item.to}
                 to={item.to}
                 end={item.end}
+                onClick={onNavClick}
                 className={({ isActive }) =>
                   cn(
-                    'flex items-center gap-2.5 px-3 py-2.5 rounded-[10px] text-[13px] transition-colors',
+                    'flex items-center gap-2.5 px-3 py-2.5 rounded-[10px] text-[13px] transition-colors min-h-[44px]',
                     isActive
                       ? 'bg-gradient-active border-l-2 border-nikito-pink text-text font-medium'
                       : 'text-dim hover:text-text hover:bg-white/[0.02]'
@@ -118,16 +119,16 @@ export function Sidebar({ user, roleAffiche, roleCode }: SidebarProps) {
 
       <div className="mt-auto pt-3.5 px-2.5 border-t border-white/[0.06] flex items-center gap-2.5">
         <div
-          className="w-[34px] h-[34px] rounded-full flex items-center justify-center font-semibold text-xs"
+          className="w-[34px] h-[34px] rounded-full flex items-center justify-center font-semibold text-xs flex-shrink-0"
           style={{ background: user.couleurAvatar ?? '#5DE5FF', color: '#0B0B2E' }}
         >
           {user.initiales}
         </div>
-        <div className="text-xs">
-          <div className="font-medium">{user.nom}</div>
-          <div className="text-dim text-[11px]">{user.role}</div>
+        <div className="text-xs min-w-0">
+          <div className="font-medium truncate">{user.nom}</div>
+          <div className="text-dim text-[11px] truncate">{user.role}</div>
         </div>
       </div>
-    </aside>
+    </div>
   );
 }

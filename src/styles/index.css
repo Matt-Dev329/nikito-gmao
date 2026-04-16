@@ -6,6 +6,8 @@
   html, body {
     @apply bg-bg-app text-text font-sans antialiased;
     -webkit-tap-highlight-color: transparent;
+    -webkit-text-size-adjust: 100%;
+    overflow-x: hidden;
   }
   body {
     margin: 0;

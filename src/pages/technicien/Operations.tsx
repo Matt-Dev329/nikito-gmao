@@ -131,7 +131,7 @@ export function Operations() {
         enService={!!utilisateur}
       />
 
-      <div className="px-[18px] pt-3 bg-bg-deep flex gap-2 overflow-x-auto">
+      <div className="px-3 md:px-[18px] pt-3 bg-bg-deep flex gap-2 overflow-x-auto">
         {[
           { code: 'a_faire' as Onglet, label: 'À faire', badge: compteurs.aFaire, badgeTone: 'white' },
           { code: 'en_cours' as Onglet, label: 'En cours', badge: compteurs.enCours, badgeTone: 'amber' },
@@ -142,7 +142,7 @@ export function Operations() {
             key={o.code}
             onClick={() => setOnglet(o.code)}
             className={cn(
-              'px-4 py-2.5 rounded-pill text-[13px] whitespace-nowrap',
+              'px-4 py-2.5 rounded-pill text-[13px] whitespace-nowrap min-h-[44px]',
               onglet === o.code
                 ? 'bg-gradient-cta text-text font-semibold'
                 : 'bg-bg-card border border-white/[0.08] text-dim'
@@ -167,14 +167,14 @@ export function Operations() {
         ))}
       </div>
 
-      <div className="px-[18px] py-3 bg-bg-deep flex gap-2 items-center flex-wrap border-b border-white/[0.04]">
+      <div className="px-3 md:px-[18px] py-3 bg-bg-deep flex gap-2 items-center flex-wrap border-b border-white/[0.04]">
         <span className="text-[11px] text-faint uppercase tracking-wider mr-1">Zone</span>
         {zones.map((z) => (
           <button
             key={z}
             onClick={() => setZoneFiltre(z)}
             className={cn(
-              'px-3 py-1.5 rounded-[14px] text-[11px]',
+              'px-3 py-1.5 rounded-[14px] text-[11px] min-h-[44px]',
               zoneFiltre === z
                 ? 'bg-nikito-cyan text-bg-app font-semibold'
                 : 'bg-transparent border border-white/10 text-dim'
@@ -185,7 +185,7 @@ export function Operations() {
         ))}
       </div>
 
-      <div className="p-3.5 px-[18px] flex flex-col gap-2.5 bg-bg-app">
+      <div className="p-3 px-3 md:p-3.5 md:px-[18px] flex flex-col gap-2.5 bg-bg-app">
         {incidentsQ.isLoading ? (
           <>
             <TicketSkeleton />

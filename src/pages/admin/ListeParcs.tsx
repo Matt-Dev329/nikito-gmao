@@ -6,17 +6,17 @@ export function ListeParcs() {
   const { data: parcs, isLoading } = useParcs();
 
   return (
-    <div className="p-6 px-7">
-      <div className="flex justify-between items-start mb-[22px]">
+    <div className="p-4 md:p-6 md:px-7">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-[22px]">
         <div>
-          <h1 className="text-[22px] font-semibold m-0">Parcs Nikito Group</h1>
+          <h1 className="text-xl md:text-[22px] font-semibold m-0">Parcs Nikito Group</h1>
           <div className="text-[13px] text-dim mt-1">
             {parcs?.length ?? 0} parc(s) actif(s) · gestion centralisée
           </div>
         </div>
         <button
           onClick={() => navigate('/gmao/parcs/nouveau')}
-          className="bg-gradient-cta text-text px-4 py-2.5 rounded-lg text-[13px] font-bold"
+          className="bg-gradient-cta text-text px-4 py-2.5 rounded-lg text-[13px] font-bold min-h-[44px] w-full sm:w-auto"
         >
           + Créer un parc
         </button>
@@ -25,20 +25,20 @@ export function ListeParcs() {
       {isLoading ? (
         <div className="text-dim">Chargement...</div>
       ) : (
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
           {parcs?.map((p) => (
             <div
               key={p.id}
               onClick={() => navigate(`/admin/parcs/${p.id}`)}
-              className="bg-bg-card rounded-2xl p-5 cursor-pointer hover:bg-bg-deep transition-colors"
+              className="bg-bg-card rounded-2xl p-4 md:p-5 cursor-pointer hover:bg-bg-deep transition-colors"
             >
               <div className="flex justify-between items-start mb-3">
-                <div>
+                <div className="min-w-0">
                   <div className="text-[11px] text-dim font-mono">{p.code}</div>
-                  <div className="text-base font-semibold">{p.nom}</div>
+                  <div className="text-base font-semibold truncate">{p.nom}</div>
                 </div>
                 {p.ouvert_7j7 && (
-                  <span className="bg-amber/20 text-amber px-2.5 py-0.5 rounded-md text-[10px] font-bold">
+                  <span className="bg-amber/20 text-amber px-2.5 py-0.5 rounded-md text-[10px] font-bold flex-shrink-0">
                     7J/7
                   </span>
                 )}

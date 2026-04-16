@@ -185,13 +185,13 @@ export function TableauDeBord() {
   const now = new Date();
 
   return (
-    <div className="p-6 px-7 overflow-hidden">
-      <div className="flex justify-between items-start mb-[18px]">
+    <div className="p-4 md:p-6 md:px-7 overflow-hidden">
+      <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-start mb-[18px]">
         <div>
           <div className="text-[11px] text-dim tracking-[1.5px] uppercase mb-1">
             {formatDateLong(now)} · {formatHeure(now)}
           </div>
-          <h1 className="text-[22px] font-semibold m-0">Pilotage temps réel</h1>
+          <h1 className="text-xl md:text-2xl lg:text-[22px] font-semibold m-0">Pilotage temps réel</h1>
         </div>
         <div className="flex gap-2">
           {(['7j', '30j', '90j'] as Periode[]).map((p) => (
@@ -200,8 +200,8 @@ export function TableauDeBord() {
               onClick={() => setPeriode(p)}
               className={
                 periode === p
-                  ? 'bg-gradient-cta text-text px-3.5 py-1.5 rounded-lg text-xs font-medium'
-                  : 'bg-bg-card border border-white/[0.08] text-text px-3.5 py-1.5 rounded-lg text-xs'
+                  ? 'bg-gradient-cta text-text px-3.5 py-1.5 rounded-lg text-xs font-medium min-h-[44px] md:min-h-0'
+                  : 'bg-bg-card border border-white/[0.08] text-text px-3.5 py-1.5 rounded-lg text-xs min-h-[44px] md:min-h-0'
               }
             >
               {p === '7j' ? '7 jours' : p === '30j' ? '30 jours' : '90 jours'}
@@ -210,7 +210,7 @@ export function TableauDeBord() {
         </div>
       </div>
 
-      <div className="flex gap-2 mb-5 flex-wrap">
+      <div className="flex gap-2 mb-5 overflow-x-auto pb-1 -mx-4 px-4 md:mx-0 md:px-0 md:flex-wrap">
         <Pill active={parcActif === null} onClick={() => setParcActif(null)}>
           Tous les parcs
         </Pill>
@@ -226,13 +226,13 @@ export function TableauDeBord() {
       </div>
 
       {kpiLoading ? (
-        <div className="grid grid-cols-5 gap-3 mb-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 mb-5">
           {Array.from({ length: 5 }).map((_, i) => (
             <KpiSkeleton key={i} />
           ))}
         </div>
       ) : (
-        <div className="grid grid-cols-5 gap-3 mb-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 mb-5">
           <KpiCard
             label={kpiLabels.performance}
             valeur={kpiAgreg.performance}
@@ -270,7 +270,7 @@ export function TableauDeBord() {
         </div>
       )}
 
-      <div className="grid grid-cols-[1.5fr_1fr] gap-3.5 mb-[18px]">
+      <div className="grid grid-cols-1 lg:grid-cols-[1.5fr_1fr] gap-3.5 mb-[18px]">
         <Card>
           <CardHead titre={`Performance par parc · ${periode === '7j' ? '7' : periode === '30j' ? '30' : '90'} derniers jours`} meta="% disponibilité bloquants" />
           <div className="h-[200px]">
@@ -332,7 +332,7 @@ export function TableauDeBord() {
                 <div className="flex flex-col gap-1.5 text-[11px] pr-1">
                   {critData.map((d) => (
                     <div key={d.name} className="flex items-center gap-2">
-                      <span className="w-2.5 h-2.5 rounded-sm" style={{ background: d.color }} />
+                      <span className="w-2.5 h-2.5 rounded-sm flex-shrink-0" style={{ background: d.color }} />
                       <span className="text-dim">{d.name}</span>
                       <span className="font-medium ml-auto">{d.value}</span>
                     </div>
@@ -372,29 +372,67 @@ export function TableauDeBord() {
               return (
                 <div
                   key={a.numero_bt as string}
-                  className={
-                    criticite === 'bloquant'
-                      ? 'grid grid-cols-[90px_1fr_120px_140px_100px] gap-3 items-center px-3.5 py-3 bg-bg-deep rounded-lg border-l-[3px] border-l-red'
-                      : 'grid grid-cols-[90px_1fr_120px_140px_100px] gap-3 items-center px-3.5 py-3 bg-bg-deep rounded-lg border-l-[3px] border-l-amber'
-                  }
+                  className={`md:hidden flex flex-col gap-2 px-3.5 py-3 bg-bg-deep rounded-lg border-l-[3px] ${
+                    criticite === 'bloquant' ? 'border-l-red' : 'border-l-amber'
+                  }`}
                 >
-                  <CritTag niveau={criticite} />
-                  <div>
-                    <div className="text-[13px] font-medium">
-                      {equip?.libelle as string ?? equip?.code as string ?? 'N/A'}
-                    </div>
-                    <div className="text-[11px] text-dim">
-                      {parc?.code as string ?? ''} · {parc?.nom as string ?? ''}{zone ? ` · ${zone.nom as string}` : ''}
-                    </div>
+                  <div className="flex items-center gap-2">
+                    <CritTag niveau={criticite} />
+                    <span className={`text-[11px] ${statutToneClass[statutInfo.tone]}`}>{statutInfo.texte}</span>
+                    <span className="text-[11px] text-dim ml-auto">{formatDuree(declareLe)}</span>
                   </div>
-                  <span className="text-[11px] text-dim">depuis {formatDuree(declareLe)}</span>
-                  <span className={`text-[11px] ${statutToneClass[statutInfo.tone]}`}>{statutInfo.texte}</span>
-                  <button className="bg-transparent border border-nikito-cyan text-nikito-cyan px-2.5 py-1.5 rounded-md text-[11px]">
+                  <div className="text-[13px] font-medium">
+                    {equip?.libelle as string ?? equip?.code as string ?? 'N/A'}
+                  </div>
+                  <div className="text-[11px] text-dim">
+                    {parc?.code as string ?? ''} · {parc?.nom as string ?? ''}{zone ? ` · ${zone.nom as string}` : ''}
+                  </div>
+                  <button className="bg-transparent border border-nikito-cyan text-nikito-cyan px-2.5 py-2 rounded-md text-[11px] min-h-[44px] self-start">
                     Ouvrir
                   </button>
                 </div>
               );
             })}
+
+            <table className="hidden md:table w-full">
+              <tbody>
+                {alertes.map((a: Record<string, unknown>) => {
+                  const priorite = a.niveaux_priorite as Record<string, unknown> | null;
+                  const equip = a.equipements as Record<string, unknown>;
+                  const parc = equip?.parcs as Record<string, unknown> | null;
+                  const zone = equip?.zones as Record<string, unknown> | null;
+                  const criticite = mapCriticite(priorite);
+                  const statutInfo = getStatutInfo(a);
+                  const declareLe = a.declare_le as string;
+
+                  return (
+                    <tr
+                      key={a.numero_bt as string}
+                      className={`bg-bg-deep rounded-lg border-l-[3px] ${
+                        criticite === 'bloquant' ? 'border-l-red' : 'border-l-amber'
+                      }`}
+                    >
+                      <td className="px-3.5 py-3 rounded-l-lg"><CritTag niveau={criticite} /></td>
+                      <td className="py-3">
+                        <div className="text-[13px] font-medium">
+                          {equip?.libelle as string ?? equip?.code as string ?? 'N/A'}
+                        </div>
+                        <div className="text-[11px] text-dim">
+                          {parc?.code as string ?? ''} · {parc?.nom as string ?? ''}{zone ? ` · ${zone.nom as string}` : ''}
+                        </div>
+                      </td>
+                      <td className="py-3 text-[11px] text-dim whitespace-nowrap">depuis {formatDuree(declareLe)}</td>
+                      <td className={`py-3 text-[11px] whitespace-nowrap ${statutToneClass[statutInfo.tone]}`}>{statutInfo.texte}</td>
+                      <td className="py-3 pr-3.5 rounded-r-lg">
+                        <button className="bg-transparent border border-nikito-cyan text-nikito-cyan px-2.5 py-1.5 rounded-md text-[11px]">
+                          Ouvrir
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         )}
       </Card>

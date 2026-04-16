@@ -31,15 +31,15 @@ export function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-bg-app text-text flex items-center justify-center p-6">
+    <div className="min-h-screen bg-bg-app text-text flex items-center justify-center p-4 md:p-6">
       <div className="w-full max-w-md">
-        <div className="flex justify-center mb-8">
+        <div className="flex justify-center mb-6 md:mb-8">
           <Logo size="lg" subtitle="GMAO Lean Ballé" />
         </div>
 
         <form
           onSubmit={handleSubmit}
-          className="bg-bg-card rounded-2xl p-6 flex flex-col gap-4"
+          className="bg-bg-card rounded-2xl p-5 md:p-6 flex flex-col gap-4"
         >
           <h1 className="text-xl font-semibold mb-2">Connexion</h1>
 
@@ -53,7 +53,7 @@ export function Login() {
               onChange={(e) => setEmail(e.target.value)}
               required
               autoFocus
-              className="w-full bg-bg-deep border border-white/[0.08] rounded-lg p-3 text-text outline-none focus:border-nikito-cyan"
+              className="w-full bg-bg-deep border border-white/[0.08] rounded-lg p-3 text-text text-base outline-none focus:border-nikito-cyan min-h-[44px]"
               placeholder="prenom.nom@nikito.fr"
             />
           </div>
@@ -67,7 +67,7 @@ export function Login() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              className="w-full bg-bg-deep border border-white/[0.08] rounded-lg p-3 text-text outline-none focus:border-nikito-cyan"
+              className="w-full bg-bg-deep border border-white/[0.08] rounded-lg p-3 text-text text-base outline-none focus:border-nikito-cyan min-h-[44px]"
             />
           </div>
 
@@ -81,7 +81,7 @@ export function Login() {
             type="submit"
             disabled={loading}
             className={cn(
-              'bg-gradient-cta text-text py-3.5 rounded-xl text-sm font-bold mt-2',
+              'bg-gradient-cta text-text py-3.5 rounded-xl text-sm font-bold mt-2 min-h-[44px]',
               loading && 'opacity-50 cursor-wait'
             )}
           >
@@ -90,7 +90,7 @@ export function Login() {
 
           <a
             href="/staff/login"
-            className="text-center text-xs text-dim hover:text-nikito-cyan mt-2"
+            className="text-center text-xs text-dim hover:text-nikito-cyan mt-2 min-h-[44px] flex items-center justify-center"
           >
             Vous êtes staff opérationnel ? Connexion par PIN ›
           </a>
