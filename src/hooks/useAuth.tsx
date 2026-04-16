@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import type { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 
@@ -13,7 +13,18 @@ export interface UtilisateurMetier {
   consentement_gps: boolean;
 }
 
-export function useAuth() {
+interface AuthContextValue {
+  session: Session | null;
+  authUser: User | null;
+  utilisateur: UtilisateurMetier | null;
+  loading: boolean;
+  signIn: (email: string, password: string) => ReturnType<typeof supabase.auth.signInWithPassword>;
+  signOut: () => ReturnType<typeof supabase.auth.signOut>;
+}
+
+const AuthContext = createContext<AuthContextValue | null>(null);
+
+export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [authUser, setAuthUser] = useState<User | null>(null);
   const [utilisateur, setUtilisateur] = useState<UtilisateurMetier | null>(null);
@@ -29,7 +40,7 @@ export function useAuth() {
       setSession((prev) => (prev?.access_token === newSession?.access_token ? prev : newSession));
       setAuthUser((prev) => {
         const next = newSession?.user ?? null;
-        if (prev?.id === next?.id) return prev; // ← évite la nouvelle référence
+        if (prev?.id === next?.id) return prev;
         return next;
       });
     });
@@ -37,7 +48,6 @@ export function useAuth() {
     return () => listener.subscription.unsubscribe();
   }, []);
 
-  // ⚠️ Dépendance sur authUser?.id (primitive), PAS sur authUser (objet)
   useEffect(() => {
     if (!authUser?.id) {
       setUtilisateur(null);
@@ -81,7 +91,7 @@ export function useAuth() {
     return () => {
       cancelled = true;
     };
-  }, [authUser?.id]); // ← ICI, la correction critique
+  }, [authUser?.id]);
 
   const signIn = async (email: string, password: string) => {
     return supabase.auth.signInWithPassword({ email, password });
@@ -91,5 +101,15 @@ export function useAuth() {
     return supabase.auth.signOut();
   };
 
-  return { session, authUser, utilisateur, loading, signIn, signOut };
+  return (
+    <AuthContext.Provider value={{ session, authUser, utilisateur, loading, signIn, signOut }}>
+      {children}
+    </AuthContext.Provider>
+  );
+}
+
+export function useAuth(): AuthContextValue {
+  const ctx = useContext(AuthContext);
+  if (!ctx) throw new Error('useAuth must be used within <AuthProvider>');
+  return ctx;
 }
