@@ -490,8 +490,8 @@ function SuccessLien({
       <div className="text-5xl mb-3">{showEmailFailed ? '\u26A0\uFE0F' : '\u2705'}</div>
       <div className="text-base font-semibold mb-2">
         {showEmailSent
-          ? `Invitation envoy\u00e9e \u00e0 ${emailDestinataire}`
-          : 'Invitation cr\u00e9\u00e9e'}
+          ? `Invitation envoyée à ${emailDestinataire}`
+          : 'Invitation créée'}
       </div>
       <div className="text-sm text-dim mb-5">
         {showEmailSent && (
@@ -499,15 +499,15 @@ function SuccessLien({
         )}
         {showEmailFailed && (
           <>
-            L'invitation a \u00e9t\u00e9 cr\u00e9\u00e9e mais l'email n'a pas pu \u00eatre envoy\u00e9.
+            L'invitation a été créée mais l'email n'a pas pu être envoyé.
             Vous pouvez transmettre le lien manuellement :
           </>
         )}
         {!showEmailSent && !showEmailFailed && (
           <>
             {authMode === 'pin_seul'
-              ? "Communique ce lien \u00e0 l'agent. Il pourra cr\u00e9er son code \u00e0 6 chiffres."
-              : "Le lien a \u00e9t\u00e9 pr\u00e9par\u00e9. L'utilisateur d\u00e9finira son mot de passe."}
+              ? "Communique ce lien à l'agent. Il pourra créer son code à 6 chiffres."
+              : "Le lien a été préparé. L'utilisateur définira son mot de passe."}
           </>
         )}
       </div>
@@ -521,7 +521,7 @@ function SuccessLien({
           onClick={copier}
           className="bg-bg-deep border border-nikito-cyan/40 text-nikito-cyan px-5 py-2.5 rounded-lg text-xs font-semibold"
         >
-          {copie ? '\u2713 Copi\u00e9 !' : '\uD83D\uDCCB Copier le lien'}
+          {copie ? '\u2713 Copié !' : '\uD83D\uDCCB Copier le lien'}
         </button>
         <button
           onClick={onClose}
