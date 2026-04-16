@@ -138,6 +138,14 @@ export function IconToggleSidebar({ className = s }: { className?: string }) {
   );
 }
 
+export function IconDeconnexion({ className = s }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M7 17H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h3M13 14l4-4-4-4M17 10H7" />
+    </svg>
+  );
+}
+
 const iconMap: Record<string, (props: { className?: string }) => JSX.Element> = {
   'Tableau de bord': IconTableauBord,
   'Mon parc': IconParc,

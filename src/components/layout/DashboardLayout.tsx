@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Outlet } from 'react-router-dom';
+import { Outlet, useNavigate } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { useAuth } from '@/hooks/useAuth';
 import { useSidebarState } from '@/hooks/useSidebarState';
@@ -30,9 +30,15 @@ function useIsDesktop() {
 }
 
 export function DashboardLayout() {
-  const { utilisateur, loading } = useAuth();
+  const { utilisateur, loading, signOut } = useAuth();
   const { mobileOpen, expanded, toggleExpanded, openMobile, closeMobile } = useSidebarState();
   const isDesktop = useIsDesktop();
+  const navigate = useNavigate();
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate('/', { replace: true });
+  };
 
   const userMock = {
     initiales: 'DI',
@@ -113,6 +119,7 @@ export function DashboardLayout() {
           compact={isDesktop && !expanded}
           onNavClick={isDesktop ? undefined : closeMobile}
           onToggle={isDesktop ? toggleExpanded : undefined}
+          onSignOut={handleSignOut}
         />
       </aside>
 

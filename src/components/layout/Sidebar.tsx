@@ -1,7 +1,7 @@
 import { NavLink } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { Logo } from '@/components/ui/Logo';
-import { getNavIcon, IconToggleSidebar } from './NavIcons';
+import { getNavIcon, IconToggleSidebar, IconDeconnexion } from './NavIcons';
 import type { RoleUtilisateur } from '@/types/database';
 
 interface NavItem {
@@ -61,9 +61,10 @@ interface SidebarProps {
   compact?: boolean;
   onNavClick?: () => void;
   onToggle?: () => void;
+  onSignOut?: () => void;
 }
 
-export function Sidebar({ user, roleAffiche, roleCode, compact = false, onNavClick, onToggle }: SidebarProps) {
+export function Sidebar({ user, roleAffiche, roleCode, compact = false, onNavClick, onToggle, onSignOut }: SidebarProps) {
   return (
     <div className={cn('h-full flex flex-col overflow-y-auto', compact ? 'p-2 gap-0.5' : 'p-5 px-3.5 gap-1.5')}>
       <div className={cn('flex items-center', compact ? 'justify-center py-3 px-0' : 'px-2.5 pt-2 pb-4')}>
@@ -164,19 +165,34 @@ export function Sidebar({ user, roleAffiche, roleCode, compact = false, onNavCli
         );
       })}
 
-      <div className={cn('mt-auto border-t border-white/[0.06] flex items-center', compact ? 'justify-center pt-3 pb-2' : 'pt-3.5 px-2.5 gap-2.5')}>
-        <div
-          className="w-[34px] h-[34px] rounded-full flex items-center justify-center font-semibold text-xs flex-shrink-0"
-          style={{ background: user.couleurAvatar ?? '#5DE5FF', color: '#0B0B2E' }}
-          title={compact ? `${user.nom} · ${user.role}` : undefined}
-        >
-          {user.initiales}
-        </div>
-        {!compact && (
-          <div className="text-xs min-w-0">
-            <div className="font-medium truncate">{user.nom}</div>
-            <div className="text-dim text-[11px] truncate">{user.role}</div>
+      <div className={cn('mt-auto border-t border-white/[0.06]', compact ? 'pt-3 pb-2' : 'pt-3.5 px-2.5')}>
+        <div className={cn('flex items-center', compact ? 'justify-center' : 'gap-2.5')}>
+          <div
+            className="w-[34px] h-[34px] rounded-full flex items-center justify-center font-semibold text-xs flex-shrink-0"
+            style={{ background: user.couleurAvatar ?? '#5DE5FF', color: '#0B0B2E' }}
+            title={compact ? `${user.nom} · ${user.role}` : undefined}
+          >
+            {user.initiales}
           </div>
+          {!compact && (
+            <div className="text-xs min-w-0">
+              <div className="font-medium truncate">{user.nom}</div>
+              <div className="text-dim text-[11px] truncate">{user.role}</div>
+            </div>
+          )}
+        </div>
+        {onSignOut && (
+          <button
+            onClick={onSignOut}
+            className={cn(
+              'flex items-center rounded-[10px] text-dim hover:text-red hover:bg-red/10 transition-colors min-h-[40px] w-full mt-2',
+              compact ? 'justify-center px-0' : 'gap-2.5 px-3'
+            )}
+            title={compact ? 'Se déconnecter' : undefined}
+          >
+            <IconDeconnexion className="w-[18px] h-[18px] flex-shrink-0" />
+            {!compact && <span className="text-[12px]">Se déconnecter</span>}
+          </button>
         )}
       </div>
     </div>

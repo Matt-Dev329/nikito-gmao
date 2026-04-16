@@ -1,21 +1,30 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Navigate, useLocation } from 'react-router-dom';
 import { Logo } from '@/components/ui/Logo';
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
 
-// ============================================================
-// Login standard (email/password) pour direction, tech, chef équipe, manager
-// Le staff opérationnel a son propre login PIN sur tablette parc
-// ============================================================
-
 export function Login() {
   const navigate = useNavigate();
-  const { signIn } = useAuth();
+  const location = useLocation();
+  const { signIn, authUser, loading: authLoading } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-bg-app text-text flex items-center justify-center">
+        <div className="text-dim text-sm">Chargement...</div>
+      </div>
+    );
+  }
+
+  if (authUser) {
+    const destination = (location.state as { from?: string })?.from || '/gmao';
+    return <Navigate to={destination} replace />;
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
