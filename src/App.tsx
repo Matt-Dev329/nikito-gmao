@@ -45,6 +45,8 @@ import {
   PageTechSignaler,
 } from '@/pages/_stubs';
 
+import { PageAide } from '@/pages/aide/PageAide';
+
 export function App() {
   return (
     <Routes>
@@ -83,6 +85,7 @@ export function App() {
         <Route path="bibliotheque" element={<PageBibliotheque />} />
         <Route path="fournisseurs" element={<PageFournisseursAdmin />} />
         <Route path="controles-historique" element={<PageHistoriqueControles />} />
+        <Route path="aide" element={<PageAide />} />
       </Route>
 
       <Route

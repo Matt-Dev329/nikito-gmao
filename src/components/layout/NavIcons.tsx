@@ -185,6 +185,15 @@ export function IconDeconnexion({ className = s }: { className?: string }) {
   );
 }
 
+export function IconAide({ className = s }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="10" cy="10" r="8" />
+      <path d="M7.5 7.5a2.5 2.5 0 0 1 4.5 1.5c0 1.5-2.5 2-2.5 3.5M10 15h.01" />
+    </svg>
+  );
+}
+
 const iconMap: Record<string, (props: { className?: string }) => JSX.Element> = {
   'Tableau de bord': IconTableauBord,
   'Mon parc': IconParc,
@@ -204,6 +213,7 @@ const iconMap: Record<string, (props: { className?: string }) => JSX.Element> = 
   'Contrôle d\'ouverture': IconControleOuverture,
   'Contrôle hebdo': IconControleHebdo,
   'Contrôle mensuel': IconControleMensuel,
+  'Aide': IconAide,
 };
 
 export function getNavIcon(label: string) {

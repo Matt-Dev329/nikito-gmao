@@ -1,7 +1,7 @@
 import { NavLink } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { Logo } from '@/components/ui/Logo';
-import { getNavIcon, IconToggleSidebar, IconDeconnexion } from './NavIcons';
+import { getNavIcon, IconToggleSidebar, IconDeconnexion, IconAide } from './NavIcons';
 import { useSidebarBadges } from '@/hooks/queries/useSidebarBadges';
 import type { RoleUtilisateur } from '@/types/database';
 
@@ -195,11 +195,28 @@ export function Sidebar({ user, roleAffiche, roleCode, compact = false, onNavCli
             </div>
           )}
         </div>
+        <NavLink
+          to="/gmao/aide"
+          onClick={onNavClick}
+          title={compact ? 'Aide' : undefined}
+          className={({ isActive }) =>
+            cn(
+              'group relative flex items-center rounded-[10px] transition-colors min-h-[40px] w-full mt-2',
+              compact ? 'justify-center px-0' : 'gap-2.5 px-3',
+              isActive
+                ? 'bg-gradient-active border-l-2 border-nikito-pink text-text font-medium'
+                : 'text-dim hover:text-text hover:bg-white/[0.02]'
+            )
+          }
+        >
+          <IconAide className="w-[18px] h-[18px] flex-shrink-0" />
+          {!compact && <span className="text-[12px]">Aide</span>}
+        </NavLink>
         {onSignOut && (
           <button
             onClick={onSignOut}
             className={cn(
-              'flex items-center rounded-[10px] text-dim hover:text-red hover:bg-red/10 transition-colors min-h-[40px] w-full mt-2',
+              'flex items-center rounded-[10px] text-dim hover:text-red hover:bg-red/10 transition-colors min-h-[40px] w-full mt-1',
               compact ? 'justify-center px-0' : 'gap-2.5 px-3'
             )}
             title={compact ? 'Se déconnecter' : undefined}
