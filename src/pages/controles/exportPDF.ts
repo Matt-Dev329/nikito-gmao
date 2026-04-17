@@ -78,7 +78,7 @@ export async function exportControlePDF(controle: ControleHistorique) {
 
   doc.setFontSize(16);
   doc.setFont('helvetica', 'bold');
-  doc.text('NIKITO GMAO', margin, y);
+  doc.text('ALBA by Nikito', margin, y);
   doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
   doc.text('Rapport de controle', margin, y + 6);

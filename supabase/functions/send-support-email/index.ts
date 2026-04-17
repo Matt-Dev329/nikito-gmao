@@ -34,7 +34,7 @@ function buildHtml(p: SupportPayload): string {
             <table role="presentation" cellpadding="0" cellspacing="0" border="0">
               <tr>
                 <td style="font-size:24px;font-weight:700;letter-spacing:4px;color:#ffffff;text-align:center;">
-                  NIKITO <span style="color:#5DE5FF;">GMAO</span>
+                  <span style="color:#5DE5FF;">A</span>LBA <span style="color:#8b92b8;font-size:14px;font-weight:400;">by Nikito</span>
                 </td>
               </tr>
             </table>
@@ -145,7 +145,7 @@ Deno.serve(async (req: Request) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: "Nikito GMAO <noreply@nikito.tech>",
+        from: "ALBA by Nikito <noreply@nikito.tech>",
         to: ["si@nikito.com"],
         reply_to: payload.user_email,
         subject,

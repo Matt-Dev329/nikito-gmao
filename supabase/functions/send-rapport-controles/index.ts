@@ -76,7 +76,7 @@ function buildHtml(p: RapportPayload): string {
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Rapport contr&ocirc;les NIKITO</title>
+<title>Rapport contr&ocirc;les ALBA</title>
 </head>
 <body style="margin:0;padding:0;background-color:#0a0e27;font-family:Arial,Helvetica,sans-serif;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#0a0e27;">
@@ -86,7 +86,7 @@ function buildHtml(p: RapportPayload): string {
 
         <tr>
           <td align="center" style="padding:0 0 24px 0;">
-            <span style="font-size:24px;font-weight:700;letter-spacing:4px;color:#ffffff;">NIKITO <span style="color:#5DE5FF;">GMAO</span></span>
+            <span style="font-size:24px;font-weight:700;letter-spacing:4px;color:#ffffff;"><span style="color:#5DE5FF;">A</span>LBA <span style="color:#8b92b8;font-size:14px;font-weight:400;">by Nikito</span></span>
           </td>
         </tr>
 
@@ -218,7 +218,7 @@ Deno.serve(async (req: Request) => {
       ? ` ${payload.parc_label}`
       : "";
 
-    const subject = `Rapport contr\u00f4les NIKITO${parcSuffix} \u2014 ${payload.date_debut} au ${payload.date_fin}`;
+    const subject = `Rapport contr\u00f4les ALBA${parcSuffix} \u2014 ${payload.date_debut} au ${payload.date_fin}`;
 
     const resendRes = await fetch("https://api.resend.com/emails", {
       method: "POST",
@@ -227,7 +227,7 @@ Deno.serve(async (req: Request) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: "Nikito GMAO <noreply@nikito.tech>",
+        from: "ALBA by Nikito <noreply@nikito.tech>",
         to: [payload.destinataire_email],
         subject,
         html,

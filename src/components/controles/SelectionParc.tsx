@@ -55,7 +55,7 @@ export function SelectionParc({ titre, onSelect }: SelectionParcProps) {
       <header className="px-[22px] py-[18px] bg-bg-sidebar flex items-center gap-3.5 border-b border-white/[0.06]">
         <Logo size="md" withText={false} />
         <div className="flex-1">
-          <div className="text-[11px] text-dim tracking-[1.4px] uppercase">Nikito GMAO</div>
+          <div className="text-[11px] text-dim tracking-[1.4px] uppercase">ALBA by Nikito</div>
           <div className="text-base font-semibold">{titre}</div>
         </div>
         <div className="flex items-center gap-2">

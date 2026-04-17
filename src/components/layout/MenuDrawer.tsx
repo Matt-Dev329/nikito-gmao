@@ -46,7 +46,7 @@ export function MenuDrawer({ open, onClose }: MenuDrawerProps) {
       >
         <div className="px-5 pt-5 pb-4 border-b border-white/[0.06]">
           <div className="flex items-center justify-between mb-4">
-            <Logo size="sm" subtitle="GMAO" />
+            <Logo size="sm" subtitle="by Nikito" />
             <button
               onClick={onClose}
               className="w-8 h-8 rounded-lg bg-bg-card border border-white/[0.08] text-dim text-sm"

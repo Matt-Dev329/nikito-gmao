@@ -84,7 +84,7 @@ export function Sidebar({ user, roleAffiche, roleCode, compact = false, onNavCli
         {compact ? (
           <Logo size="sm" withText={false} />
         ) : (
-          <Logo subtitle={`GMAO · ${roleAffiche}`} />
+          <Logo subtitle={`by Nikito · ${roleAffiche}`} />
         )}
       </div>
 

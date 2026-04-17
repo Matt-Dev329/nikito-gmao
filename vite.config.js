@@ -9,9 +9,9 @@ export default defineConfig({
             registerType: 'autoUpdate',
             includeAssets: ['favicon.svg'],
             manifest: {
-                name: 'Nikito GMAO',
-                short_name: 'Nikito',
-                description: 'GMAO Lean Ballé · 4 parcs Nikito Group',
+                name: 'ALBA by Nikito',
+                short_name: 'ALBA',
+                description: 'ALBA — Gestion de maintenance des parcs Nikito. On prot\u00e8ge les familles d\u00e8s l\u2019aube.',
                 theme_color: '#0B0B2E',
                 background_color: '#0B0B2E',
                 display: 'standalone',

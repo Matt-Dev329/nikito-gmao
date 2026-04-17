@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, Navigate, useLocation } from 'react-router-dom';
-import { Logo } from '@/components/ui/Logo';
+import { AlbaLoginHero } from '@/components/ui/Logo';
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
 
@@ -42,8 +42,8 @@ export function Login() {
   return (
     <div className="min-h-screen bg-bg-app text-text flex items-center justify-center p-4 md:p-6">
       <div className="w-full max-w-md">
-        <div className="flex justify-center mb-6 md:mb-8">
-          <Logo size="lg" subtitle="GMAO Lean Ballé" />
+        <div className="flex justify-center mb-8 md:mb-10">
+          <AlbaLoginHero />
         </div>
 
         <form

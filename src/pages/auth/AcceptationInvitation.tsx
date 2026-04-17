@@ -171,8 +171,9 @@ export function AcceptationInvitation() {
             <Logo size="md" withText={false} />
           </div>
           <div className="text-[11px] text-bg-app/70 tracking-[1.4px] font-semibold">
-            BIENVENUE CHEZ NIKITO GMAO
+            BIENVENUE SUR ALBA
           </div>
+          <div className="text-[11px] text-bg-app/50 mt-0.5">by Nikito</div>
           <div className="text-[22px] font-bold text-bg-app mt-1.5">
             Salut {invitation.prenom} ! 👋
           </div>
@@ -263,7 +264,7 @@ export function AcceptationInvitation() {
             <div className="flex items-start gap-2">
               <span className="text-nikito-cyan text-sm flex-shrink-0">ⓘ</span>
               <div className="text-[11px] text-dim leading-relaxed">
-                En activant ton compte, tu acceptes que Nikito GMAO enregistre{' '}
+                En activant ton compte, tu acceptes qu'ALBA by Nikito enregistre{' '}
                 <strong className="text-text">tes saisies de contrôle</strong> (qui, quand, quoi).
                 Aucune donnée personnelle au-delà de ton prénom·nom n'est collectée.
               </div>

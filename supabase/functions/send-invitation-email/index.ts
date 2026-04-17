@@ -26,7 +26,7 @@ function buildHtml(p: InvitationPayload): string {
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Invitation Nikito GMAO</title>
+<title>Invitation ALBA by Nikito</title>
 </head>
 <body style="margin:0;padding:0;background-color:#0a0e27;font-family:Arial,Helvetica,sans-serif;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#0a0e27;">
@@ -40,7 +40,7 @@ function buildHtml(p: InvitationPayload): string {
             <table role="presentation" cellpadding="0" cellspacing="0" border="0">
               <tr>
                 <td style="font-size:24px;font-weight:700;letter-spacing:4px;color:#ffffff;text-align:center;">
-                  NIKITO <span style="color:#5DE5FF;">GMAO</span>
+                  <span style="color:#5DE5FF;">A</span>LBA <span style="color:#8b92b8;font-size:14px;font-weight:400;">by Nikito</span>
                 </td>
               </tr>
             </table>
@@ -60,7 +60,7 @@ function buildHtml(p: InvitationPayload): string {
 
               <tr>
                 <td style="font-size:15px;color:#8b92b8;line-height:24px;padding-bottom:12px;">
-                  <strong style="color:#ffffff;">${p.invitant_prenom} ${p.invitant_nom}</strong> vous invite &agrave; rejoindre Nikito GMAO en tant que <strong style="color:#5DE5FF;">${p.role_label}</strong>.
+                  <strong style="color:#ffffff;">${p.invitant_prenom} ${p.invitant_nom}</strong> vous invite &agrave; rejoindre ALBA by Nikito en tant que <strong style="color:#5DE5FF;">${p.role_label}</strong>.
                 </td>
               </tr>
 
@@ -111,7 +111,7 @@ function buildHtml(p: InvitationPayload): string {
               </tr>
               <tr>
                 <td style="font-size:10px;color:#6E6E96;text-align:center;padding-top:16px;">
-                  &copy; Nikito Group &middot; GMAO
+                  &copy; Nikito Group &middot; ALBA
                 </td>
               </tr>
             </table>
@@ -151,9 +151,9 @@ Deno.serve(async (req: Request) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: "Nikito GMAO <noreply@nikito.tech>",
+        from: "ALBA by Nikito <noreply@nikito.tech>",
         to: [payload.destinataire_email],
-        subject: "Vous êtes invité à rejoindre Nikito GMAO",
+        subject: "Vous \u00eates invit\u00e9 \u00e0 rejoindre ALBA by Nikito",
         html,
       }),
     });
