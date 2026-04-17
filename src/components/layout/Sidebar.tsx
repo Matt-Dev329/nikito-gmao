@@ -94,56 +94,47 @@ export function Sidebar({ user, roleAffiche, roleCode, realRoleCode, compact = f
         )}
       </div>
 
-      {onToggle && (
-        <button
-          onClick={onToggle}
-          className={cn(
-            'hidden md:flex items-center gap-2.5 rounded-[10px] text-dim hover:text-text hover:bg-white/[0.04] transition-colors min-h-[40px]',
-            compact ? 'justify-center px-0' : 'px-3'
-          )}
-          title={compact ? 'Etendre la sidebar' : 'Reduire la sidebar'}
-        >
-          <IconToggleSidebar className={cn('w-[18px] h-[18px] flex-shrink-0 transition-transform', compact && 'rotate-180')} />
-          {!compact && <span className="text-[12px]">Reduire</span>}
-        </button>
-      )}
-
-      {showViewAs && <ViewAsSelector compact={compact} />}
-
-      {showFormation && (
-        <>
-          {!compact && formationActive && (
-            <div className="text-[10px] text-[#7C3AED] uppercase tracking-[1.4px] px-2.5 pt-3 pb-1.5 font-semibold">
-              Formation
-            </div>
-          )}
-          {compact && formationActive && <div className="h-px bg-[#7C3AED]/30 my-2 mx-2" />}
+      <div className={cn('flex items-center gap-1', compact ? 'justify-center' : 'px-0')}>
+        {onToggle && (
+          <button
+            onClick={onToggle}
+            className={cn(
+              'hidden md:flex items-center gap-2.5 rounded-[10px] text-dim hover:text-text hover:bg-white/[0.04] transition-colors min-h-[40px]',
+              compact ? 'justify-center px-0 flex-1' : 'px-3 flex-1'
+            )}
+            title={compact ? 'Etendre la sidebar' : 'Reduire la sidebar'}
+          >
+            <IconToggleSidebar className={cn('w-[18px] h-[18px] flex-shrink-0 transition-transform', compact && 'rotate-180')} />
+            {!compact && <span className="text-[12px]">Reduire</span>}
+          </button>
+        )}
+        {showFormation && (
           <NavLink
             to="/gmao/formation"
             onClick={onNavClick}
-            title={compact ? 'Formation' : undefined}
+            title="Formation"
             className={({ isActive }) =>
               cn(
-                'group relative flex items-center rounded-[10px] transition-colors min-h-[44px]',
-                compact ? 'justify-center px-0' : 'gap-2.5 px-3 py-2.5',
+                'group relative flex items-center justify-center rounded-[10px] transition-colors w-[40px] min-h-[40px] flex-shrink-0',
                 isActive
-                  ? 'bg-[#7C3AED]/15 border-l-2 border-[#7C3AED] text-[#A78BFA] font-medium'
+                  ? 'bg-[#7C3AED]/15 text-[#A78BFA]'
                   : formationActive
                     ? 'text-[#A78BFA] hover:text-text hover:bg-[#7C3AED]/10'
-                    : 'text-dim hover:text-text hover:bg-white/[0.02]'
+                    : 'text-dim hover:text-text hover:bg-white/[0.04]'
               )
             }
           >
             <GraduationCapIcon className="w-[18px] h-[18px] flex-shrink-0" />
-            {!compact && <span className="text-[13px]">Formation</span>}
             {compact && (
               <span className="pointer-events-none absolute left-full ml-2 px-2.5 py-1.5 rounded-lg bg-bg-card text-text text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity z-50 shadow-lg border border-white/[0.08]">
                 Formation
               </span>
             )}
           </NavLink>
-        </>
-      )}
+        )}
+      </div>
+
+      {showViewAs && <ViewAsSelector compact={compact} />}
 
       {sections.map((section) => {
         const itemsVisibles = section.items.filter((it) => it.roles.includes(roleCode));
