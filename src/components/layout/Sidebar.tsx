@@ -33,7 +33,7 @@ const sections: { titre: string; items: NavItem[] }[] = [
         roles: ['direction', 'chef_maintenance'],
       },
       { to: '/gmao/stock', label: 'Stock', roles: ['direction', 'chef_maintenance', 'technicien'] },
-      { to: '/gmao/preventif', label: 'Préventif', roles: ['chef_maintenance', 'technicien'] },
+      { to: '/gmao/preventif', label: 'Préventif', roles: ['direction', 'chef_maintenance', 'manager_parc'] },
       { to: '/gmao/certifications', label: 'Certifications', roles: ['direction', 'chef_maintenance'] },
       { to: '/gmao/plaintes', label: 'Plaintes clients', roles: ['direction', 'chef_maintenance', 'manager_parc'] },
     ],
