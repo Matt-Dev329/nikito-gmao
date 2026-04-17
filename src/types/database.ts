@@ -73,7 +73,7 @@ export interface NoteChantier {
 
 export interface Parc {
   id: string;
-  code: 'FRA' | 'SGB' | 'DOM' | 'ALF';
+  code: 'FRA' | 'SGB' | 'DOM' | 'ALF' | 'ECO';
   nom: string;
   adresse: string;
   ville: string;

@@ -2,8 +2,10 @@ import { useEffect, useState } from 'react';
 import { Outlet, useNavigate } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { ViewAsBanner } from './ViewAsBanner';
+import { FormationBanner } from './FormationBanner';
 import { useAuth } from '@/hooks/useAuth';
 import { useViewAs, useEffectiveRole } from '@/hooks/useViewAs';
+import { useFormation } from '@/hooks/useFormation';
 import { useSidebarState } from '@/hooks/useSidebarState';
 import { roleLabels } from '@/lib/tokens';
 import { cn } from '@/lib/utils';
@@ -71,13 +73,16 @@ export function DashboardLayout() {
     );
   }
 
+  const formationActive = useFormation((s) => s.active);
   const sidebarWidth = expanded ? SIDEBAR_W_EXPANDED : SIDEBAR_W_COMPACT;
-  const bannerActive = !!viewAsRole;
-  const bannerH = bannerActive ? 36 : 0;
+  const viewAsBannerH = viewAsRole ? 36 : 0;
+  const formationBannerH = formationActive ? 40 : 0;
+  const bannerH = viewAsBannerH + formationBannerH;
 
   return (
     <div className="min-h-screen bg-bg-app text-text">
-      <ViewAsBanner />
+      <FormationBanner />
+      <ViewAsBanner topOffset={formationBannerH} />
       <header
         className="md:hidden fixed left-0 right-0 z-40 bg-bg-sidebar border-b border-white/[0.06] px-4 h-14 flex items-center justify-between"
         style={{ top: bannerH }}
@@ -129,7 +134,7 @@ export function DashboardLayout() {
         )}
         <Sidebar
           user={user}
-          roleAffiche={roleAffiches[effectiveRole] ?? 'UTILISATEUR'}
+          roleAffiche={formationActive ? `${roleAffiches[effectiveRole] ?? 'UTILISATEUR'} · FORMATION` : roleAffiches[effectiveRole] ?? 'UTILISATEUR'}
           roleCode={effectiveRole}
           realRoleCode={realRoleCode}
           compact={isDesktop && !expanded}

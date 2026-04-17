@@ -3,6 +3,7 @@ import { cn } from '@/lib/utils';
 import { Logo } from '@/components/ui/Logo';
 import { getNavIcon, IconToggleSidebar, IconDeconnexion, IconAide } from './NavIcons';
 import { ViewAsSelector } from './ViewAsSelector';
+import { useFormation } from '@/hooks/useFormation';
 import { useSidebarBadges } from '@/hooks/queries/useSidebarBadges';
 import type { RoleUtilisateur } from '@/types/database';
 
@@ -79,7 +80,9 @@ function resolveBadge(
 
 export function Sidebar({ user, roleAffiche, roleCode, realRoleCode, compact = false, onNavClick, onToggle, onSignOut }: SidebarProps) {
   const { data: badges } = useSidebarBadges();
+  const formationActive = useFormation((s) => s.active);
   const showViewAs = (realRoleCode ?? roleCode) === 'direction' || (realRoleCode ?? roleCode) === 'chef_maintenance';
+  const showFormation = showViewAs;
 
   return (
     <div className={cn('h-full flex flex-col overflow-y-auto', compact ? 'p-2 gap-0.5' : 'p-5 px-3.5 gap-1.5')}>
@@ -106,6 +109,41 @@ export function Sidebar({ user, roleAffiche, roleCode, realRoleCode, compact = f
       )}
 
       {showViewAs && <ViewAsSelector compact={compact} />}
+
+      {showFormation && (
+        <>
+          {!compact && formationActive && (
+            <div className="text-[10px] text-[#7C3AED] uppercase tracking-[1.4px] px-2.5 pt-3 pb-1.5 font-semibold">
+              Formation
+            </div>
+          )}
+          {compact && formationActive && <div className="h-px bg-[#7C3AED]/30 my-2 mx-2" />}
+          <NavLink
+            to="/gmao/formation"
+            onClick={onNavClick}
+            title={compact ? 'Formation' : undefined}
+            className={({ isActive }) =>
+              cn(
+                'group relative flex items-center rounded-[10px] transition-colors min-h-[44px]',
+                compact ? 'justify-center px-0' : 'gap-2.5 px-3 py-2.5',
+                isActive
+                  ? 'bg-[#7C3AED]/15 border-l-2 border-[#7C3AED] text-[#A78BFA] font-medium'
+                  : formationActive
+                    ? 'text-[#A78BFA] hover:text-text hover:bg-[#7C3AED]/10'
+                    : 'text-dim hover:text-text hover:bg-white/[0.02]'
+              )
+            }
+          >
+            <GraduationCapIcon className="w-[18px] h-[18px] flex-shrink-0" />
+            {!compact && <span className="text-[13px]">Formation</span>}
+            {compact && (
+              <span className="pointer-events-none absolute left-full ml-2 px-2.5 py-1.5 rounded-lg bg-bg-card text-text text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity z-50 shadow-lg border border-white/[0.08]">
+                Formation
+              </span>
+            )}
+          </NavLink>
+        </>
+      )}
 
       {sections.map((section) => {
         const itemsVisibles = section.items.filter((it) => it.roles.includes(roleCode));
@@ -232,5 +270,15 @@ export function Sidebar({ user, roleAffiche, roleCode, realRoleCode, compact = f
         )}
       </div>
     </div>
+  );
+}
+
+function GraduationCapIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M10 2L1 7l9 5 9-5-9-5Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/>
+      <path d="M15 9.5v5c0 1.5-2.5 3-5 3s-5-1.5-5-3v-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M18 7v6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+    </svg>
   );
 }

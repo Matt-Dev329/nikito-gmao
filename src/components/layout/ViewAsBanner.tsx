@@ -9,7 +9,7 @@ const roleLabelsUpper: Record<string, string> = {
   staff_operationnel: 'STAFF OPERATIONNEL',
 };
 
-export function ViewAsBanner() {
+export function ViewAsBanner({ topOffset = 0 }: { topOffset?: number }) {
   const { role, parcLabel, userLabel, reset } = useViewAs();
   if (!role) return null;
 
@@ -17,7 +17,10 @@ export function ViewAsBanner() {
   const details = [userLabel, parcLabel].filter(Boolean).join(' - ');
 
   return (
-    <div className="fixed top-0 left-0 right-0 z-[60] h-9 bg-gradient-to-r from-amber/90 to-amber/70 flex items-center justify-center gap-3 px-4 text-[13px] font-semibold text-bg-app select-none">
+    <div
+      className="fixed left-0 right-0 z-[60] h-9 bg-gradient-to-r from-amber/90 to-amber/70 flex items-center justify-center gap-3 px-4 text-[13px] font-semibold text-bg-app select-none"
+      style={{ top: topOffset }}
+    >
       <span className="flex items-center gap-1.5">
         <EyeIcon />
         Vue simulee : {label}

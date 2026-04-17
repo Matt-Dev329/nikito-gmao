@@ -1,17 +1,20 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
+import { useFormationFilter } from '@/hooks/useFormation';
 import type { Fiche5PourquoiAvecJoins, Statut5Pourquoi } from '@/types/database';
 
 const SELECT_FICHE =
   '*, equipements(code, libelle, parc_id, parcs(code, nom)), incidents(numero_bt, titre)';
 
 export function useFiches5P() {
+  const { estFormation } = useFormationFilter();
   return useQuery({
-    queryKey: ['fiches_5_pourquoi'],
+    queryKey: ['fiches_5_pourquoi', estFormation],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('fiches_5_pourquoi')
         .select(SELECT_FICHE)
+        .eq('est_formation', estFormation)
         .order('ouvert_le', { ascending: false });
       if (error) throw error;
       return (data ?? []) as Fiche5PourquoiAvecJoins[];
@@ -38,6 +41,7 @@ export function useFiche5P(id: string | undefined) {
 
 export function useCreerFiche5P() {
   const qc = useQueryClient();
+  const { estFormation } = useFormationFilter();
   return useMutation({
     mutationFn: async (payload: {
       incident_id: string;
@@ -51,6 +55,7 @@ export function useCreerFiche5P() {
           equipement_id: payload.equipement_id,
           ouvert_par_id: payload.ouvert_par_id,
           statut: 'ouvert',
+          est_formation: estFormation,
         })
         .select('id')
         .single();
@@ -66,6 +71,7 @@ export function useCreerFiche5P() {
 
 export function useCreerFiche5PDepuisRecurrence() {
   const qc = useQueryClient();
+  const { estFormation } = useFormationFilter();
   return useMutation({
     mutationFn: async (payload: {
       equipement_id: string;
@@ -88,6 +94,7 @@ export function useCreerFiche5PDepuisRecurrence() {
           equipement_id: payload.equipement_id,
           ouvert_par_id: payload.ouvert_par_id,
           statut: 'ouvert',
+          est_formation: estFormation,
         })
         .select('id')
         .single();

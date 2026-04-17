@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
+import { useFormationFilter } from '@/hooks/useFormation';
 import type { EquipementAvecJoins, StatutEquipement } from '@/types/database';
 
 // ============================================================
@@ -7,14 +8,18 @@ import type { EquipementAvecJoins, StatutEquipement } from '@/types/database';
 // ============================================================
 
 export function useParcs() {
+  const { estFormation } = useFormationFilter();
   return useQuery({
-    queryKey: ['parcs'],
+    queryKey: ['parcs', estFormation],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let q = supabase
         .from('parcs')
         .select('*')
-        .eq('actif', true)
-        .order('code');
+        .eq('actif', true);
+      if (!estFormation) {
+        q = q.neq('code', 'ECO');
+      }
+      const { data, error } = await q.order('code');
       if (error) throw error;
       return data;
     },

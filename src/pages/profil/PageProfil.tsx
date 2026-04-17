@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import { useFormation } from '@/hooks/useFormation';
 import { supabase } from '@/lib/supabase';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { cn } from '@/lib/utils';
@@ -78,6 +79,7 @@ export function PageProfil() {
       </div>
 
       <SectionGPS utilisateurId={utilisateur.id} initial={utilisateur.consentement_gps} />
+      <SectionFormation />
       <SectionMotDePasse />
     </div>
   );
@@ -147,6 +149,45 @@ function SectionGPS({ utilisateurId, initial }: { utilisateurId: string; initial
       {mutation.isError && (
         <div className="text-red text-xs mt-2">Erreur lors de la mise a jour</div>
       )}
+    </div>
+  );
+}
+
+function SectionFormation() {
+  const { active, toggle } = useFormation();
+
+  return (
+    <div className="bg-bg-card rounded-2xl p-5 md:p-6 mb-4">
+      <div className="text-[11px] text-dim uppercase tracking-wider mb-3">Formation</div>
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <div className="text-sm font-medium flex items-center gap-2">
+            <svg className="w-4 h-4 text-[#7C3AED]" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M10 2L1 7l9 5 9-5-9-5Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/>
+              <path d="M15 9.5v5c0 1.5-2.5 3-5 3s-5-1.5-5-3v-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M18 7v6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+            </svg>
+            Mode Formation
+          </div>
+          <div className="text-[12px] text-dim mt-0.5">
+            Activez pour vous entrainer sur des cas pratiques sans affecter les vraies donnees.
+          </div>
+        </div>
+        <button
+          onClick={toggle}
+          className={cn(
+            'w-12 h-7 rounded-full relative transition-colors flex-shrink-0',
+            active ? 'bg-[#7C3AED]' : 'bg-white/15'
+          )}
+        >
+          <span
+            className={cn(
+              'absolute top-0.5 w-6 h-6 rounded-full bg-white shadow transition-transform',
+              active ? 'translate-x-[22px]' : 'translate-x-0.5'
+            )}
+          />
+        </button>
+      </div>
     </div>
   );
 }

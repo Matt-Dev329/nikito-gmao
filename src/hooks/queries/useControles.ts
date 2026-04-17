@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
+import { useFormationFilter } from '@/hooks/useFormation';
 import type { TypeControle, EtatControleItem } from '@/types/database';
 
 export interface PointCharge {
@@ -56,6 +57,7 @@ export interface ItemSaisiMensuel extends ItemSaisi {
 
 export function useValiderControle() {
   const qc = useQueryClient();
+  const { estFormation } = useFormationFilter();
   return useMutation({
     mutationFn: async (params: {
       parc_id: string;
@@ -110,6 +112,7 @@ export function useValiderControle() {
             realise_par_role: params.realise_par_role,
             valide_par_id: params.realise_par_id,
             statut: 'valide',
+            est_formation: estFormation,
           })
           .select('id')
           .single();
@@ -142,6 +145,7 @@ export function useValiderControle() {
 
 export function useValiderControleMensuel() {
   const qc = useQueryClient();
+  const { estFormation } = useFormationFilter();
   return useMutation({
     mutationFn: async (params: {
       parc_id: string;
@@ -198,6 +202,7 @@ export function useValiderControleMensuel() {
             parc_id: params.parc_id,
             type: 'mensuel' as const,
             date_planifiee: params.date_planifiee,
+            est_formation: estFormation,
             ...controlePayload,
           })
           .select('id')

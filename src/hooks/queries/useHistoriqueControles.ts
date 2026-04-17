@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
+import { useFormationFilter } from '@/hooks/useFormation';
 import type { StatutControle, TypeControle } from '@/types/database';
 
 export interface ControleHistorique {
@@ -59,8 +60,9 @@ interface FiltresHistorique {
 }
 
 export function useHistoriqueControles(filtres: FiltresHistorique) {
+  const { estFormation } = useFormationFilter();
   return useQuery({
-    queryKey: ['historique_controles', filtres],
+    queryKey: ['historique_controles', filtres, estFormation],
     queryFn: async () => {
       let q = supabase
         .from('controles')
@@ -85,6 +87,7 @@ export function useHistoriqueControles(filtres: FiltresHistorique) {
           parcs!inner(code, nom),
           controle_items(id, etat)
         `)
+        .eq('est_formation', estFormation)
         .gte('date_planifiee', filtres.dateDebut)
         .lte('date_planifiee', filtres.dateFin)
         .order('date_planifiee', { ascending: false });

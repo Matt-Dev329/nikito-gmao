@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
+import { useFormationFilter } from '@/hooks/useFormation';
 
 interface SidebarBadges {
   recurrences: number;
@@ -9,8 +10,9 @@ interface SidebarBadges {
 }
 
 export function useSidebarBadges() {
+  const { estFormation } = useFormationFilter();
   return useQuery({
-    queryKey: ['sidebar-badges'],
+    queryKey: ['sidebar-badges', estFormation],
     queryFn: async (): Promise<SidebarBadges> => {
       const [recRes, fpRes, incRes, invRes] = await Promise.all([
         supabase
@@ -19,11 +21,13 @@ export function useSidebarBadges() {
         supabase
           .from('fiches_5_pourquoi')
           .select('id', { count: 'exact', head: true })
-          .eq('statut', 'ouvert'),
+          .eq('statut', 'ouvert')
+          .eq('est_formation', estFormation),
         supabase
           .from('incidents')
           .select('id', { count: 'exact', head: true })
-          .in('statut', ['ouvert', 'a_faire']),
+          .in('statut', ['ouvert', 'a_faire'])
+          .eq('est_formation', estFormation),
         supabase
           .from('invitations')
           .select('id', { count: 'exact', head: true })

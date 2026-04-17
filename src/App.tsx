@@ -46,6 +46,7 @@ import {
 } from '@/pages/_stubs';
 
 import { PageAide } from '@/pages/aide/PageAide';
+import { PageFormation } from '@/pages/formation/PageFormation';
 
 export function App() {
   return (
@@ -86,6 +87,7 @@ export function App() {
         <Route path="fournisseurs" element={<PageFournisseursAdmin />} />
         <Route path="controles-historique" element={<PageHistoriqueControles />} />
         <Route path="aide" element={<PageAide />} />
+        <Route path="formation" element={<PageFormation />} />
       </Route>
 
       <Route

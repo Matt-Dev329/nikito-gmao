@@ -1,18 +1,16 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
+import { useFormationFilter } from '@/hooks/useFormation';
 import type { StatutIncident } from '@/types/database';
-
-// ============================================================
-// Query hooks · Tickets / Incidents
-// ============================================================
 
 export function useIncidents(filtres?: {
   parcId?: string;
   statuts?: StatutIncident[];
   technicienId?: string;
 }) {
+  const { estFormation } = useFormationFilter();
   return useQuery({
-    queryKey: ['incidents', filtres],
+    queryKey: ['incidents', filtres, estFormation],
     queryFn: async () => {
       let q = supabase
         .from('incidents')
@@ -21,6 +19,7 @@ export function useIncidents(filtres?: {
           equipements!inner(code, libelle, parc_id, parcs(code, nom), zones(nom), categories_equipement(nom)),
           niveaux_priorite(code, nom, sla_h, couleur_hex)`
         )
+        .eq('est_formation', estFormation)
         .order('declare_le', { ascending: false });
 
       if (filtres?.parcId) {
@@ -89,12 +88,14 @@ export function useStockBas() {
 }
 
 export function useFiches5Pourquoi(statut?: 'ouvert' | 'valide' | 'audit_en_cours' | 'clos') {
+  const { estFormation } = useFormationFilter();
   return useQuery({
-    queryKey: ['5_pourquoi', statut],
+    queryKey: ['5_pourquoi', statut, estFormation],
     queryFn: async () => {
       let q = supabase
         .from('fiches_5_pourquoi')
         .select(`*, equipements(code, libelle, parc_id, parcs(code, nom)), incidents(numero_bt, titre)`)
+        .eq('est_formation', estFormation)
         .order('ouvert_le', { ascending: false });
       if (statut) q = q.eq('statut', statut);
       const { data, error } = await q;
