@@ -12,6 +12,7 @@ import {
   useUtilisateursDesactives,
   useInvitationsEnCours,
   useAnnulerInvitation,
+  useSupprimerUtilisateur,
   type UtilisateurRow,
   type InvitationRow,
 } from '@/hooks/queries/useUtilisateurs';
@@ -170,7 +171,15 @@ function ParcBadges({ parcs }: { parcs: { code: string }[] }) {
   );
 }
 
-function UserRow({ user }: { user: UtilisateurRow }) {
+function UserRow({
+  user,
+  onSupprimer,
+  supprimant,
+}: {
+  user: UtilisateurRow;
+  onSupprimer?: () => void;
+  supprimant?: boolean;
+}) {
   return (
     <div className="flex items-center gap-3 py-3 px-1 border-b border-white/[0.04] last:border-b-0">
       <Avatar prenom={user.prenom} nom={user.nom} />
@@ -186,6 +195,15 @@ function UserRow({ user }: { user: UtilisateurRow }) {
         </div>
       </div>
       <ParcBadges parcs={user.parcs} />
+      {onSupprimer && (
+        <button
+          onClick={onSupprimer}
+          disabled={supprimant}
+          className="text-[11px] font-semibold px-3 py-1.5 rounded-lg bg-bg-deep border border-white/[0.08] text-red hover:border-red/30 transition-colors disabled:opacity-40 shrink-0"
+        >
+          Supprimer
+        </button>
+      )}
     </div>
   );
 }
@@ -205,15 +223,29 @@ function EmptyState({ text, sub }: { text: string; sub?: string }) {
 }
 
 function ListeActifs() {
+  const { utilisateur } = useAuth();
   const { data, isLoading } = useUtilisateursActifs();
+  const supprimerMutation = useSupprimerUtilisateur();
+  const isDirection = utilisateur?.role_code === 'direction';
 
   if (isLoading) return <div className="text-dim text-sm text-center py-8">Chargement...</div>;
   if (!data || data.length === 0) return <EmptyState text="Aucun utilisateur actif." />;
 
+  const supprimer = (id: string, nom: string) => {
+    if (confirm(`Desactiver le compte de ${nom} ?`)) {
+      supprimerMutation.mutate(id);
+    }
+  };
+
   return (
     <div>
       {data.map((u) => (
-        <UserRow key={u.id} user={u} />
+        <UserRow
+          key={u.id}
+          user={u}
+          onSupprimer={isDirection && u.id !== utilisateur?.id ? () => supprimer(u.id, `${u.prenom} ${u.nom}`) : undefined}
+          supprimant={supprimerMutation.isPending}
+        />
       ))}
     </div>
   );

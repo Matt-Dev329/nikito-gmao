@@ -184,3 +184,19 @@ export function useAnnulerInvitation() {
     },
   });
 }
+
+export function useSupprimerUtilisateur() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from('utilisateurs')
+        .update({ actif: false, statut_validation: 'desactive' })
+        .eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['utilisateurs'] });
+    },
+  });
+}
