@@ -134,8 +134,6 @@ export function Sidebar({ user, roleAffiche, roleCode, realRoleCode, compact = f
         )}
       </div>
 
-      {showViewAs && <ViewAsSelector compact={compact} />}
-
       {sections.map((section) => {
         const itemsVisibles = section.items.filter((it) => it.roles.includes(roleCode));
         if (itemsVisibles.length === 0) return null;
@@ -223,11 +221,12 @@ export function Sidebar({ user, roleAffiche, roleCode, realRoleCode, compact = f
             {user.initiales}
           </div>
           {!compact && (
-            <div className="text-xs min-w-0">
+            <div className="text-xs min-w-0 flex-1">
               <div className="font-medium truncate">{user.nom}</div>
               <div className="text-dim text-[11px] truncate">{user.role}</div>
             </div>
           )}
+          {showViewAs && <ViewAsSelector compact />}
         </div>
         <NavLink
           to="/gmao/aide"
