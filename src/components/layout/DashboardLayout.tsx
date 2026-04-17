@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Outlet, useNavigate } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
+import { ViewAsBanner } from './ViewAsBanner';
 import { useAuth } from '@/hooks/useAuth';
+import { useViewAs, useEffectiveRole } from '@/hooks/useViewAs';
 import { useSidebarState } from '@/hooks/useSidebarState';
 import { roleLabels } from '@/lib/tokens';
 import { cn } from '@/lib/utils';
@@ -34,6 +36,9 @@ export function DashboardLayout() {
   const { mobileOpen, expanded, toggleExpanded, openMobile, closeMobile } = useSidebarState();
   const isDesktop = useIsDesktop();
   const navigate = useNavigate();
+  const viewAsRole = useViewAs((s) => s.role);
+  const realRoleCode = utilisateur?.role_code ?? 'direction';
+  const effectiveRole = useEffectiveRole(realRoleCode);
 
   const handleSignOut = async () => {
     await signOut();
@@ -67,10 +72,16 @@ export function DashboardLayout() {
   }
 
   const sidebarWidth = expanded ? SIDEBAR_W_EXPANDED : SIDEBAR_W_COMPACT;
+  const bannerActive = !!viewAsRole;
+  const bannerH = bannerActive ? 36 : 0;
 
   return (
     <div className="min-h-screen bg-bg-app text-text">
-      <header className="md:hidden fixed top-0 left-0 right-0 z-40 bg-bg-sidebar border-b border-white/[0.06] px-4 h-14 flex items-center justify-between">
+      <ViewAsBanner />
+      <header
+        className="md:hidden fixed left-0 right-0 z-40 bg-bg-sidebar border-b border-white/[0.06] px-4 h-14 flex items-center justify-between"
+        style={{ top: bannerH }}
+      >
         <button
           onClick={openMobile}
           className="min-w-[44px] min-h-[44px] flex items-center justify-center text-text -ml-2"
@@ -93,13 +104,17 @@ export function DashboardLayout() {
 
       <aside
         className={cn(
-          'fixed top-0 left-0 h-screen bg-bg-sidebar border-r border-white/[0.06]',
+          'fixed left-0 bg-bg-sidebar border-r border-white/[0.06]',
           'transition-all duration-300 ease-out',
           isDesktop
             ? 'z-auto translate-x-0'
             : cn('z-50', mobileOpen ? 'translate-x-0' : '-translate-x-full')
         )}
-        style={{ width: isDesktop ? sidebarWidth : SIDEBAR_W_MOBILE }}
+        style={{
+          width: isDesktop ? sidebarWidth : SIDEBAR_W_MOBILE,
+          top: isDesktop ? bannerH : 0,
+          height: isDesktop ? `calc(100vh - ${bannerH}px)` : '100vh',
+        }}
       >
         {!isDesktop && (
           <button
@@ -114,8 +129,9 @@ export function DashboardLayout() {
         )}
         <Sidebar
           user={user}
-          roleAffiche={roleAffiches[user.role_code] ?? 'UTILISATEUR'}
-          roleCode={user.role_code}
+          roleAffiche={roleAffiches[effectiveRole] ?? 'UTILISATEUR'}
+          roleCode={effectiveRole}
+          realRoleCode={realRoleCode}
           compact={isDesktop && !expanded}
           onNavClick={isDesktop ? undefined : closeMobile}
           onToggle={isDesktop ? toggleExpanded : undefined}
@@ -125,7 +141,7 @@ export function DashboardLayout() {
 
       <div
         className="transition-[margin] duration-300 ease-out"
-        style={{ marginLeft: isDesktop ? sidebarWidth : 0 }}
+        style={{ marginLeft: isDesktop ? sidebarWidth : 0, paddingTop: bannerH }}
       >
         <main className={cn('min-h-screen overflow-x-hidden', !isDesktop && 'pt-14')}>
           <Outlet />

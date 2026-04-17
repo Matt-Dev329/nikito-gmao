@@ -2,6 +2,7 @@ import { NavLink } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { Logo } from '@/components/ui/Logo';
 import { getNavIcon, IconToggleSidebar, IconDeconnexion, IconAide } from './NavIcons';
+import { ViewAsSelector } from './ViewAsSelector';
 import { useSidebarBadges } from '@/hooks/queries/useSidebarBadges';
 import type { RoleUtilisateur } from '@/types/database';
 
@@ -59,6 +60,7 @@ interface SidebarProps {
   user: { initiales: string; nom: string; role: string; couleurAvatar?: string };
   roleAffiche: string;
   roleCode: RoleUtilisateur;
+  realRoleCode?: RoleUtilisateur;
   compact?: boolean;
   onNavClick?: () => void;
   onToggle?: () => void;
@@ -75,8 +77,9 @@ function resolveBadge(
   return { count, tone: item.badgeTone ?? 'amber' };
 }
 
-export function Sidebar({ user, roleAffiche, roleCode, compact = false, onNavClick, onToggle, onSignOut }: SidebarProps) {
+export function Sidebar({ user, roleAffiche, roleCode, realRoleCode, compact = false, onNavClick, onToggle, onSignOut }: SidebarProps) {
   const { data: badges } = useSidebarBadges();
+  const showViewAs = (realRoleCode ?? roleCode) === 'direction' || (realRoleCode ?? roleCode) === 'chef_maintenance';
 
   return (
     <div className={cn('h-full flex flex-col overflow-y-auto', compact ? 'p-2 gap-0.5' : 'p-5 px-3.5 gap-1.5')}>
@@ -95,12 +98,14 @@ export function Sidebar({ user, roleAffiche, roleCode, compact = false, onNavCli
             'hidden md:flex items-center gap-2.5 rounded-[10px] text-dim hover:text-text hover:bg-white/[0.04] transition-colors min-h-[40px]',
             compact ? 'justify-center px-0' : 'px-3'
           )}
-          title={compact ? 'Étendre la sidebar' : 'Réduire la sidebar'}
+          title={compact ? 'Etendre la sidebar' : 'Reduire la sidebar'}
         >
           <IconToggleSidebar className={cn('w-[18px] h-[18px] flex-shrink-0 transition-transform', compact && 'rotate-180')} />
-          {!compact && <span className="text-[12px]">Réduire</span>}
+          {!compact && <span className="text-[12px]">Reduire</span>}
         </button>
       )}
+
+      {showViewAs && <ViewAsSelector compact={compact} />}
 
       {sections.map((section) => {
         const itemsVisibles = section.items.filter((it) => it.roles.includes(roleCode));

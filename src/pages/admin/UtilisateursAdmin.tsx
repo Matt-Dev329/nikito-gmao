@@ -1,7 +1,9 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { ModaleInviterUtilisateur } from '@/components/admin/ModaleInviterUtilisateur';
 import { useAuth } from '@/hooks/useAuth';
+import { useViewAs } from '@/hooks/useViewAs';
 import { roleLabels } from '@/lib/tokens';
 import { useParcs } from '@/hooks/queries/useReferentiel';
 import type { RoleUtilisateur } from '@/types/database';
@@ -175,10 +177,12 @@ function UserRow({
   user,
   onSupprimer,
   supprimant,
+  onViewAs,
 }: {
   user: UtilisateurRow;
   onSupprimer?: () => void;
   supprimant?: boolean;
+  onViewAs?: () => void;
 }) {
   return (
     <div className="flex items-center gap-3 py-3 px-1 border-b border-white/[0.04] last:border-b-0">
@@ -195,6 +199,18 @@ function UserRow({
         </div>
       </div>
       <ParcBadges parcs={user.parcs} />
+      {onViewAs && (
+        <button
+          onClick={onViewAs}
+          className="w-8 h-8 rounded-lg bg-bg-deep border border-white/[0.08] text-dim hover:text-amber hover:border-amber/30 transition-colors flex items-center justify-center shrink-0"
+          title={`Voir comme ${user.prenom}`}
+        >
+          <svg className="w-4 h-4" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M10 4.5C5.5 4.5 2 10 2 10s3.5 5.5 8 5.5 8-5.5 8-5.5-3.5-5.5-8-5.5Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+            <circle cx="10" cy="10" r="2.5" stroke="currentColor" strokeWidth="1.5"/>
+          </svg>
+        </button>
+      )}
       {onSupprimer && (
         <button
           onClick={onSupprimer}
@@ -222,19 +238,45 @@ function EmptyState({ text, sub }: { text: string; sub?: string }) {
   );
 }
 
+const roleHomePage: Record<RoleUtilisateur, string> = {
+  direction: '/gmao',
+  chef_maintenance: '/gmao',
+  technicien: '/gmao/operations',
+  manager_parc: '/gmao/mon-parc',
+  staff_operationnel: '/staff/controle-ouverture',
+};
+
 function ListeActifs() {
   const { utilisateur } = useAuth();
   const { data, isLoading } = useUtilisateursActifs();
+  const { data: parcs } = useParcs();
   const supprimerMutation = useSupprimerUtilisateur();
+  const { activate } = useViewAs();
+  const navigate = useNavigate();
   const isDirection = utilisateur?.role_code === 'direction';
+  const canViewAs = isDirection || utilisateur?.role_code === 'chef_maintenance';
 
   if (isLoading) return <div className="text-dim text-sm text-center py-8">Chargement...</div>;
   if (!data || data.length === 0) return <EmptyState text="Aucun utilisateur actif." />;
+
+  const parcMap = new Map((parcs ?? []).map((p) => [p.id, p]));
 
   const supprimer = (id: string, nom: string) => {
     if (confirm(`Desactiver le compte de ${nom} ?`)) {
       supprimerMutation.mutate(id);
     }
+  };
+
+  const handleViewAs = (u: UtilisateurRow) => {
+    const firstParc = u.parcs[0] ? parcMap.get(u.parcs[0].parc_id) : null;
+    const parcLabel = firstParc ? `${firstParc.code} - ${firstParc.nom}` : null;
+    activate(
+      u.role_code,
+      firstParc?.id ?? null,
+      parcLabel,
+      `${u.prenom} ${u.nom}`
+    );
+    navigate(roleHomePage[u.role_code] ?? '/gmao');
   };
 
   return (
@@ -243,6 +285,7 @@ function ListeActifs() {
         <UserRow
           key={u.id}
           user={u}
+          onViewAs={canViewAs && u.id !== utilisateur?.id ? () => handleViewAs(u) : undefined}
           onSupprimer={isDirection && u.id !== utilisateur?.id ? () => supprimer(u.id, `${u.prenom} ${u.nom}`) : undefined}
           supprimant={supprimerMutation.isPending}
         />
