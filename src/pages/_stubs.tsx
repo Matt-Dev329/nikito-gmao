@@ -4,40 +4,11 @@
 // Bolt n'a qu'à remplir le contenu UI
 // ============================================================
 
-import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStock, useStockBas, useFiches5Pourquoi } from '@/hooks/queries/useTickets';
-import { useEquipements, useFournisseurs } from '@/hooks/queries/useReferentiel';
+import { useFournisseurs } from '@/hooks/queries/useReferentiel';
 
-// ------------------------------------------------------------
-// EQUIPEMENTS · CRUD page
-// ------------------------------------------------------------
-export function PageEquipements() {
-  const [parcFilter, _setParcFilter] = useState<string | undefined>(undefined);
-  const { data: equipements } = useEquipements(parcFilter);
-
-  return (
-    <div className="p-6 px-7">
-      <div className="flex justify-between items-start mb-[22px]">
-        <div>
-          <h1 className="text-[22px] font-semibold m-0">Équipements</h1>
-          <div className="text-[13px] text-dim mt-1">
-            {equipements?.length ?? 0} équipements actifs
-          </div>
-        </div>
-        <div className="flex gap-2">
-          <button className="bg-bg-card border border-nikito-cyan/40 text-nikito-cyan px-3 py-2 rounded-lg text-xs">
-            ⬆ Importer CSV
-          </button>
-          <button className="bg-gradient-cta text-text px-4 py-2.5 rounded-lg text-[13px] font-bold">
-            + Nouvel équipement
-          </button>
-        </div>
-      </div>
-      {/* TODO Bolt · table équipements + filtres parc/zone/catégorie/statut */}
-    </div>
-  );
-}
+export { PageEquipements } from '@/pages/equipements/PageEquipements';
 
 // ------------------------------------------------------------
 // STOCK pièces détachées

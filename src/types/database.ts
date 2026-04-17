@@ -74,6 +74,8 @@ export interface Parc {
   actif: boolean;
 }
 
+export type StatutEquipement = 'actif' | 'maintenance' | 'hors_service' | 'archive';
+
 export interface Equipement {
   id: string;
   parc_id: string;
@@ -83,8 +85,37 @@ export interface Equipement {
   libelle: string;
   numero_serie: string | null;
   date_mise_service: string | null;
+  date_fin_garantie: string | null;
+  statut: StatutEquipement;
   a_surveiller: boolean;
   meta: Record<string, unknown>;
+  cree_le: string;
+  modifie_le: string;
+}
+
+export interface EquipementAvecJoins extends Equipement {
+  parcs: { code: string; nom: string } | null;
+  categories_equipement: { nom: string; criticite_defaut: string | null } | null;
+  zones: { nom: string } | null;
+}
+
+export interface CategorieEquipement {
+  id: string;
+  nom: string;
+  description: string | null;
+  criticite_defaut: string | null;
+  norme_associee: string | null;
+  fournisseur_principal_id: string | null;
+  cree_le: string;
+}
+
+export interface Zone {
+  id: string;
+  parc_id: string;
+  nom: string;
+  ordre: number;
+  coordonnees_plan: unknown;
+  cree_le: string;
 }
 
 export interface Incident {
