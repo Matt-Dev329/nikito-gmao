@@ -1,36 +1,25 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import {
-  useFiche5P,
-  useModifierFiche5P,
-  useStandardsEvolutifs,
-  useCreerStandard,
-  useModifierStandard,
-} from '@/hooks/queries/useFiches5P';
-import { useUtilisateursActifs } from '@/hooks/queries/useUtilisateurs';
+import { useFiche5P, useModifierFiche5P } from '@/hooks/queries/useFiches5P';
 import { useAuth } from '@/hooks/useAuth';
 import { Card } from '@/components/ui/Card';
 import { cn } from '@/lib/utils';
-import type { Statut5Pourquoi, StandardEvolutifAvecJoins, StatutStandardEvolutif } from '@/types/database';
+import type { Statut5Pourquoi } from '@/types/database';
 
-const POURQUOI_KEYS = ['pourquoi_1', 'pourquoi_2', 'pourquoi_3', 'pourquoi_4', 'pourquoi_5'] as const;
+const POURQUOI_KEYS = ['q1', 'q2', 'q3', 'q4', 'q5'] as const;
 
 const STATUT_BADGE: Record<Statut5Pourquoi, { label: string; cls: string }> = {
   ouvert: { label: 'Ouvert', cls: 'bg-red/15 text-red' },
-  en_cours: { label: 'En cours', cls: 'bg-amber/15 text-amber' },
-  cloture: { label: 'Cloture', cls: 'bg-green/15 text-green' },
+  valide: { label: 'Valide', cls: 'bg-nikito-cyan/15 text-nikito-cyan' },
+  audit_en_cours: { label: 'Audit 90j', cls: 'bg-amber/15 text-amber' },
+  clos: { label: 'Clos', cls: 'bg-green/15 text-green' },
 };
 
 const TRANSITIONS: Record<Statut5Pourquoi, { next: Statut5Pourquoi; label: string } | null> = {
-  ouvert: { next: 'en_cours', label: 'Passer en cours' },
-  en_cours: { next: 'cloture', label: 'Cloturer la fiche' },
-  cloture: null,
-};
-
-const STATUT_ACTION: Record<StatutStandardEvolutif, { label: string; cls: string }> = {
-  a_faire: { label: 'A faire', cls: 'bg-red/15 text-red' },
-  en_cours: { label: 'En cours', cls: 'bg-amber/15 text-amber' },
-  fait: { label: 'Fait', cls: 'bg-green/15 text-green' },
+  ouvert: { next: 'valide', label: 'Valider le 5P' },
+  valide: { next: 'audit_en_cours', label: 'Programmer audit 90j' },
+  audit_en_cours: { next: 'clos', label: 'Cloturer (audit OK)' },
+  clos: null,
 };
 
 export function FicheCinqPourquoi() {
@@ -39,28 +28,28 @@ export function FicheCinqPourquoi() {
   const { utilisateur } = useAuth();
   const { data: fiche, isLoading } = useFiche5P(id);
   const modifier = useModifierFiche5P();
-  const { data: standards, isLoading: stdLoading } = useStandardsEvolutifs(id);
 
-  const [p1, setP1] = useState('');
-  const [p2, setP2] = useState('');
-  const [p3, setP3] = useState('');
-  const [p4, setP4] = useState('');
-  const [p5, setP5] = useState('');
+  const [q1, setQ1] = useState('');
+  const [q2, setQ2] = useState('');
+  const [q3, setQ3] = useState('');
+  const [q4, setQ4] = useState('');
+  const [q5, setQ5] = useState('');
   const [causeRacine, setCauseRacine] = useState('');
+  const [contreMesure, setContreMesure] = useState('');
   const [dirty, setDirty] = useState(false);
-  const [ajoutAction, setAjoutAction] = useState(false);
 
-  const pSetters = [setP1, setP2, setP3, setP4, setP5];
-  const pValues = [p1, p2, p3, p4, p5];
+  const pSetters = [setQ1, setQ2, setQ3, setQ4, setQ5];
+  const pValues = [q1, q2, q3, q4, q5];
 
   useEffect(() => {
     if (!fiche) return;
-    setP1(fiche.pourquoi_1 ?? '');
-    setP2(fiche.pourquoi_2 ?? '');
-    setP3(fiche.pourquoi_3 ?? '');
-    setP4(fiche.pourquoi_4 ?? '');
-    setP5(fiche.pourquoi_5 ?? '');
+    setQ1(fiche.q1 ?? '');
+    setQ2(fiche.q2 ?? '');
+    setQ3(fiche.q3 ?? '');
+    setQ4(fiche.q4 ?? '');
+    setQ5(fiche.q5 ?? '');
     setCauseRacine(fiche.cause_racine ?? '');
+    setContreMesure(fiche.contre_mesure ?? '');
     setDirty(false);
   }, [fiche]);
 
@@ -88,23 +77,24 @@ export function FicheCinqPourquoi() {
     );
   }
 
-  const verrouille = fiche.statut === 'cloture';
+  const verrouille = fiche.statut === 'clos';
   const badge = STATUT_BADGE[fiche.statut];
   const transition = TRANSITIONS[fiche.statut];
   const nbPourquoi = POURQUOI_KEYS.filter((k) => fiche[k] && fiche[k]!.trim().length > 0).length;
-  const dateStr = new Date(fiche.cree_le).toLocaleDateString('fr-FR', {
+  const dateStr = new Date(fiche.ouvert_le).toLocaleDateString('fr-FR', {
     day: '2-digit', month: 'long', year: 'numeric',
   });
 
   const sauver = async () => {
     await modifier.mutateAsync({
       id: fiche.id,
-      pourquoi_1: p1 || null,
-      pourquoi_2: p2 || null,
-      pourquoi_3: p3 || null,
-      pourquoi_4: p4 || null,
-      pourquoi_5: p5 || null,
+      q1: q1 || null,
+      q2: q2 || null,
+      q3: q3 || null,
+      q4: q4 || null,
+      q5: q5 || null,
       cause_racine: causeRacine || null,
+      contre_mesure: contreMesure || null,
     });
     setDirty(false);
   };
@@ -112,9 +102,14 @@ export function FicheCinqPourquoi() {
   const changerStatut = async (statut: Statut5Pourquoi) => {
     if (dirty) await sauver();
     const extra: Record<string, unknown> = { id: fiche.id, statut };
-    if (statut === 'cloture') {
-      extra.cloture_le = new Date().toISOString();
-      extra.cloture_par_id = utilisateur?.id ?? null;
+    if (statut === 'valide') {
+      extra.validee_par_id = utilisateur?.id ?? null;
+      extra.validee_le = new Date().toISOString();
+    }
+    if (statut === 'audit_en_cours') {
+      const d = new Date();
+      d.setDate(d.getDate() + 90);
+      extra.audit_90j_le = d.toISOString().slice(0, 10);
     }
     await modifier.mutateAsync(extra as Parameters<typeof modifier.mutateAsync>[0]);
   };
@@ -131,7 +126,7 @@ export function FicheCinqPourquoi() {
           5 Pourquoi
         </button>
         <span className="text-faint">/</span>
-        <span className="truncate max-w-[200px]">{fiche.titre}</span>
+        <span className="truncate max-w-[200px]">{fiche.incidents?.numero_bt ?? 'Fiche'}</span>
       </div>
 
       <Card className="mb-5 p-4 px-[18px]">
@@ -143,7 +138,12 @@ export function FicheCinqPourquoi() {
               </span>
               <ProgressionDots count={nbPourquoi} />
             </div>
-            <h1 className="text-[17px] font-semibold leading-snug mb-1">{fiche.titre}</h1>
+            {fiche.incidents && (
+              <h1 className="text-[17px] font-semibold leading-snug mb-1">
+                <span className="text-nikito-pink font-mono mr-2">{fiche.incidents.numero_bt}</span>
+                {fiche.incidents.titre}
+              </h1>
+            )}
             <div className="flex items-center gap-2 flex-wrap text-[12px] text-dim">
               {fiche.equipements && (
                 <>
@@ -152,13 +152,14 @@ export function FicheCinqPourquoi() {
                   <span className="text-faint">|</span>
                 </>
               )}
-              <span>{fiche.parcs?.nom}</span>
+              <span>{fiche.equipements?.parcs?.nom}</span>
               <span className="text-faint">|</span>
               <span>{dateStr}</span>
             </div>
-            {fiche.description && (
-              <p className="text-[12px] text-dim mt-2 bg-bg-deep rounded-lg p-2.5 border border-white/[0.04]">
-                {fiche.description}
+            {fiche.audit_90j_le && (
+              <p className="text-[11px] text-amber mt-1.5">
+                Audit 90j prevu le {new Date(fiche.audit_90j_le).toLocaleDateString('fr-FR')}
+                {fiche.audit_resultat && ` — Resultat : ${fiche.audit_resultat}`}
               </p>
             )}
           </div>
@@ -169,7 +170,7 @@ export function FicheCinqPourquoi() {
                 disabled={modifier.isPending}
                 className={cn(
                   'px-4 py-2 rounded-[10px] text-[12px] font-bold min-h-[44px] whitespace-nowrap',
-                  transition.next === 'cloture'
+                  transition.next === 'clos'
                     ? 'bg-green/15 text-green border border-green/30 hover:bg-green/25'
                     : 'bg-gradient-cta text-text'
                 )}
@@ -184,7 +185,7 @@ export function FicheCinqPourquoi() {
       {verrouille && (
         <div className="bg-green/5 border border-green/20 rounded-[10px] p-3 mb-4 text-[12px] text-green flex items-center gap-2">
           <span className="w-2 h-2 rounded-full bg-green flex-shrink-0" />
-          Fiche cloturee &mdash; les champs ne sont plus modifiables.
+          Fiche close &mdash; les champs ne sont plus modifiables.
         </div>
       )}
 
@@ -223,38 +224,22 @@ export function FicheCinqPourquoi() {
       </section>
 
       <section className="mb-6">
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-[11px] text-dim uppercase tracking-[1.2px]">Actions correctives</h2>
-          {!verrouille && (
-            <button
-              onClick={() => setAjoutAction(true)}
-              className="text-nikito-cyan text-[12px] font-medium hover:underline min-h-[44px] flex items-center"
-            >
-              + Ajouter une action
-            </button>
+        <h2 className="text-[11px] text-dim uppercase tracking-[1.2px] mb-3">Contre-mesure</h2>
+        <Card className="p-4 px-[18px]">
+          {verrouille ? (
+            <p className="text-[13px] text-text whitespace-pre-wrap min-h-[40px]">
+              {contreMesure || <span className="text-faint italic">Non renseignee</span>}
+            </p>
+          ) : (
+            <textarea
+              value={contreMesure}
+              onChange={(e) => { setContreMesure(e.target.value); setDirty(true); }}
+              placeholder="Quelle contre-mesure est mise en place ?"
+              rows={3}
+              className="w-full bg-transparent text-text text-[13px] resize-y outline-none placeholder:text-faint min-h-[70px]"
+            />
           )}
-        </div>
-
-        {stdLoading ? (
-          <div className="bg-bg-card rounded-xl h-20 animate-pulse" />
-        ) : (standards ?? []).length === 0 && !ajoutAction ? (
-          <Card className="p-4 text-center">
-            <p className="text-[12px] text-faint">Aucune action corrective.</p>
-          </Card>
-        ) : (
-          <div className="space-y-2.5">
-            {(standards ?? []).map((s) => (
-              <ActionCard key={s.id} action={s} verrouille={verrouille} />
-            ))}
-          </div>
-        )}
-
-        {ajoutAction && id && (
-          <FormulaireAction
-            ficheId={id}
-            onClose={() => setAjoutAction(false)}
-          />
-        )}
+        </Card>
       </section>
 
       {modifier.isError && (
@@ -317,125 +302,6 @@ function PourquoiBlock({
         )}
       </div>
     </div>
-  );
-}
-
-function ActionCard({ action: a, verrouille }: { action: StandardEvolutifAvecJoins; verrouille: boolean }) {
-  const modifierStd = useModifierStandard();
-  const statut = STATUT_ACTION[a.statut];
-  const responsable = a.utilisateurs ? `${a.utilisateurs.prenom} ${a.utilisateurs.nom}` : null;
-  const deadline = a.deadline ? new Date(a.deadline).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' }) : null;
-
-  const cycleStatut = async () => {
-    if (verrouille) return;
-    const next: StatutStandardEvolutif = a.statut === 'a_faire' ? 'en_cours' : a.statut === 'en_cours' ? 'fait' : 'a_faire';
-    await modifierStd.mutateAsync({ id: a.id, fiche_5p_id: a.fiche_5p_id, statut: next });
-  };
-
-  return (
-    <Card className="p-3.5 px-4">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0 flex-1">
-          <p className="text-[13px] text-text leading-snug">{a.description}</p>
-          <div className="flex items-center gap-3 mt-1.5 flex-wrap text-[11px] text-dim">
-            {responsable && <span>{responsable}</span>}
-            {deadline && (
-              <span className={cn(
-                a.deadline && new Date(a.deadline) < new Date() && a.statut !== 'fait' ? 'text-red' : ''
-              )}>
-                {deadline}
-              </span>
-            )}
-          </div>
-        </div>
-        <button
-          onClick={cycleStatut}
-          disabled={verrouille || modifierStd.isPending}
-          className={cn(
-            'text-[10px] font-semibold px-2.5 py-1 rounded-md whitespace-nowrap min-h-[28px]',
-            statut.cls,
-            !verrouille && 'cursor-pointer hover:opacity-80',
-            verrouille && 'cursor-default'
-          )}
-        >
-          {statut.label}
-        </button>
-      </div>
-    </Card>
-  );
-}
-
-function FormulaireAction({ ficheId, onClose }: { ficheId: string; onClose: () => void }) {
-  const creerStd = useCreerStandard();
-  const { data: utilisateurs } = useUtilisateursActifs();
-  const [desc, setDesc] = useState('');
-  const [responsableId, setResponsableId] = useState('');
-  const [deadline, setDeadline] = useState('');
-
-  const submit = async () => {
-    if (!desc.trim()) return;
-    await creerStd.mutateAsync({
-      fiche_5p_id: ficheId,
-      description: desc.trim(),
-      responsable_id: responsableId || null,
-      deadline: deadline || null,
-    });
-    onClose();
-  };
-
-  return (
-    <Card className="mt-2.5 p-4 px-[18px] border border-nikito-cyan/20">
-      <div className="text-[11px] text-dim uppercase tracking-wider mb-3">Nouvelle action corrective</div>
-      <div className="space-y-3 mb-4">
-        <textarea
-          value={desc}
-          onChange={(e) => setDesc(e.target.value)}
-          placeholder="Description de l'action..."
-          rows={2}
-          className="w-full bg-bg-deep border border-white/[0.08] rounded-[10px] p-3 px-3.5 text-text text-[13px] outline-none focus:border-nikito-cyan resize-y min-h-[60px]"
-        />
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-          <select
-            value={responsableId}
-            onChange={(e) => setResponsableId(e.target.value)}
-            className="bg-bg-deep border border-white/[0.08] rounded-[10px] p-3 px-3.5 text-text text-[13px] outline-none focus:border-nikito-cyan min-h-[44px]"
-          >
-            <option value="">Responsable (optionnel)</option>
-            {(utilisateurs ?? []).map((u) => (
-              <option key={u.id} value={u.id}>{u.prenom} {u.nom}</option>
-            ))}
-          </select>
-          <input
-            type="date"
-            value={deadline}
-            onChange={(e) => setDeadline(e.target.value)}
-            className="bg-bg-deep border border-white/[0.08] rounded-[10px] p-3 px-3.5 text-text text-[13px] outline-none focus:border-nikito-cyan min-h-[44px]"
-          />
-        </div>
-      </div>
-
-      {creerStd.isError && (
-        <div className="text-red text-[12px] mb-3 bg-red/10 rounded-lg p-3">
-          Erreur : {(creerStd.error as Error).message}
-        </div>
-      )}
-
-      <div className="flex gap-2.5 justify-end">
-        <button onClick={onClose} className="text-dim text-[12px] px-3 py-2 min-h-[44px]">
-          Annuler
-        </button>
-        <button
-          onClick={submit}
-          disabled={!desc.trim() || creerStd.isPending}
-          className={cn(
-            'bg-gradient-cta text-text px-5 py-2 rounded-[10px] text-[12px] font-bold min-h-[44px]',
-            (!desc.trim() || creerStd.isPending) && 'opacity-40 cursor-not-allowed'
-          )}
-        >
-          {creerStd.isPending ? 'Ajout...' : 'Ajouter'}
-        </button>
-      </div>
-    </Card>
   );
 }
 

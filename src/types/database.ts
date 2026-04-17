@@ -9,8 +9,18 @@ export type EtatControleItem = 'ok' | 'degrade' | 'hs';
 export type StatutIncident = 'ouvert' | 'assigne' | 'en_cours' | 'resolu' | 'ferme' | 'annule';
 export type StatutControle = 'a_faire' | 'en_cours' | 'valide' | 'echec';
 export type TypeControle = 'quotidien' | 'hebdo' | 'mensuel';
-export type Statut5Pourquoi = 'ouvert' | 'en_cours' | 'cloture';
-export type StatutStandardEvolutif = 'a_faire' | 'en_cours' | 'fait';
+export type Statut5Pourquoi = 'ouvert' | 'valide' | 'audit_en_cours' | 'clos';
+export type AuditResultat = 'efficace' | 'inefficace' | 'partiel';
+export type TypeMaintenance =
+  | 'preventif_systematique'
+  | 'preventif_conditionnel'
+  | 'preventif_previsionnel'
+  | 'correctif_palliatif'
+  | 'correctif_curatif'
+  | 'reglementaire'
+  | 'amelioration'
+  | 'travaux_neufs';
+export type CanalPlainte = 'caisse' | 'google_review' | 'email' | 'tel' | 'app_client';
 export type Criticite = 'bloquant' | 'majeur' | 'mineur';
 export type RoleUtilisateur =
   | 'direction'
@@ -168,42 +178,106 @@ export interface Intervention {
 
 export interface Fiche5Pourquoi {
   id: string;
-  parc_id: string;
-  equipement_id: string | null;
-  titre: string;
-  description: string | null;
-  statut: Statut5Pourquoi;
-  pourquoi_1: string | null;
-  pourquoi_2: string | null;
-  pourquoi_3: string | null;
-  pourquoi_4: string | null;
-  pourquoi_5: string | null;
+  incident_id: string;
+  equipement_id: string;
+  ouvert_par_id: string;
+  ouvert_le: string;
+  q1: string | null;
+  q2: string | null;
+  q3: string | null;
+  q4: string | null;
+  q5: string | null;
   cause_racine: string | null;
-  cree_par_id: string | null;
+  contre_mesure: string | null;
+  type_action: TypeMaintenance | null;
+  validee_par_id: string | null;
+  validee_le: string | null;
+  audit_90j_le: string | null;
+  audit_resultat: AuditResultat | null;
+  statut: Statut5Pourquoi;
   cree_le: string;
   modifie_le: string;
-  cloture_le: string | null;
-  cloture_par_id: string | null;
 }
 
 export interface Fiche5PourquoiAvecJoins extends Fiche5Pourquoi {
-  parcs: { code: string; nom: string } | null;
-  equipements: { code: string; libelle: string } | null;
+  equipements: { code: string; libelle: string; parc_id: string; parcs: { code: string; nom: string } | null } | null;
+  incidents: { numero_bt: string; titre: string } | null;
 }
 
-export interface StandardEvolutif {
+export interface PieceDetachee {
   id: string;
-  fiche_5p_id: string;
+  reference: string;
+  nom: string;
   description: string | null;
-  responsable_id: string | null;
-  deadline: string | null;
-  statut: StatutStandardEvolutif;
+  fournisseur_id: string | null;
+  stock_actuel: number;
+  stock_min: number;
+  prix_unitaire_ht: number | null;
+  delai_reappro_jours: number | null;
+  emplacement: string | null;
   cree_le: string;
   modifie_le: string;
 }
 
-export interface StandardEvolutifAvecJoins extends StandardEvolutif {
-  utilisateurs: { prenom: string; nom: string } | null;
+export interface PieceDetacheeAvecJoins extends PieceDetachee {
+  fournisseurs: { nom: string; contact_tel: string | null } | null;
+}
+
+export interface MaintenancePreventive {
+  id: string;
+  equipement_id: string;
+  type: TypeMaintenance;
+  libelle: string;
+  description: string | null;
+  frequence_jours: number | null;
+  derniere_execution: string | null;
+  prochaine_echeance: string;
+  duree_min_estimee: number | null;
+  fournisseur_id: string | null;
+  actif: boolean;
+  cree_le: string;
+  modifie_le: string;
+}
+
+export interface MaintenancePreventiveAvecJoins extends MaintenancePreventive {
+  equipements: { code: string; libelle: string; parc_id: string; parcs: { code: string; nom: string } | null } | null;
+  fournisseurs: { nom: string } | null;
+}
+
+export interface Certification {
+  id: string;
+  equipement_id: string;
+  norme: string;
+  organisme_certificateur: string | null;
+  numero_certificat: string | null;
+  date_certif: string;
+  prochaine_echeance: string;
+  document_pdf_url: string | null;
+  notes: string | null;
+  cree_le: string;
+  modifie_le: string;
+}
+
+export interface CertificationAvecJoins extends Certification {
+  equipements: { code: string; libelle: string; parc_id: string; parcs: { code: string; nom: string } | null } | null;
+}
+
+export interface PlainteClient {
+  id: string;
+  equipement_id: string | null;
+  parc_id: string;
+  declare_le: string;
+  canal: CanalPlainte | null;
+  commentaire: string | null;
+  saisi_par_id: string | null;
+  ticket_genere_id: string | null;
+  cree_le: string;
+}
+
+export interface PlainteClientAvecJoins extends PlainteClient {
+  parcs: { code: string; nom: string } | null;
+  equipements: { code: string; libelle: string } | null;
+  incidents: { numero_bt: string } | null;
 }
 
 // Vues KPI

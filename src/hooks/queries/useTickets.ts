@@ -88,14 +88,14 @@ export function useStockBas() {
   });
 }
 
-export function useFiches5Pourquoi(statut?: 'ouvert' | 'en_cours' | 'cloture') {
+export function useFiches5Pourquoi(statut?: 'ouvert' | 'valide' | 'audit_en_cours' | 'clos') {
   return useQuery({
     queryKey: ['5_pourquoi', statut],
     queryFn: async () => {
       let q = supabase
         .from('fiches_5_pourquoi')
-        .select(`*, parcs(code, nom), equipements(code, libelle)`)
-        .order('cree_le', { ascending: false });
+        .select(`*, equipements(code, libelle, parc_id, parcs(code, nom)), incidents(numero_bt, titre)`)
+        .order('ouvert_le', { ascending: false });
       if (statut) q = q.eq('statut', statut);
       const { data, error } = await q;
       if (error) throw error;

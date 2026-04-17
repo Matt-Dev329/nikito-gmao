@@ -5,24 +5,25 @@ import { useParcs } from '@/hooks/queries/useReferentiel';
 import { Card } from '@/components/ui/Card';
 import { Pill } from '@/components/ui/Pill';
 import { cn } from '@/lib/utils';
-import { ModaleCreerFiche5P } from '@/pages/cinq-pourquoi/ModaleCreerFiche5P';
 import type { Fiche5PourquoiAvecJoins, Statut5Pourquoi } from '@/types/database';
 
 const STATUTS_FILTRE: Array<{ value: Statut5Pourquoi | 'tous'; label: string }> = [
   { value: 'tous', label: 'Tous' },
   { value: 'ouvert', label: 'Ouvert' },
-  { value: 'en_cours', label: 'En cours' },
-  { value: 'cloture', label: 'Cloture' },
+  { value: 'valide', label: 'Valide' },
+  { value: 'audit_en_cours', label: 'Audit 90j' },
+  { value: 'clos', label: 'Clos' },
 ];
 
 const STATUT_BADGE: Record<Statut5Pourquoi, { label: string; cls: string }> = {
   ouvert: { label: 'Ouvert', cls: 'bg-red/15 text-red' },
-  en_cours: { label: 'En cours', cls: 'bg-amber/15 text-amber' },
-  cloture: { label: 'Cloture', cls: 'bg-green/15 text-green' },
+  valide: { label: 'Valide', cls: 'bg-nikito-cyan/15 text-nikito-cyan' },
+  audit_en_cours: { label: 'Audit 90j', cls: 'bg-amber/15 text-amber' },
+  clos: { label: 'Clos', cls: 'bg-green/15 text-green' },
 };
 
 function countPourquoi(f: Fiche5PourquoiAvecJoins) {
-  return [f.pourquoi_1, f.pourquoi_2, f.pourquoi_3, f.pourquoi_4, f.pourquoi_5]
+  return [f.q1, f.q2, f.q3, f.q4, f.q5]
     .filter((v) => v && v.trim().length > 0).length;
 }
 
@@ -33,16 +34,15 @@ export function ListeCinqPourquoi() {
   const [statutFilter, setStatutFilter] = useState<Statut5Pourquoi | 'tous'>('tous');
   const [parcFilter, setParcFilter] = useState('');
   const [recherche, setRecherche] = useState('');
-  const [modaleOuverte, setModaleOuverte] = useState(false);
 
   const filtrees = useMemo(() => {
     let result = fiches ?? [];
     if (statutFilter !== 'tous') result = result.filter((f) => f.statut === statutFilter);
-    if (parcFilter) result = result.filter((f) => f.parc_id === parcFilter);
+    if (parcFilter) result = result.filter((f) => f.equipements?.parc_id === parcFilter);
     if (recherche.trim()) {
       const q = recherche.toLowerCase();
       result = result.filter((f) => {
-        const haystack = [f.titre, f.equipements?.code, f.equipements?.libelle]
+        const haystack = [f.incidents?.titre, f.equipements?.code, f.equipements?.libelle, f.incidents?.numero_bt]
           .filter(Boolean).join(' ').toLowerCase();
         return haystack.includes(q);
       });
@@ -52,26 +52,14 @@ export function ListeCinqPourquoi() {
 
   const compteurs = useMemo(() => {
     const all = fiches ?? [];
-    const parParc = new Map<string, { nom: string; nb: number }>();
-    for (const f of all) {
-      const pNom = f.parcs?.nom ?? 'Inconnu';
-      const existing = parParc.get(f.parc_id);
-      if (existing) existing.nb++;
-      else parParc.set(f.parc_id, { nom: pNom, nb: 1 });
-    }
     return {
       total: all.length,
       ouvert: all.filter((f) => f.statut === 'ouvert').length,
-      enCours: all.filter((f) => f.statut === 'en_cours').length,
-      cloture: all.filter((f) => f.statut === 'cloture').length,
-      parParc: Array.from(parParc.values()),
+      valide: all.filter((f) => f.statut === 'valide').length,
+      audit: all.filter((f) => f.statut === 'audit_en_cours').length,
+      clos: all.filter((f) => f.statut === 'clos').length,
     };
   }, [fiches]);
-
-  const handleCreated = (id: string) => {
-    setModaleOuverte(false);
-    navigate(`/gmao/cinq-pourquoi/${id}`);
-  };
 
   return (
     <div className="p-4 md:p-6 md:px-7">
@@ -82,22 +70,14 @@ export function ListeCinqPourquoi() {
             Analyses de cause racine &mdash; methode Lean
           </p>
         </div>
-        <button
-          onClick={() => setModaleOuverte(true)}
-          className="bg-gradient-cta text-text px-5 py-2.5 rounded-[10px] text-[13px] font-bold flex items-center gap-2 min-h-[44px] w-full sm:w-auto justify-center"
-        >
-          <span className="text-base leading-none">+</span> Nouvelle fiche 5P
-        </button>
       </div>
 
       <div className="flex flex-wrap gap-2.5 mb-4">
         <Compteur label="Total" value={compteurs.total} />
         <Compteur label="Ouvert" value={compteurs.ouvert} color="red" />
-        <Compteur label="En cours" value={compteurs.enCours} color="amber" />
-        <Compteur label="Cloture" value={compteurs.cloture} color="green" />
-        {compteurs.parParc.map((p) => (
-          <Compteur key={p.nom} label={p.nom} value={p.nb} />
-        ))}
+        <Compteur label="Valide" value={compteurs.valide} color="cyan" />
+        <Compteur label="Audit 90j" value={compteurs.audit} color="amber" />
+        <Compteur label="Clos" value={compteurs.clos} color="green" />
       </div>
 
       <div className="flex flex-col gap-3 mb-4">
@@ -106,7 +86,7 @@ export function ListeCinqPourquoi() {
             type="text"
             value={recherche}
             onChange={(e) => setRecherche(e.target.value)}
-            placeholder="Rechercher (titre, equipement)..."
+            placeholder="Rechercher (BT, equipement, titre)..."
             className="flex-1 bg-bg-deep border border-white/[0.08] rounded-xl px-4 py-2.5 text-[13px] text-text placeholder:text-faint outline-none focus:border-nikito-cyan/50 min-h-[44px]"
           />
           <select
@@ -144,13 +124,7 @@ export function ListeCinqPourquoi() {
       ) : filtrees.length === 0 ? (
         <div className="text-center py-16">
           <p className="text-dim text-sm mb-1">Aucune fiche 5 Pourquoi.</p>
-          <p className="text-faint text-xs mb-5">Ajustez vos filtres ou creez une nouvelle fiche.</p>
-          <button
-            onClick={() => setModaleOuverte(true)}
-            className="bg-gradient-cta text-text px-5 py-2.5 rounded-[10px] text-[13px] font-bold min-h-[44px]"
-          >
-            + Nouvelle fiche 5P
-          </button>
+          <p className="text-faint text-xs">Ajustez vos filtres ou ouvrez un 5P depuis un incident recurrent.</p>
         </div>
       ) : (
         <>
@@ -166,10 +140,6 @@ export function ListeCinqPourquoi() {
           </div>
         </>
       )}
-
-      {modaleOuverte && (
-        <ModaleCreerFiche5P onClose={() => setModaleOuverte(false)} onCreated={handleCreated} />
-      )}
     </div>
   );
 }
@@ -177,7 +147,7 @@ export function ListeCinqPourquoi() {
 function FicheCard({ fiche: f, onClick }: { fiche: Fiche5PourquoiAvecJoins; onClick: () => void }) {
   const badge = STATUT_BADGE[f.statut];
   const nb = countPourquoi(f);
-  const dateStr = new Date(f.cree_le).toLocaleDateString('fr-FR', {
+  const dateStr = new Date(f.ouvert_le).toLocaleDateString('fr-FR', {
     day: '2-digit', month: 'short', year: 'numeric',
   });
 
@@ -193,7 +163,12 @@ function FicheCard({ fiche: f, onClick }: { fiche: Fiche5PourquoiAvecJoins; onCl
         <span className="text-[10px] text-faint whitespace-nowrap">{dateStr}</span>
       </div>
 
-      <h3 className="text-[13px] font-medium leading-snug mb-1.5 line-clamp-2">{f.titre}</h3>
+      {f.incidents && (
+        <p className="text-[12px] text-dim mb-1 truncate">
+          <span className="text-nikito-pink font-mono mr-1">{f.incidents.numero_bt}</span>
+          {f.incidents.titre}
+        </p>
+      )}
 
       {f.equipements && (
         <p className="text-[11px] text-dim mb-1.5 truncate">
@@ -203,7 +178,7 @@ function FicheCard({ fiche: f, onClick }: { fiche: Fiche5PourquoiAvecJoins; onCl
       )}
 
       <div className="flex items-center justify-between gap-2">
-        <span className="text-[11px] text-dim">{f.parcs?.nom}</span>
+        <span className="text-[11px] text-dim">{f.equipements?.parcs?.nom}</span>
         <ProgressionDots count={nb} />
       </div>
     </Card>
@@ -224,10 +199,10 @@ function ProgressionDots({ count }: { count: number }) {
   );
 }
 
-function Compteur({ label, value, color }: { label: string; value: number; color?: 'red' | 'amber' | 'green' }) {
-  const textCls = color === 'red' ? 'text-red' : color === 'amber' ? 'text-amber' : color === 'green' ? 'text-green' : 'text-text';
+function Compteur({ label, value, color }: { label: string; value: number; color?: 'red' | 'amber' | 'green' | 'cyan' }) {
+  const textCls = color === 'red' ? 'text-red' : color === 'amber' ? 'text-amber' : color === 'green' ? 'text-green' : color === 'cyan' ? 'text-nikito-cyan' : 'text-text';
   return (
-    <div className="bg-bg-card rounded-xl px-4 py-2.5 border border-white/[0.06] min-w-[100px]">
+    <div className="bg-bg-card rounded-xl px-4 py-2.5 border border-white/[0.06] min-w-[90px]">
       <div className="text-[10px] text-dim uppercase tracking-wider">{label}</div>
       <div className={cn('text-lg font-semibold', textCls)}>{value}</div>
     </div>
