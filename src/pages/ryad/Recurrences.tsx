@@ -1,11 +1,14 @@
 import { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { KpiCard } from '@/components/kpi/KpiCard';
 import { Card } from '@/components/ui/Card';
 import { CritTag } from '@/components/ui/CritTag';
 import { Pill } from '@/components/ui/Pill';
 import { useRecurrencesActives } from '@/hooks/queries/useKpi';
 import { useFiches5Pourquoi } from '@/hooks/queries/useTickets';
+import { useCreerFiche5PDepuisRecurrence } from '@/hooks/queries/useFiches5P';
 import { useParcs } from '@/hooks/queries/useReferentiel';
+import { useAuth } from '@/hooks/useAuth';
 import type { Criticite } from '@/types/database';
 
 function SkeletonBlock({ className }: { className?: string }) {
@@ -38,12 +41,16 @@ function getCriticite(pannes30j: number, plaintes7j: number): Criticite {
 }
 
 export function Recurrences() {
+  const navigate = useNavigate();
+  const { utilisateur } = useAuth();
   const [parcActif, setParcActif] = useState<string | null>(null);
   const [seuilPannes, setSeuilPannes] = useState(3);
+  const [erreur5P, setErreur5P] = useState<string | null>(null);
 
   const recurrencesQ = useRecurrencesActives();
   const fiches5pQ = useFiches5Pourquoi();
   const parcsQ = useParcs();
+  const creer5P = useCreerFiche5PDepuisRecurrence();
 
   const loading = recurrencesQ.isLoading || fiches5pQ.isLoading;
 
@@ -76,6 +83,27 @@ export function Recurrences() {
   }, [recurrences, fiches5p]);
 
   const parcs = (parcsQ.data ?? []) as Record<string, unknown>[];
+
+  const handleOuvrir5P = async (equipementId: string) => {
+    if (!utilisateur) return;
+    setErreur5P(null);
+    try {
+      const result = await creer5P.mutateAsync({
+        equipement_id: equipementId,
+        ouvert_par_id: utilisateur.id,
+      });
+      navigate(`/gmao/cinq-pourquoi/${result.id}`);
+    } catch (err) {
+      setErreur5P((err as Error).message);
+    }
+  };
+
+  const handleVoir5P = (equipementId: string) => {
+    const fiche = fiches5p.find(
+      (f) => (f.equipement_id as string) === equipementId && f.statut !== 'clos'
+    );
+    if (fiche) navigate(`/gmao/cinq-pourquoi/${fiche.id as string}`);
+  };
 
   return (
     <div className="p-4 md:p-6 md:px-7 overflow-hidden">
@@ -134,6 +162,12 @@ export function Recurrences() {
             <KpiCard label="Standards évolutifs validés" valeur={kpi.standards.toString()} couleur="green" />
           </div>
 
+          {erreur5P && (
+            <div className="bg-red/10 border border-red/20 rounded-xl p-3 mb-4 text-[12px] text-red">
+              L'ouverture du 5 Pourquoi a echoue : {erreur5P}
+            </div>
+          )}
+
           {recurrences.length === 0 ? (
             <div className="text-center py-12 text-dim text-sm">
               Aucune récurrence active détectée
@@ -164,6 +198,7 @@ export function Recurrences() {
                       pannes30j={pannes30j}
                       pannes90j={pannes90j}
                       plaintes7j={plaintes7j}
+                      onContinuer5P={() => handleVoir5P(equipId)}
                     />
                   ) : (
                     <RecurrenceCompacte
@@ -172,6 +207,8 @@ export function Recurrences() {
                       pannes30j={pannes30j}
                       plaintes7j={plaintes7j}
                       a5p={a5p}
+                      onOuvrir5P={() => a5p ? handleVoir5P(equipId) : handleOuvrir5P(equipId)}
+                      loading5P={creer5P.isPending}
                     />
                   )}
                 </Card>
@@ -232,6 +269,7 @@ function RecurrenceDetaillée({
   pannes30j,
   pannes90j,
   plaintes7j,
+  onContinuer5P,
 }: {
   rec: Record<string, unknown>;
   fiche5p: Record<string, unknown>;
@@ -239,6 +277,7 @@ function RecurrenceDetaillée({
   pannes30j: number;
   pannes90j: number;
   plaintes7j: number;
+  onContinuer5P: () => void;
 }) {
   const pourquois = [
     fiche5p.pourquoi_1 as string | null,
@@ -302,7 +341,10 @@ function RecurrenceDetaillée({
       </div>
 
       <div className="flex gap-2.5 flex-wrap">
-        <button className="flex-1 min-w-[160px] bg-gradient-cta text-text py-3 px-4 rounded-[10px] text-[13px] font-semibold min-h-[44px]">
+        <button
+          onClick={onContinuer5P}
+          className="flex-1 min-w-[160px] bg-gradient-cta text-text py-3 px-4 rounded-[10px] text-[13px] font-semibold min-h-[44px]"
+        >
           Continuer le 5 Pourquoi
         </button>
         <button className="bg-bg-deep border border-white/10 text-text py-3 px-4 rounded-[10px] text-[13px] min-h-[44px]">
@@ -322,12 +364,16 @@ function RecurrenceCompacte({
   pannes30j,
   plaintes7j,
   a5p,
+  onOuvrir5P,
+  loading5P,
 }: {
   rec: Record<string, unknown>;
   criticite: Criticite;
   pannes30j: number;
   plaintes7j: number;
   a5p: boolean;
+  onOuvrir5P: () => void;
+  loading5P: boolean;
 }) {
   return (
     <div className="p-4 px-[18px]">
@@ -345,8 +391,12 @@ function RecurrenceCompacte({
         </span>
       </div>
       <div className="mt-2.5 flex gap-2">
-        <button className="bg-gradient-cta text-text py-2 px-3.5 rounded-lg text-xs font-medium min-h-[44px]">
-          {a5p ? 'Voir 5 Pourquoi' : 'Ouvrir 5 Pourquoi'}
+        <button
+          onClick={onOuvrir5P}
+          disabled={loading5P}
+          className="bg-gradient-cta text-text py-2 px-3.5 rounded-lg text-xs font-medium min-h-[44px] disabled:opacity-40"
+        >
+          {loading5P ? 'Creation...' : a5p ? 'Voir 5 Pourquoi' : 'Ouvrir 5 Pourquoi'}
         </button>
         <button className="bg-bg-deep border border-white/10 text-dim py-2 px-3.5 rounded-lg text-xs min-h-[44px]">
           Historique

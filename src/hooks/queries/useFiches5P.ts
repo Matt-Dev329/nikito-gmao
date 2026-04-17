@@ -59,6 +59,44 @@ export function useCreerFiche5P() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['fiches_5_pourquoi'] });
+      qc.invalidateQueries({ queryKey: ['recurrences', 'actives'] });
+    },
+  });
+}
+
+export function useCreerFiche5PDepuisRecurrence() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload: {
+      equipement_id: string;
+      ouvert_par_id: string;
+    }) => {
+      const { data: incident, error: incErr } = await supabase
+        .from('incidents')
+        .select('id')
+        .eq('equipement_id', payload.equipement_id)
+        .order('declare_le', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (incErr) throw incErr;
+      if (!incident) throw new Error('Aucun incident trouve pour cet equipement');
+
+      const { data, error } = await supabase
+        .from('fiches_5_pourquoi')
+        .insert({
+          incident_id: incident.id,
+          equipement_id: payload.equipement_id,
+          ouvert_par_id: payload.ouvert_par_id,
+          statut: 'ouvert',
+        })
+        .select('id')
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['fiches_5_pourquoi'] });
+      qc.invalidateQueries({ queryKey: ['recurrences', 'actives'] });
     },
   });
 }
