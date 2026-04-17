@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { TabletHeader } from '@/components/layout/TabletHeader';
 import { TicketCard, type TicketSummary } from '@/components/tickets/TicketCard';
+import { Pill } from '@/components/ui/Pill';
 import { cn, formatDateCourt, formatDuree } from '@/lib/utils';
 import { useIncidents } from '@/hooks/queries/useTickets';
 import { useAuth } from '@/hooks/useAuth';
@@ -9,6 +10,12 @@ import { useParcs } from '@/hooks/queries/useReferentiel';
 import type { Criticite } from '@/types/database';
 
 type Onglet = 'a_faire' | 'en_cours' | 'controles' | 'preventif';
+
+interface ParcOption {
+  id: string;
+  code: string;
+  nom: string;
+}
 
 function TicketSkeleton() {
   return (
@@ -61,29 +68,61 @@ function incidentToTicket(inc: Record<string, unknown>): TicketSummary {
   };
 }
 
+function useParcsVisibles() {
+  const { utilisateur } = useAuth();
+  const { data: allParcs, isLoading } = useParcs();
+
+  const role = utilisateur?.role_code;
+  const parcIds = utilisateur?.parc_ids ?? [];
+
+  const parcsVisibles: ParcOption[] = useMemo(() => {
+    if (!allParcs) return [];
+    const raw = allParcs as ParcOption[];
+    if (role === 'direction' || role === 'chef_maintenance') return raw;
+    return raw.filter((p) => parcIds.includes(p.id));
+  }, [allParcs, role, parcIds]);
+
+  const peutVoirTous = role === 'direction' || role === 'chef_maintenance';
+
+  return { parcsVisibles, peutVoirTous, isLoading };
+}
+
 export function Operations() {
   const navigate = useNavigate();
   const { utilisateur } = useAuth();
   const [onglet, setOnglet] = useState<Onglet>('a_faire');
   const [zoneFiltre, setZoneFiltre] = useState<string>('toutes');
+  const [parcActif, setParcActif] = useState<string | null>(null);
 
-  const parcId = utilisateur?.parc_ids[0];
-  const parcsQ = useParcs();
+  const { parcsVisibles, peutVoirTous } = useParcsVisibles();
+
+  const parcIdEffectif = useMemo(() => {
+    if (parcActif) return parcActif;
+    if (peutVoirTous) return undefined;
+    if (parcsVisibles.length === 1) return parcsVisibles[0].id;
+    return undefined;
+  }, [parcActif, peutVoirTous, parcsVisibles]);
 
   const parcActuel = useMemo(() => {
-    if (!parcId || !parcsQ.data) return null;
-    return (parcsQ.data as Record<string, unknown>[]).find(
-      (p) => p.id === parcId
-    ) ?? null;
-  }, [parcId, parcsQ.data]);
+    if (!parcIdEffectif) return null;
+    return parcsVisibles.find((p) => p.id === parcIdEffectif) ?? null;
+  }, [parcIdEffectif, parcsVisibles]);
+
+  const headerParc = parcActuel
+    ? { nom: parcActuel.nom, code: parcActuel.code }
+    : { nom: 'Tous les parcs', code: 'ALL' };
 
   const statutsFiltres = onglet === 'en_cours'
     ? ['en_cours' as const]
     : ['ouvert' as const, 'assigne' as const];
 
   const incidentsQ = useIncidents({
-    parcId: parcId ?? undefined,
+    parcId: parcIdEffectif,
     statuts: statutsFiltres,
+  });
+
+  const allIncidentsQ = useIncidents({
+    parcId: parcIdEffectif,
   });
 
   const tickets = useMemo(() => {
@@ -105,13 +144,13 @@ export function Operations() {
   });
 
   const compteurs = useMemo(() => {
-    if (!incidentsQ.data) return { aFaire: 0, enCours: 0 };
-    const all = incidentsQ.data as Record<string, unknown>[];
+    if (!allIncidentsQ.data) return { aFaire: 0, enCours: 0 };
+    const all = allIncidentsQ.data as Record<string, unknown>[];
     return {
       aFaire: all.filter((i) => i.statut === 'ouvert' || i.statut === 'assigne').length,
       enCours: all.filter((i) => i.statut === 'en_cours').length,
     };
-  }, [incidentsQ.data]);
+  }, [allIncidentsQ.data]);
 
   const [premier, ...autres] = ticketsFiltres;
 
@@ -124,12 +163,31 @@ export function Operations() {
   return (
     <>
       <TabletHeader
-        parc={(parcActuel?.nom as string) ?? 'Parc'}
-        parcCode={(parcActuel?.code as string) ?? '...'}
+        parc={headerParc.nom}
+        parcCode={headerParc.code}
         titre={`Mes opérations · ${formatDateCourt(now)}`}
         user={utilisateur ? { initiales, prenom: utilisateur.prenom } : undefined}
         enService={!!utilisateur}
       />
+
+      {parcsVisibles.length > 1 && (
+        <div className="px-3 md:px-[18px] pt-3 bg-bg-deep flex gap-2 overflow-x-auto pb-1">
+          {peutVoirTous && (
+            <Pill active={parcActif === null} onClick={() => setParcActif(null)}>
+              Tous les parcs
+            </Pill>
+          )}
+          {parcsVisibles.map((p) => (
+            <Pill
+              key={p.id}
+              active={parcActif === p.id}
+              onClick={() => setParcActif(p.id)}
+            >
+              {p.code} · {p.nom}
+            </Pill>
+          ))}
+        </div>
+      )}
 
       <div className="px-3 md:px-[18px] pt-3 bg-bg-deep flex gap-2 overflow-x-auto">
         {[
