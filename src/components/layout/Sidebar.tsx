@@ -2,12 +2,19 @@ import { NavLink } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { Logo } from '@/components/ui/Logo';
 import { getNavIcon, IconToggleSidebar, IconDeconnexion } from './NavIcons';
+import { useSidebarBadges } from '@/hooks/queries/useSidebarBadges';
 import type { RoleUtilisateur } from '@/types/database';
+
+interface Badge {
+  count: number;
+  tone: 'red' | 'amber';
+}
 
 interface NavItem {
   to: string;
   label: string;
-  badge?: { count: number; tone: 'red' | 'amber' };
+  badgeKey?: 'recurrences' | 'cinqPourquoi' | 'operations' | 'invitationsPending';
+  badgeTone?: 'red' | 'amber';
   roles: RoleUtilisateur[];
   end?: boolean;
 }
@@ -18,20 +25,10 @@ const sections: { titre: string; items: NavItem[] }[] = [
     items: [
       { to: '/gmao', label: 'Tableau de bord', roles: ['direction', 'chef_maintenance'], end: true },
       { to: '/gmao/mon-parc', label: 'Mon parc', roles: ['manager_parc'] },
-      { to: '/gmao/operations', label: 'Opérations', roles: ['direction', 'chef_maintenance', 'technicien'] },
+      { to: '/gmao/operations', label: 'Opérations', badgeKey: 'operations', badgeTone: 'red', roles: ['direction', 'chef_maintenance', 'technicien'] },
       { to: '/gmao/equipements', label: 'Équipements', roles: ['direction', 'chef_maintenance', 'technicien', 'manager_parc'] },
-      {
-        to: '/gmao/recurrences',
-        label: 'Récurrences',
-        badge: { count: 4, tone: 'red' },
-        roles: ['direction', 'chef_maintenance'],
-      },
-      {
-        to: '/gmao/cinq-pourquoi',
-        label: '5 Pourquoi',
-        badge: { count: 2, tone: 'amber' },
-        roles: ['direction', 'chef_maintenance'],
-      },
+      { to: '/gmao/recurrences', label: 'Récurrences', badgeKey: 'recurrences', badgeTone: 'red', roles: ['direction', 'chef_maintenance'] },
+      { to: '/gmao/cinq-pourquoi', label: '5 Pourquoi', badgeKey: 'cinqPourquoi', badgeTone: 'amber', roles: ['direction', 'chef_maintenance'] },
       { to: '/gmao/stock', label: 'Stock', roles: ['direction', 'chef_maintenance', 'technicien'] },
       { to: '/gmao/preventif', label: 'Préventif', roles: ['direction', 'chef_maintenance', 'manager_parc'] },
       { to: '/gmao/certifications', label: 'Certifications', roles: ['direction', 'chef_maintenance'] },
@@ -51,12 +48,7 @@ const sections: { titre: string; items: NavItem[] }[] = [
     titre: 'Configuration',
     items: [
       { to: '/gmao/parcs', label: 'Parcs', roles: ['direction', 'chef_maintenance'] },
-      {
-        to: '/gmao/utilisateurs',
-        label: 'Utilisateurs',
-        badge: { count: 3, tone: 'amber' },
-        roles: ['direction', 'chef_maintenance', 'manager_parc'],
-      },
+      { to: '/gmao/utilisateurs', label: 'Utilisateurs', badgeKey: 'invitationsPending', badgeTone: 'amber', roles: ['direction', 'chef_maintenance', 'manager_parc'] },
       { to: '/gmao/bibliotheque', label: 'Bibliothèque points', roles: ['direction', 'chef_maintenance'] },
       { to: '/gmao/fournisseurs', label: 'Fournisseurs', roles: ['direction', 'chef_maintenance'] },
     ],
@@ -73,7 +65,19 @@ interface SidebarProps {
   onSignOut?: () => void;
 }
 
+function resolveBadge(
+  item: NavItem,
+  badges: { recurrences: number; cinqPourquoi: number; operations: number; invitationsPending: number } | undefined
+): Badge | undefined {
+  if (!item.badgeKey || !badges) return undefined;
+  const count = badges[item.badgeKey] ?? 0;
+  if (count === 0) return undefined;
+  return { count, tone: item.badgeTone ?? 'amber' };
+}
+
 export function Sidebar({ user, roleAffiche, roleCode, compact = false, onNavClick, onToggle, onSignOut }: SidebarProps) {
+  const { data: badges } = useSidebarBadges();
+
   return (
     <div className={cn('h-full flex flex-col overflow-y-auto', compact ? 'p-2 gap-0.5' : 'p-5 px-3.5 gap-1.5')}>
       <div className={cn('flex items-center', compact ? 'justify-center py-3 px-0' : 'px-2.5 pt-2 pb-4')}>
@@ -112,6 +116,7 @@ export function Sidebar({ user, roleAffiche, roleCode, compact = false, onNavCli
             )}
             {itemsVisibles.map((item) => {
               const Icon = getNavIcon(item.label);
+              const badge = resolveBadge(item, badges);
               return (
                 <NavLink
                   key={item.to}
@@ -135,32 +140,32 @@ export function Sidebar({ user, roleAffiche, roleCode, compact = false, onNavCli
                       {!compact && (
                         <>
                           <span className="text-[13px]">{item.label}</span>
-                          {item.badge && (
+                          {badge && (
                             <span
                               className={cn(
                                 'ml-auto text-[10px] font-semibold px-1.5 py-0.5 rounded-lg text-bg-app',
-                                item.badge.tone === 'red' ? 'bg-red' : 'bg-amber'
+                                badge.tone === 'red' ? 'bg-red' : 'bg-amber'
                               )}
                             >
-                              {item.badge.count}
+                              {badge.count}
                             </span>
                           )}
                         </>
                       )}
-                      {compact && item.badge && (
+                      {compact && badge && (
                         <span
                           className={cn(
                             'absolute top-1.5 right-1.5 w-2 h-2 rounded-full',
-                            item.badge.tone === 'red' ? 'bg-red' : 'bg-amber'
+                            badge.tone === 'red' ? 'bg-red' : 'bg-amber'
                           )}
                         />
                       )}
                       {compact && (
                         <span className="pointer-events-none absolute left-full ml-2 px-2.5 py-1.5 rounded-lg bg-bg-card text-text text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity z-50 shadow-lg border border-white/[0.08]">
                           {item.label}
-                          {item.badge && (
-                            <span className={cn('ml-1.5 text-[10px] font-semibold px-1 py-0.5 rounded text-bg-app', item.badge.tone === 'red' ? 'bg-red' : 'bg-amber')}>
-                              {item.badge.count}
+                          {badge && (
+                            <span className={cn('ml-1.5 text-[10px] font-semibold px-1 py-0.5 rounded text-bg-app', badge.tone === 'red' ? 'bg-red' : 'bg-amber')}>
+                              {badge.count}
                             </span>
                           )}
                         </span>
