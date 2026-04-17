@@ -18,6 +18,29 @@
     user-select: none;
     -webkit-user-select: none;
   }
+
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  ::-webkit-scrollbar-track {
+    background: #0a0e27;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #1e2448;
+    border-radius: 4px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #2a3158;
+  }
+  ::-webkit-scrollbar-corner {
+    background: #0a0e27;
+  }
+
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: #1e2448 #0a0e27;
+  }
 }
 
 @layer components {
