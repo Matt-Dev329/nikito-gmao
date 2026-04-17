@@ -93,12 +93,26 @@ export function AcceptationInvitation() {
       let authUserId: string | null = null;
 
       if (invitation.auth_mode === 'email_password') {
-        const { data, error } = await supabase.auth.signUp({
+        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
           email: invitation.email!,
           password,
         });
-        if (error) throw error;
-        authUserId = data.user?.id ?? null;
+
+        if (signUpError) {
+          if (signUpError.message?.includes('already registered')) {
+            const { data: signInData, error: signInError } =
+              await supabase.auth.signInWithPassword({
+                email: invitation.email!,
+                password,
+              });
+            if (signInError) throw signInError;
+            authUserId = signInData.user?.id ?? null;
+          } else {
+            throw signUpError;
+          }
+        } else {
+          authUserId = signUpData.user?.id ?? null;
+        }
       }
 
       const { error: rpcError } = await supabase.rpc('accepter_invitation', {
@@ -109,7 +123,6 @@ export function AcceptationInvitation() {
 
       if (rpcError) throw rpcError;
 
-      // Redirection selon le mode
       if (invitation.auth_mode === 'pin_seul') {
         navigate('/staff/login');
       } else {
