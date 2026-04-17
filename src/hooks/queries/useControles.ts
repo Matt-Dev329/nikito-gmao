@@ -48,6 +48,12 @@ export interface ItemSaisi {
   commentaire?: string | null;
 }
 
+export interface ItemSaisiMensuel extends ItemSaisi {
+  point_libelle_snapshot: string;
+  point_categorie_snapshot: string;
+  point_type_controle_snapshot: string;
+}
+
 export function useValiderControle() {
   const qc = useQueryClient();
   return useMutation({
@@ -117,6 +123,98 @@ export function useValiderControle() {
         etat: item.etat,
         commentaire: item.commentaire ?? null,
         saisi_par_id: params.realise_par_id,
+      }));
+
+      const { error: errItems } = await supabase
+        .from('controle_items')
+        .insert(rows);
+
+      if (errItems) throw errItems;
+      return { id: controleId };
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['controles'] });
+      qc.invalidateQueries({ queryKey: ['manager_parc_stats'] });
+      qc.invalidateQueries({ queryKey: ['historique_controles'] });
+    },
+  });
+}
+
+export function useValiderControleMensuel() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (params: {
+      parc_id: string;
+      date_planifiee: string;
+      realise_par_id: string;
+      realise_par_nom: string;
+      realise_par_role: string;
+      signature_url: string;
+      meta: {
+        binome_nom: string;
+        binome_signature_url: string;
+      };
+      items: ItemSaisiMensuel[];
+    }) => {
+      const now = new Date().toISOString();
+
+      const { data: existant } = await supabase
+        .from('controles')
+        .select('id')
+        .eq('parc_id', params.parc_id)
+        .eq('type', 'mensuel')
+        .eq('date_planifiee', params.date_planifiee)
+        .in('statut', ['a_faire', 'en_cours'])
+        .maybeSingle();
+
+      let controleId: string;
+
+      const controlePayload = {
+        date_demarrage: now,
+        date_validation: now,
+        realise_par_id: params.realise_par_id,
+        realise_par_nom: params.realise_par_nom,
+        realise_par_role: params.realise_par_role,
+        valide_par_id: params.realise_par_id,
+        signature_url: params.signature_url,
+        signature_at: now,
+        meta: params.meta,
+        statut: 'valide' as const,
+      };
+
+      if (existant) {
+        const { data: updated, error: errUpd } = await supabase
+          .from('controles')
+          .update(controlePayload)
+          .eq('id', existant.id)
+          .select('id')
+          .single();
+        if (errUpd) throw errUpd;
+        controleId = updated.id;
+      } else {
+        const { data: created, error: errCtrl } = await supabase
+          .from('controles')
+          .insert({
+            parc_id: params.parc_id,
+            type: 'mensuel' as const,
+            date_planifiee: params.date_planifiee,
+            ...controlePayload,
+          })
+          .select('id')
+          .single();
+        if (errCtrl) throw errCtrl;
+        controleId = created.id;
+      }
+
+      const rows = params.items.map((item) => ({
+        controle_id: controleId,
+        point_id: item.point_id,
+        etat: item.etat,
+        commentaire: item.commentaire ?? null,
+        saisi_par_id: params.realise_par_id,
+        point_libelle_snapshot: item.point_libelle_snapshot,
+        point_categorie_snapshot: item.point_categorie_snapshot,
+        point_type_controle_snapshot: item.point_type_controle_snapshot,
       }));
 
       const { error: errItems } = await supabase

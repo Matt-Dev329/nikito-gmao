@@ -11,13 +11,7 @@ export { PageCertifications } from '@/pages/certifications/PageCertifications';
 export { PageProfil } from '@/pages/profil/PageProfil';
 export { VueManagerParc } from '@/pages/parc/VueManagerParc';
 
-export function ControleMensuel() {
-  return (
-    <div className="p-4 md:p-6 md:px-7">
-      Controle mensuel - a venir (validation binome requise)
-    </div>
-  );
-}
+export { ControleMensuel } from '@/pages/technicien/ControleMensuel';
 
 export function PageTechStock() {
   return (
