@@ -41,7 +41,7 @@ const sections: { titre: string; items: NavItem[] }[] = [
   {
     titre: 'Configuration',
     items: [
-      { to: '/gmao/parcs', label: 'Parcs', roles: ['direction'] },
+      { to: '/gmao/parcs', label: 'Parcs', roles: ['direction', 'chef_maintenance'] },
       {
         to: '/gmao/utilisateurs',
         label: 'Utilisateurs',
