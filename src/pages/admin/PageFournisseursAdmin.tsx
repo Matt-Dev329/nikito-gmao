@@ -1,26 +1,52 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { cn } from '@/lib/utils';
 import { useFournisseurs } from '@/hooks/queries/useReferentiel';
 import { supabase } from '@/lib/supabase';
 import { useQueryClient } from '@tanstack/react-query';
 
-// ============================================================
-// Page Fournisseurs · CRUD complet
-// Utilisé aussi en composant (ModaleNouveauFournisseur) ailleurs
-// dans l'app pour ajout rapide depuis le wizard parc
-// ============================================================
-
 const types = [
   { value: 'maintenance', label: 'Maintenance' },
-  { value: 'pieces', label: 'Pièces détachées' },
-  { value: 'norme', label: 'Conformité norme' },
+  { value: 'pieces', label: 'Pieces detachees' },
+  { value: 'norme', label: 'Conformite norme' },
   { value: 'audit', label: 'Audit constructeur' },
-  { value: 'reglementaire', label: 'Réglementaire' },
+  { value: 'reglementaire', label: 'Reglementaire' },
 ];
+
+interface Fournisseur {
+  id: string;
+  nom: string;
+  type: string | null;
+  contact_nom: string | null;
+  contact_email: string | null;
+  contact_tel: string | null;
+  numero_contrat: string | null;
+  sla_h: number | null;
+  notes: string | null;
+  actif: boolean;
+}
 
 export function PageFournisseursAdmin() {
   const { data: fournisseurs } = useFournisseurs();
   const [editeurOuvert, setEditeurOuvert] = useState(false);
+  const [editFournisseur, setEditFournisseur] = useState<Fournisseur | null>(null);
+  const [recherche, setRecherche] = useState('');
+
+  const filtered = useMemo(() => {
+    if (!fournisseurs) return [];
+    const q = recherche.toLowerCase();
+    if (!q) return fournisseurs;
+    return fournisseurs.filter(
+      (f) =>
+        f.nom.toLowerCase().includes(q) ||
+        f.contact_nom?.toLowerCase().includes(q) ||
+        f.contact_email?.toLowerCase().includes(q) ||
+        f.type?.toLowerCase().includes(q)
+    );
+  }, [fournisseurs, recherche]);
+
+  const openEdit = (f: Fournisseur) => {
+    setEditFournisseur(f);
+  };
 
   return (
     <div className="p-4 md:p-6 md:px-7">
@@ -28,7 +54,7 @@ export function PageFournisseursAdmin() {
         <div>
           <h1 className="text-xl md:text-[22px] font-semibold m-0">Fournisseurs</h1>
           <div className="text-[13px] text-dim mt-1">
-            {fournisseurs?.length ?? 0} fournisseurs · contrats et SLA
+            {fournisseurs?.length ?? 0} fournisseurs - contrats et SLA
           </div>
         </div>
         <button
@@ -39,13 +65,31 @@ export function PageFournisseursAdmin() {
         </button>
       </div>
 
+      <div className="mb-4">
+        <input
+          type="text"
+          value={recherche}
+          onChange={(e) => setRecherche(e.target.value)}
+          placeholder="Rechercher un fournisseur..."
+          className="w-full sm:max-w-xs bg-bg-card border border-white/[0.08] rounded-[10px] p-2.5 px-3.5 text-text text-[13px] outline-none focus:border-nikito-cyan min-h-[44px]"
+        />
+      </div>
+
+      {filtered.length === 0 && (
+        <div className="text-dim text-sm py-8 text-center">Aucun fournisseur trouve</div>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        {fournisseurs?.map((f) => (
-          <div key={f.id} className="bg-bg-card rounded-2xl p-4 px-5">
+        {filtered.map((f) => (
+          <button
+            key={f.id}
+            onClick={() => openEdit(f as Fournisseur)}
+            className="bg-bg-card rounded-2xl p-4 px-5 text-left hover:bg-bg-card/80 transition-colors"
+          >
             <div className="flex justify-between items-start mb-2">
               <div>
                 <div className="text-base font-semibold">{f.nom}</div>
-                <div className="text-[11px] text-dim mt-0.5">{f.type}</div>
+                <div className="text-[11px] text-dim mt-0.5">{f.type ?? 'Non defini'}</div>
               </div>
               {f.sla_h && (
                 <span className="bg-nikito-cyan/15 text-nikito-cyan px-2 py-0.5 rounded-md text-[10px] font-semibold">
@@ -54,27 +98,33 @@ export function PageFournisseursAdmin() {
               )}
             </div>
             <div className="text-xs text-dim space-y-1">
-              {f.contact_nom && <div>👤 {f.contact_nom}</div>}
-              {f.contact_tel && <div>📞 {f.contact_tel}</div>}
-              {f.numero_contrat && <div>📄 Contrat {f.numero_contrat}</div>}
+              {f.contact_nom && <div>{f.contact_nom}</div>}
+              {f.contact_tel && <div>{f.contact_tel}</div>}
+              {f.contact_email && <div>{f.contact_email}</div>}
+              {f.numero_contrat && <div>Contrat {f.numero_contrat}</div>}
             </div>
-          </div>
+          </button>
         ))}
       </div>
 
       {editeurOuvert && (
-        <ModaleNouveauFournisseur
+        <ModaleFournisseur
           onClose={() => setEditeurOuvert(false)}
-          onCreated={() => setEditeurOuvert(false)}
+          onSaved={() => setEditeurOuvert(false)}
+        />
+      )}
+
+      {editFournisseur && (
+        <ModaleFournisseur
+          fournisseur={editFournisseur}
+          onClose={() => setEditFournisseur(null)}
+          onSaved={() => setEditFournisseur(null)}
         />
       )}
     </div>
   );
 }
 
-// ============================================================
-// Modale création fournisseur · réutilisable depuis n'importe où
-// ============================================================
 export function ModaleNouveauFournisseur({
   onClose,
   onCreated,
@@ -82,56 +132,91 @@ export function ModaleNouveauFournisseur({
   onClose: () => void;
   onCreated?: (fournisseur: { id: string; nom: string }) => void;
 }) {
+  return (
+    <ModaleFournisseur
+      onClose={onClose}
+      onSaved={(data) => {
+        if (data) onCreated?.(data);
+      }}
+    />
+  );
+}
+
+function ModaleFournisseur({
+  fournisseur,
+  onClose,
+  onSaved,
+}: {
+  fournisseur?: Fournisseur;
+  onClose: () => void;
+  onSaved?: (data?: { id: string; nom: string }) => void;
+}) {
   const queryClient = useQueryClient();
-  const [nom, setNom] = useState('');
-  const [type, setType] = useState('maintenance');
-  const [contactNom, setContactNom] = useState('');
-  const [contactEmail, setContactEmail] = useState('');
-  const [contactTel, setContactTel] = useState('');
-  const [numeroContrat, setNumeroContrat] = useState('');
-  const [slaH, setSlaH] = useState<number | ''>('');
-  const [notes, setNotes] = useState('');
+  const isEdit = !!fournisseur;
+  const [nom, setNom] = useState(fournisseur?.nom ?? '');
+  const [type, setType] = useState(fournisseur?.type ?? 'maintenance');
+  const [contactNom, setContactNom] = useState(fournisseur?.contact_nom ?? '');
+  const [contactEmail, setContactEmail] = useState(fournisseur?.contact_email ?? '');
+  const [contactTel, setContactTel] = useState(fournisseur?.contact_tel ?? '');
+  const [numeroContrat, setNumeroContrat] = useState(fournisseur?.numero_contrat ?? '');
+  const [slaH, setSlaH] = useState<number | ''>(fournisseur?.sla_h ?? '');
+  const [notes, setNotes] = useState(fournisseur?.notes ?? '');
   const [submitting, setSubmitting] = useState(false);
 
   const enregistrer = async () => {
     setSubmitting(true);
-    const { data, error } = await supabase
-      .from('fournisseurs')
-      .insert({
-        nom,
-        type,
-        contact_nom: contactNom || null,
-        contact_email: contactEmail || null,
-        contact_tel: contactTel || null,
-        numero_contrat: numeroContrat || null,
-        sla_h: slaH || null,
-        notes: notes || null,
-      })
-      .select('id, nom')
-      .single();
+    const payload = {
+      nom,
+      type,
+      contact_nom: contactNom || null,
+      contact_email: contactEmail || null,
+      contact_tel: contactTel || null,
+      numero_contrat: numeroContrat || null,
+      sla_h: slaH || null,
+      notes: notes || null,
+    };
 
-    setSubmitting(false);
-    if (!error && data) {
-      queryClient.invalidateQueries({ queryKey: ['fournisseurs'] });
-      onCreated?.(data);
+    if (isEdit) {
+      const { error } = await supabase
+        .from('fournisseurs')
+        .update(payload)
+        .eq('id', fournisseur.id);
+      setSubmitting(false);
+      if (!error) {
+        queryClient.invalidateQueries({ queryKey: ['fournisseurs'] });
+        onSaved?.();
+      }
+    } else {
+      const { data, error } = await supabase
+        .from('fournisseurs')
+        .insert(payload)
+        .select('id, nom')
+        .single();
+      setSubmitting(false);
+      if (!error && data) {
+        queryClient.invalidateQueries({ queryKey: ['fournisseurs'] });
+        onSaved?.(data);
+      }
     }
   };
 
   return (
     <div className="fixed inset-0 z-50 bg-black/60 flex items-end md:items-center justify-center md:p-4">
-      <div className="w-full md:max-w-[560px] bg-bg-card rounded-t-[18px] md:rounded-[18px] border border-nikito-violet/20 p-5 md:p-6 md:px-[26px] max-h-[90vh] overflow-y-auto">
+      <div className="w-full md:max-w-[560px] bg-bg-card rounded-t-[18px] md:rounded-[18px] border border-white/[0.08] p-5 md:p-6 md:px-[26px] max-h-[90vh] overflow-y-auto">
         <div className="flex justify-between items-start mb-5">
           <div>
             <div className="text-[11px] text-dim tracking-[1.2px] uppercase">
-              Nouveau fournisseur
+              {isEdit ? 'Modifier' : 'Nouveau'} fournisseur
             </div>
-            <div className="text-[19px] font-semibold mt-0.5">Ajouter un fournisseur</div>
+            <div className="text-[19px] font-semibold mt-0.5">
+              {isEdit ? fournisseur.nom : 'Ajouter un fournisseur'}
+            </div>
           </div>
           <button
             onClick={onClose}
             className="bg-bg-deep border border-white/[0.08] text-dim w-[34px] h-[34px] rounded-[10px] text-base"
           >
-            ×
+            x
           </button>
         </div>
 
@@ -153,9 +238,7 @@ export function ModaleNouveauFournisseur({
               className="w-full bg-bg-deep border border-white/[0.08] rounded-[10px] p-3 px-3.5 text-text text-[13px] outline-none focus:border-nikito-cyan"
             >
               {types.map((t) => (
-                <option key={t.value} value={t.value}>
-                  {t.label}
-                </option>
+                <option key={t.value} value={t.value}>{t.label}</option>
               ))}
             </select>
           </Field>
@@ -167,7 +250,7 @@ export function ModaleNouveauFournisseur({
               className="w-full bg-bg-deep border border-white/[0.08] rounded-[10px] p-3 px-3.5 text-text text-[13px] outline-none focus:border-nikito-cyan"
             />
           </Field>
-          <Field label="Téléphone">
+          <Field label="Telephone">
             <input
               type="tel"
               value={contactTel}
@@ -183,7 +266,7 @@ export function ModaleNouveauFournisseur({
               className="w-full bg-bg-deep border border-white/[0.08] rounded-[10px] p-3 px-3.5 text-text text-[13px] outline-none focus:border-nikito-cyan"
             />
           </Field>
-          <Field label="N° de contrat">
+          <Field label="N de contrat">
             <input
               type="text"
               value={numeroContrat}
@@ -226,7 +309,7 @@ export function ModaleNouveauFournisseur({
               (!nom || submitting) && 'opacity-40 cursor-not-allowed'
             )}
           >
-            {submitting ? 'Enregistrement...' : 'Créer le fournisseur'}
+            {submitting ? 'Enregistrement...' : isEdit ? 'Enregistrer' : 'Creer le fournisseur'}
           </button>
         </div>
       </div>

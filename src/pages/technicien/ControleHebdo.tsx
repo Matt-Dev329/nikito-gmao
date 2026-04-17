@@ -1,34 +1,68 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ControleEcran, type PointControleVue, type ZoneVue } from '@/components/controles/ControleEcran';
 import { ModaleQuitterSansValider } from '@/components/ui/ModaleQuitterSansValider';
+import { useAuth } from '@/hooks/useAuth';
+import { useParcs } from '@/hooks/queries/useReferentiel';
+import { usePointsControle, useValiderControle } from '@/hooks/queries/useControles';
 import type { EtatControleItem } from '@/types/database';
-
-const zonesMock: ZoneVue[] = [
-  { code: 'karting', label: 'Karting', count: 12, fait: 0 },
-  { code: 'trampoline', label: 'Trampoline', count: 8, fait: 0 },
-  { code: 'bowling', label: 'Bowling', count: 5, fait: 0 },
-  { code: 'arcade', label: 'Arcade', count: 3, fait: 0 },
-];
-
-const pointsMock: PointControleVue[] = [
-  { id: 'h1', libelle: 'Syst\u00e8me freinage avant \u00b7 r\u00e9ponse', ordre: 1, zone: 'karting', bloquantSiKO: true, photoObligatoire: true, norme: 'EN ISO 17929', etat: 'ok', saisiPar: 'EC' },
-  { id: 'h2', libelle: 'Ceinture harnais \u00b7 \u00e9tat + boucle', ordre: 2, zone: 'karting', bloquantSiKO: true, photoObligatoire: true, etat: 'ok', saisiPar: 'EC' },
-  { id: 'h3', libelle: 'Pneus AV \u00b7 usure', ordre: 3, zone: 'karting', bloquantSiKO: false, photoObligatoire: true, etat: 'degrade', saisiPar: 'EC' },
-  { id: 'h4', libelle: 'Pneus AR \u00b7 usure', ordre: 4, zone: 'karting', bloquantSiKO: false, photoObligatoire: true, etat: null },
-  { id: 'h5', libelle: 'Phares AV \u00b7 fonctionnement', ordre: 5, zone: 'karting', bloquantSiKO: false, photoObligatoire: false, etat: null },
-  { id: 'h6', libelle: 'Niveau batterie', ordre: 6, zone: 'karting', bloquantSiKO: false, photoObligatoire: false, etat: null },
-];
 
 export function ControleHebdo() {
   const navigate = useNavigate();
-  const [zoneActive, setZoneActive] = useState('karting');
-  const [points, setPoints] = useState(pointsMock);
+  const { utilisateur } = useAuth();
+  const { data: allParcs } = useParcs();
+
+  const parcId = utilisateur?.parc_ids[0];
+  const parc = allParcs?.find((p) => p.id === parcId);
+
+  const { data: pointsBruts, isLoading } = usePointsControle(parcId, 'hebdo');
+  const validerMutation = useValiderControle();
+
+  const [etats, setEtats] = useState<Record<string, { etat: EtatControleItem; saisiPar: string }>>({});
+  const [zoneActive, setZoneActive] = useState<string>('');
   const [dirty, setDirty] = useState(false);
   const [showModale, setShowModale] = useState(false);
+  const [validated, setValidated] = useState(false);
+
+  const zones: ZoneVue[] = useMemo(() => {
+    if (!pointsBruts?.length) return [];
+    const map = new Map<string, { code: string; label: string; count: number }>();
+    for (const p of pointsBruts) {
+      const existing = map.get(p.categorie_id);
+      if (existing) {
+        existing.count++;
+      } else {
+        map.set(p.categorie_id, { code: p.categorie_id, label: p.categorie_nom, count: 1 });
+      }
+    }
+    return Array.from(map.values()).map((z) => ({
+      ...z,
+      fait: pointsBruts.filter((p) => p.categorie_id === z.code && etats[p.point_id]).length,
+    }));
+  }, [pointsBruts, etats]);
+
+  const activeZone = zoneActive || zones[0]?.code || '';
+
+  const pointsZoneActive: PointControleVue[] = useMemo(() => {
+    if (!pointsBruts) return [];
+    return pointsBruts
+      .filter((p) => p.categorie_id === activeZone)
+      .map((p) => ({
+        id: p.point_id,
+        libelle: p.libelle,
+        ordre: p.ordre,
+        zone: p.categorie_id,
+        bloquantSiKO: p.bloquant,
+        photoObligatoire: p.photo_obligatoire,
+        etat: etats[p.point_id]?.etat ?? null,
+        saisiPar: etats[p.point_id]?.saisiPar,
+      }));
+  }, [pointsBruts, activeZone, etats]);
+
+  const trigramme = utilisateur?.trigramme ?? utilisateur?.prenom?.slice(0, 2).toUpperCase() ?? '??';
 
   const setEtatPoint = (id: string, etat: EtatControleItem) => {
-    setPoints((prev) => prev.map((p) => (p.id === id ? { ...p, etat, saisiPar: 'EC' } : p)));
+    setEtats((prev) => ({ ...prev, [id]: { etat, saisiPar: trigramme } }));
     setDirty(true);
   };
 
@@ -45,28 +79,103 @@ export function ControleHebdo() {
     navigate('/tech/operations');
   };
 
-  const totalPoints = zonesMock.reduce((sum, z) => sum + z.count, 0);
-  const totalFaits = zonesMock.reduce((sum, z) => sum + z.fait, 0);
+  const totalPoints = zones.reduce((sum, z) => sum + z.count, 0);
+  const totalFaits = zones.reduce((sum, z) => sum + z.fait, 0);
   const restants = totalPoints - totalFaits;
+
+  const handleValider = async () => {
+    if (!parcId || !utilisateur || !pointsBruts) return;
+
+    const now = new Date();
+    const lundi = new Date(now);
+    lundi.setDate(now.getDate() - ((now.getDay() + 6) % 7));
+    const datePlanifiee = lundi.toISOString().slice(0, 10);
+
+    const items = pointsBruts
+      .filter((p) => etats[p.point_id])
+      .map((p) => ({
+        point_id: p.point_id,
+        etat: etats[p.point_id].etat,
+      }));
+
+    await validerMutation.mutateAsync({
+      parc_id: parcId,
+      type: 'hebdo',
+      date_planifiee: datePlanifiee,
+      realise_par_id: utilisateur.id,
+      items,
+    });
+
+    setValidated(true);
+  };
+
+  const now = new Date();
+  const getWeekNumber = (d: Date) => {
+    const onejan = new Date(d.getFullYear(), 0, 1);
+    return Math.ceil(((d.getTime() - onejan.getTime()) / 86400000 + onejan.getDay() + 1) / 7);
+  };
+  const semaine = `S${getWeekNumber(now)}`;
+
+  if (isLoading) {
+    return (
+      <div className="p-6 text-dim text-sm">Chargement des points de controle...</div>
+    );
+  }
+
+  if (!pointsBruts?.length) {
+    return (
+      <div className="p-6">
+        <div className="text-dim text-sm">
+          Aucun point de controle hebdomadaire configure pour ce parc.
+        </div>
+        <button
+          onClick={() => navigate('/tech/operations')}
+          className="text-nikito-cyan text-sm mt-3"
+        >
+          Retour aux operations
+        </button>
+      </div>
+    );
+  }
+
+  if (validated) {
+    return (
+      <div className="p-6 text-center">
+        <div className="text-4xl mb-3">OK</div>
+        <div className="text-lg font-semibold mb-1">Controle hebdo valide</div>
+        <div className="text-dim text-sm mb-4">{totalFaits} points controles - {semaine}</div>
+        <button
+          onClick={() => navigate('/tech/operations')}
+          className="bg-gradient-cta text-text px-6 py-3 rounded-[10px] text-[13px] font-bold min-h-[44px]"
+        >
+          Retour aux operations
+        </button>
+      </div>
+    );
+  }
 
   return (
     <>
       <ControleEcran
         type="hebdo"
-        parcCode="DOM"
-        parcNom="Rosny Domus"
-        contexte="S16 \u00b7 Lundi 13 \u2192 dimanche 19 avril"
-        zones={zonesMock}
-        pointsZoneActive={points}
-        zoneActiveCode={zoneActive}
-        agentActuel={{ initiales: 'EC', prenom: 'Emeric' }}
+        parcCode={parc?.code ?? ''}
+        parcNom={parc?.nom ?? ''}
+        contexte={`${semaine} - Controle hebdomadaire`}
+        zones={zones}
+        pointsZoneActive={pointsZoneActive}
+        zoneActiveCode={activeZone}
+        agentActuel={{ initiales: trigramme, prenom: utilisateur?.prenom ?? '' }}
         onChangeZone={setZoneActive}
         onSetEtat={setEtatPoint}
         onRetour={handleRetour}
-        onValider={() => alert('Validation pack 7 + passage au suivant')}
-        validationDisabled={restants > 0}
+        onValider={handleValider}
+        validationDisabled={restants > 0 || validerMutation.isPending}
         validationDisabledRaison={
-          restants > 0 ? `Disponible quand le pack est complet (${restants} restants)` : undefined
+          validerMutation.isPending
+            ? 'Enregistrement en cours...'
+            : restants > 0
+              ? `Disponible quand le pack est complet (${restants} restants)`
+              : undefined
         }
       />
       <ModaleQuitterSansValider

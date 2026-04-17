@@ -1,34 +1,84 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ControleEcran, type PointControleVue, type ZoneVue } from '@/components/controles/ControleEcran';
 import { ModaleQuitterSansValider } from '@/components/ui/ModaleQuitterSansValider';
+import { useAuth } from '@/hooks/useAuth';
+import { useParcs } from '@/hooks/queries/useReferentiel';
+import { usePointsControle, useValiderControle } from '@/hooks/queries/useControles';
 import type { EtatControleItem } from '@/types/database';
 
-const zonesMock: ZoneVue[] = [
-  { code: 'accueil', label: 'Accueil', count: 8, fait: 8 },
-  { code: 'sanitaires', label: 'Sanitaires', count: 6, fait: 6 },
-  { code: 'trampoline', label: 'Trampoline', count: 19, fait: 14 },
-  { code: 'karting', label: 'Karting', count: 8, fait: 0 },
-  { code: 'bowling', label: 'Bowling', count: 6, fait: 0 },
-];
-
-const pointsMockTrampoline: PointControleVue[] = [
-  { id: 'p1', libelle: 'Toile T01 \u00b7 v\u00e9rification visuelle g\u00e9n\u00e9rale', ordre: 1, zone: 'trampoline', bloquantSiKO: false, photoObligatoire: true, etat: 'ok', saisiPar: 'KM' },
-  { id: 'p2', libelle: 'Toile T07 \u00b7 mousses de protection', ordre: 7, zone: 'trampoline', bloquantSiKO: false, photoObligatoire: true, etat: 'degrade', saisiPar: 'JT' },
-  { id: 'p3', libelle: 'Toile T08 \u00b7 ressorts et fixations', ordre: 8, zone: 'trampoline', bloquantSiKO: true, photoObligatoire: true, norme: 'EN ISO 23659', etat: null },
-  { id: 'p4', libelle: 'Toile T09 \u00b7 ressorts et fixations', ordre: 9, zone: 'trampoline', bloquantSiKO: true, photoObligatoire: true, etat: null },
-  { id: 'p5', libelle: "Toile T10 \u00b7 zone d'acc\u00e8s et signal\u00e9tique", ordre: 10, zone: 'trampoline', bloquantSiKO: false, photoObligatoire: false, etat: null },
-];
+function formatDuree(sec: number): string {
+  const h = Math.floor(sec / 3600);
+  const m = Math.floor((sec % 3600) / 60);
+  if (h > 0) return `${h}h ${String(m).padStart(2, '0')}min`;
+  return `${m}min`;
+}
 
 export function ControleOuverture() {
   const navigate = useNavigate();
-  const [zoneActive, setZoneActive] = useState('trampoline');
-  const [points, setPoints] = useState(pointsMockTrampoline);
+  const { utilisateur } = useAuth();
+  const { data: allParcs } = useParcs();
+
+  const parcId = utilisateur?.parc_ids[0];
+  const parc = allParcs?.find((p) => p.id === parcId);
+
+  const { data: pointsBruts, isLoading } = usePointsControle(parcId, 'quotidien');
+  const validerMutation = useValiderControle();
+
+  const [startTime] = useState(() => Date.now());
+  const [elapsed, setElapsed] = useState(0);
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setElapsed(Math.floor((Date.now() - startTime) / 1000));
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [startTime]);
+
+  const [etats, setEtats] = useState<Record<string, { etat: EtatControleItem; saisiPar: string }>>({});
+  const [zoneActive, setZoneActive] = useState<string>('');
   const [dirty, setDirty] = useState(false);
   const [showModale, setShowModale] = useState(false);
+  const [validated, setValidated] = useState(false);
+
+  const zones: ZoneVue[] = useMemo(() => {
+    if (!pointsBruts?.length) return [];
+    const map = new Map<string, { code: string; label: string; count: number }>();
+    for (const p of pointsBruts) {
+      const existing = map.get(p.categorie_id);
+      if (existing) {
+        existing.count++;
+      } else {
+        map.set(p.categorie_id, { code: p.categorie_id, label: p.categorie_nom, count: 1 });
+      }
+    }
+    return Array.from(map.values()).map((z) => ({
+      ...z,
+      fait: pointsBruts.filter((p) => p.categorie_id === z.code && etats[p.point_id]).length,
+    }));
+  }, [pointsBruts, etats]);
+
+  const activeZone = zoneActive || zones[0]?.code || '';
+
+  const pointsZoneActive: PointControleVue[] = useMemo(() => {
+    if (!pointsBruts) return [];
+    return pointsBruts
+      .filter((p) => p.categorie_id === activeZone)
+      .map((p) => ({
+        id: p.point_id,
+        libelle: p.libelle,
+        ordre: p.ordre,
+        zone: p.categorie_id,
+        bloquantSiKO: p.bloquant,
+        photoObligatoire: p.photo_obligatoire,
+        etat: etats[p.point_id]?.etat ?? null,
+        saisiPar: etats[p.point_id]?.saisiPar,
+      }));
+  }, [pointsBruts, activeZone, etats]);
+
+  const trigramme = utilisateur?.trigramme ?? utilisateur?.prenom?.slice(0, 2).toUpperCase() ?? '??';
 
   const setEtatPoint = (id: string, etat: EtatControleItem) => {
-    setPoints((prev) => prev.map((p) => (p.id === id ? { ...p, etat, saisiPar: 'SL' } : p)));
+    setEtats((prev) => ({ ...prev, [id]: { etat, saisiPar: trigramme } }));
     setDirty(true);
   };
 
@@ -45,32 +95,101 @@ export function ControleOuverture() {
     navigate('/staff/login');
   };
 
-  const totalPoints = zonesMock.reduce((sum, z) => sum + z.count, 0);
-  const totalFaits = zonesMock.reduce((sum, z) => sum + z.fait, 0);
+  const totalPoints = zones.reduce((sum, z) => sum + z.count, 0);
+  const totalFaits = zones.reduce((sum, z) => sum + z.fait, 0);
   const restants = totalPoints - totalFaits;
+
+  const handleValider = async () => {
+    if (!parcId || !utilisateur || !pointsBruts) return;
+
+    const datePlanifiee = new Date().toISOString().slice(0, 10);
+
+    const items = pointsBruts
+      .filter((p) => etats[p.point_id])
+      .map((p) => ({
+        point_id: p.point_id,
+        etat: etats[p.point_id].etat,
+      }));
+
+    await validerMutation.mutateAsync({
+      parc_id: parcId,
+      type: 'quotidien',
+      date_planifiee: datePlanifiee,
+      realise_par_id: utilisateur.id,
+      items,
+    });
+
+    setValidated(true);
+  };
+
+  const today = new Date().toLocaleDateString('fr-FR', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+  });
+
+  if (isLoading) {
+    return (
+      <div className="p-6 text-dim text-sm">Chargement des points de controle...</div>
+    );
+  }
+
+  if (!pointsBruts?.length) {
+    return (
+      <div className="p-6">
+        <div className="text-dim text-sm">
+          Aucun point de controle quotidien configure pour ce parc.
+        </div>
+        <button
+          onClick={() => navigate('/staff/login')}
+          className="text-nikito-cyan text-sm mt-3"
+        >
+          Retour
+        </button>
+      </div>
+    );
+  }
+
+  if (validated) {
+    return (
+      <div className="p-6 text-center">
+        <div className="text-4xl mb-3">OK</div>
+        <div className="text-lg font-semibold mb-1">Controle ouverture valide</div>
+        <div className="text-dim text-sm mb-4">{totalFaits} points controles - {today}</div>
+        <button
+          onClick={() => navigate('/staff/login')}
+          className="bg-gradient-cta text-text px-6 py-3 rounded-[10px] text-[13px] font-bold min-h-[44px]"
+        >
+          Retour
+        </button>
+      </div>
+    );
+  }
 
   return (
     <>
       <ControleEcran
         type="quotidien"
-        parcCode="DOM"
-        parcNom="Rosny Domus"
-        contexte="Mercredi 15 avril \u00b7 ouverture 10h"
-        chrono="2h 18min"
-        zones={zonesMock}
-        pointsZoneActive={points}
-        zoneActiveCode={zoneActive}
-        agentActuel={{ initiales: 'SL', prenom: 'Sophie L.' }}
+        parcCode={parc?.code ?? ''}
+        parcNom={parc?.nom ?? ''}
+        contexte={`${today} - ouverture`}
+        chrono={formatDuree(elapsed)}
+        zones={zones}
+        pointsZoneActive={pointsZoneActive}
+        zoneActiveCode={activeZone}
+        agentActuel={{ initiales: trigramme, prenom: utilisateur?.prenom ?? '' }}
         onChangeZone={setZoneActive}
         onSetEtat={setEtatPoint}
         onRetour={handleRetour}
-        onChangerAgent={() => alert('Retour au login PIN')}
-        onValider={() => alert('Validation + signature \u00e0 impl\u00e9menter')}
-        validationDisabled={restants > 0}
+        onChangerAgent={() => navigate('/staff/login')}
+        onValider={handleValider}
+        validationDisabled={restants > 0 || validerMutation.isPending}
         validationDisabledRaison={
-          restants > 0
-            ? `Disponible quand tous les points sont saisis (${restants} restants)`
-            : undefined
+          validerMutation.isPending
+            ? 'Enregistrement en cours...'
+            : restants > 0
+              ? `Disponible quand tous les points sont saisis (${restants} restants)`
+              : undefined
         }
       />
       <ModaleQuitterSansValider
