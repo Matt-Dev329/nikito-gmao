@@ -8,15 +8,16 @@ interface KpiCardProps {
   unite?: string;
   delta?: { texte: string; tone: 'positif' | 'negatif' | 'neutre' };
   couleur: Couleur;
+  compact?: boolean;
 }
 
 const couleurClasses: Record<Couleur, { border: string; text: string }> = {
-  lime: { border: 'border-lime', text: 'text-lime' },
-  cyan: { border: 'border-nikito-cyan', text: 'text-nikito-cyan' },
-  violet: { border: 'border-nikito-violet', text: 'text-nikito-violet' },
-  green: { border: 'border-green', text: 'text-green' },
-  amber: { border: 'border-amber', text: 'text-amber' },
-  red: { border: 'border-red', text: 'text-red' },
+  lime: { border: 'border-l-lime', text: 'text-lime' },
+  cyan: { border: 'border-l-nikito-cyan', text: 'text-nikito-cyan' },
+  violet: { border: 'border-l-nikito-violet', text: 'text-nikito-violet' },
+  green: { border: 'border-l-green', text: 'text-green' },
+  amber: { border: 'border-l-amber', text: 'text-amber' },
+  red: { border: 'border-l-red', text: 'text-red' },
 };
 
 const deltaTone = {
@@ -25,14 +26,14 @@ const deltaTone = {
   neutre: 'text-dim',
 };
 
-export function KpiCard({ label, valeur, unite, delta, couleur }: KpiCardProps) {
+export function KpiCard({ label, valeur, unite, delta, couleur, compact = false }: KpiCardProps) {
   const c = couleurClasses[couleur];
   return (
-    <div className={cn('bg-bg-card rounded-xl p-4 border-t-2', c.border)}>
-      <div className="text-[10px] text-dim uppercase tracking-wider mb-2">{label}</div>
-      <div className={cn('text-[28px] font-semibold leading-none', c.text)}>
+    <div className={cn('bg-bg-card rounded-xl border-l-[3px]', c.border, compact ? 'p-4' : 'p-6')}>
+      <div className={cn('text-dim uppercase tracking-wider', compact ? 'text-[10px] mb-1.5' : 'text-[11px] mb-2')}>{label}</div>
+      <div className={cn('font-semibold leading-none', c.text, compact ? 'text-[22px]' : 'text-[28px]')}>
         {valeur}
-        {unite && <span className="text-sm text-dim font-normal ml-0.5">{unite}</span>}
+        {unite && <span className={cn('text-dim font-normal ml-0.5', compact ? 'text-xs' : 'text-sm')}>{unite}</span>}
       </div>
       {delta && (
         <div className={cn('text-[11px] mt-1', deltaTone[delta.tone])}>{delta.texte}</div>

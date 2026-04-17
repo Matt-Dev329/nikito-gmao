@@ -226,47 +226,60 @@ export function TableauDeBord() {
       </div>
 
       {kpiLoading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 mb-5">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <KpiSkeleton key={i} />
-          ))}
+        <div className="space-y-3 mb-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <KpiSkeleton />
+            <KpiSkeleton />
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <KpiSkeleton />
+            <KpiSkeleton />
+            <KpiSkeleton />
+          </div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 mb-5">
-          <KpiCard
-            label={kpiLabels.performance}
-            valeur={kpiAgreg.performance}
-            unite="%"
-            delta={{ texte: `moy. ${periode}`, tone: 'neutre' }}
-            couleur="lime"
-          />
-          <KpiCard
-            label={kpiLabels.mtbf}
-            valeur={kpiAgreg.mtbf}
-            unite=" j"
-            delta={{ texte: `moy. ${periode}`, tone: 'neutre' }}
-            couleur="cyan"
-          />
-          <KpiCard
-            label={kpiLabels.mttr}
-            valeur={kpiAgreg.mttr}
-            unite=" min"
-            delta={{ texte: `moy. ${periode}`, tone: 'neutre' }}
-            couleur="violet"
-          />
-          <KpiCard
-            label={kpiLabels.premierCoup}
-            valeur={kpiAgreg.premierCoup}
-            unite="%"
-            delta={{ texte: `cible 90% · ${periode}`, tone: 'neutre' }}
-            couleur="green"
-          />
-          <KpiCard
-            label={kpiLabels.plaintes}
-            valeur={kpiAgreg.plaintes}
-            delta={{ texte: '7 derniers jours', tone: 'neutre' }}
-            couleur="amber"
-          />
+        <div className="space-y-3 mb-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <KpiCard
+              label={kpiLabels.performance}
+              valeur={kpiAgreg.performance}
+              unite="%"
+              delta={{ texte: `moy. ${periode}`, tone: 'neutre' }}
+              couleur="lime"
+            />
+            <KpiCard
+              label={kpiLabels.plaintes}
+              valeur={kpiAgreg.plaintes}
+              delta={{ texte: '7 derniers jours', tone: 'neutre' }}
+              couleur="amber"
+            />
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <KpiCard
+              label={kpiLabels.mtbf}
+              valeur={kpiAgreg.mtbf}
+              unite=" j"
+              delta={{ texte: `moy. ${periode}`, tone: 'neutre' }}
+              couleur="cyan"
+              compact
+            />
+            <KpiCard
+              label={kpiLabels.mttr}
+              valeur={kpiAgreg.mttr}
+              unite=" min"
+              delta={{ texte: `moy. ${periode}`, tone: 'neutre' }}
+              couleur="violet"
+              compact
+            />
+            <KpiCard
+              label={kpiLabels.premierCoup}
+              valeur={kpiAgreg.premierCoup}
+              unite="%"
+              delta={{ texte: `cible 90% · ${periode}`, tone: 'neutre' }}
+              couleur="green"
+              compact
+            />
+          </div>
         </div>
       )}
 
