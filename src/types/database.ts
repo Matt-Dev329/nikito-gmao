@@ -306,6 +306,7 @@ export interface RecurrenceActive {
   equipement_id: string;
   code: string;
   libelle: string;
+  parc_id: string;
   parc_nom: string;
   pannes_30j: number;
   pannes_90j: number;
