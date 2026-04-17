@@ -1,4 +1,6 @@
+import { useState } from 'react';
 import { cn } from '@/lib/utils';
+import { PhotoLightbox, PhotoThumb } from '@/components/shared/PhotoLightbox';
 import { useControleDetail, type ControleHistorique } from '@/hooks/queries/useHistoriqueControles';
 import type { TypeControle } from '@/types/database';
 
@@ -63,6 +65,7 @@ interface ModaleDetailControleProps {
 
 export function ModaleDetailControle({ controle, onClose, onExportPDF, onNavigateCorrection }: ModaleDetailControleProps) {
   const { data, isLoading } = useControleDetail(controle.id);
+  const [lightboxPhotos, setLightboxPhotos] = useState<string[] | null>(null);
 
   return (
     <div className="fixed inset-0 z-50 bg-black/60 flex items-end md:items-center justify-center md:p-4">
@@ -162,7 +165,10 @@ export function ModaleDetailControle({ controle, onClose, onExportPDF, onNavigat
                         {item.commentaire && <div className="text-[12px] text-amber mt-1">{item.commentaire}</div>}
                       </div>
                       {item.photo_url && (
-                        <img src={item.photo_url} alt="Photo" className="w-12 h-12 rounded-lg object-cover flex-shrink-0" />
+                        <PhotoThumb
+                          url={item.photo_url}
+                          onClick={() => setLightboxPhotos([item.photo_url!])}
+                        />
                       )}
                     </div>
                   );
@@ -209,6 +215,9 @@ export function ModaleDetailControle({ controle, onClose, onExportPDF, onNavigat
           </div>
         </div>
       </div>
+      {lightboxPhotos && (
+        <PhotoLightbox photos={lightboxPhotos} onClose={() => setLightboxPhotos(null)} />
+      )}
     </div>
   );
 }

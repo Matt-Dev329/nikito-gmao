@@ -43,6 +43,7 @@ export function ControleOuverture() {
   }, [startTime]);
 
   const [etats, setEtats] = useState<Record<string, { etat: EtatControleItem; saisiPar: string }>>({});
+  const [photoUrls, setPhotoUrls] = useState<Record<string, string>>({});
   const [zoneActive, setZoneActive] = useState<string>('');
   const [dirty, setDirty] = useState(false);
   const [showModale, setShowModale] = useState(false);
@@ -80,8 +81,9 @@ export function ControleOuverture() {
         photoObligatoire: p.photo_obligatoire,
         etat: etats[p.point_id]?.etat ?? null,
         saisiPar: etats[p.point_id]?.saisiPar,
+        photoUrl: photoUrls[p.point_id],
       }));
-  }, [pointsBruts, activeZone, etats]);
+  }, [pointsBruts, activeZone, etats, photoUrls]);
 
   const trigramme = utilisateur?.trigramme ?? utilisateur?.prenom?.slice(0, 2).toUpperCase() ?? '??';
 
@@ -89,6 +91,11 @@ export function ControleOuverture() {
     setEtats((prev) => ({ ...prev, [id]: { etat, saisiPar: trigramme } }));
     setDirty(true);
   };
+
+  const handlePhotoUploaded = useCallback((pointId: string, url: string) => {
+    setPhotoUrls((prev) => ({ ...prev, [pointId]: url }));
+    setDirty(true);
+  }, []);
 
   const retourDestination = utilisateur?.role_code === 'staff_operationnel' ? '/staff/login' : '/gmao';
 
@@ -119,6 +126,7 @@ export function ControleOuverture() {
       .map((p) => ({
         point_id: p.point_id,
         etat: etats[p.point_id].etat,
+        photo_url: photoUrls[p.point_id] ?? null,
       }));
 
     await validerMutation.mutateAsync({
@@ -201,6 +209,7 @@ export function ControleOuverture() {
         agentActuel={{ initiales: trigramme, prenom: utilisateur?.prenom ?? '' }}
         onChangeZone={setZoneActive}
         onSetEtat={setEtatPoint}
+        onPhotoUploaded={handlePhotoUploaded}
         onRetour={handleRetour}
         onChangerAgent={() => navigate('/staff/login')}
         onValider={handleValider}

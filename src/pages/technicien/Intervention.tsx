@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { TabletHeader } from '@/components/layout/TabletHeader';
 import { CritTag } from '@/components/ui/CritTag';
+import { PhotoCapture } from '@/components/shared/PhotoCapture';
 import { ModaleQuitterSansValider } from '@/components/ui/ModaleQuitterSansValider';
 import { useChrono } from '@/hooks/useChrono';
 import { formatChrono, cn } from '@/lib/utils';
@@ -41,6 +42,8 @@ export function Intervention() {
     'D\u00e9montage capot arri\u00e8re, remplacement carte m\u00e8re, application p\u00e2te thermique sur dissipateur CPU, test boot OK, test cycle complet ride OK.'
   );
   const [premierCoup, setPremierCoup] = useState<boolean | null>(true);
+  const [photoAvant, setPhotoAvant] = useState<string | null>(null);
+  const [photoApres, setPhotoApres] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
   const [showModale, setShowModale] = useState(false);
 
@@ -118,12 +121,22 @@ export function Intervention() {
         {/* Diagnostic (étape validée) */}
         <div className="bg-bg-card rounded-xl p-3.5 px-4">
           <div className="flex justify-between items-center mb-2.5">
-            <div className="text-[13px] font-semibold text-green">✓ Diagnostic</div>
+            <div className="text-[13px] font-semibold text-green">&#10003; Diagnostic</div>
             <button onClick={() => setEtapeActive('diagnostic')} className="bg-transparent border-none text-nikito-cyan text-[11px]">
               Modifier
             </button>
           </div>
           <div className="text-[13px] text-text leading-relaxed bg-bg-deep p-3 rounded-lg">{diagnostic}</div>
+          <div className="mt-3">
+            <PhotoCapture
+              bucketName="alba-interventions"
+              storagePath={`intervention/${btNumero ?? 'draft'}/avant`}
+              onPhotoUploaded={(url) => { setPhotoAvant(url); setDirty(true); }}
+              required
+              label="Photo AVANT intervention"
+              existingUrl={photoAvant ?? undefined}
+            />
+          </div>
         </div>
 
         {/* Pièces (étape validée) */}
@@ -164,12 +177,14 @@ export function Intervention() {
             className="w-full bg-bg-deep border border-white/[0.08] rounded-lg text-text p-3 text-[13px] resize-y min-h-[90px] outline-none focus:border-nikito-cyan"
           />
           <div className="mt-3.5">
-            <div className="text-[11px] text-dim uppercase tracking-wider mb-2">Photos après réparation</div>
-            <div className="flex gap-2 flex-wrap">
-              <div className="w-[72px] h-[72px] bg-bg-deep rounded-lg flex items-center justify-center border border-nikito-cyan/30 text-green text-2xl">✓</div>
-              <div className="w-[72px] h-[72px] bg-bg-deep rounded-lg flex items-center justify-center border border-nikito-cyan/30 text-green text-2xl">✓</div>
-              <button className="w-[72px] h-[72px] bg-transparent border-2 border-dashed border-nikito-cyan/40 rounded-lg text-nikito-cyan text-2xl">+</button>
-            </div>
+            <PhotoCapture
+              bucketName="alba-interventions"
+              storagePath={`intervention/${btNumero ?? 'draft'}/apres`}
+              onPhotoUploaded={(url) => { setPhotoApres(url); setDirty(true); }}
+              required
+              label="Photo APRES reparation"
+              existingUrl={photoApres ?? undefined}
+            />
           </div>
         </div>
 

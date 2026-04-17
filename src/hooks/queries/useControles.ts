@@ -47,6 +47,7 @@ export interface ItemSaisi {
   point_id: string;
   etat: EtatControleItem;
   commentaire?: string | null;
+  photo_url?: string | null;
 }
 
 export interface ItemSaisiMensuel extends ItemSaisi {
@@ -125,6 +126,7 @@ export function useValiderControle() {
         point_id: item.point_id,
         etat: item.etat,
         commentaire: item.commentaire ?? null,
+        photo_url: item.photo_url ?? null,
         saisi_par_id: params.realise_par_id,
       }));
 
@@ -216,6 +218,7 @@ export function useValiderControleMensuel() {
         point_id: item.point_id,
         etat: item.etat,
         commentaire: item.commentaire ?? null,
+        photo_url: item.photo_url ?? null,
         saisi_par_id: params.realise_par_id,
         point_libelle_snapshot: item.point_libelle_snapshot,
         point_categorie_snapshot: item.point_categorie_snapshot,

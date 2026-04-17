@@ -1,5 +1,6 @@
-import { useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { cn } from '@/lib/utils';
+import { PhotoCapture } from '@/components/shared/PhotoCapture';
 import type { EtatControleItem, TypeControle } from '@/types/database';
 
 export interface PointControleVue {
@@ -12,6 +13,7 @@ export interface PointControleVue {
   norme?: string;
   etat: EtatControleItem | null;
   saisiPar?: string;
+  photoUrl?: string;
 }
 
 export interface ZoneVue {
@@ -33,6 +35,9 @@ interface ControleEcranProps {
   chrono?: string;
   onChangeZone: (code: string) => void;
   onSetEtat: (pointId: string, etat: EtatControleItem) => void;
+  onPhotoUploaded?: (pointId: string, url: string) => void;
+  bucketName?: string;
+  controleId?: string;
   onChangerAgent?: () => void;
   onValider?: () => void;
   onRetour?: () => void;
@@ -58,6 +63,9 @@ export function ControleEcran({
   chrono,
   onChangeZone,
   onSetEtat,
+  onPhotoUploaded,
+  bucketName = 'alba-controles',
+  controleId,
   onChangerAgent,
   onValider,
   onRetour,
@@ -146,6 +154,10 @@ export function ControleEcran({
           firstNullIdx={firstNullIdx}
           onSetEtat={handleSetEtat}
           registerRef={registerRef}
+          onPhotoUploaded={onPhotoUploaded}
+          bucketName={bucketName}
+          parcCode={parcCode}
+          controleId={controleId}
         />
 
         {type === 'quotidien' && (
@@ -280,12 +292,20 @@ function ZoneCard({
   firstNullIdx,
   onSetEtat,
   registerRef,
+  onPhotoUploaded,
+  bucketName,
+  parcCode,
+  controleId,
 }: {
   zoneActive?: ZoneVue;
   points: PointControleVue[];
   firstNullIdx: number;
   onSetEtat: (id: string, etat: EtatControleItem) => void;
   registerRef: (id: string, el: HTMLDivElement | null) => void;
+  onPhotoUploaded?: (pointId: string, url: string) => void;
+  bucketName: string;
+  parcCode: string;
+  controleId?: string;
 }) {
   if (!zoneActive) return null;
   const restants = zoneActive.count - zoneActive.fait;
@@ -310,6 +330,9 @@ function ZoneCard({
               verrouille={isVerrouille}
               onSetEtat={(etat) => onSetEtat(p.id, etat)}
               registerRef={(el) => registerRef(p.id, el)}
+              onPhotoUploaded={onPhotoUploaded ? (url) => onPhotoUploaded(p.id, url) : undefined}
+              bucketName={bucketName}
+              storagePath={`${parcCode}/${controleId ?? 'draft'}/${p.id}`}
             />
           );
         })}
@@ -324,17 +347,25 @@ function PointRow({
   verrouille,
   onSetEtat,
   registerRef,
+  onPhotoUploaded,
+  bucketName,
+  storagePath,
 }: {
   point: PointControleVue;
   actif: boolean;
   verrouille: boolean;
   onSetEtat: (e: EtatControleItem) => void;
   registerRef: (el: HTMLDivElement | null) => void;
+  onPhotoUploaded?: (url: string) => void;
+  bucketName: string;
+  storagePath: string;
 }) {
   const isOK = point.etat === 'ok';
   const isDeg = point.etat === 'degrade';
   const isHS = point.etat === 'hs';
+  const isKO = isDeg || isHS;
   const aRepondre = point.etat === null;
+  const [showPhotoOK, setShowPhotoOK] = useState(false);
 
   const elRef = useRef<HTMLDivElement>(null);
 
@@ -343,99 +374,141 @@ function PointRow({
     return () => registerRef(null);
   }, [registerRef]);
 
+  const needsPhoto = isKO && !point.photoUrl;
+
   return (
     <div
       ref={elRef}
       className={cn(
-        'flex items-center gap-2.5 p-2.5 px-3.5 rounded-lg transition-all duration-200',
+        'flex flex-col rounded-lg transition-all duration-200',
         isOK && 'bg-green/[0.06] border border-green/20',
         isDeg && 'bg-amber/[0.06] border border-amber/30',
         isHS && 'bg-red/[0.06] border border-red/30',
-        actif && aRepondre && 'bg-nikito-cyan/[0.04] border-2 border-nikito-cyan p-3 animate-pulse-subtle',
+        actif && aRepondre && 'bg-nikito-cyan/[0.04] border-2 border-nikito-cyan animate-pulse-subtle',
         verrouille && 'bg-bg-deep opacity-40 cursor-not-allowed',
         !isOK && !isDeg && !isHS && !actif && !verrouille && 'bg-bg-deep',
       )}
     >
-      <span
-        className={cn(
-          'w-[26px] h-[26px] rounded-md flex items-center justify-center font-bold text-sm flex-shrink-0',
-          isOK && 'bg-green text-bg-app',
-          isDeg && 'bg-amber text-bg-app',
-          isHS && 'bg-red text-bg-app',
-          actif && aRepondre && 'bg-nikito-cyan text-bg-app',
-          verrouille && 'bg-[#2A2A5A] text-faint',
-          !isOK && !isDeg && !isHS && !actif && !verrouille && aRepondre && 'bg-[#2A2A5A] text-dim',
-        )}
-      >
-        {isOK ? '\u2713' : isDeg ? '!' : isHS ? '\u00D7' : verrouille ? '\uD83D\uDD12' : actif ? '\u25B8' : '\u25CB'}
-      </span>
-
-      <div className="flex-1 min-w-0">
-        <div
-          className={cn(
-            'text-xs',
-            isOK && 'text-text',
-            isDeg && 'text-text',
-            isHS && 'text-text',
-            actif && aRepondre && 'text-[13px] font-semibold text-text',
-            verrouille && 'text-faint',
-            !isOK && !isDeg && !isHS && !actif && !verrouille && aRepondre && 'text-dim',
-          )}
-        >
-          {point.libelle}
-        </div>
-        {isDeg && (
-          <div className="text-[10px] text-amber mt-0.5">Photo + commentaire requis</div>
-        )}
-        {isHS && (
-          <div className="text-[10px] text-red mt-0.5">Photo + commentaire requis</div>
-        )}
-        {actif && point.bloquantSiKO && aRepondre && (
-          <div className="text-[10px] text-nikito-cyan mt-0.5">
-            Bloquant si KO · norme constructeur
-          </div>
-        )}
-      </div>
-
-      {point.saisiPar && (
-        <span className="bg-bg-deep text-nikito-cyan px-1.5 py-0.5 rounded text-[10px] font-medium flex-shrink-0">
-          {point.saisiPar}
-        </span>
-      )}
-
-      {point.etat ? (
+      <div className="flex items-center gap-2.5 p-2.5 px-3.5">
         <span
           className={cn(
-            'px-2 py-0.5 rounded-md text-[10px] font-bold flex-shrink-0',
+            'w-[26px] h-[26px] rounded-md flex items-center justify-center font-bold text-sm flex-shrink-0',
             isOK && 'bg-green text-bg-app',
             isDeg && 'bg-amber text-bg-app',
             isHS && 'bg-red text-bg-app',
+            actif && aRepondre && 'bg-nikito-cyan text-bg-app',
+            verrouille && 'bg-[#2A2A5A] text-faint',
+            !isOK && !isDeg && !isHS && !actif && !verrouille && aRepondre && 'bg-[#2A2A5A] text-dim',
           )}
         >
-          {isOK ? 'OK' : isDeg ? 'DEG' : 'HS'}
+          {isOK ? '\u2713' : isDeg ? '!' : isHS ? '\u00D7' : verrouille ? '\uD83D\uDD12' : actif ? '\u25B8' : '\u25CB'}
         </span>
-      ) : actif ? (
-        <div className="flex gap-1.5 flex-shrink-0">
-          <button
-            onClick={() => onSetEtat('ok')}
-            className="bg-green text-bg-app px-4 py-2 rounded-lg text-[13px] font-bold min-h-[44px] min-w-[48px]"
+
+        <div className="flex-1 min-w-0">
+          <div
+            className={cn(
+              'text-xs',
+              isOK && 'text-text',
+              isDeg && 'text-text',
+              isHS && 'text-text',
+              actif && aRepondre && 'text-[13px] font-semibold text-text',
+              verrouille && 'text-faint',
+              !isOK && !isDeg && !isHS && !actif && !verrouille && aRepondre && 'text-dim',
+            )}
           >
-            OK
-          </button>
-          <button
-            onClick={() => onSetEtat('degrade')}
-            className="bg-transparent border border-amber text-amber px-3 py-2 rounded-lg text-xs font-semibold min-h-[44px] min-w-[48px]"
+            {point.libelle}
+          </div>
+          {needsPhoto && (
+            <div className={cn('text-[10px] mt-0.5', isDeg ? 'text-amber' : 'text-red')}>
+              Photo obligatoire
+            </div>
+          )}
+          {isKO && point.photoUrl && (
+            <div className={cn('text-[10px] mt-0.5', isDeg ? 'text-amber' : 'text-red')}>
+              Photo jointe
+            </div>
+          )}
+          {actif && point.bloquantSiKO && aRepondre && (
+            <div className="text-[10px] text-nikito-cyan mt-0.5">
+              Bloquant si KO · norme constructeur
+            </div>
+          )}
+        </div>
+
+        {point.saisiPar && (
+          <span className="bg-bg-deep text-nikito-cyan px-1.5 py-0.5 rounded text-[10px] font-medium flex-shrink-0">
+            {point.saisiPar}
+          </span>
+        )}
+
+        {point.etat ? (
+          <span
+            className={cn(
+              'px-2 py-0.5 rounded-md text-[10px] font-bold flex-shrink-0',
+              isOK && 'bg-green text-bg-app',
+              isDeg && 'bg-amber text-bg-app',
+              isHS && 'bg-red text-bg-app',
+            )}
           >
-            DEG
-          </button>
+            {isOK ? 'OK' : isDeg ? 'DEG' : 'HS'}
+          </span>
+        ) : actif ? (
+          <div className="flex gap-1.5 flex-shrink-0">
+            <button
+              onClick={() => onSetEtat('ok')}
+              className="bg-green text-bg-app px-4 py-2 rounded-lg text-[13px] font-bold min-h-[44px] min-w-[48px]"
+            >
+              OK
+            </button>
+            <button
+              onClick={() => onSetEtat('degrade')}
+              className="bg-transparent border border-amber text-amber px-3 py-2 rounded-lg text-xs font-semibold min-h-[44px] min-w-[48px]"
+            >
+              DEG
+            </button>
+            <button
+              onClick={() => onSetEtat('hs')}
+              className="bg-transparent border border-red text-red px-3 py-2 rounded-lg text-xs font-semibold min-h-[44px] min-w-[48px]"
+            >
+              HS
+            </button>
+          </div>
+        ) : null}
+      </div>
+
+      {isKO && onPhotoUploaded && (
+        <div className="px-3.5 pb-3">
+          <PhotoCapture
+            bucketName={bucketName}
+            storagePath={storagePath}
+            onPhotoUploaded={onPhotoUploaded}
+            required
+            existingUrl={point.photoUrl}
+          />
+        </div>
+      )}
+
+      {isOK && onPhotoUploaded && !point.photoUrl && !showPhotoOK && (
+        <div className="px-3.5 pb-2">
           <button
-            onClick={() => onSetEtat('hs')}
-            className="bg-transparent border border-red text-red px-3 py-2 rounded-lg text-xs font-semibold min-h-[44px] min-w-[48px]"
+            onClick={() => setShowPhotoOK(true)}
+            className="text-[11px] text-dim hover:text-nikito-cyan"
           >
-            HS
+            &#128247; Ajouter une photo
           </button>
         </div>
-      ) : null}
+      )}
+
+      {isOK && onPhotoUploaded && (showPhotoOK || point.photoUrl) && (
+        <div className="px-3.5 pb-3">
+          <PhotoCapture
+            bucketName={bucketName}
+            storagePath={storagePath}
+            onPhotoUploaded={onPhotoUploaded}
+            existingUrl={point.photoUrl}
+          />
+        </div>
+      )}
     </div>
   );
 }

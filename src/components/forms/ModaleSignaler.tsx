@@ -1,16 +1,7 @@
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
+import { PhotoCapture } from '@/components/shared/PhotoCapture';
 import type { Criticite } from '@/types/database';
-
-// ============================================================
-// Modale Signaler un incident · bottom-sheet style
-// Accessible via le bouton "+" de la bottom-bar (tous profils)
-//
-// Branchement Supabase :
-//   - INSERT dans incidents (source='staff_caisse' ou 'tech_terrain')
-//   - Trigger SQL check_recurrence se déclenche
-//   - Si BLOQUANT → Edge Function notify-escalade-sms (OVH)
-// ============================================================
 
 interface ModaleSignalerProps {
   open: boolean;
@@ -27,17 +18,21 @@ export interface SignalementData {
   criticite: Criticite;
   description: string;
   photos: File[];
+  photoUrls: string[];
 }
 
 export function ModaleSignaler({ open, onClose, onSubmit, parc, user }: ModaleSignalerProps) {
   const [recherche, setRecherche] = useState('');
   const [criticite, setCriticite] = useState<Criticite | null>(null);
   const [description, setDescription] = useState('');
-  const [photos, setPhotos] = useState<File[]>([]);
+  const [photos] = useState<File[]>([]);
+  const [photoUrls, setPhotoUrls] = useState<string[]>([]);
 
   if (!open) return null;
 
   const peutEnvoyer = recherche.length > 0 && criticite !== null && description.length >= 10;
+
+  const incidentId = `new_${Date.now()}`;
 
   return (
     <div className="fixed inset-0 z-50 bg-black/65 flex items-end justify-center p-0 md:p-6">
@@ -51,14 +46,13 @@ export function ModaleSignaler({ open, onClose, onSubmit, parc, user }: ModaleSi
             onClick={onClose}
             className="bg-bg-deep border border-white/[0.08] text-dim w-[34px] h-[34px] rounded-[10px] text-base"
           >
-            ×
+            &#215;
           </button>
         </div>
 
-        {/* Détection auto */}
         <div className="bg-bg-deep rounded-[10px] p-2.5 px-3.5 flex items-center gap-2.5 mb-4 text-[11px] flex-wrap">
-          <span className="text-nikito-cyan">📍</span>
-          <span className="text-dim">Détecté auto :</span>
+          <span className="text-nikito-cyan">&#128205;</span>
+          <span className="text-dim">Detecte auto :</span>
           <span className="font-medium">
             {parc.code} · {parc.nom}
           </span>
@@ -75,13 +69,12 @@ export function ModaleSignaler({ open, onClose, onSubmit, parc, user }: ModaleSi
           </span>
         </div>
 
-        {/* Équipement */}
         <div className="mb-3.5">
           <label className="block text-[11px] text-dim uppercase tracking-wider mb-2">
-            Équipement concerné
+            Equipement concerne
           </label>
           <div className="bg-bg-deep border border-nikito-violet/30 rounded-[10px] p-3 px-3.5 flex items-center gap-2.5">
-            <span className="text-nikito-cyan text-sm">🔍</span>
+            <span className="text-nikito-cyan text-sm">&#128269;</span>
             <input
               type="text"
               value={recherche}
@@ -92,10 +85,9 @@ export function ModaleSignaler({ open, onClose, onSubmit, parc, user }: ModaleSi
           </div>
         </div>
 
-        {/* Criticité */}
         <div className="mb-3.5">
           <label className="block text-[11px] text-dim uppercase tracking-wider mb-2">
-            Criticité
+            Criticite
           </label>
           <div className="grid grid-cols-3 gap-2">
             {(['bloquant', 'majeur', 'mineur'] as Criticite[]).map((c) => (
@@ -118,17 +110,16 @@ export function ModaleSignaler({ open, onClose, onSubmit, parc, user }: ModaleSi
                         : 'border-nikito-cyan/30')
                 )}
               >
-                <span className="text-lg">{c === 'bloquant' ? '⚠' : c === 'majeur' ? '●' : '○'}</span>
+                <span className="text-lg">{c === 'bloquant' ? '\u26A0' : c === 'majeur' ? '\u25CF' : '\u25CB'}</span>
                 {c.toUpperCase()}
               </button>
             ))}
           </div>
         </div>
 
-        {/* Description */}
         <div className="mb-3.5">
           <label className="block text-[11px] text-dim uppercase tracking-wider mb-2">
-            Description du problème
+            Description du probleme
           </label>
           <textarea
             value={description}
@@ -138,51 +129,29 @@ export function ModaleSignaler({ open, onClose, onSubmit, parc, user }: ModaleSi
           />
         </div>
 
-        {/* Photos */}
         <div className="mb-[18px]">
-          <label className="block text-[11px] text-dim uppercase tracking-wider mb-2">
-            Photos · max 5
-          </label>
-          <div className="flex gap-2 flex-wrap">
-            {photos.map((_, i) => (
-              <div
-                key={i}
-                className="w-16 h-16 bg-bg-deep rounded-lg border border-nikito-cyan/30 flex items-center justify-center text-green text-xl"
-              >
-                ✓
-              </div>
-            ))}
-            {photos.length < 5 && (
-              <label className="w-16 h-16 bg-transparent border-2 border-dashed border-nikito-cyan/40 rounded-lg text-nikito-cyan flex flex-col items-center justify-center cursor-pointer">
-                <span className="text-lg">📷</span>
-                <span className="text-[9px]">Photo</span>
-                <input
-                  type="file"
-                  accept="image/*"
-                  capture="environment"
-                  multiple
-                  className="hidden"
-                  onChange={(e) =>
-                    setPhotos([...photos, ...Array.from(e.target.files ?? [])].slice(0, 5))
-                  }
-                />
-              </label>
-            )}
-          </div>
+          <PhotoCapture
+            bucketName="alba-incidents"
+            storagePath={`${parc.code}/${incidentId}`}
+            onPhotoUploaded={(url) => setPhotoUrls((prev) => [...prev, url])}
+            required
+            label="Photo du probleme"
+          />
+          {photoUrls.length > 0 && (
+            <div className="mt-2 text-[11px] text-green">{photoUrls.length} photo(s) uploadee(s)</div>
+          )}
         </div>
 
-        {/* Avertissement SLA si bloquant */}
         {criticite === 'bloquant' && (
           <div className="bg-bg-deep rounded-[10px] p-2.5 px-3.5 mb-[18px] flex items-center gap-2.5 text-[11px] text-dim">
-            <span className="text-amber">ⓘ</span>
+            <span className="text-amber">i</span>
             <span>
-              Bloquant → SMS auto à <strong className="text-text">Direction</strong> et{' '}
+              Bloquant → SMS auto a <strong className="text-text">Direction</strong> et{' '}
               <strong className="text-text">Ryad</strong> · escalade SLA 1h
             </span>
           </div>
         )}
 
-        {/* Actions */}
         <div className="flex gap-2.5">
           <button
             onClick={onClose}
@@ -194,12 +163,13 @@ export function ModaleSignaler({ open, onClose, onSubmit, parc, user }: ModaleSi
             onClick={() => {
               if (!peutEnvoyer) return;
               onSubmit({
-                equipementId: '', // résolu côté useMutation depuis recherche
+                equipementId: '',
                 equipementCode: '',
                 equipementLibelle: recherche,
                 criticite: criticite!,
                 description,
                 photos,
+                photoUrls,
               });
             }}
             disabled={!peutEnvoyer}
@@ -208,7 +178,7 @@ export function ModaleSignaler({ open, onClose, onSubmit, parc, user }: ModaleSi
               !peutEnvoyer && 'opacity-40 cursor-not-allowed'
             )}
           >
-            Créer le ticket
+            Creer le ticket
           </button>
         </div>
       </div>
