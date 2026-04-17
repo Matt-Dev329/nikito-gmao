@@ -3,6 +3,7 @@ import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/lib/supabase';
 import { guidesParRole } from './aideContenu';
+import { useTour } from '@/components/tour/useTour';
 import type { SectionAide } from './aideContenu';
 
 const MOTIFS = [
@@ -243,6 +244,7 @@ export function PageAide() {
   const { utilisateur } = useAuth();
   const roleCode = utilisateur?.role_code ?? 'direction';
   const guide = guidesParRole[roleCode];
+  const startTour = useTour((s) => s.start);
 
   const [ouverts, setOuverts] = useState<Record<number, boolean>>({ 0: true });
 
@@ -252,10 +254,21 @@ export function PageAide() {
 
   return (
     <div className="max-w-3xl mx-auto">
-      <div className="mb-6">
+      <div className="mb-6 flex items-center justify-between gap-4">
         <h1 className="text-xl font-semibold">
           Aide <span className="text-dim font-normal">· {guide.titre}</span>
         </h1>
+        <button
+          onClick={startTour}
+          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-[10px] bg-nikito-cyan/10 border border-nikito-cyan/20 text-nikito-cyan text-[13px] font-medium hover:bg-nikito-cyan/15 transition-colors min-h-[44px] flex-shrink-0"
+        >
+          <svg className="w-4 h-4" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M10 2L1 7l9 5 9-5-9-5Z" />
+            <path d="M15 9.5v5c0 1.5-2.5 3-5 3s-5-1.5-5-3v-5" />
+            <path d="M18 7v6" />
+          </svg>
+          Visite guidee
+        </button>
       </div>
 
       <div className="space-y-3">

@@ -5,7 +5,17 @@ import { getNavIcon, IconToggleSidebar, IconDeconnexion, IconAide } from './NavI
 import { ViewAsSelector } from './ViewAsSelector';
 import { useFormation } from '@/hooks/useFormation';
 import { useSidebarBadges } from '@/hooks/queries/useSidebarBadges';
+import { useTour } from '@/components/tour/useTour';
 import type { RoleUtilisateur } from '@/types/database';
+
+const TOUR_KEYS: Record<string, string> = {
+  'Tableau de bord': 'tableau-de-bord',
+  'Opérations': 'operations',
+  'Équipements': 'equipements',
+  'Contrôles': 'controles',
+  'Récurrences': 'recurrences',
+  'Utilisateurs': 'utilisateurs',
+};
 
 interface Badge {
   count: number;
@@ -81,6 +91,7 @@ function resolveBadge(
 export function Sidebar({ user, roleAffiche, roleCode, realRoleCode, compact = false, onNavClick, onToggle, onSignOut }: SidebarProps) {
   const { data: badges } = useSidebarBadges();
   const formationActive = useFormation((s) => s.active);
+  const startTour = useTour((s) => s.start);
   const showViewAs = (realRoleCode ?? roleCode) === 'direction' || (realRoleCode ?? roleCode) === 'chef_maintenance';
   const showFormation = showViewAs;
 
@@ -149,6 +160,7 @@ export function Sidebar({ user, roleAffiche, roleCode, realRoleCode, compact = f
             {itemsVisibles.map((item) => {
               const Icon = getNavIcon(item.label);
               const badge = resolveBadge(item, badges);
+              const tourKey = TOUR_KEYS[item.label];
               return (
                 <NavLink
                   key={item.to}
@@ -156,6 +168,7 @@ export function Sidebar({ user, roleAffiche, roleCode, realRoleCode, compact = f
                   end={item.end}
                   onClick={onNavClick}
                   title={compact ? item.label : undefined}
+                  {...(tourKey ? { 'data-tour': tourKey } : {})}
                   className={({ isActive }) =>
                     cn(
                       'group relative flex items-center rounded-[10px] transition-colors min-h-[44px]',
@@ -236,6 +249,7 @@ export function Sidebar({ user, roleAffiche, roleCode, realRoleCode, compact = f
           to="/gmao/aide"
           onClick={onNavClick}
           title={compact ? 'Aide' : undefined}
+          data-tour="aide"
           className={({ isActive }) =>
             cn(
               'group relative flex items-center rounded-[10px] transition-colors min-h-[40px] w-full mt-2',
@@ -249,6 +263,17 @@ export function Sidebar({ user, roleAffiche, roleCode, realRoleCode, compact = f
           <IconAide className="w-[18px] h-[18px] flex-shrink-0" />
           {!compact && <span className="text-[12px]">Aide</span>}
         </NavLink>
+        <button
+          onClick={startTour}
+          className={cn(
+            'flex items-center rounded-[10px] text-dim hover:text-nikito-cyan hover:bg-nikito-cyan/5 transition-colors min-h-[40px] w-full mt-1',
+            compact ? 'justify-center px-0' : 'gap-2.5 px-3'
+          )}
+          title={compact ? 'Visite guidee' : undefined}
+        >
+          <GraduationCapTourIcon className="w-[18px] h-[18px] flex-shrink-0" />
+          {!compact && <span className="text-[12px]">Visite guidee</span>}
+        </button>
         {onSignOut && (
           <button
             onClick={onSignOut}
@@ -268,6 +293,16 @@ export function Sidebar({ user, roleAffiche, roleCode, realRoleCode, compact = f
 }
 
 function GraduationCapIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M10 2L1 7l9 5 9-5-9-5Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/>
+      <path d="M15 9.5v5c0 1.5-2.5 3-5 3s-5-1.5-5-3v-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M18 7v6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+    </svg>
+  );
+}
+
+function GraduationCapTourIcon({ className }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
       <path d="M10 2L1 7l9 5 9-5-9-5Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/>

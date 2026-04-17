@@ -3,6 +3,8 @@ import { Outlet, useNavigate } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { ViewAsBanner } from './ViewAsBanner';
 import { FormationBanner } from './FormationBanner';
+import { TourOverlay } from '@/components/tour/TourOverlay';
+import { useTour, isTourCompleted } from '@/components/tour/useTour';
 import { useAuth } from '@/hooks/useAuth';
 import { useViewAs, useEffectiveRole } from '@/hooks/useViewAs';
 import { useFormation } from '@/hooks/useFormation';
@@ -65,6 +67,16 @@ export function DashboardLayout() {
       }
     : userMock;
 
+  const startTour = useTour((s) => s.start);
+  const tourActive = useTour((s) => s.active);
+
+  useEffect(() => {
+    if (!loading && utilisateur && !isTourCompleted() && !tourActive) {
+      const timer = setTimeout(() => startTour(), 800);
+      return () => clearTimeout(timer);
+    }
+  }, [loading, utilisateur, startTour, tourActive]);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-bg-app text-text flex items-center justify-center">
@@ -81,6 +93,7 @@ export function DashboardLayout() {
 
   return (
     <div className="min-h-screen bg-bg-app text-text">
+      <TourOverlay />
       <FormationBanner />
       <ViewAsBanner topOffset={formationBannerH} />
       <header
