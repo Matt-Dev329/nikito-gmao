@@ -112,6 +112,9 @@ export function AcceptationInvitation() {
           }
         } else {
           authUserId = signUpData.user?.id ?? null;
+          if (!authUserId && signUpData.user === null) {
+            throw new Error('Impossible de créer le compte. Réessaie ou contacte le support.');
+          }
         }
       }
 
@@ -122,6 +125,16 @@ export function AcceptationInvitation() {
       });
 
       if (rpcError) throw rpcError;
+
+      if (invitation.auth_mode === 'email_password' && authUserId) {
+        const { data: session } = await supabase.auth.getSession();
+        if (!session?.session) {
+          await supabase.auth.signInWithPassword({
+            email: invitation.email!,
+            password,
+          });
+        }
+      }
 
       if (invitation.auth_mode === 'pin_seul') {
         navigate('/staff/login');
