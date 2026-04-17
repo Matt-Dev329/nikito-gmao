@@ -157,6 +157,16 @@ export function IconControles({ className = s }: { className?: string }) {
   );
 }
 
+export function IconIAPredictive({ className = s }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="10" cy="10" r="8" />
+      <path d="M10 6v4l3 2" />
+      <path d="M6 3.5l1 2M14 3.5l-1 2" />
+    </svg>
+  );
+}
+
 export function IconFournisseurs({ className = s }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
@@ -210,6 +220,7 @@ const iconMap: Record<string, (props: { className?: string }) => JSX.Element> = 
   'Utilisateurs': IconUtilisateurs,
   'Bibliothèque points': IconBibliotheque,
   'Fournisseurs': IconFournisseurs,
+  'IA Prédictive': IconIAPredictive,
   'Contrôle d\'ouverture': IconControleOuverture,
   'Contrôle hebdo': IconControleHebdo,
   'Contrôle mensuel': IconControleMensuel,

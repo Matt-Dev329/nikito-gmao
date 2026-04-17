@@ -47,6 +47,7 @@ import {
 
 import { PageAide } from '@/pages/aide/PageAide';
 import { PageFormation } from '@/pages/formation/PageFormation';
+import { PageIAPredictive } from '@/pages/ia-predictive/PageIAPredictive';
 
 export function App() {
   return (
@@ -86,6 +87,7 @@ export function App() {
         <Route path="bibliotheque" element={<PageBibliotheque />} />
         <Route path="fournisseurs" element={<PageFournisseursAdmin />} />
         <Route path="controles-historique" element={<PageHistoriqueControles />} />
+        <Route path="ia-predictive" element={<PageIAPredictive />} />
         <Route path="aide" element={<PageAide />} />
         <Route path="formation" element={<PageFormation />} />
       </Route>
