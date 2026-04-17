@@ -56,27 +56,63 @@ export function useValiderControle() {
       type: TypeControle;
       date_planifiee: string;
       realise_par_id: string;
+      realise_par_nom: string;
+      realise_par_role: string;
       items: ItemSaisi[];
     }) => {
-      const { data: controle, error: errCtrl } = await supabase
-        .from('controles')
-        .insert({
-          parc_id: params.parc_id,
-          type: params.type,
-          date_planifiee: params.date_planifiee,
-          date_demarrage: new Date().toISOString(),
-          date_validation: new Date().toISOString(),
-          realise_par_id: params.realise_par_id,
-          valide_par_id: params.realise_par_id,
-          statut: 'valide',
-        })
-        .select('id')
-        .single();
+      const now = new Date().toISOString();
 
-      if (errCtrl) throw errCtrl;
+      const { data: existant } = await supabase
+        .from('controles')
+        .select('id')
+        .eq('parc_id', params.parc_id)
+        .eq('type', params.type)
+        .eq('date_planifiee', params.date_planifiee)
+        .in('statut', ['a_faire', 'en_cours'])
+        .maybeSingle();
+
+      let controleId: string;
+
+      if (existant) {
+        const { data: updated, error: errUpd } = await supabase
+          .from('controles')
+          .update({
+            date_demarrage: now,
+            date_validation: now,
+            realise_par_id: params.realise_par_id,
+            realise_par_nom: params.realise_par_nom,
+            realise_par_role: params.realise_par_role,
+            valide_par_id: params.realise_par_id,
+            statut: 'valide',
+          })
+          .eq('id', existant.id)
+          .select('id')
+          .single();
+        if (errUpd) throw errUpd;
+        controleId = updated.id;
+      } else {
+        const { data: created, error: errCtrl } = await supabase
+          .from('controles')
+          .insert({
+            parc_id: params.parc_id,
+            type: params.type,
+            date_planifiee: params.date_planifiee,
+            date_demarrage: now,
+            date_validation: now,
+            realise_par_id: params.realise_par_id,
+            realise_par_nom: params.realise_par_nom,
+            realise_par_role: params.realise_par_role,
+            valide_par_id: params.realise_par_id,
+            statut: 'valide',
+          })
+          .select('id')
+          .single();
+        if (errCtrl) throw errCtrl;
+        controleId = created.id;
+      }
 
       const rows = params.items.map((item) => ({
-        controle_id: controle.id,
+        controle_id: controleId,
         point_id: item.point_id,
         etat: item.etat,
         commentaire: item.commentaire ?? null,
@@ -88,11 +124,12 @@ export function useValiderControle() {
         .insert(rows);
 
       if (errItems) throw errItems;
-      return controle;
+      return { id: controleId };
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['controles'] });
       qc.invalidateQueries({ queryKey: ['manager_parc_stats'] });
+      qc.invalidateQueries({ queryKey: ['historique_controles'] });
     },
   });
 }

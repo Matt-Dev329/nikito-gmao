@@ -1,9 +1,11 @@
 import { useState, useMemo } from 'react';
 import { useHistoriqueControles, type ControleHistorique } from '@/hooks/queries/useHistoriqueControles';
+import { useParcs } from '@/hooks/queries/useReferentiel';
 import { FiltresHistorique } from './FiltresHistorique';
 import { CompteursControles } from './CompteursControles';
 import { TableControles } from './TableControles';
 import { ModaleDetailControle } from './ModaleDetailControle';
+import { ModaleEnvoyerRapport } from './ModaleEnvoyerRapport';
 import { exportControlesCSV } from './exportCSV';
 import { exportControlePDF } from './exportPDF';
 import type { TypeControle, StatutControle } from '@/types/database';
@@ -24,6 +26,11 @@ export function PageHistoriqueControles() {
   const [recherche, setRecherche] = useState('');
 
   const [controleSelectionne, setControleSelectionne] = useState<ControleHistorique | null>(null);
+  const [showModaleEmail, setShowModaleEmail] = useState(false);
+
+  const { data: parcs } = useParcs();
+
+  const parcCode = parcId ? parcs?.find((p) => p.id === parcId)?.code : undefined;
 
   const filtres = useMemo(() => ({
     dateDebut,
@@ -74,17 +81,26 @@ export function PageHistoriqueControles() {
         <>
           <CompteursControles controles={controles ?? []} />
 
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between flex-wrap gap-2">
             <div className="text-[11px] text-dim uppercase tracking-wider">
               {controles?.length ?? 0} controle{(controles?.length ?? 0) > 1 ? 's' : ''} trouves
             </div>
-            <button
-              onClick={() => exportControlesCSV(controles ?? [], dateDebut, dateFin)}
-              disabled={!controles?.length}
-              className="bg-bg-deep border border-white/[0.08] text-dim hover:text-text px-4 py-2 rounded-[10px] text-[12px] font-medium min-h-[40px] transition-colors disabled:opacity-40"
-            >
-              Exporter CSV
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setShowModaleEmail(true)}
+                disabled={!controles?.length}
+                className="bg-bg-deep border border-white/[0.08] text-dim hover:text-text px-4 py-2 rounded-[10px] text-[12px] font-medium min-h-[40px] transition-colors disabled:opacity-40"
+              >
+                Envoyer par email
+              </button>
+              <button
+                onClick={() => exportControlesCSV(controles ?? [], dateDebut, dateFin)}
+                disabled={!controles?.length}
+                className="bg-bg-deep border border-white/[0.08] text-dim hover:text-text px-4 py-2 rounded-[10px] text-[12px] font-medium min-h-[40px] transition-colors disabled:opacity-40"
+              >
+                Exporter CSV
+              </button>
+            </div>
           </div>
 
           <TableControles controles={controles ?? []} onVoir={handleVoir} />
@@ -97,6 +113,16 @@ export function PageHistoriqueControles() {
           onClose={() => setControleSelectionne(null)}
           onExportPDF={exportControlePDF}
           onNavigateCorrection={handleNavigateCorrection}
+        />
+      )}
+
+      {showModaleEmail && (
+        <ModaleEnvoyerRapport
+          controles={controles ?? []}
+          dateDebut={dateDebut}
+          dateFin={dateFin}
+          parcCode={parcCode}
+          onClose={() => setShowModaleEmail(false)}
         />
       )}
     </div>

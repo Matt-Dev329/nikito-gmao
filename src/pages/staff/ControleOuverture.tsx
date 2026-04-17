@@ -126,6 +126,8 @@ export function ControleOuverture() {
       type: 'quotidien',
       date_planifiee: datePlanifiee,
       realise_par_id: utilisateur.id,
+      realise_par_nom: `${utilisateur.prenom} ${utilisateur.nom}`,
+      realise_par_role: utilisateur.role_code,
       items,
     });
 
