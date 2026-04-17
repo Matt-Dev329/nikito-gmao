@@ -226,7 +226,11 @@ export function Sidebar({ user, roleAffiche, roleCode, realRoleCode, compact = f
               <div className="text-dim text-[11px] truncate">{user.role}</div>
             </div>
           )}
-          {showViewAs && <ViewAsSelector compact />}
+          {showViewAs && (
+            <div className="ml-auto flex-shrink-0">
+              <ViewAsSelector compact />
+            </div>
+          )}
         </div>
         <NavLink
           to="/gmao/aide"
