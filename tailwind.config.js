@@ -42,6 +42,15 @@ export default {
       borderRadius: {
         pill: '20px',
       },
+      keyframes: {
+        'pulse-subtle': {
+          '0%, 100%': { borderColor: 'rgba(93,229,255,1)' },
+          '50%': { borderColor: 'rgba(93,229,255,0.4)' },
+        },
+      },
+      animation: {
+        'pulse-subtle': 'pulse-subtle 2s ease-in-out infinite',
+      },
     },
   },
   plugins: [],

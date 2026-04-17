@@ -172,12 +172,24 @@ export function ControleMensuel() {
 
   const trigramme = utilisateur?.trigramme ?? utilisateur?.prenom?.slice(0, 2).toUpperCase() ?? '??';
 
+  const pointRefsMap = useRef<Map<string, HTMLDivElement>>(new Map());
+
+  const firstNullIdx = pointsZoneActive.findIndex((pt) => !etats[pt.point_id]);
+
   const setEtatPoint = (id: string, etat: EtatControleItem) => {
     setEtats((prev) => ({
       ...prev,
       [id]: { etat, commentaire: prev[id]?.commentaire ?? '', saisiPar: trigramme },
     }));
     setDirty(true);
+    const currentIdx = pointsZoneActive.findIndex((p) => p.point_id === id);
+    const nextUnfilled = pointsZoneActive.findIndex((p, i) => i > currentIdx && !etats[p.point_id]);
+    if (nextUnfilled !== -1) {
+      requestAnimationFrame(() => {
+        const el = pointRefsMap.current.get(pointsZoneActive[nextUnfilled].point_id);
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      });
+    }
   };
 
   const setCommentaire = (id: string, commentaire: string) => {
@@ -385,47 +397,61 @@ export function ControleMensuel() {
             </div>
 
             <div className="flex flex-col gap-2">
-              {pointsZoneActive.map((p) => {
+              {pointsZoneActive.map((p, idx) => {
                 const e = etats[p.point_id];
                 const isOK = e?.etat === 'ok';
                 const isDeg = e?.etat === 'degrade';
                 const isHS = e?.etat === 'hs';
                 const aRepondre = !e;
-                const isActive = !e && pointsZoneActive.findIndex((pt) => !etats[pt.point_id]) === pointsZoneActive.indexOf(p);
+                const isActive = idx === firstNullIdx;
+                const isVerrouille = aRepondre && idx > firstNullIdx && firstNullIdx !== -1;
 
                 return (
-                  <div key={p.point_id} className="bg-bg-deep rounded-lg overflow-hidden">
-                    <div
-                      className={cn(
-                        'flex items-center gap-2.5 p-2.5 px-3.5',
-                        isDeg && 'border border-amber',
-                        isActive && aRepondre && 'border-2 border-nikito-cyan p-3'
-                      )}
-                    >
+                  <div
+                    key={p.point_id}
+                    ref={(el) => { if (el) pointRefsMap.current.set(p.point_id, el); else pointRefsMap.current.delete(p.point_id); }}
+                    className={cn(
+                      'rounded-lg overflow-hidden transition-all duration-200',
+                      isOK && 'bg-green/[0.06] border border-green/20',
+                      isDeg && 'bg-amber/[0.06] border border-amber/30',
+                      isHS && 'bg-red/[0.06] border border-red/30',
+                      isActive && aRepondre && 'bg-nikito-cyan/[0.04] border-2 border-nikito-cyan animate-pulse-subtle',
+                      isVerrouille && 'bg-bg-deep opacity-40 cursor-not-allowed',
+                      !isOK && !isDeg && !isHS && !isActive && !isVerrouille && 'bg-bg-deep',
+                    )}
+                  >
+                    <div className="flex items-center gap-2.5 p-2.5 px-3.5">
                       <span
                         className={cn(
                           'w-[26px] h-[26px] rounded-md flex items-center justify-center font-bold text-sm flex-shrink-0',
                           isOK && 'bg-green text-bg-app',
                           isDeg && 'bg-amber text-bg-app',
                           isHS && 'bg-red text-bg-app',
-                          aRepondre && !isActive && 'bg-[#2A2A5A] text-dim',
-                          aRepondre && isActive && 'bg-nikito-cyan text-bg-app'
+                          isActive && aRepondre && 'bg-nikito-cyan text-bg-app',
+                          isVerrouille && 'bg-[#2A2A5A] text-faint',
+                          !isOK && !isDeg && !isHS && !isActive && !isVerrouille && aRepondre && 'bg-[#2A2A5A] text-dim',
                         )}
                       >
-                        {isOK ? '\u2713' : isDeg ? '!' : isHS ? '\u00D7' : isActive ? '\u25B8' : '\u25CB'}
+                        {isOK ? '\u2713' : isDeg ? '!' : isHS ? '\u00D7' : isVerrouille ? '\uD83D\uDD12' : isActive ? '\u25B8' : '\u25CB'}
                       </span>
 
                       <div className="flex-1 min-w-0">
-                        <div className={cn('text-xs', aRepondre && !isActive ? 'text-dim' : 'text-text', isActive && 'text-[13px] font-semibold')}>
+                        <div className={cn(
+                          'text-xs',
+                          (isOK || isDeg || isHS) && 'text-text',
+                          isActive && aRepondre && 'text-[13px] font-semibold text-text',
+                          isVerrouille && 'text-faint',
+                          !isOK && !isDeg && !isHS && !isActive && !isVerrouille && aRepondre && 'text-dim',
+                        )}>
                           {p.libelle}
                         </div>
-                        {isHS && (
-                          <div className="text-[10px] text-red mt-0.5">Photo obligatoire pour point non conforme</div>
+                        {(isHS || isDeg) && (
+                          <div className={cn('text-[10px] mt-0.5', isHS ? 'text-red' : 'text-amber')}>Photo + commentaire requis</div>
                         )}
                       </div>
 
                       {e?.saisiPar && (
-                        <span className="bg-bg-deep text-nikito-cyan px-1.5 py-0.5 rounded text-[10px] font-medium">
+                        <span className="bg-bg-deep text-nikito-cyan px-1.5 py-0.5 rounded text-[10px] font-medium flex-shrink-0">
                           {e.saisiPar}
                         </span>
                       )}
@@ -436,7 +462,7 @@ export function ControleMensuel() {
                             'px-2 py-0.5 rounded-md text-[10px] font-bold flex-shrink-0',
                             isOK && 'bg-green text-bg-app',
                             isDeg && 'bg-amber text-bg-app',
-                            isHS && 'bg-red text-bg-app'
+                            isHS && 'bg-red text-bg-app',
                           )}
                         >
                           {isOK ? 'OK' : isDeg ? 'DEG' : 'HS'}
@@ -447,13 +473,7 @@ export function ControleMensuel() {
                           <button onClick={() => setEtatPoint(p.point_id, 'degrade')} className="bg-transparent border border-amber text-amber px-3 py-2 rounded-lg text-xs font-semibold min-h-[44px] min-w-[48px]">DEG</button>
                           <button onClick={() => setEtatPoint(p.point_id, 'hs')} className="bg-transparent border border-red text-red px-3 py-2 rounded-lg text-xs font-semibold min-h-[44px] min-w-[48px]">HS</button>
                         </div>
-                      ) : (
-                        <div className="flex gap-1 flex-shrink-0">
-                          <button onClick={() => setEtatPoint(p.point_id, 'ok')} className="bg-transparent border border-white/15 text-dim px-2 py-0.5 rounded-md text-[10px]">OK</button>
-                          <button onClick={() => setEtatPoint(p.point_id, 'degrade')} className="bg-transparent border border-white/15 text-dim px-2 py-0.5 rounded-md text-[10px]">DEG</button>
-                          <button onClick={() => setEtatPoint(p.point_id, 'hs')} className="bg-transparent border border-white/15 text-dim px-2 py-0.5 rounded-md text-[10px]">HS</button>
-                        </div>
-                      )}
+                      ) : null}
                     </div>
 
                     {e && (
@@ -465,7 +485,7 @@ export function ControleMensuel() {
                           rows={2}
                           className={cn(
                             'w-full bg-bg-app border rounded-[8px] p-2 text-[12px] text-text outline-none resize-y min-h-[40px] placeholder:text-faint',
-                            e.commentaire.trim() ? 'border-white/[0.08]' : 'border-red/40'
+                            e.commentaire.trim() ? 'border-white/[0.08]' : 'border-red/40',
                           )}
                         />
                       </div>

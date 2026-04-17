@@ -7,12 +7,17 @@ interface SidebarBadges {
   cinqPourquoi: number;
   operations: number;
   invitationsPending: number;
+  controlesManquants: number;
 }
 
 export function useSidebarBadges() {
   const { estFormation } = useFormationFilter();
+  const now = new Date();
+  const heure = now.getHours();
+  const today = now.toISOString().slice(0, 10);
+
   return useQuery({
-    queryKey: ['sidebar-badges', estFormation],
+    queryKey: ['sidebar-badges', estFormation, today],
     queryFn: async (): Promise<SidebarBadges> => {
       const [recRes, fpRes, incRes, invRes] = await Promise.all([
         supabase
@@ -35,11 +40,24 @@ export function useSidebarBadges() {
           .gt('expire_le', new Date().toISOString()),
       ]);
 
+      let controlesManquants = 0;
+      if (heure >= 10) {
+        const [parcsRes, ctrlRes] = await Promise.all([
+          supabase.from('parcs').select('id', { count: 'exact', head: true }).eq('actif', true),
+          supabase.from('controles').select('parc_id').eq('type', 'quotidien').eq('date_planifiee', today).eq('statut', 'valide'),
+        ]);
+        const totalParcs = parcsRes.count ?? 0;
+        const parcsAvecControle = new Set((ctrlRes.data ?? []).map((c) => c.parc_id));
+        controlesManquants = totalParcs - parcsAvecControle.size;
+        if (controlesManquants < 0) controlesManquants = 0;
+      }
+
       return {
         recurrences: recRes.count ?? 0,
         cinqPourquoi: fpRes.count ?? 0,
         operations: incRes.count ?? 0,
         invitationsPending: invRes.count ?? 0,
+        controlesManquants,
       };
     },
     refetchInterval: 60_000,

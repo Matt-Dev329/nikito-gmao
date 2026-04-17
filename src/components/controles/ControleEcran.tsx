@@ -1,18 +1,6 @@
+import { useRef, useEffect, useCallback } from 'react';
 import { cn } from '@/lib/utils';
 import type { EtatControleItem, TypeControle } from '@/types/database';
-
-// ============================================================
-// Composant générique de contrôle · réutilisé pour :
-//   - quotidien (staff opérationnel, pré-ouverture)
-//   - hebdo (technicien, mode Heijunka)
-//   - mensuel (technicien, validation binôme)
-//
-// Branchement Supabase :
-//   - Récupère les points via `bibliotheque_points` filtré par type_controle
-//   - Saisie → INSERT dans `controle_items`
-//   - Trigger SQL `auto_create_incident` se déclenche sur HS
-//   - Validation → UPDATE statut='valide' dans `controles`
-// ============================================================
 
 export interface PointControleVue {
   id: string;
@@ -23,7 +11,7 @@ export interface PointControleVue {
   photoObligatoire: boolean;
   norme?: string;
   etat: EtatControleItem | null;
-  saisiPar?: string; // trigramme agent
+  saisiPar?: string;
 }
 
 export interface ZoneVue {
@@ -54,9 +42,9 @@ interface ControleEcranProps {
 }
 
 const typeLabels: Record<TypeControle, string> = {
-  quotidien: 'CONTRÔLE OUVERTURE',
-  hebdo: 'CONTRÔLE HEBDO',
-  mensuel: 'CONTRÔLE MENSUEL',
+  quotidien: 'CONTROLE OUVERTURE',
+  hebdo: 'CONTROLE HEBDO',
+  mensuel: 'CONTROLE MENSUEL',
 };
 
 export function ControleEcran({
@@ -80,6 +68,38 @@ export function ControleEcran({
   const totalPoints = zones.reduce((sum, z) => sum + z.count, 0);
   const totalFaits = zones.reduce((sum, z) => sum + z.fait, 0);
   const pctAvancement = totalPoints > 0 ? Math.round((totalFaits / totalPoints) * 100) : 0;
+
+  const pointRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+  const firstNullIdx = pointsZoneActive.findIndex((pt) => pt.etat === null);
+
+  const scrollToPoint = useCallback((pointId: string) => {
+    requestAnimationFrame(() => {
+      const el = pointRefs.current.get(pointId);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    });
+  }, []);
+
+  const handleSetEtat = useCallback(
+    (pointId: string, etat: EtatControleItem) => {
+      onSetEtat(pointId, etat);
+      const currentIdx = pointsZoneActive.findIndex((p) => p.id === pointId);
+      const nextUnfilled = pointsZoneActive.findIndex((p, i) => i > currentIdx && p.etat === null);
+      if (nextUnfilled !== -1) {
+        scrollToPoint(pointsZoneActive[nextUnfilled].id);
+      }
+    },
+    [onSetEtat, pointsZoneActive, scrollToPoint],
+  );
+
+  const registerRef = useCallback((id: string, el: HTMLDivElement | null) => {
+    if (el) {
+      pointRefs.current.set(id, el);
+    } else {
+      pointRefs.current.delete(id);
+    }
+  }, []);
 
   return (
     <div className="bg-bg-app text-text">
@@ -110,7 +130,6 @@ export function ControleEcran({
         {headerRightSlot}
       </header>
 
-      {/* Avancement */}
       <ProgressBar
         zones={zones}
         totalFaits={totalFaits}
@@ -118,16 +137,20 @@ export function ControleEcran({
         pctAvancement={pctAvancement}
       />
 
-      {/* Onglets zones */}
       <ZonesTabs zones={zones} active={zoneActiveCode} onChange={onChangeZone} />
 
-      {/* Liste points zone active */}
       <main className="p-3 px-3 md:p-3.5 md:px-[18px] flex flex-col gap-2.5">
-        <ZoneCard zoneActive={zones.find((z) => z.code === zoneActiveCode)} points={pointsZoneActive} onSetEtat={onSetEtat} />
+        <ZoneCard
+          zoneActive={zones.find((z) => z.code === zoneActiveCode)}
+          points={pointsZoneActive}
+          firstNullIdx={firstNullIdx}
+          onSetEtat={handleSetEtat}
+          registerRef={registerRef}
+        />
 
         {type === 'quotidien' && (
           <NotePedagogique>
-            Si tu pars en pause, le contrôle est sauvegardé. Tes collègues pourront reprendre.
+            Si tu pars en pause, le controle est sauvegarde. Tes collegues pourront reprendre.
           </NotePedagogique>
         )}
 
@@ -136,10 +159,10 @@ export function ControleEcran({
           disabled={validationDisabled}
           className={cn(
             'bg-gradient-cta text-text py-4 rounded-2xl text-[15px] font-bold mt-1 min-h-[56px]',
-            validationDisabled && 'opacity-50 cursor-not-allowed'
+            validationDisabled && 'opacity-50 cursor-not-allowed',
           )}
         >
-          Valider le contrôle · signature électronique
+          Valider le controle · signature electronique
           {validationDisabledRaison && (
             <span className="block mt-0.5 text-[11px] font-normal opacity-80">
               {validationDisabledRaison}
@@ -150,10 +173,6 @@ export function ControleEcran({
     </div>
   );
 }
-
-// ============================================================
-// Sous-composants
-// ============================================================
 
 function AgentPill({
   agent,
@@ -191,20 +210,20 @@ function ProgressBar({
   return (
     <div className="bg-bg-deep px-3 md:px-[18px] py-3 md:py-3.5 border-b border-white/[0.04]">
       <div className="flex justify-between mb-2">
-        <div className="text-xs text-dim">Avancement contrôle</div>
+        <div className="text-xs text-dim">Avancement controle</div>
         <div className="text-[13px] font-semibold">
-          <span className="text-nikito-cyan">{totalFaits}</span> / {totalPoints} points ·{' '}
+          <span className="text-nikito-cyan">{totalFaits}</span> / {totalPoints} points verifies ·{' '}
           <span className="text-green">{pctAvancement}%</span>
         </div>
       </div>
-      <div className="h-2 bg-bg-app rounded-full overflow-hidden flex">
+      <div className="h-2.5 bg-bg-app rounded-full overflow-hidden flex">
         <div
-          className="bg-gradient-to-r from-green to-lime"
+          className="bg-gradient-to-r from-green to-lime transition-all duration-500 ease-out"
           style={{ width: `${pctAvancement}%` }}
         />
       </div>
       <div className="flex justify-between mt-2 text-[10px] text-dim">
-        <span>{zones.filter((z) => z.fait === z.count).length} zones terminées</span>
+        <span>{zones.filter((z) => z.fait === z.count).length} zones terminees</span>
         <span>{totalPoints - totalFaits} restants</span>
       </div>
     </div>
@@ -235,15 +254,15 @@ function ZonesTabs({
               'px-3.5 py-2.5 md:py-2 rounded-[14px] text-[12px] md:text-[11px] font-semibold whitespace-nowrap min-h-[44px]',
               fait && !enCours && 'bg-green text-bg-app',
               enCours && 'bg-gradient-cta text-text',
-              pasCommence && 'bg-bg-card border border-white/[0.08] text-dim'
+              pasCommence && 'bg-bg-card border border-white/[0.08] text-dim',
             )}
           >
-            {fait ? '✓ ' : enCours ? '⏵ ' : '○ '}
+            {fait ? '\u2713 ' : enCours ? '\u23F5 ' : '\u25CB '}
             {z.label}
             <span
               className={cn(
                 'ml-1.5 px-1.5 py-px rounded-lg text-[10px]',
-                enCours ? 'bg-white/25' : 'bg-bg-app/30'
+                enCours ? 'bg-white/25' : 'bg-bg-app/30',
               )}
             >
               {z.fait}/{z.count}
@@ -258,11 +277,15 @@ function ZonesTabs({
 function ZoneCard({
   zoneActive,
   points,
+  firstNullIdx,
   onSetEtat,
+  registerRef,
 }: {
   zoneActive?: ZoneVue;
   points: PointControleVue[];
+  firstNullIdx: number;
   onSetEtat: (id: string, etat: EtatControleItem) => void;
+  registerRef: (id: string, el: HTMLDivElement | null) => void;
 }) {
   if (!zoneActive) return null;
   const restants = zoneActive.count - zoneActive.fait;
@@ -277,13 +300,16 @@ function ZoneCard({
 
       <div className="flex flex-col gap-1.5">
         {points.map((p, i) => {
-          const isPointActif = i === points.findIndex((pt) => pt.etat === null);
+          const isActif = i === firstNullIdx;
+          const isVerrouille = p.etat === null && i > firstNullIdx && firstNullIdx !== -1;
           return (
             <PointRow
               key={p.id}
               point={p}
-              actif={isPointActif}
+              actif={isActif}
+              verrouille={isVerrouille}
               onSetEtat={(etat) => onSetEtat(p.id, etat)}
+              registerRef={(el) => registerRef(p.id, el)}
             />
           );
         })}
@@ -295,54 +321,84 @@ function ZoneCard({
 function PointRow({
   point,
   actif,
+  verrouille,
   onSetEtat,
+  registerRef,
 }: {
   point: PointControleVue;
   actif: boolean;
+  verrouille: boolean;
   onSetEtat: (e: EtatControleItem) => void;
+  registerRef: (el: HTMLDivElement | null) => void;
 }) {
   const isOK = point.etat === 'ok';
   const isDeg = point.etat === 'degrade';
   const isHS = point.etat === 'hs';
   const aRepondre = point.etat === null;
 
+  const elRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    registerRef(elRef.current);
+    return () => registerRef(null);
+  }, [registerRef]);
+
   return (
     <div
+      ref={elRef}
       className={cn(
-        'flex items-center gap-2.5 p-2.5 px-3.5 bg-bg-deep rounded-lg',
-        isDeg && 'border border-amber',
-        actif && aRepondre && 'border-2 border-nikito-cyan p-3'
+        'flex items-center gap-2.5 p-2.5 px-3.5 rounded-lg transition-all duration-200',
+        isOK && 'bg-green/[0.06] border border-green/20',
+        isDeg && 'bg-amber/[0.06] border border-amber/30',
+        isHS && 'bg-red/[0.06] border border-red/30',
+        actif && aRepondre && 'bg-nikito-cyan/[0.04] border-2 border-nikito-cyan p-3 animate-pulse-subtle',
+        verrouille && 'bg-bg-deep opacity-40 cursor-not-allowed',
+        !isOK && !isDeg && !isHS && !actif && !verrouille && 'bg-bg-deep',
       )}
     >
       <span
         className={cn(
-          'w-[26px] h-[26px] rounded-md flex items-center justify-center font-bold text-sm',
+          'w-[26px] h-[26px] rounded-md flex items-center justify-center font-bold text-sm flex-shrink-0',
           isOK && 'bg-green text-bg-app',
           isDeg && 'bg-amber text-bg-app',
           isHS && 'bg-red text-bg-app',
-          aRepondre && !actif && 'bg-[#2A2A5A] text-dim',
-          aRepondre && actif && 'bg-nikito-cyan text-bg-app'
+          actif && aRepondre && 'bg-nikito-cyan text-bg-app',
+          verrouille && 'bg-[#2A2A5A] text-faint',
+          !isOK && !isDeg && !isHS && !actif && !verrouille && aRepondre && 'bg-[#2A2A5A] text-dim',
         )}
       >
-        {isOK ? '✓' : isDeg ? '!' : isHS ? '×' : actif ? '▸' : '○'}
+        {isOK ? '\u2713' : isDeg ? '!' : isHS ? '\u00D7' : verrouille ? '\uD83D\uDD12' : actif ? '\u25B8' : '\u25CB'}
       </span>
 
-      <div className="flex-1">
-        <div className={cn('text-xs', aRepondre && !actif ? 'text-dim' : 'text-text', actif && 'text-[13px] font-semibold')}>
+      <div className="flex-1 min-w-0">
+        <div
+          className={cn(
+            'text-xs',
+            isOK && 'text-text',
+            isDeg && 'text-text',
+            isHS && 'text-text',
+            actif && aRepondre && 'text-[13px] font-semibold text-text',
+            verrouille && 'text-faint',
+            !isOK && !isDeg && !isHS && !actif && !verrouille && aRepondre && 'text-dim',
+          )}
+        >
           {point.libelle}
         </div>
         {isDeg && (
-          <div className="text-[10px] text-amber mt-0.5">📷 Photo + commentaire requis</div>
+          <div className="text-[10px] text-amber mt-0.5">Photo + commentaire requis</div>
+        )}
+        {isHS && (
+          <div className="text-[10px] text-red mt-0.5">Photo + commentaire requis</div>
         )}
         {actif && point.bloquantSiKO && aRepondre && (
           <div className="text-[10px] text-nikito-cyan mt-0.5">
-            ⚠ Bloquant si KO · norme constructeur
+            Bloquant si KO · norme constructeur
           </div>
         )}
       </div>
 
       {point.saisiPar && (
-        <span className="bg-bg-deep text-nikito-cyan px-1.5 py-0.5 rounded text-[10px] font-medium">
+        <span className="bg-bg-deep text-nikito-cyan px-1.5 py-0.5 rounded text-[10px] font-medium flex-shrink-0">
           {point.saisiPar}
         </span>
       )}
@@ -350,16 +406,16 @@ function PointRow({
       {point.etat ? (
         <span
           className={cn(
-            'px-2 py-0.5 rounded-md text-[10px] font-bold',
+            'px-2 py-0.5 rounded-md text-[10px] font-bold flex-shrink-0',
             isOK && 'bg-green text-bg-app',
             isDeg && 'bg-amber text-bg-app',
-            isHS && 'bg-red text-bg-app'
+            isHS && 'bg-red text-bg-app',
           )}
         >
-          {isOK ? 'OK' : isDeg ? 'DÉG' : 'HS'}
+          {isOK ? 'OK' : isDeg ? 'DEG' : 'HS'}
         </span>
       ) : actif ? (
-        <div className="flex gap-1.5">
+        <div className="flex gap-1.5 flex-shrink-0">
           <button
             onClick={() => onSetEtat('ok')}
             className="bg-green text-bg-app px-4 py-2 rounded-lg text-[13px] font-bold min-h-[44px] min-w-[48px]"
@@ -379,13 +435,7 @@ function PointRow({
             HS
           </button>
         </div>
-      ) : (
-        <div className="flex gap-1">
-          <button onClick={() => onSetEtat('ok')} className="bg-transparent border border-white/15 text-dim px-2 py-0.5 rounded-md text-[10px]">OK</button>
-          <button onClick={() => onSetEtat('degrade')} className="bg-transparent border border-white/15 text-dim px-2 py-0.5 rounded-md text-[10px]">DÉG</button>
-          <button onClick={() => onSetEtat('hs')} className="bg-transparent border border-white/15 text-dim px-2 py-0.5 rounded-md text-[10px]">HS</button>
-        </div>
-      )}
+      ) : null}
     </div>
   );
 }
@@ -393,7 +443,7 @@ function PointRow({
 function NotePedagogique({ children }: { children: React.ReactNode }) {
   return (
     <div className="bg-bg-deep rounded-[10px] p-2.5 px-3.5 flex items-center gap-2.5 text-[11px] text-dim border border-dashed border-nikito-cyan/20">
-      <span className="text-amber">ⓘ</span>
+      <span className="text-amber">i</span>
       <span>{children}</span>
     </div>
   );

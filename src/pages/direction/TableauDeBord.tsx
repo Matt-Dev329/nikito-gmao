@@ -15,6 +15,7 @@ import {
 } from '@/hooks/queries/useKpi';
 import { useIncidents } from '@/hooks/queries/useTickets';
 import { useParcs } from '@/hooks/queries/useReferentiel';
+import { useControlesOuvertureManquants } from '@/hooks/queries/useControlesManquants';
 import type { Criticite } from '@/types/database';
 
 type Periode = '7j' | '30j' | '90j';
@@ -103,6 +104,7 @@ export function TableauDeBord() {
   const plaintesQ = useKpiPlaintes();
   const parcsQ = useParcs();
   const incidentsQ = useIncidents({ statuts: ['ouvert', 'assigne', 'en_cours'] });
+  const { data: controlesManquants } = useControlesOuvertureManquants();
 
   const kpiLoading = perfQ.isLoading || mtbfQ.isLoading || mttrQ.isLoading
     || premierCoupQ.isLoading || plaintesQ.isLoading;
@@ -224,6 +226,35 @@ export function TableauDeBord() {
           </Pill>
         ))}
       </div>
+
+      {controlesManquants && controlesManquants.length > 0 && (
+        <div className="flex flex-col gap-2 mb-5">
+          {controlesManquants.map((cm) => (
+            <div
+              key={cm.parc_id}
+              className="bg-red/10 border border-red/30 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center gap-3"
+            >
+              <div className="flex-1">
+                <div className="text-[13px] font-semibold text-red flex items-center gap-2">
+                  <span className="text-base">!</span>
+                  CONTROLE NON FAIT
+                </div>
+                <div className="text-[12px] text-text mt-1">
+                  Le controle d'ouverture de <strong>{cm.parc_nom}</strong> ({cm.parc_code}) n'a pas ete realise aujourd'hui.
+                </div>
+              </div>
+              <a
+                href={`https://wa.me/?text=${encodeURIComponent(`Le controle d'ouverture de ${cm.parc_nom} (${cm.parc_code}) n'a pas ete fait ce matin. Merci de verifier avec l'equipe sur place.`)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="bg-transparent border border-red text-red px-4 py-2.5 rounded-lg text-[12px] font-semibold text-center min-h-[44px] flex items-center justify-center whitespace-nowrap self-start"
+              >
+                Contacter l'equipe
+              </a>
+            </div>
+          ))}
+        </div>
+      )}
 
       {kpiLoading ? (
         <div className="space-y-3 mb-5">

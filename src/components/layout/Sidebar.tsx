@@ -37,7 +37,7 @@ interface Badge {
 interface NavItem {
   to: string;
   label: string;
-  badgeKey?: 'recurrences' | 'cinqPourquoi' | 'operations' | 'invitationsPending';
+  badgeKey?: 'recurrences' | 'cinqPourquoi' | 'operations' | 'invitationsPending' | 'controlesManquants';
   badgeTone?: 'red' | 'amber';
   roles: RoleUtilisateur[];
   end?: boolean;
@@ -63,7 +63,7 @@ const sections: { titre: string; items: NavItem[] }[] = [
   {
     titre: 'Contrôles',
     items: [
-      { to: '/staff/controle-ouverture', label: 'Contrôle d\'ouverture', roles: ['direction', 'chef_maintenance', 'staff_operationnel'] },
+      { to: '/staff/controle-ouverture', label: 'Contrôle d\'ouverture', badgeKey: 'controlesManquants', badgeTone: 'red', roles: ['direction', 'chef_maintenance', 'staff_operationnel'] },
       { to: '/tech/controle-hebdo', label: 'Contrôle hebdo', roles: ['direction', 'chef_maintenance', 'technicien'] },
       { to: '/tech/controle-mensuel', label: 'Contrôle mensuel', roles: ['direction', 'chef_maintenance', 'technicien'] },
     ],
@@ -92,7 +92,7 @@ interface SidebarProps {
 
 function resolveBadge(
   item: NavItem,
-  badges: { recurrences: number; cinqPourquoi: number; operations: number; invitationsPending: number } | undefined
+  badges: { recurrences: number; cinqPourquoi: number; operations: number; invitationsPending: number; controlesManquants: number } | undefined
 ): Badge | undefined {
   if (!item.badgeKey || !badges) return undefined;
   const count = badges[item.badgeKey] ?? 0;
