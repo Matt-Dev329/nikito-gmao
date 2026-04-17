@@ -36,6 +36,7 @@ const sections: { titre: string; items: NavItem[] }[] = [
       { to: '/gmao/preventif', label: 'Préventif', roles: ['direction', 'chef_maintenance', 'manager_parc'] },
       { to: '/gmao/certifications', label: 'Certifications', roles: ['direction', 'chef_maintenance'] },
       { to: '/gmao/plaintes', label: 'Plaintes clients', roles: ['direction', 'chef_maintenance', 'manager_parc'] },
+      { to: '/gmao/controles-historique', label: 'Contrôles', roles: ['direction', 'chef_maintenance'] },
     ],
   },
   {

@@ -147,6 +147,16 @@ export function IconControleMensuel({ className = s }: { className?: string }) {
   );
 }
 
+export function IconControles({ className = s }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="2" width="14" height="16" rx="2" />
+      <path d="M7 6h6M7 10h6M7 14h4" />
+      <path d="M13 13l1.5 1.5 3-3" />
+    </svg>
+  );
+}
+
 export function IconFournisseurs({ className = s }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
@@ -186,6 +196,7 @@ const iconMap: Record<string, (props: { className?: string }) => JSX.Element> = 
   'Préventif': IconPreventif,
   'Certifications': IconCertifications,
   'Plaintes clients': IconPlaintes,
+  'Contrôles': IconControles,
   'Parcs': IconParcs,
   'Utilisateurs': IconUtilisateurs,
   'Bibliothèque points': IconBibliotheque,

@@ -22,6 +22,8 @@ import { CreationParcWizard } from '@/pages/admin/CreationParcWizard';
 import { UtilisateursAdmin } from '@/pages/admin/UtilisateursAdmin';
 import { PageFournisseursAdmin } from '@/pages/admin/PageFournisseursAdmin';
 
+import { PageHistoriqueControles } from '@/pages/controles/PageHistoriqueControles';
+
 import { FicheParc } from '@/pages/parc/FicheParc';
 import { AttractionsParc } from '@/pages/parc/AttractionsParc';
 import { PersonnaliserPointsParc } from '@/pages/parc/PersonnaliserPointsParc';
@@ -80,6 +82,7 @@ export function App() {
         <Route path="utilisateurs" element={<UtilisateursAdmin />} />
         <Route path="bibliotheque" element={<PageBibliotheque />} />
         <Route path="fournisseurs" element={<PageFournisseursAdmin />} />
+        <Route path="controles-historique" element={<PageHistoriqueControles />} />
       </Route>
 
       <Route
