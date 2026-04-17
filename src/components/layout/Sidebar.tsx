@@ -10,11 +10,23 @@ import type { RoleUtilisateur } from '@/types/database';
 
 const TOUR_KEYS: Record<string, string> = {
   'Tableau de bord': 'tableau-de-bord',
+  'Mon parc': 'mon-parc',
   'Opérations': 'operations',
   'Équipements': 'equipements',
-  'Contrôles': 'controles',
   'Récurrences': 'recurrences',
+  '5 Pourquoi': 'cinq-pourquoi',
+  'Stock': 'stock',
+  'Préventif': 'preventif',
+  'Certifications': 'certifications',
+  'Plaintes clients': 'plaintes',
+  'Contrôles': 'controles',
+  'Contrôle d\'ouverture': 'controle-ouverture',
+  'Contrôle hebdo': 'controle-hebdo',
+  'Contrôle mensuel': 'controle-mensuel',
+  'Parcs': 'parcs',
   'Utilisateurs': 'utilisateurs',
+  'Bibliothèque points': 'bibliotheque',
+  'Fournisseurs': 'fournisseurs',
 };
 
 interface Badge {
