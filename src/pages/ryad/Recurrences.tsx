@@ -69,9 +69,9 @@ export function Recurrences() {
 
   const kpi = useMemo(() => {
     const aSurveiller = recurrences.length;
-    const fichesOuvertes = fiches5p.filter((f) => f.statut === 'ouvert' || f.statut === 'valide').length;
-    const audits = fiches5p.filter((f) => f.statut === 'audit_en_cours').length;
-    const standards = fiches5p.filter((f) => f.statut === 'clos').length;
+    const fichesOuvertes = fiches5p.filter((f) => f.statut === 'ouvert' || f.statut === 'en_cours').length;
+    const audits = 0;
+    const standards = fiches5p.filter((f) => f.statut === 'cloture').length;
     return { aSurveiller, fichesOuvertes, audits, standards };
   }, [recurrences, fiches5p]);
 
@@ -148,7 +148,7 @@ export function Recurrences() {
               const equipId = rec.equipement_id as string;
 
               const fiche5p = fiches5p.find(
-                (f) => (f.equipement_id as string) === equipId && f.statut !== 'clos'
+                (f) => (f.equipement_id as string) === equipId && f.statut !== 'cloture'
               );
 
               const borderColor = criticite === 'bloquant' ? 'pink'
@@ -179,36 +179,8 @@ export function Recurrences() {
             })
           )}
 
-          {fiches5p.filter((f) => f.statut === 'audit_en_cours').length > 0 && (
-            <div className="mt-[18px]">
-              {fiches5p
-                .filter((f) => f.statut === 'audit_en_cours')
-                .map((f) => {
-                  const equip = f.equipements as Record<string, unknown> | null;
-                  return (
-                    <Card
-                      key={f.id as string}
-                      borderLeft="cyan"
-                      className="mb-3 p-3.5 px-[18px] flex items-center gap-3.5 flex-wrap"
-                    >
-                      <div className="bg-nikito-cyan text-bg-app w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm">
-                        A
-                      </div>
-                      <div className="flex-1 min-w-[200px]">
-                        <div className="text-[13px] font-semibold">
-                          Audit 90j · {equip?.libelle as string ?? equip?.code as string ?? ''}
-                        </div>
-                        <div className="text-[11px] text-dim mt-0.5">
-                          Date audit : {f.date_audit as string ?? 'à planifier'}
-                        </div>
-                      </div>
-                      <button className="bg-transparent border border-nikito-cyan text-nikito-cyan py-2 px-3.5 rounded-lg text-xs min-h-[44px]">
-                        Préparer audit
-                      </button>
-                    </Card>
-                  );
-                })}
-            </div>
+          {false && (
+            <div className="mt-[18px]" />
           )}
 
           <div className="bg-bg-deep rounded-xl p-3.5 px-[18px] flex items-center gap-3.5 border border-dashed border-nikito-cyan/30 mt-4">

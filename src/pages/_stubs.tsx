@@ -5,7 +5,7 @@
 // ============================================================
 
 import { useNavigate } from 'react-router-dom';
-import { useStock, useStockBas, useFiches5Pourquoi } from '@/hooks/queries/useTickets';
+import { useStock, useStockBas } from '@/hooks/queries/useTickets';
 import { useFournisseurs } from '@/hooks/queries/useReferentiel';
 
 export { PageEquipements } from '@/pages/equipements/PageEquipements';
@@ -50,27 +50,8 @@ export function ControleMensuel() {
   );
 }
 
-// ------------------------------------------------------------
-// 5 POURQUOI · saisie complète
-// ------------------------------------------------------------
-export function FicheCinqPourquoi() {
-  return (
-    <div className="p-6 px-7">
-      <h1 className="text-[22px] font-semibold m-0">Fiche 5 Pourquoi</h1>
-      {/* TODO Bolt · formulaire 5 questions + cause racine + contre-mesure + audit 90j auto */}
-    </div>
-  );
-}
-
-export function ListeCinqPourquoi() {
-  const { data: fiches } = useFiches5Pourquoi();
-  return (
-    <div className="p-6 px-7">
-      <h1 className="text-[22px] font-semibold m-0">5 Pourquoi · {fiches?.length ?? 0} fiches</h1>
-      {/* TODO Bolt · liste filtrée par statut */}
-    </div>
-  );
-}
+export { FicheCinqPourquoi } from '@/pages/cinq-pourquoi/FicheCinqPourquoi';
+export { ListeCinqPourquoi } from '@/pages/cinq-pourquoi/ListeCinqPourquoi';
 
 // ------------------------------------------------------------
 // PLAINTES CLIENTS

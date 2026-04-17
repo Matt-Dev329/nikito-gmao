@@ -9,7 +9,8 @@ export type EtatControleItem = 'ok' | 'degrade' | 'hs';
 export type StatutIncident = 'ouvert' | 'assigne' | 'en_cours' | 'resolu' | 'ferme' | 'annule';
 export type StatutControle = 'a_faire' | 'en_cours' | 'valide' | 'echec';
 export type TypeControle = 'quotidien' | 'hebdo' | 'mensuel';
-export type Statut5Pourquoi = 'ouvert' | 'valide' | 'audit_en_cours' | 'clos';
+export type Statut5Pourquoi = 'ouvert' | 'en_cours' | 'cloture';
+export type StatutStandardEvolutif = 'a_faire' | 'en_cours' | 'fait';
 export type Criticite = 'bloquant' | 'majeur' | 'mineur';
 export type RoleUtilisateur =
   | 'direction'
@@ -163,6 +164,46 @@ export interface Intervention {
   diagnostic: string | null;
   actions: string | null;
   resolu_premier_coup: boolean | null;
+}
+
+export interface Fiche5Pourquoi {
+  id: string;
+  parc_id: string;
+  equipement_id: string | null;
+  titre: string;
+  description: string | null;
+  statut: Statut5Pourquoi;
+  pourquoi_1: string | null;
+  pourquoi_2: string | null;
+  pourquoi_3: string | null;
+  pourquoi_4: string | null;
+  pourquoi_5: string | null;
+  cause_racine: string | null;
+  cree_par_id: string | null;
+  cree_le: string;
+  modifie_le: string;
+  cloture_le: string | null;
+  cloture_par_id: string | null;
+}
+
+export interface Fiche5PourquoiAvecJoins extends Fiche5Pourquoi {
+  parcs: { code: string; nom: string } | null;
+  equipements: { code: string; libelle: string } | null;
+}
+
+export interface StandardEvolutif {
+  id: string;
+  fiche_5p_id: string;
+  description: string | null;
+  responsable_id: string | null;
+  deadline: string | null;
+  statut: StatutStandardEvolutif;
+  cree_le: string;
+  modifie_le: string;
+}
+
+export interface StandardEvolutifAvecJoins extends StandardEvolutif {
+  utilisateurs: { prenom: string; nom: string } | null;
 }
 
 // Vues KPI
