@@ -12,8 +12,9 @@ export interface UtilisateurRow {
   statut_validation: string;
   auth_mode: string;
   cree_le: string;
+  role_id: string;
   role_code: RoleUtilisateur;
-  parcs: { parc_id: string; code: string }[];
+  parcs: { parc_id: string; code: string; est_manager: boolean }[];
 }
 
 export interface InvitationRow {
@@ -67,9 +68,9 @@ export function useUtilisateursActifs() {
       const { data, error } = await supabase
         .from('utilisateurs')
         .select(
-          `id, email, prenom, nom, trigramme, actif, statut_validation, auth_mode, cree_le,
+          `id, email, prenom, nom, trigramme, actif, statut_validation, auth_mode, cree_le, role_id,
            roles!inner(code),
-           parcs_utilisateurs(parc_id, parcs(code))`
+           parcs_utilisateurs(parc_id, est_manager, parcs(code))`
         )
         .eq('actif', true)
         .eq('statut_validation', 'valide')
@@ -79,11 +80,11 @@ export function useUtilisateursActifs() {
       return (data ?? []).map((d) => {
         const raw = d as Record<string, unknown>;
         const roles = raw.roles as { code: string };
-        const pu = raw.parcs_utilisateurs as { parc_id: string; parcs: { code: string } }[];
+        const pu = raw.parcs_utilisateurs as { parc_id: string; est_manager: boolean; parcs: { code: string } }[];
         return {
           ...d,
           role_code: roles.code as RoleUtilisateur,
-          parcs: pu.map((p) => ({ parc_id: p.parc_id, code: p.parcs.code })),
+          parcs: pu.map((p) => ({ parc_id: p.parc_id, code: p.parcs.code, est_manager: p.est_manager })),
         } as UtilisateurRow;
       });
     },
@@ -97,9 +98,9 @@ export function useUtilisateursAValider() {
       const { data, error } = await supabase
         .from('utilisateurs')
         .select(
-          `id, email, prenom, nom, trigramme, actif, statut_validation, auth_mode, cree_le,
+          `id, email, prenom, nom, trigramme, actif, statut_validation, auth_mode, cree_le, role_id,
            roles!inner(code),
-           parcs_utilisateurs(parc_id, parcs(code))`
+           parcs_utilisateurs(parc_id, est_manager, parcs(code))`
         )
         .eq('statut_validation', 'en_attente')
         .order('cree_le', { ascending: false });
@@ -108,11 +109,11 @@ export function useUtilisateursAValider() {
       return (data ?? []).map((d) => {
         const raw = d as Record<string, unknown>;
         const roles = raw.roles as { code: string };
-        const pu = raw.parcs_utilisateurs as { parc_id: string; parcs: { code: string } }[];
+        const pu = raw.parcs_utilisateurs as { parc_id: string; est_manager: boolean; parcs: { code: string } }[];
         return {
           ...d,
           role_code: roles.code as RoleUtilisateur,
-          parcs: pu.map((p) => ({ parc_id: p.parc_id, code: p.parcs.code })),
+          parcs: pu.map((p) => ({ parc_id: p.parc_id, code: p.parcs.code, est_manager: p.est_manager })),
         } as UtilisateurRow;
       });
     },
@@ -126,9 +127,9 @@ export function useUtilisateursDesactives() {
       const { data, error } = await supabase
         .from('utilisateurs')
         .select(
-          `id, email, prenom, nom, trigramme, actif, statut_validation, auth_mode, cree_le,
+          `id, email, prenom, nom, trigramme, actif, statut_validation, auth_mode, cree_le, role_id,
            roles!inner(code),
-           parcs_utilisateurs(parc_id, parcs(code))`
+           parcs_utilisateurs(parc_id, est_manager, parcs(code))`
         )
         .or('actif.eq.false,statut_validation.eq.desactive')
         .order('nom');
@@ -137,11 +138,11 @@ export function useUtilisateursDesactives() {
       return (data ?? []).map((d) => {
         const raw = d as Record<string, unknown>;
         const roles = raw.roles as { code: string };
-        const pu = raw.parcs_utilisateurs as { parc_id: string; parcs: { code: string } }[];
+        const pu = raw.parcs_utilisateurs as { parc_id: string; est_manager: boolean; parcs: { code: string } }[];
         return {
           ...d,
           role_code: roles.code as RoleUtilisateur,
-          parcs: pu.map((p) => ({ parc_id: p.parc_id, code: p.parcs.code })),
+          parcs: pu.map((p) => ({ parc_id: p.parc_id, code: p.parcs.code, est_manager: p.est_manager })),
         } as UtilisateurRow;
       });
     },
@@ -192,6 +193,61 @@ export function useSupprimerUtilisateur() {
       const { error } = await supabase
         .from('utilisateurs')
         .update({ actif: false, statut_validation: 'desactive' })
+        .eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['utilisateurs'] });
+    },
+  });
+}
+
+export function useRoles() {
+  return useQuery({
+    queryKey: ['roles'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('roles')
+        .select('id, code, nom')
+        .order('nom');
+      if (error) throw error;
+      return data as { id: string; code: RoleUtilisateur; nom: string }[];
+    },
+  });
+}
+
+export function useModifierUtilisateur() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload: {
+      utilisateur_id: string;
+      role_id: string;
+      parc_ids: string[];
+      est_manager: boolean;
+      actif: boolean;
+    }) => {
+      const { error } = await supabase.rpc('modifier_utilisateur', {
+        p_utilisateur_id: payload.utilisateur_id,
+        p_role_id: payload.role_id,
+        p_parc_ids: payload.parc_ids,
+        p_est_manager: payload.est_manager,
+        p_actif: payload.actif,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['utilisateurs'] });
+    },
+  });
+}
+
+export function useReactiverUtilisateur() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from('utilisateurs')
+        .update({ actif: true, statut_validation: 'valide' })
         .eq('id', id);
       if (error) throw error;
     },

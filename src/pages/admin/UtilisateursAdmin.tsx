@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { ModaleInviterUtilisateur } from '@/components/admin/ModaleInviterUtilisateur';
+import { ModaleEditerUtilisateur } from '@/components/admin/ModaleEditerUtilisateur';
 import { useAuth } from '@/hooks/useAuth';
 import { useViewAs } from '@/hooks/useViewAs';
 import { roleLabels } from '@/lib/tokens';
@@ -15,6 +16,7 @@ import {
   useInvitationsEnCours,
   useAnnulerInvitation,
   useSupprimerUtilisateur,
+  useReactiverUtilisateur,
   type UtilisateurRow,
   type InvitationRow,
 } from '@/hooks/queries/useUtilisateurs';
@@ -178,11 +180,17 @@ function UserRow({
   onSupprimer,
   supprimant,
   onViewAs,
+  onEditer,
+  onReactiver,
+  reactivant,
 }: {
   user: UtilisateurRow;
   onSupprimer?: () => void;
   supprimant?: boolean;
   onViewAs?: () => void;
+  onEditer?: () => void;
+  onReactiver?: () => void;
+  reactivant?: boolean;
 }) {
   return (
     <div className="flex items-center gap-3 py-3 px-1 border-b border-white/[0.04] last:border-b-0">
@@ -193,33 +201,60 @@ function UserRow({
             {user.prenom} {user.nom}
           </span>
           <RoleBadge code={user.role_code} />
+          {user.parcs.some((p) => p.est_manager) && (
+            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber/15 text-amber">
+              MGR
+            </span>
+          )}
         </div>
         <div className="text-[11px] text-dim truncate mt-0.5">
           {user.email || user.auth_mode === 'pin_seul' ? (user.email || 'Connexion PIN') : '--'}
         </div>
       </div>
       <ParcBadges parcs={user.parcs} />
-      {onViewAs && (
-        <button
-          onClick={onViewAs}
-          className="w-8 h-8 rounded-lg bg-bg-deep border border-white/[0.08] text-dim hover:text-amber hover:border-amber/30 transition-colors flex items-center justify-center shrink-0"
-          title={`Voir comme ${user.prenom}`}
-        >
-          <svg className="w-4 h-4" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M10 4.5C5.5 4.5 2 10 2 10s3.5 5.5 8 5.5 8-5.5 8-5.5-3.5-5.5-8-5.5Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-            <circle cx="10" cy="10" r="2.5" stroke="currentColor" strokeWidth="1.5"/>
-          </svg>
-        </button>
-      )}
-      {onSupprimer && (
-        <button
-          onClick={onSupprimer}
-          disabled={supprimant}
-          className="text-[11px] font-semibold px-3 py-1.5 rounded-lg bg-bg-deep border border-white/[0.08] text-red hover:border-red/30 transition-colors disabled:opacity-40 shrink-0"
-        >
-          Supprimer
-        </button>
-      )}
+      <div className="flex gap-1.5 shrink-0">
+        {onViewAs && (
+          <button
+            onClick={onViewAs}
+            className="w-8 h-8 rounded-lg bg-bg-deep border border-white/[0.08] text-dim hover:text-amber hover:border-amber/30 transition-colors flex items-center justify-center"
+            title={`Voir comme ${user.prenom}`}
+          >
+            <svg className="w-4 h-4" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M10 4.5C5.5 4.5 2 10 2 10s3.5 5.5 8 5.5 8-5.5 8-5.5-3.5-5.5-8-5.5Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              <circle cx="10" cy="10" r="2.5" stroke="currentColor" strokeWidth="1.5"/>
+            </svg>
+          </button>
+        )}
+        {onEditer && (
+          <button
+            onClick={onEditer}
+            className="w-8 h-8 rounded-lg bg-bg-deep border border-white/[0.08] text-dim hover:text-nikito-cyan hover:border-nikito-cyan/30 transition-colors flex items-center justify-center"
+            title={`Modifier ${user.prenom}`}
+          >
+            <svg className="w-4 h-4" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M14.85 3.15a1.5 1.5 0 0 1 2.12 0l.88.88a1.5 1.5 0 0 1 0 2.12L7.5 16.5 3 17.5l1-4.5L14.85 3.15Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </button>
+        )}
+        {onReactiver && (
+          <button
+            onClick={onReactiver}
+            disabled={reactivant}
+            className="text-[11px] font-semibold px-3 py-1.5 rounded-lg bg-bg-deep border border-white/[0.08] text-green hover:border-green/30 transition-colors disabled:opacity-40"
+          >
+            Reactiver
+          </button>
+        )}
+        {onSupprimer && (
+          <button
+            onClick={onSupprimer}
+            disabled={supprimant}
+            className="text-[11px] font-semibold px-3 py-1.5 rounded-lg bg-bg-deep border border-white/[0.08] text-red hover:border-red/30 transition-colors disabled:opacity-40"
+          >
+            Desactiver
+          </button>
+        )}
+      </div>
     </div>
   );
 }
@@ -254,7 +289,9 @@ function ListeActifs() {
   const { activate } = useViewAs();
   const navigate = useNavigate();
   const isDirection = utilisateur?.role_code === 'direction';
-  const canViewAs = isDirection || utilisateur?.role_code === 'chef_maintenance';
+  const canEdit = isDirection || utilisateur?.role_code === 'chef_maintenance';
+  const canViewAs = canEdit;
+  const [editUser, setEditUser] = useState<UtilisateurRow | null>(null);
 
   if (isLoading) return <div className="text-dim text-sm text-center py-8">Chargement...</div>;
   if (!data || data.length === 0) return <EmptyState text="Aucun utilisateur actif." />;
@@ -280,22 +317,35 @@ function ListeActifs() {
   };
 
   return (
-    <div>
-      {data.map((u) => (
-        <UserRow
-          key={u.id}
-          user={u}
-          onViewAs={canViewAs && u.id !== utilisateur?.id ? () => handleViewAs(u) : undefined}
-          onSupprimer={isDirection && u.id !== utilisateur?.id ? () => supprimer(u.id, `${u.prenom} ${u.nom}`) : undefined}
-          supprimant={supprimerMutation.isPending}
+    <>
+      <div>
+        {data.map((u) => (
+          <UserRow
+            key={u.id}
+            user={u}
+            onViewAs={canViewAs && u.id !== utilisateur?.id ? () => handleViewAs(u) : undefined}
+            onEditer={canEdit && u.id !== utilisateur?.id ? () => setEditUser(u) : undefined}
+            onSupprimer={isDirection && u.id !== utilisateur?.id ? () => supprimer(u.id, `${u.prenom} ${u.nom}`) : undefined}
+            supprimant={supprimerMutation.isPending}
+          />
+        ))}
+      </div>
+      {editUser && (
+        <ModaleEditerUtilisateur
+          open={!!editUser}
+          onClose={() => setEditUser(null)}
+          utilisateur={editUser}
         />
-      ))}
-    </div>
+      )}
+    </>
   );
 }
 
 function ListeAValider() {
+  const { utilisateur } = useAuth();
   const { data, isLoading } = useUtilisateursAValider();
+  const canEdit = utilisateur?.role_code === 'direction' || utilisateur?.role_code === 'chef_maintenance';
+  const [editUser, setEditUser] = useState<UtilisateurRow | null>(null);
 
   if (isLoading) return <div className="text-dim text-sm text-center py-8">Chargement...</div>;
   if (!data || data.length === 0) {
@@ -308,26 +358,65 @@ function ListeAValider() {
   }
 
   return (
-    <div>
-      {data.map((u) => (
-        <UserRow key={u.id} user={u} />
-      ))}
-    </div>
+    <>
+      <div>
+        {data.map((u) => (
+          <UserRow
+            key={u.id}
+            user={u}
+            onEditer={canEdit ? () => setEditUser(u) : undefined}
+          />
+        ))}
+      </div>
+      {editUser && (
+        <ModaleEditerUtilisateur
+          open={!!editUser}
+          onClose={() => setEditUser(null)}
+          utilisateur={editUser}
+        />
+      )}
+    </>
   );
 }
 
 function ListeDesactives() {
+  const { utilisateur } = useAuth();
   const { data, isLoading } = useUtilisateursDesactives();
+  const reactiverMutation = useReactiverUtilisateur();
+  const isDirection = utilisateur?.role_code === 'direction';
+  const canEdit = isDirection || utilisateur?.role_code === 'chef_maintenance';
+  const [editUser, setEditUser] = useState<UtilisateurRow | null>(null);
 
   if (isLoading) return <div className="text-dim text-sm text-center py-8">Chargement...</div>;
   if (!data || data.length === 0) return <EmptyState text="Aucun compte desactive." />;
 
+  const reactiver = (id: string, nom: string) => {
+    if (confirm(`Reactiver le compte de ${nom} ?`)) {
+      reactiverMutation.mutate(id);
+    }
+  };
+
   return (
-    <div>
-      {data.map((u) => (
-        <UserRow key={u.id} user={u} />
-      ))}
-    </div>
+    <>
+      <div>
+        {data.map((u) => (
+          <UserRow
+            key={u.id}
+            user={u}
+            onEditer={canEdit ? () => setEditUser(u) : undefined}
+            onReactiver={canEdit ? () => reactiver(u.id, `${u.prenom} ${u.nom}`) : undefined}
+            reactivant={reactiverMutation.isPending}
+          />
+        ))}
+      </div>
+      {editUser && (
+        <ModaleEditerUtilisateur
+          open={!!editUser}
+          onClose={() => setEditUser(null)}
+          utilisateur={editUser}
+        />
+      )}
+    </>
   );
 }
 
