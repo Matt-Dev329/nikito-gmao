@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/lib/supabase';
 import { guidesParRole } from './aideContenu';
 import type { SectionAide } from './aideContenu';
 
@@ -91,27 +92,43 @@ function FormulaireSupport({ userName, userEmail }: { userName: string; userEmai
   const [objet, setObjet] = useState('');
   const [message, setMessage] = useState('');
   const [envoye, setEnvoye] = useState(false);
+  const [envoyEnCours, setEnvoyEnCours] = useState(false);
+  const [erreur, setErreur] = useState('');
   const formRef = useRef<HTMLFormElement>(null);
 
-  const canSubmit = motif.length > 0 && objet.trim().length > 0 && message.trim().length > 0;
+  const canSubmit = motif.length > 0 && objet.trim().length > 0 && message.trim().length > 0 && !envoyEnCours;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!canSubmit) return;
 
-    const sujetComplet = `[GMAO - ${motif}] ${objet}`;
-    const corpsComplet = `${message}\n\n---\nEnvoye depuis l'aide GMAO\nUtilisateur : ${userName} (${userEmail})`;
+    setEnvoyEnCours(true);
+    setErreur('');
 
-    const mailto = `mailto:si@nikito.com?subject=${encodeURIComponent(sujetComplet)}&body=${encodeURIComponent(corpsComplet)}`;
-    window.location.href = mailto;
+    try {
+      const { data, error } = await supabase.functions.invoke('send-support-email', {
+        body: {
+          motif,
+          objet,
+          message,
+          user_name: userName,
+          user_email: userEmail,
+        },
+      });
 
-    setEnvoye(true);
-    setTimeout(() => {
+      if (error) throw new Error(error.message);
+      if (!data?.success) throw new Error(data?.error ?? 'Erreur lors de l\'envoi');
+
+      setEnvoye(true);
       setMotif('');
       setObjet('');
       setMessage('');
-      setEnvoye(false);
-    }, 4000);
+      setTimeout(() => setEnvoye(false), 5000);
+    } catch (err) {
+      setErreur(err instanceof Error ? err.message : 'Erreur inattendue');
+    } finally {
+      setEnvoyEnCours(false);
+    }
   };
 
   const inputCls = 'w-full bg-bg-deep border border-white/[0.08] rounded-[10px] p-3 px-3.5 text-text text-[13px] outline-none focus:border-nikito-cyan';
@@ -133,7 +150,7 @@ function FormulaireSupport({ userName, userEmail }: { userName: string; userEmai
             <svg className="w-4 h-4" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M5 10l3 3 7-7" />
             </svg>
-            Votre client mail va s'ouvrir avec le message pre-rempli.
+            Message envoye avec succes a l'equipe SI.
           </div>
         ) : (
           <form ref={formRef} onSubmit={handleSubmit} className="space-y-4">
@@ -180,6 +197,16 @@ function FormulaireSupport({ userName, userEmail }: { userName: string; userEmai
               />
             </div>
 
+            {erreur && (
+              <div className="flex items-center gap-2 text-red text-[12px] bg-red/10 rounded-[10px] px-3.5 py-2.5">
+                <svg className="w-3.5 h-3.5 flex-shrink-0" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="10" cy="10" r="8" />
+                  <path d="M10 7v4M10 13h.01" />
+                </svg>
+                {erreur}
+              </div>
+            )}
+
             <div className="flex items-center justify-between pt-2">
               <span className="text-[11px] text-faint">Destinataire : si@nikito.com</span>
               <button
@@ -192,11 +219,17 @@ function FormulaireSupport({ userName, userEmail }: { userName: string; userEmai
                     : 'bg-white/[0.04] text-faint cursor-not-allowed'
                 )}
               >
-                <svg className="w-4 h-4" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M2 10l7 3 9-8" />
-                  <path d="M9 13v5l3-3" />
-                </svg>
-                Envoyer
+                {envoyEnCours ? (
+                  <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
+                  </svg>
+                ) : (
+                  <svg className="w-4 h-4" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M2 10l7 3 9-8" />
+                    <path d="M9 13v5l3-3" />
+                  </svg>
+                )}
+                {envoyEnCours ? 'Envoi...' : 'Envoyer'}
               </button>
             </div>
           </form>
