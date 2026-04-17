@@ -39,6 +39,14 @@ const sections: { titre: string; items: NavItem[] }[] = [
     ],
   },
   {
+    titre: 'Contrôles',
+    items: [
+      { to: '/staff/controle-ouverture', label: 'Contrôle d\'ouverture', roles: ['direction', 'chef_maintenance', 'staff_operationnel'] },
+      { to: '/tech/controle-hebdo', label: 'Contrôle hebdo', roles: ['direction', 'chef_maintenance', 'technicien'] },
+      { to: '/tech/controle-mensuel', label: 'Contrôle mensuel', roles: ['direction', 'chef_maintenance', 'technicien'] },
+    ],
+  },
+  {
     titre: 'Configuration',
     items: [
       { to: '/gmao/parcs', label: 'Parcs', roles: ['direction', 'chef_maintenance'] },

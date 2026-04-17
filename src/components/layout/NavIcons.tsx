@@ -118,6 +118,35 @@ export function IconBibliotheque({ className = s }: { className?: string }) {
   );
 }
 
+export function IconControleOuverture({ className = s }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 17V9l7-5 7 5v8" />
+      <path d="M8 13h4M10 11v4" />
+    </svg>
+  );
+}
+
+export function IconControleHebdo({ className = s }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="4" width="14" height="14" rx="2" />
+      <path d="M3 8h14M7 2v4M13 2v4" />
+      <path d="M7 12l2 2 4-4" />
+    </svg>
+  );
+}
+
+export function IconControleMensuel({ className = s }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="4" width="14" height="14" rx="2" />
+      <path d="M3 8h14M7 2v4M13 2v4" />
+      <path d="M8 12h4M10 14h2" />
+    </svg>
+  );
+}
+
 export function IconFournisseurs({ className = s }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
@@ -161,6 +190,9 @@ const iconMap: Record<string, (props: { className?: string }) => JSX.Element> = 
   'Utilisateurs': IconUtilisateurs,
   'Bibliothèque points': IconBibliotheque,
   'Fournisseurs': IconFournisseurs,
+  'Contrôle d\'ouverture': IconControleOuverture,
+  'Contrôle hebdo': IconControleHebdo,
+  'Contrôle mensuel': IconControleMensuel,
 };
 
 export function getNavIcon(label: string) {
