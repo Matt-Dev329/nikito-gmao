@@ -137,9 +137,11 @@ export function ModaleInviterUtilisateur({
       );
 
       if (fnError) {
+        console.error('[send-invitation-email] fnError:', fnError, 'fnData:', fnData);
         setEmailStatus('failed');
         setEmailErreurDetail({ error: String(fnError) });
       } else if (fnData && fnData.success === false) {
+        console.error('[send-invitation-email] Resend failure:', fnData);
         setEmailStatus('failed');
         setEmailErreurDetail(fnData);
       } else {
