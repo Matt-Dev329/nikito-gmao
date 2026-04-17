@@ -50,6 +50,7 @@ interface ControleEcranProps {
   onRetour?: () => void;
   validationDisabled?: boolean;
   validationDisabledRaison?: string;
+  headerRightSlot?: React.ReactNode;
 }
 
 const typeLabels: Record<TypeControle, string> = {
@@ -74,6 +75,7 @@ export function ControleEcran({
   onRetour,
   validationDisabled,
   validationDisabledRaison,
+  headerRightSlot,
 }: ControleEcranProps) {
   const totalPoints = zones.reduce((sum, z) => sum + z.count, 0);
   const totalFaits = zones.reduce((sum, z) => sum + z.fait, 0);
@@ -105,6 +107,7 @@ export function ControleEcran({
             {chrono}
           </div>
         )}
+        {headerRightSlot}
       </header>
 
       {/* Avancement */}

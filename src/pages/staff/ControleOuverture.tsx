@@ -2,6 +2,8 @@ import { useState, useCallback, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ControleEcran, type PointControleVue, type ZoneVue } from '@/components/controles/ControleEcran';
 import { ModaleQuitterSansValider } from '@/components/ui/ModaleQuitterSansValider';
+import { SelectionParc } from '@/components/controles/SelectionParc';
+import { BoutonRetourGmao } from '@/components/controles/BoutonRetourGmao';
 import { useAuth } from '@/hooks/useAuth';
 import { useParcs } from '@/hooks/queries/useReferentiel';
 import { usePointsControle, useValiderControle } from '@/hooks/queries/useControles';
@@ -19,8 +21,14 @@ export function ControleOuverture() {
   const { utilisateur } = useAuth();
   const { data: allParcs } = useParcs();
 
-  const parcId = utilisateur?.parc_ids[0];
-  const parc = allParcs?.find((p) => p.id === parcId);
+  const [parcChoisi, setParcChoisi] = useState<{ id: string; code: string; nom: string } | null>(null);
+
+  const handleSelectParc = useCallback((p: { id: string; code: string; nom: string }) => {
+    setParcChoisi(p);
+  }, []);
+
+  const parcId = parcChoisi?.id;
+  const parc = parcChoisi ?? allParcs?.find((p) => p.id === parcId);
 
   const { data: pointsBruts, isLoading } = usePointsControle(parcId, 'quotidien');
   const validerMutation = useValiderControle();
@@ -82,17 +90,19 @@ export function ControleOuverture() {
     setDirty(true);
   };
 
+  const retourDestination = utilisateur?.role_code === 'staff_operationnel' ? '/staff/login' : '/gmao';
+
   const handleRetour = useCallback(() => {
     if (dirty) {
       setShowModale(true);
     } else {
-      navigate('/staff/login');
+      navigate(retourDestination);
     }
-  }, [dirty, navigate]);
+  }, [dirty, navigate, retourDestination]);
 
   const confirmerQuitter = () => {
     setShowModale(false);
-    navigate('/staff/login');
+    navigate(retourDestination);
   };
 
   const totalPoints = zones.reduce((sum, z) => sum + z.count, 0);
@@ -128,6 +138,15 @@ export function ControleOuverture() {
     month: 'long',
   });
 
+  if (!parcChoisi) {
+    return (
+      <SelectionParc
+        titre="Controle d'ouverture"
+        onSelect={handleSelectParc}
+      />
+    );
+  }
+
   if (isLoading) {
     return (
       <div className="p-6 text-dim text-sm">Chargement des points de controle...</div>
@@ -141,7 +160,7 @@ export function ControleOuverture() {
           Aucun point de controle quotidien configure pour ce parc.
         </div>
         <button
-          onClick={() => navigate('/staff/login')}
+          onClick={() => navigate(retourDestination)}
           className="text-nikito-cyan text-sm mt-3"
         >
           Retour
@@ -157,7 +176,7 @@ export function ControleOuverture() {
         <div className="text-lg font-semibold mb-1">Controle ouverture valide</div>
         <div className="text-dim text-sm mb-4">{totalFaits} points controles - {today}</div>
         <button
-          onClick={() => navigate('/staff/login')}
+          onClick={() => navigate(retourDestination)}
           className="bg-gradient-cta text-text px-6 py-3 rounded-[10px] text-[13px] font-bold min-h-[44px]"
         >
           Retour
@@ -191,6 +210,7 @@ export function ControleOuverture() {
               ? `Disponible quand tous les points sont saisis (${restants} restants)`
               : undefined
         }
+        headerRightSlot={<BoutonRetourGmao />}
       />
       <ModaleQuitterSansValider
         open={showModale}
