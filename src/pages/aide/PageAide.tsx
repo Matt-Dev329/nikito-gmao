@@ -114,11 +114,14 @@ function FormulaireSupport({ userName, userEmail }: { userName: string; userEmai
     }, 4000);
   };
 
+  const inputCls = 'w-full bg-bg-deep border border-white/[0.08] rounded-[10px] p-3 px-3.5 text-text text-[13px] outline-none focus:border-nikito-cyan';
+  const labelCls = 'block text-[11px] text-dim uppercase tracking-wider mb-2';
+
   return (
     <div className="mt-10">
-      <div className="bg-bg-card rounded-xl border border-white/[0.06] p-5">
-        <h2 className="text-[15px] font-medium mb-4 flex items-center gap-2">
-          <svg className="w-4 h-4 text-dim" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <div className="bg-bg-card rounded-[18px] border border-nikito-violet/20 p-5 md:p-6">
+        <h2 className="text-[15px] font-medium mb-5 flex items-center gap-2.5">
+          <svg className="w-4 h-4 text-nikito-cyan" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
             <rect x="2" y="4" width="16" height="12" rx="2" />
             <path d="M2 6l8 5 8-5" />
           </svg>
@@ -126,7 +129,7 @@ function FormulaireSupport({ userName, userEmail }: { userName: string; userEmai
         </h2>
 
         {envoye ? (
-          <div className="flex items-center gap-2 text-green text-sm py-4">
+          <div className="flex items-center gap-2 text-green text-[13px] py-4">
             <svg className="w-4 h-4" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M5 10l3 3 7-7" />
             </svg>
@@ -135,50 +138,57 @@ function FormulaireSupport({ userName, userEmail }: { userName: string; userEmai
         ) : (
           <form ref={formRef} onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-xs text-dim mb-1.5">Motif</label>
-              <select
-                value={motif}
-                onChange={(e) => setMotif(e.target.value)}
-                className="w-full bg-bg-body border border-white/[0.08] rounded-lg px-3 py-2.5 text-sm text-text min-h-[44px] focus:outline-none focus:border-nikito-cyan/40 transition-colors"
-              >
-                <option value="" disabled>Choisir un motif...</option>
+              <label className={labelCls}>Motif</label>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                 {MOTIFS.map((m) => (
-                  <option key={m} value={m}>{m}</option>
+                  <button
+                    key={m}
+                    type="button"
+                    onClick={() => setMotif(motif === m ? '' : m)}
+                    className={cn(
+                      'px-3 py-2.5 rounded-[10px] text-[12px] leading-tight text-center border transition-colors',
+                      motif === m
+                        ? 'bg-nikito-cyan/10 border-nikito-cyan/40 text-nikito-cyan'
+                        : 'bg-bg-deep border-white/[0.08] text-dim hover:border-white/[0.15]'
+                    )}
+                  >
+                    {m}
+                  </button>
                 ))}
-              </select>
+              </div>
             </div>
 
             <div>
-              <label className="block text-xs text-dim mb-1.5">Objet</label>
+              <label className={labelCls}>Objet</label>
               <input
                 type="text"
                 value={objet}
                 onChange={(e) => setObjet(e.target.value)}
                 placeholder="Resume en quelques mots..."
-                className="w-full bg-bg-body border border-white/[0.08] rounded-lg px-3 py-2.5 text-sm text-text min-h-[44px] placeholder:text-faint focus:outline-none focus:border-nikito-cyan/40 transition-colors"
+                className={cn(inputCls, 'placeholder:text-faint')}
               />
             </div>
 
             <div>
-              <label className="block text-xs text-dim mb-1.5">Message</label>
+              <label className={labelCls}>Message</label>
               <textarea
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
                 placeholder="Decrivez votre demande ou probleme..."
                 rows={5}
-                className="w-full bg-bg-body border border-white/[0.08] rounded-lg px-3 py-2.5 text-sm text-text placeholder:text-faint focus:outline-none focus:border-nikito-cyan/40 transition-colors resize-none"
+                className={cn(inputCls, 'resize-y min-h-[70px] placeholder:text-faint')}
               />
             </div>
 
-            <div className="flex items-center justify-between pt-1">
-              <span className="text-xs text-faint">Destinataire : si@nikito.com</span>
+            <div className="flex items-center justify-between pt-2">
+              <span className="text-[11px] text-faint">Destinataire : si@nikito.com</span>
               <button
                 type="submit"
                 disabled={!canSubmit}
                 className={cn(
-                  'inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium min-h-[44px] transition-colors',
+                  'inline-flex items-center gap-2 px-5 py-2.5 rounded-[10px] text-[13px] font-medium min-h-[44px] transition-colors',
                   canSubmit
-                    ? 'bg-nikito-cyan text-bg-body hover:bg-nikito-cyan/90'
+                    ? 'bg-nikito-cyan text-bg-deep hover:bg-nikito-cyan/90'
                     : 'bg-white/[0.04] text-faint cursor-not-allowed'
                 )}
               >
