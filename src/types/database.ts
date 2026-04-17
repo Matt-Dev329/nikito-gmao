@@ -118,6 +118,30 @@ export interface Zone {
   cree_le: string;
 }
 
+export type AssigneA = 'staff' | 'tech';
+
+export interface PointBibliotheque {
+  id: string;
+  categorie_id: string;
+  libelle: string;
+  description: string | null;
+  type_controle: TypeControle;
+  assigne_a: AssigneA;
+  obligation_constructeur: boolean;
+  norme_associee: string | null;
+  bloquant_si_ko: boolean;
+  photo_obligatoire: boolean;
+  ordre: number;
+  verrouille: boolean;
+  actif: boolean;
+  cree_le: string;
+  modifie_le: string;
+}
+
+export interface PointBibliothequeAvecJoins extends PointBibliotheque {
+  categories_equipement: { id: string; nom: string } | null;
+}
+
 export interface Incident {
   id: string;
   numero_bt: string;
