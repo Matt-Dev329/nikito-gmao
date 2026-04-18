@@ -5,61 +5,6 @@ import type { AnalyseIA, AnalyseIACachee, MaintenanceData } from '@/types/ia-pre
 const CACHE_PREFIX = 'alba_ia_predictive_cache';
 const CACHE_DURATION = 6 * 60 * 60 * 1000;
 
-const SYSTEM_PROMPT = `Tu es un expert en maintenance prédictive pour des parcs de loisirs indoor (trampolines, laser game, arcades, soft play).
-Tu analyses les données de maintenance et tu retournes des prédictions et recommandations structurées.
-
-Retourne UNIQUEMENT un JSON valide (pas de texte avant ou après, pas de backticks) avec cette structure exacte :
-
-{
-  "score_sante_global": number (0-100),
-  "tendance": "stable" | "amelioration" | "degradation",
-  "equipements_a_risque": [
-    {
-      "equipement_id": "string",
-      "equipement_code": "string",
-      "equipement_libelle": "string",
-      "parc": "string",
-      "score_risque": number (0-100, 100 = très risqué),
-      "prediction": "string",
-      "justification": "string",
-      "action_recommandee": "string",
-      "priorite": "haute" | "moyenne" | "basse",
-      "date_panne_estimee": "YYYY-MM-DD"
-    }
-  ],
-  "alertes": [
-    {
-      "type": "garantie_expiration" | "controle_manquant" | "stock_critique" | "certification_expiration" | "tendance_degradation",
-      "message": "string",
-      "parc": "string",
-      "priorite": "haute" | "moyenne" | "basse"
-    }
-  ],
-  "recommandations": [
-    {
-      "titre": "string",
-      "description": "string",
-      "impact_estime": "string",
-      "cout_estime": "string",
-      "deadline_suggeree": "YYYY-MM-DD"
-    }
-  ],
-  "kpi_predictions": {
-    "mtbf_prevu_30j": number,
-    "incidents_prevus_30j": number,
-    "taux_conformite_prevu": number,
-    "equipements_necessitant_attention": number
-  }
-}
-
-Règles :
-- Trie les équipements à risque par score_risque décroissant
-- Ne retourne que les équipements avec un risque réel (score > 40)
-- Sois précis et factuel dans les justifications
-- Base tes prédictions sur les tendances des données
-- Les dates de panne estimées doivent être réalistes (dans les 30 prochains jours)
-- Limite à 10 équipements à risque max, 10 alertes max, 5 recommandations max`;
-
 function getCacheKey(estFormation: boolean) {
   return `${CACHE_PREFIX}_${estFormation ? 'formation' : 'production'}`;
 }
@@ -139,42 +84,50 @@ export function useAnalyseIA() {
     setLoading(true);
     setError(null);
 
-    try {
-      const userMessage = `Voici les données de maintenance des 90 derniers jours au format JSON :\n\n${JSON.stringify(data, null, 2)}`;
+    const meta = import.meta as unknown as { env: Record<string, string> };
+    const apiUrl = `${meta.env.VITE_SUPABASE_URL}/functions/v1/analyse-ia-predictive`;
 
-      console.log('[IA] Appel API Anthropic...');
+    try {
+      console.log('[IA] Appel edge function:', apiUrl);
+      console.log('[IA] Equipements:', data.equipements.length, '| Parcs:', data.parcs.length);
       console.log('[IA] Taille payload:', JSON.stringify(data).length, 'chars');
 
-      const response = await fetch('https://api.anthropic.com/v1/messages', {
+      const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'anthropic-version': '2023-06-01',
+          'Authorization': `Bearer ${meta.env.VITE_SUPABASE_ANON_KEY}`,
         },
-        body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
-          max_tokens: 4000,
-          system: SYSTEM_PROMPT,
-          messages: [{ role: 'user', content: userMessage }],
-        }),
+        body: JSON.stringify({ maintenance_data: data }),
       });
 
-      console.log('[IA] Response status:', response.status);
+      console.log('[IA] Response status:', response.status, response.statusText);
 
-      const responseData = await response.json();
-      console.log('[IA] Response data:', JSON.stringify(responseData).substring(0, 500));
+      const rawText = await response.text();
+      console.log('[IA] Response raw (500 chars):', rawText.substring(0, 500));
+
+      let responseData: Record<string, unknown>;
+      try {
+        responseData = JSON.parse(rawText);
+      } catch {
+        throw new Error(`Reponse non-JSON (${response.status}): ${rawText.substring(0, 200)}`);
+      }
+
+      console.log('[IA] Response body:', JSON.stringify(responseData).substring(0, 500));
 
       if (!response.ok) {
-        throw new Error(`API error ${response.status}: ${JSON.stringify(responseData)}`);
+        throw new Error(`Edge function error ${response.status}: ${JSON.stringify(responseData)}`);
       }
 
-      const text = responseData.content?.[0]?.text ?? '';
-      if (!text) {
-        throw new Error('Reponse IA vide');
+      if (responseData.success === false) {
+        const detail = responseData.detail ? ` — ${responseData.detail}` : '';
+        throw new Error(`${responseData.error}${detail}`);
       }
 
-      const cleaned = text.replace(/```json|```/g, '').trim();
-      const ia = JSON.parse(cleaned) as AnalyseIA;
+      const ia = responseData.analysis as AnalyseIA;
+      if (!ia) {
+        throw new Error('Reponse IA vide (pas de champ analysis)');
+      }
 
       setAnalyse(ia);
       setCache(estFormation, ia);
