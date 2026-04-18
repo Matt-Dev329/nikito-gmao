@@ -9,6 +9,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useViewAs, useEffectiveRole } from '@/hooks/useViewAs';
 import { useFormation } from '@/hooks/useFormation';
 import { useSidebarState } from '@/hooks/useSidebarState';
+import { useControlesManquantsCheck } from '@/hooks/useControlesManquantsCheck';
 import { roleLabels } from '@/lib/tokens';
 import { cn } from '@/lib/utils';
 
@@ -43,6 +44,8 @@ export function DashboardLayout() {
   const viewAsRole = useViewAs((s) => s.role);
   const realRoleCode = utilisateur?.role_code ?? 'direction';
   const effectiveRole = useEffectiveRole(realRoleCode);
+
+  useControlesManquantsCheck();
 
   const handleSignOut = async () => {
     await signOut();
