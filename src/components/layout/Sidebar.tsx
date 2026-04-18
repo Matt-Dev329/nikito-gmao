@@ -37,7 +37,7 @@ interface Badge {
 interface NavItem {
   to: string;
   label: string;
-  badgeKey?: 'recurrences' | 'cinqPourquoi' | 'operations' | 'invitationsPending' | 'controlesManquants';
+  badgeKey?: 'recurrences' | 'cinqPourquoi' | 'operations' | 'invitationsPending' | 'controlesManquants' | 'notificationsIA';
   badgeTone?: 'red' | 'amber';
   roles: RoleUtilisateur[];
   end?: boolean;
@@ -59,6 +59,7 @@ const sections: { titre: string; items: NavItem[] }[] = [
       { to: '/gmao/plaintes', label: 'Plaintes clients', roles: ['direction', 'chef_maintenance', 'manager_parc'] },
       { to: '/gmao/controles-historique', label: 'Contrôles', roles: ['direction', 'chef_maintenance'] },
       { to: '/gmao/ia-predictive', label: 'IA Prédictive', roles: ['direction', 'chef_maintenance'] },
+      { to: '/gmao/notifications-ia', label: 'Notifications IA', badgeKey: 'notificationsIA', badgeTone: 'amber', roles: ['direction', 'chef_maintenance'] },
     ],
   },
   {
@@ -93,7 +94,7 @@ interface SidebarProps {
 
 function resolveBadge(
   item: NavItem,
-  badges: { recurrences: number; cinqPourquoi: number; operations: number; invitationsPending: number; controlesManquants: number } | undefined
+  badges: { recurrences: number; cinqPourquoi: number; operations: number; invitationsPending: number; controlesManquants: number; notificationsIA: number } | undefined
 ): Badge | undefined {
   if (!item.badgeKey || !badges) return undefined;
   const count = badges[item.badgeKey] ?? 0;
