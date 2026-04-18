@@ -3,6 +3,10 @@ import { Outlet, useNavigate } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { ViewAsBanner } from './ViewAsBanner';
 import { FormationBanner } from './FormationBanner';
+import { MobileHeader } from './MobileHeader';
+import { BottomTabBar } from './BottomTabBar';
+import { MobileMoreDrawer } from './MobileMoreDrawer';
+import { MobileAlertPanel } from './MobileAlertPanel';
 import { TourOverlay } from '@/components/tour/TourOverlay';
 import { useTour, isTourCompleted } from '@/components/tour/useTour';
 import { useAuth } from '@/hooks/useAuth';
@@ -10,6 +14,7 @@ import { useViewAs, useEffectiveRole } from '@/hooks/useViewAs';
 import { useFormation } from '@/hooks/useFormation';
 import { useSidebarState } from '@/hooks/useSidebarState';
 import { useControlesManquantsCheck } from '@/hooks/useControlesManquantsCheck';
+import { useIsMobile } from '@/hooks/useIsMobile';
 import { roleLabels } from '@/lib/tokens';
 import { cn } from '@/lib/utils';
 
@@ -19,7 +24,7 @@ const SIDEBAR_W_MOBILE = 280;
 
 const roleAffiches: Record<string, string> = {
   direction: 'DIRECTION',
-  chef_maintenance: "CHEF D'ÉQUIPE",
+  chef_maintenance: "CHEF D'EQUIPE",
   manager_parc: 'MANAGER PARC',
   technicien: 'TECHNICIEN',
   staff_operationnel: 'STAFF',
@@ -40,10 +45,14 @@ export function DashboardLayout() {
   const { utilisateur, loading, signOut } = useAuth();
   const { mobileOpen, expanded, toggleExpanded, openMobile, closeMobile } = useSidebarState();
   const isDesktop = useIsDesktop();
+  const isMobile = useIsMobile();
   const navigate = useNavigate();
   const viewAsRole = useViewAs((s) => s.role);
   const realRoleCode = utilisateur?.role_code ?? 'direction';
   const effectiveRole = useEffectiveRole(realRoleCode);
+
+  const [moreOpen, setMoreOpen] = useState(false);
+  const [alertsOpen, setAlertsOpen] = useState(false);
 
   useControlesManquantsCheck();
 
@@ -93,6 +102,58 @@ export function DashboardLayout() {
   const viewAsBannerH = viewAsRole ? 36 : 0;
   const formationBannerH = formationActive ? 40 : 0;
   const bannerH = viewAsBannerH + formationBannerH;
+
+  if (isMobile) {
+    const mobileTopOffset = bannerH;
+    const headerH = 56;
+    const bottomBarH = 70;
+
+    return (
+      <div className="min-h-screen bg-bg-app text-text">
+        <TourOverlay />
+        <FormationBanner />
+        <ViewAsBanner topOffset={formationBannerH} />
+
+        <MobileHeader
+          initiales={user.initiales}
+          couleurAvatar={user.couleurAvatar}
+          topOffset={mobileTopOffset}
+        />
+
+        <div style={{ paddingTop: mobileTopOffset + headerH, paddingBottom: bottomBarH + 12 }}>
+          <main className="min-h-screen overflow-x-hidden">
+            <Outlet />
+          </main>
+        </div>
+
+        <BottomTabBar
+          roleCode={effectiveRole}
+          onAlertsClick={() => {
+            setMoreOpen(false);
+            setAlertsOpen((v) => !v);
+          }}
+          onMoreClick={() => {
+            setAlertsOpen(false);
+            setMoreOpen((v) => !v);
+          }}
+          alertsOpen={alertsOpen}
+          moreOpen={moreOpen}
+        />
+
+        <MobileAlertPanel
+          open={alertsOpen}
+          onClose={() => setAlertsOpen(false)}
+        />
+
+        <MobileMoreDrawer
+          open={moreOpen}
+          onClose={() => setMoreOpen(false)}
+          roleCode={effectiveRole}
+          onSignOut={handleSignOut}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-bg-app text-text">
