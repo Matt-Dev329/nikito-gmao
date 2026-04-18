@@ -1,8 +1,9 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
+import { useFormationFilter } from '@/hooks/useFormation';
 import type { MaintenanceData, MaintenanceEquipementData, MaintenanceParcsData } from '@/types/ia-predictive';
 
-async function fetchMaintenanceData(): Promise<MaintenanceData> {
+async function fetchMaintenanceData(estFormation: boolean): Promise<MaintenanceData> {
   const now = new Date();
   const d30 = new Date(now.getTime() - 30 * 86400000).toISOString();
   const d60 = new Date(now.getTime() - 60 * 86400000).toISOString();
@@ -18,20 +19,25 @@ async function fetchMaintenanceData(): Promise<MaintenanceData> {
     supabase
       .from('equipements')
       .select('id, code, libelle, parc_id, statut, date_mise_service, date_fin_garantie, a_surveiller, parcs(code, nom)')
-      .neq('statut', 'archive'),
+      .neq('statut', 'archive')
+      .eq('est_formation', estFormation),
     supabase
       .from('incidents')
       .select('id, equipement_id, declare_le, statut')
-      .gte('declare_le', d90),
+      .gte('declare_le', d90)
+      .eq('est_formation', estFormation),
     supabase
       .from('vue_recurrences_actives')
-      .select('*'),
+      .select('*')
+      .eq('est_formation', estFormation),
     supabase
       .from('vue_kpi_performance')
-      .select('*'),
+      .select('*')
+      .eq('est_formation', estFormation),
     supabase
       .from('pieces_detachees')
-      .select('id, nom, stock_actuel, stock_min'),
+      .select('id, nom, stock_actuel, stock_min')
+      .eq('est_formation', estFormation),
   ]);
 
   const equipements = (equipRes.data ?? []) as Array<Record<string, unknown>>;
@@ -120,9 +126,10 @@ async function fetchMaintenanceData(): Promise<MaintenanceData> {
 }
 
 export function useMaintenanceData() {
+  const { estFormation } = useFormationFilter();
   return useQuery({
-    queryKey: ['ia-predictive', 'maintenance-data'],
-    queryFn: fetchMaintenanceData,
+    queryKey: ['ia-predictive', 'maintenance-data', estFormation],
+    queryFn: () => fetchMaintenanceData(estFormation),
     staleTime: 5 * 60_000,
   });
 }

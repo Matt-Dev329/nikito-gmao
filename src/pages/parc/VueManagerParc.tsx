@@ -3,12 +3,14 @@ import { useAuth } from '@/hooks/useAuth';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useParcs } from '@/hooks/queries/useReferentiel';
+import { useFormationFilter } from '@/hooks/useFormation';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 
 export function VueManagerParc() {
   const { utilisateur } = useAuth();
   const { data: allParcs } = useParcs();
+  const { estFormation } = useFormationFilter();
   const navigate = useNavigate();
 
   const parcsUser = useMemo(() => {
@@ -22,7 +24,7 @@ export function VueManagerParc() {
   const parc = parcsUser.find((p) => p.id === parcId) ?? null;
 
   const { data: stats } = useQuery({
-    queryKey: ['manager_parc_stats', parcId],
+    queryKey: ['manager_parc_stats', parcId, estFormation],
     queryFn: async () => {
       if (!parcId) return null;
 
@@ -30,19 +32,22 @@ export function VueManagerParc() {
         supabase
           .from('equipements')
           .select('statut')
-          .eq('parc_id', parcId),
+          .eq('parc_id', parcId)
+          .eq('est_formation', estFormation),
         supabase
           .from('incidents')
           .select('id')
           .eq('statut', 'ouvert')
+          .eq('est_formation', estFormation)
           .in('equipement_id',
-            (await supabase.from('equipements').select('id').eq('parc_id', parcId)).data?.map((e) => e.id) ?? []
+            (await supabase.from('equipements').select('id').eq('parc_id', parcId).eq('est_formation', estFormation)).data?.map((e) => e.id) ?? []
           ),
         supabase
           .from('controles')
           .select('id, type, date_planifiee, date_validation, realise_par_id')
           .eq('parc_id', parcId)
           .eq('type', 'quotidien')
+          .eq('est_formation', estFormation)
           .order('date_planifiee', { ascending: false })
           .limit(1),
       ]);

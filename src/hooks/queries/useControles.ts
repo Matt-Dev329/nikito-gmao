@@ -77,6 +77,7 @@ export function useValiderControle() {
         .eq('parc_id', params.parc_id)
         .eq('type', params.type)
         .eq('date_planifiee', params.date_planifiee)
+        .eq('est_formation', estFormation)
         .in('statut', ['a_faire', 'en_cours'])
         .maybeSingle();
 
@@ -170,6 +171,7 @@ export function useValiderControleMensuel() {
         .eq('parc_id', params.parc_id)
         .eq('type', 'mensuel')
         .eq('date_planifiee', params.date_planifiee)
+        .eq('est_formation', estFormation)
         .in('statut', ['a_faire', 'en_cours'])
         .maybeSingle();
 

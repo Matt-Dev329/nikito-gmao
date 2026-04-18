@@ -81,6 +81,7 @@ export function useCreerFiche5PDepuisRecurrence() {
         .from('incidents')
         .select('id')
         .eq('equipement_id', payload.equipement_id)
+        .eq('est_formation', estFormation)
         .order('declare_le', { ascending: false })
         .limit(1)
         .maybeSingle();

@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
+import { useFormationFilter } from '@/hooks/useFormation';
 
 export interface ControleManquant {
   parc_id: string;
@@ -8,12 +9,13 @@ export interface ControleManquant {
 }
 
 export function useControlesOuvertureManquants() {
+  const { estFormation } = useFormationFilter();
   const now = new Date();
   const heure = now.getHours();
   const today = now.toISOString().slice(0, 10);
 
   return useQuery({
-    queryKey: ['controles_manquants', today],
+    queryKey: ['controles_manquants', today, estFormation],
     queryFn: async () => {
       const { data: parcs, error: errParcs } = await supabase
         .from('parcs')
@@ -27,7 +29,8 @@ export function useControlesOuvertureManquants() {
         .select('parc_id')
         .eq('type', 'quotidien')
         .eq('date_planifiee', today)
-        .eq('statut', 'valide');
+        .eq('statut', 'valide')
+        .eq('est_formation', estFormation);
       if (errCtrl) throw errCtrl;
 
       const parcsAvecControle = new Set((controles ?? []).map((c) => c.parc_id));

@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useParcs, useEquipements } from '@/hooks/queries/useReferentiel';
+import { useFormationFilter } from '@/hooks/useFormation';
 import { Card } from '@/components/ui/Card';
 import { Pill } from '@/components/ui/Pill';
 import { cn } from '@/lib/utils';
@@ -10,12 +11,14 @@ import type { CertificationAvecJoins } from '@/types/database';
 type FiltreStatut = 'tous' | 'valide' | 'expire_bientot' | 'expire';
 
 function useCertifications() {
+  const { estFormation } = useFormationFilter();
   return useQuery({
-    queryKey: ['certifications'],
+    queryKey: ['certifications', estFormation],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('certifications')
         .select('*, equipements(code, libelle, parc_id, parcs(code, nom))')
+        .eq('est_formation', estFormation)
         .order('prochaine_echeance');
       if (error) throw error;
       return (data ?? []) as CertificationAvecJoins[];
@@ -25,6 +28,7 @@ function useCertifications() {
 
 function useCreerCertification() {
   const qc = useQueryClient();
+  const { estFormation } = useFormationFilter();
   return useMutation({
     mutationFn: async (payload: {
       equipement_id: string;
@@ -37,7 +41,7 @@ function useCreerCertification() {
     }) => {
       const { data, error } = await supabase
         .from('certifications')
-        .insert(payload)
+        .insert({ ...payload, est_formation: estFormation })
         .select('id')
         .single();
       if (error) throw error;

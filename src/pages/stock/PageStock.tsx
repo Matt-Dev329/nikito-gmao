@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useFournisseurs } from '@/hooks/queries/useReferentiel';
+import { useFormationFilter } from '@/hooks/useFormation';
 import { Pill } from '@/components/ui/Pill';
 import { cn } from '@/lib/utils';
 import type { PieceDetacheeAvecJoins } from '@/types/database';
@@ -9,12 +10,14 @@ import type { PieceDetacheeAvecJoins } from '@/types/database';
 type FiltreCritique = 'tous' | 'critique' | 'ok';
 
 function usePiecesDetachees() {
+  const { estFormation } = useFormationFilter();
   return useQuery({
-    queryKey: ['pieces_detachees'],
+    queryKey: ['pieces_detachees', estFormation],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('pieces_detachees')
         .select('*, fournisseurs(nom, contact_tel)')
+        .eq('est_formation', estFormation)
         .order('nom');
       if (error) throw error;
       return (data ?? []) as PieceDetacheeAvecJoins[];
@@ -47,6 +50,7 @@ function useModifierStock() {
 
 function useCreerPiece() {
   const qc = useQueryClient();
+  const { estFormation } = useFormationFilter();
   return useMutation({
     mutationFn: async (payload: {
       reference: string;
@@ -60,7 +64,7 @@ function useCreerPiece() {
     }) => {
       const { data, error } = await supabase
         .from('pieces_detachees')
-        .insert(payload)
+        .insert({ ...payload, est_formation: estFormation })
         .select('id')
         .single();
       if (error) throw error;

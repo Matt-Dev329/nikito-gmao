@@ -7,6 +7,7 @@ import { AlertesIA } from '@/components/ia-predictive/AlertesIA';
 import { RecommandationsIA } from '@/components/ia-predictive/RecommandationsIA';
 import { KpiPredictionsCards } from '@/components/ia-predictive/KpiPredictionsCards';
 import { supabase } from '@/lib/supabase';
+import { useFormationFilter } from '@/hooks/useFormation';
 import type { EquipementRisque, RecommandationIA } from '@/types/ia-predictive';
 
 function SkeletonBlock({ className }: { className?: string }) {
@@ -61,6 +62,7 @@ function EtatErreur({ message, onRetry }: { message: string; onRetry: () => void
 export function PageIAPredictive() {
   const { data: maintenanceData, isLoading: dataLoading } = useMaintenanceData();
   const { analyse, loading: iaLoading, error, lastAnalyse, lancer } = useAnalyseIA();
+  const { estFormation } = useFormationFilter();
 
   useEffect(() => {
     if (maintenanceData && !analyse && !iaLoading && !error) {
@@ -81,11 +83,12 @@ export function PageIAPredictive() {
       libelle: `[IA] ${eq.action_recommandee}`.slice(0, 200),
       description: `Prediction IA : ${eq.prediction}\n\nJustification : ${eq.justification}`,
       prochaine_echeance: eq.date_panne_estimee || new Date(Date.now() + 14 * 86400000).toISOString().slice(0, 10),
+      est_formation: estFormation,
     });
     if (!err) {
       alert('Maintenance preventive creee avec succes.');
     }
-  }, []);
+  }, [estFormation]);
 
   const handleAppliquerReco = useCallback(async (rec: RecommandationIA) => {
     alert(`Recommandation notee : ${rec.titre}\n\nCreez manuellement la tache dans Preventif.`);

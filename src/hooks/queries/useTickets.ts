@@ -60,12 +60,14 @@ export function useIncident(numeroBT: string | undefined) {
 }
 
 export function useStock() {
+  const { estFormation } = useFormationFilter();
   return useQuery({
-    queryKey: ['stock'],
+    queryKey: ['stock', estFormation],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('pieces_detachees')
         .select('*, fournisseurs(nom, contact_tel)')
+        .eq('est_formation', estFormation)
         .order('nom');
       if (error) throw error;
       return data;
@@ -74,12 +76,14 @@ export function useStock() {
 }
 
 export function useStockBas() {
+  const { estFormation } = useFormationFilter();
   return useQuery({
-    queryKey: ['stock', 'bas'],
+    queryKey: ['stock', 'bas', estFormation],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('pieces_detachees')
         .select('*, fournisseurs(nom, contact_tel)')
+        .eq('est_formation', estFormation)
         .lt('stock_actuel', 'stock_min');
       if (error) throw error;
       return data;

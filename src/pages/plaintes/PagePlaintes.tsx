@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useParcs, useEquipements } from '@/hooks/queries/useReferentiel';
+import { useFormationFilter } from '@/hooks/useFormation';
 import { useAuth } from '@/hooks/useAuth';
 import { Card } from '@/components/ui/Card';
 import { Pill } from '@/components/ui/Pill';
@@ -25,12 +26,14 @@ const CANAL_BADGE: Record<string, string> = {
 };
 
 function usePlaintes() {
+  const { estFormation } = useFormationFilter();
   return useQuery({
-    queryKey: ['plaintes_clients'],
+    queryKey: ['plaintes_clients', estFormation],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('plaintes_clients')
         .select('*, parcs(code, nom), equipements(code, libelle), incidents!ticket_genere_id(numero_bt)')
+        .eq('est_formation', estFormation)
         .order('declare_le', { ascending: false });
       if (error) throw error;
       return (data ?? []) as PlainteClientAvecJoins[];
@@ -40,6 +43,7 @@ function usePlaintes() {
 
 function useCreerPlainte() {
   const qc = useQueryClient();
+  const { estFormation } = useFormationFilter();
   return useMutation({
     mutationFn: async (payload: {
       parc_id: string;
@@ -50,7 +54,7 @@ function useCreerPlainte() {
     }) => {
       const { data, error } = await supabase
         .from('plaintes_clients')
-        .insert(payload)
+        .insert({ ...payload, est_formation: estFormation })
         .select('id')
         .single();
       if (error) throw error;

@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useParcs, useEquipements, useFournisseurs } from '@/hooks/queries/useReferentiel';
+import { useFormationFilter } from '@/hooks/useFormation';
 import { Card } from '@/components/ui/Card';
 import { Pill } from '@/components/ui/Pill';
 import { cn } from '@/lib/utils';
@@ -24,13 +25,15 @@ function freqLabel(jours: number | null): string {
 }
 
 function useMaintenancesPreventives() {
+  const { estFormation } = useFormationFilter();
   return useQuery({
-    queryKey: ['maintenances_preventives'],
+    queryKey: ['maintenances_preventives', estFormation],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('maintenances_preventives')
         .select('*, equipements(code, libelle, parc_id, parcs(code, nom)), fournisseurs(nom)')
         .eq('actif', true)
+        .eq('est_formation', estFormation)
         .order('prochaine_echeance');
       if (error) throw error;
       return (data ?? []) as MaintenancePreventiveAvecJoins[];
@@ -40,6 +43,7 @@ function useMaintenancesPreventives() {
 
 function useCreerMaintenance() {
   const qc = useQueryClient();
+  const { estFormation } = useFormationFilter();
   return useMutation({
     mutationFn: async (payload: {
       equipement_id: string;
@@ -52,7 +56,7 @@ function useCreerMaintenance() {
     }) => {
       const { data, error } = await supabase
         .from('maintenances_preventives')
-        .insert({ ...payload, type: 'preventif_systematique', actif: true })
+        .insert({ ...payload, type: 'preventif_systematique', actif: true, est_formation: estFormation })
         .select('id')
         .single();
       if (error) throw error;

@@ -90,12 +90,14 @@ export function useFournisseurs() {
 }
 
 export function useEquipements(parcId?: string) {
+  const { estFormation } = useFormationFilter();
   return useQuery({
-    queryKey: ['equipements', parcId],
+    queryKey: ['equipements', parcId, estFormation],
     queryFn: async () => {
       let q = supabase
         .from('equipements')
-        .select('*, parcs(code, nom), categories_equipement(nom, criticite_defaut), zones(nom)');
+        .select('*, parcs(code, nom), categories_equipement(nom, criticite_defaut), zones(nom)')
+        .eq('est_formation', estFormation);
       if (parcId) q = q.eq('parc_id', parcId);
       const { data, error } = await q.order('code');
       if (error) throw error;
@@ -106,6 +108,7 @@ export function useEquipements(parcId?: string) {
 
 export function useCreerEquipement() {
   const qc = useQueryClient();
+  const { estFormation } = useFormationFilter();
   return useMutation({
     mutationFn: async (payload: {
       parc_id: string;
@@ -129,6 +132,7 @@ export function useCreerEquipement() {
           date_fin_garantie: payload.date_fin_garantie || null,
           statut: payload.statut ?? 'actif',
           a_surveiller: payload.a_surveiller ?? false,
+          est_formation: estFormation,
         })
         .select('*')
         .single();
@@ -174,6 +178,7 @@ export function useModifierEquipement() {
 
 export function useImporterEquipements() {
   const qc = useQueryClient();
+  const { estFormation } = useFormationFilter();
   return useMutation({
     mutationFn: async (rows: Array<{
       parc_id: string;
@@ -189,6 +194,7 @@ export function useImporterEquipements() {
           ...r,
           numero_serie: r.numero_serie || null,
           date_mise_service: r.date_mise_service || null,
+          est_formation: estFormation,
         })))
         .select('id');
       if (error) throw error;

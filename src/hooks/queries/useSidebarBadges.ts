@@ -22,7 +22,8 @@ export function useSidebarBadges() {
       const [recRes, fpRes, incRes, invRes] = await Promise.all([
         supabase
           .from('vue_recurrences_actives')
-          .select('equipement_id', { count: 'exact', head: true }),
+          .select('equipement_id', { count: 'exact', head: true })
+          .eq('est_formation', estFormation),
         supabase
           .from('fiches_5_pourquoi')
           .select('id', { count: 'exact', head: true })
@@ -44,7 +45,7 @@ export function useSidebarBadges() {
       if (heure >= 10) {
         const [parcsRes, ctrlRes] = await Promise.all([
           supabase.from('parcs').select('id', { count: 'exact', head: true }).eq('actif', true),
-          supabase.from('controles').select('parc_id').eq('type', 'quotidien').eq('date_planifiee', today).eq('statut', 'valide'),
+          supabase.from('controles').select('parc_id').eq('type', 'quotidien').eq('date_planifiee', today).eq('statut', 'valide').eq('est_formation', estFormation),
         ]);
         const totalParcs = parcsRes.count ?? 0;
         const parcsAvecControle = new Set((ctrlRes.data ?? []).map((c) => c.parc_id));
