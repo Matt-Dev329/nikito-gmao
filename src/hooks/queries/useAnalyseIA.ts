@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { useFormationFilter } from '@/hooks/useFormation';
+import { supabaseUrl, supabaseAnonKey } from '@/lib/supabase';
 import type { AnalyseIA, AnalyseIACachee, MaintenanceData } from '@/types/ia-predictive';
 
 const CACHE_PREFIX = 'alba_ia_predictive_cache';
@@ -84,8 +85,7 @@ export function useAnalyseIA() {
     setLoading(true);
     setError(null);
 
-    const meta = import.meta as unknown as { env: Record<string, string> };
-    const apiUrl = `${meta.env.VITE_SUPABASE_URL}/functions/v1/analyse-ia-predictive`;
+    const apiUrl = `${supabaseUrl}/functions/v1/analyse-ia-predictive`;
 
     try {
       console.log('[IA] Appel edge function:', apiUrl);
@@ -96,7 +96,7 @@ export function useAnalyseIA() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${meta.env.VITE_SUPABASE_ANON_KEY}`,
+          'Authorization': `Bearer ${supabaseAnonKey}`,
         },
         body: JSON.stringify({ maintenance_data: data }),
       });
