@@ -80,18 +80,16 @@ export function Login() {
     setError(null);
     setLoading(true);
 
-    console.log('[2FA] === DEBUT LOGIN ===');
+    entering2FA.current = true;
 
     const { data: signInData, error: signInError } = await signIn(email, password);
 
     if (signInError || !signInData.session) {
-      console.log('[2FA] Credentials KO:', signInError?.message);
+      entering2FA.current = false;
       setError('Email ou mot de passe incorrect');
       setLoading(false);
       return;
     }
-
-    console.log('[2FA] Credentials OK, user:', signInData.user?.id);
 
     const { data: utilisateurData } = await supabase
       .from('utilisateurs')
@@ -103,26 +101,19 @@ export function Login() {
     const userEmail = utilisateurData?.email || email;
 
     const deviceHash = getDeviceHash();
-    console.log('[2FA] Device hash:', deviceHash);
 
-    const { data: deviceReconnu, error: deviceError } = await supabase.rpc('verifier_device_reconnu', {
+    const { data: deviceReconnu } = await supabase.rpc('verifier_device_reconnu', {
       p_email: userEmail,
       p_device_hash: deviceHash,
     });
 
-    console.log('[2FA] Device reconnu:', deviceReconnu, 'Erreur:', deviceError);
-
     if (deviceReconnu === true) {
-      console.log('[2FA] Device reconnu -> acces direct');
       await supabase.rpc('rafraichir_device', { p_device_hash: deviceHash });
+      entering2FA.current = false;
       setLoading(false);
       navigate(destination, { replace: true });
       return;
     }
-
-    console.log('[2FA] Device NON reconnu -> mode 2FA');
-
-    entering2FA.current = true;
 
     const code = Math.floor(100000 + Math.random() * 900000).toString();
 
@@ -132,14 +123,11 @@ export function Login() {
       body: { email: userEmail, code, prenom },
     });
 
-    console.log('[2FA] Code envoye, signOut maintenant...');
-
     setPending2FA({ email: userEmail, prenom, tempPassword: password });
     setScreen('2fa');
 
     await supabase.auth.signOut();
 
-    console.log('[2FA] SignOut OK, screen devrait etre 2fa');
     setLoading(false);
   };
 
