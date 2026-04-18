@@ -3,6 +3,7 @@ import { cn } from '@/lib/utils';
 import { Logo } from '@/components/ui/Logo';
 import { getNavIcon, IconToggleSidebar, IconDeconnexion, IconAide } from './NavIcons';
 import { ViewAsSelector } from './ViewAsSelector';
+import { NotificationBell } from './NotificationBell';
 import { useFormation } from '@/hooks/useFormation';
 import { useSidebarBadges } from '@/hooks/queries/useSidebarBadges';
 import { useTour } from '@/components/tour/useTour';
@@ -51,16 +52,15 @@ const sections: { titre: string; items: NavItem[] }[] = [
       { to: '/gmao/mon-parc', label: 'Mon parc', roles: ['manager_parc'] },
       { to: '/gmao/operations', label: 'Opérations', badgeKey: 'operations', badgeTone: 'red', roles: ['direction', 'chef_maintenance', 'technicien'] },
       { to: '/gmao/equipements', label: 'Équipements', roles: ['direction', 'chef_maintenance', 'technicien', 'manager_parc'] },
+      { to: '/gmao/ia-predictive', label: 'IA Prédictive', roles: ['direction', 'chef_maintenance'] },
+      { to: '/gmao/flotte', label: 'Flotte', roles: ['direction', 'chef_maintenance'] },
       { to: '/gmao/recurrences', label: 'Récurrences', badgeKey: 'recurrences', badgeTone: 'red', roles: ['direction', 'chef_maintenance'] },
       { to: '/gmao/cinq-pourquoi', label: '5 Pourquoi', badgeKey: 'cinqPourquoi', badgeTone: 'amber', roles: ['direction', 'chef_maintenance'] },
-      { to: '/gmao/stock', label: 'Stock', roles: ['direction', 'chef_maintenance', 'technicien'] },
-      { to: '/gmao/preventif', label: 'Préventif', roles: ['direction', 'chef_maintenance', 'manager_parc'] },
-      { to: '/gmao/certifications', label: 'Certifications', roles: ['direction', 'chef_maintenance'] },
-      { to: '/gmao/plaintes', label: 'Plaintes clients', roles: ['direction', 'chef_maintenance', 'manager_parc'] },
       { to: '/gmao/controles-historique', label: 'Contrôles', roles: ['direction', 'chef_maintenance'] },
-      { to: '/gmao/ia-predictive', label: 'IA Prédictive', roles: ['direction', 'chef_maintenance'] },
-      { to: '/gmao/notifications-ia', label: 'Notifications IA', badgeKey: 'notificationsIA', badgeTone: 'amber', roles: ['direction', 'chef_maintenance'] },
-      { to: '/gmao/flotte', label: 'Flotte', roles: ['direction', 'chef_maintenance'] },
+      { to: '/gmao/plaintes', label: 'Plaintes clients', roles: ['direction', 'chef_maintenance', 'manager_parc'] },
+      { to: '/gmao/certifications', label: 'Certifications', roles: ['direction', 'chef_maintenance'] },
+      { to: '/gmao/preventif', label: 'Préventif', roles: ['direction', 'chef_maintenance', 'manager_parc'] },
+      { to: '/gmao/stock', label: 'Stock', roles: ['direction', 'chef_maintenance', 'technicien'] },
     ],
   },
   {
@@ -111,8 +111,8 @@ export function Sidebar({ user, roleAffiche, roleCode, realRoleCode, compact = f
   const showFormation = showViewAs;
 
   return (
-    <div className={cn('h-full flex flex-col overflow-y-auto', compact ? 'p-2 gap-0.5' : 'p-5 px-3.5 gap-1.5')}>
-      <div className={cn('flex items-center', compact ? 'justify-center py-3 px-0' : 'px-2.5 pt-2 pb-4')}>
+    <div className={cn('h-full flex flex-col', compact ? 'p-2 gap-0.5' : 'p-5 px-3.5 gap-1.5')}>
+      <div className={cn('flex items-center flex-shrink-0', compact ? 'justify-center py-3 px-0' : 'px-2.5 pt-2 pb-4')}>
         {compact ? (
           <Logo size="sm" withText={false} />
         ) : (
@@ -120,7 +120,7 @@ export function Sidebar({ user, roleAffiche, roleCode, realRoleCode, compact = f
         )}
       </div>
 
-      <div className={cn('flex items-center gap-1', compact ? 'justify-center' : 'px-0')}>
+      <div className={cn('flex items-center gap-1 flex-shrink-0', compact ? 'justify-center' : 'px-0')}>
         {onToggle && (
           <button
             onClick={onToggle}
@@ -134,6 +134,7 @@ export function Sidebar({ user, roleAffiche, roleCode, realRoleCode, compact = f
             {!compact && <span className="text-[12px]">Reduire</span>}
           </button>
         )}
+        <NotificationBell compact={compact} onNavClick={onNavClick} />
         {showFormation && (
           <NavLink
             to="/gmao/formation"
@@ -160,91 +161,105 @@ export function Sidebar({ user, roleAffiche, roleCode, realRoleCode, compact = f
         )}
       </div>
 
-      {sections.map((section) => {
-        const itemsVisibles = section.items.filter((it) => it.roles.includes(roleCode));
-        if (itemsVisibles.length === 0) return null;
-        return (
-          <div key={section.titre} className="contents">
-            {compact ? (
-              <div className="h-px bg-white/[0.06] my-2 mx-2" />
-            ) : (
-              <div className="text-[10px] text-faint uppercase tracking-[1.4px] px-2.5 pt-3 pb-1.5">
-                {section.titre}
-              </div>
-            )}
-            {itemsVisibles.map((item) => {
-              const Icon = getNavIcon(item.label);
-              const badge = resolveBadge(item, badges);
-              const tourKey = TOUR_KEYS[item.label];
-              return (
-                <NavLink
-                  key={item.to}
-                  to={item.to}
-                  end={item.end}
-                  onClick={onNavClick}
-                  title={compact ? item.label : undefined}
-                  {...(tourKey ? { 'data-tour': tourKey } : {})}
-                  className={({ isActive }) =>
-                    cn(
-                      'group relative flex items-center rounded-[10px] transition-colors min-h-[44px]',
-                      compact ? 'justify-center px-0' : 'gap-2.5 px-3 py-2.5',
-                      isActive
-                        ? 'bg-gradient-active border-l-2 border-nikito-pink text-text font-medium'
-                        : 'text-dim hover:text-text hover:bg-white/[0.02]'
-                    )
-                  }
-                >
-                  {({ isActive }) => (
-                    <>
-                      <Icon className={cn('w-[18px] h-[18px] flex-shrink-0', isActive ? 'text-nikito-pink' : '')} />
-                      {!compact && (
-                        <>
-                          <span className="text-[13px]">{item.label}</span>
-                          {badge && (
-                            <span
-                              className={cn(
-                                'ml-auto text-[10px] font-semibold px-1.5 py-0.5 rounded-lg text-bg-app',
-                                badge.tone === 'red' ? 'bg-red' : 'bg-amber'
-                              )}
-                            >
-                              {badge.count}
-                            </span>
-                          )}
-                        </>
-                      )}
-                      {compact && badge && (
-                        <span
-                          className={cn(
-                            'absolute top-1.5 right-1.5 w-2 h-2 rounded-full',
-                            badge.tone === 'red' ? 'bg-red' : 'bg-amber'
-                          )}
-                        />
-                      )}
-                      {compact && (
-                        <span className="pointer-events-none absolute left-full ml-2 px-2.5 py-1.5 rounded-lg bg-bg-card text-text text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity z-50 shadow-lg border border-white/[0.08]">
-                          {item.label}
-                          {badge && (
-                            <span className={cn('ml-1.5 text-[10px] font-semibold px-1 py-0.5 rounded text-bg-app', badge.tone === 'red' ? 'bg-red' : 'bg-amber')}>
-                              {badge.count}
-                            </span>
-                          )}
-                        </span>
-                      )}
-                    </>
-                  )}
-                </NavLink>
-              );
-            })}
-          </div>
-        );
-      })}
+      <div className="flex-1 overflow-y-auto min-h-0">
+        {sections.map((section) => {
+          const itemsVisibles = section.items.filter((it) => it.roles.includes(roleCode));
+          if (itemsVisibles.length === 0) return null;
+          return (
+            <div key={section.titre} className="contents">
+              {compact ? (
+                <div className="h-px bg-white/[0.06] my-2 mx-2" />
+              ) : (
+                <div className="text-[10px] text-faint uppercase tracking-[1.4px] px-2.5 pt-3 pb-1.5">
+                  {section.titre}
+                </div>
+              )}
+              {itemsVisibles.map((item) => {
+                const Icon = getNavIcon(item.label);
+                const badge = resolveBadge(item, badges);
+                const tourKey = TOUR_KEYS[item.label];
+                return (
+                  <NavLink
+                    key={item.to}
+                    to={item.to}
+                    end={item.end}
+                    onClick={onNavClick}
+                    title={compact ? item.label : undefined}
+                    {...(tourKey ? { 'data-tour': tourKey } : {})}
+                    className={({ isActive }) =>
+                      cn(
+                        'group relative flex items-center rounded-[10px] transition-colors min-h-[44px]',
+                        compact ? 'justify-center px-0' : 'gap-2.5 px-3 py-2.5',
+                        isActive
+                          ? 'bg-gradient-active border-l-2 border-nikito-pink text-text font-medium'
+                          : 'text-dim hover:text-text hover:bg-white/[0.02]'
+                      )
+                    }
+                  >
+                    {({ isActive }) => (
+                      <>
+                        <Icon className={cn('w-[18px] h-[18px] flex-shrink-0', isActive ? 'text-nikito-pink' : '')} />
+                        {!compact && (
+                          <>
+                            <span className="text-[13px]">{item.label}</span>
+                            {badge && (
+                              <span
+                                className={cn(
+                                  'ml-auto text-[10px] font-semibold px-1.5 py-0.5 rounded-lg text-bg-app',
+                                  badge.tone === 'red' ? 'bg-red' : 'bg-amber'
+                                )}
+                              >
+                                {badge.count}
+                              </span>
+                            )}
+                          </>
+                        )}
+                        {compact && badge && (
+                          <span
+                            className={cn(
+                              'absolute top-1.5 right-1.5 w-2 h-2 rounded-full',
+                              badge.tone === 'red' ? 'bg-red' : 'bg-amber'
+                            )}
+                          />
+                        )}
+                        {compact && (
+                          <span className="pointer-events-none absolute left-full ml-2 px-2.5 py-1.5 rounded-lg bg-bg-card text-text text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity z-50 shadow-lg border border-white/[0.08]">
+                            {item.label}
+                            {badge && (
+                              <span className={cn('ml-1.5 text-[10px] font-semibold px-1 py-0.5 rounded text-bg-app', badge.tone === 'red' ? 'bg-red' : 'bg-amber')}>
+                                {badge.count}
+                              </span>
+                            )}
+                          </span>
+                        )}
+                      </>
+                    )}
+                  </NavLink>
+                );
+              })}
+            </div>
+          );
+        })}
+      </div>
 
-      <div className={cn('mt-auto border-t border-white/[0.06]', compact ? 'pt-3 pb-2' : 'pt-3.5 px-2.5')}>
-        <div className={cn('flex items-center', compact ? 'justify-center' : 'gap-2.5')}>
+      <div className={cn('border-t border-white/[0.06] flex-shrink-0', compact ? 'pt-3 pb-2' : 'pt-3.5 px-2.5')}>
+        <NavLink
+          to="/gmao/profil"
+          onClick={onNavClick}
+          title={compact ? `${user.nom} · ${user.role}` : undefined}
+          className={({ isActive }) =>
+            cn(
+              'group relative flex items-center rounded-[10px] transition-colors min-h-[44px] w-full',
+              compact ? 'justify-center px-0' : 'gap-2.5 px-1',
+              isActive
+                ? 'bg-gradient-active border-l-2 border-nikito-pink'
+                : 'hover:bg-white/[0.02]'
+            )
+          }
+        >
           <div
             className="w-[34px] h-[34px] rounded-full flex items-center justify-center font-semibold text-xs flex-shrink-0"
             style={{ background: user.couleurAvatar ?? '#5DE5FF', color: '#0B0B2E' }}
-            title={compact ? `${user.nom} · ${user.role}` : undefined}
           >
             {user.initiales}
           </div>
@@ -254,12 +269,27 @@ export function Sidebar({ user, roleAffiche, roleCode, realRoleCode, compact = f
               <div className="text-dim text-[11px] truncate">{user.role}</div>
             </div>
           )}
-          {showViewAs && (
-            <div className="ml-auto flex-shrink-0">
+          {!compact && showViewAs && (
+            <div
+              className="ml-auto flex-shrink-0"
+              onClick={(e) => e.preventDefault()}
+            >
               <ViewAsSelector compact />
             </div>
           )}
-        </div>
+          {compact && (
+            <span className="pointer-events-none absolute left-full ml-2 px-2.5 py-1.5 rounded-lg bg-bg-card text-text text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity z-50 shadow-lg border border-white/[0.08]">
+              {user.nom}
+            </span>
+          )}
+        </NavLink>
+
+        {compact && showViewAs && (
+          <div className="flex justify-center mt-1">
+            <ViewAsSelector compact />
+          </div>
+        )}
+
         <NavLink
           to="/gmao/aide"
           onClick={onNavClick}
@@ -267,7 +297,7 @@ export function Sidebar({ user, roleAffiche, roleCode, realRoleCode, compact = f
           data-tour="aide"
           className={({ isActive }) =>
             cn(
-              'group relative flex items-center rounded-[10px] transition-colors min-h-[40px] w-full mt-2',
+              'group relative flex items-center rounded-[10px] transition-colors min-h-[40px] w-full mt-1',
               compact ? 'justify-center px-0' : 'gap-2.5 px-3',
               isActive
                 ? 'bg-gradient-active border-l-2 border-nikito-pink text-text font-medium'
@@ -277,7 +307,13 @@ export function Sidebar({ user, roleAffiche, roleCode, realRoleCode, compact = f
         >
           <IconAide className="w-[18px] h-[18px] flex-shrink-0" />
           {!compact && <span className="text-[12px]">Aide</span>}
+          {compact && (
+            <span className="pointer-events-none absolute left-full ml-2 px-2.5 py-1.5 rounded-lg bg-bg-card text-text text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity z-50 shadow-lg border border-white/[0.08]">
+              Aide
+            </span>
+          )}
         </NavLink>
+
         <button
           onClick={startTour}
           className={cn(
@@ -289,6 +325,7 @@ export function Sidebar({ user, roleAffiche, roleCode, realRoleCode, compact = f
           <GraduationCapTourIcon className="w-[18px] h-[18px] flex-shrink-0" />
           {!compact && <span className="text-[12px]">Visite guidee</span>}
         </button>
+
         {onSignOut && (
           <button
             onClick={onSignOut}
@@ -296,10 +333,10 @@ export function Sidebar({ user, roleAffiche, roleCode, realRoleCode, compact = f
               'flex items-center rounded-[10px] text-dim hover:text-red hover:bg-red/10 transition-colors min-h-[40px] w-full mt-1',
               compact ? 'justify-center px-0' : 'gap-2.5 px-3'
             )}
-            title={compact ? 'Se déconnecter' : undefined}
+            title={compact ? 'Se deconnecter' : undefined}
           >
             <IconDeconnexion className="w-[18px] h-[18px] flex-shrink-0" />
-            {!compact && <span className="text-[12px]">Se déconnecter</span>}
+            {!compact && <span className="text-[12px]">Se deconnecter</span>}
           </button>
         )}
       </div>
