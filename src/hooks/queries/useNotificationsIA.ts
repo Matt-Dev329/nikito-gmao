@@ -15,6 +15,8 @@ export interface RapportIAHebdo {
   cree_le: string;
 }
 
+export type ResultatReel = 'bon_choix' | 'mauvais_choix' | 'non_evalue';
+
 export interface HypotheseIA {
   id: string;
   rapport_id: string;
@@ -27,10 +29,34 @@ export interface HypotheseIA {
   validee_par_id: string | null;
   validee_le: string | null;
   commentaire_validation: string | null;
+  resultat_reel: ResultatReel;
+  resultat_commentaire: string | null;
+  resultat_evalue_par_id: string | null;
+  resultat_evalue_le: string | null;
   est_formation: boolean;
   cree_le: string;
   rapport?: RapportIAHebdo;
   valideur?: { nom: string; prenom: string } | null;
+  evaluateur?: { nom: string; prenom: string } | null;
+}
+
+export interface HistoriqueDecision {
+  id: string;
+  hypothese_id: string;
+  action: 'validee' | 'rejetee' | 'resultat_bon' | 'resultat_mauvais';
+  utilisateur_id: string;
+  utilisateur_nom: string;
+  commentaire: string | null;
+  donnees_snapshot: Record<string, unknown>;
+  cree_le: string;
+}
+
+export interface DecisionStats {
+  total_evaluees: number;
+  bons_choix: number;
+  mauvais_choix: number;
+  taux_reussite: number;
+  a_evaluer: number;
 }
 
 export interface NotificationsStats {
@@ -71,7 +97,8 @@ export function useHypothesesIA(rapportId?: string) {
         .select(`
           *,
           rapport:rapports_ia_hebdo(id, semaine_iso, score_sante, tendance, genere_le),
-          valideur:utilisateurs!hypotheses_ia_validee_par_id_fkey(nom, prenom)
+          valideur:utilisateurs!hypotheses_ia_validee_par_id_fkey(nom, prenom),
+          evaluateur:utilisateurs!hypotheses_ia_resultat_evalue_par_id_fkey(nom, prenom)
         `)
         .eq('est_formation', estFormation)
         .order('cree_le', { ascending: false });
@@ -155,13 +182,114 @@ export function useValiderHypothese() {
         .eq('id', id);
 
       if (error) throw error;
+
+      await supabase.from('historique_decisions_ia').insert({
+        hypothese_id: id,
+        action: statut,
+        utilisateur_id: utilisateur?.id ?? '',
+        utilisateur_nom: `${utilisateur?.prenom ?? ''} ${utilisateur?.nom ?? ''}`.trim(),
+        commentaire: commentaire ?? null,
+        donnees_snapshot: { statut },
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['hypotheses-ia'] });
       queryClient.invalidateQueries({ queryKey: ['hypotheses-ia-en-attente'] });
       queryClient.invalidateQueries({ queryKey: ['notifications-ia-stats'] });
       queryClient.invalidateQueries({ queryKey: ['sidebar-badges'] });
+      queryClient.invalidateQueries({ queryKey: ['historique-decisions-ia'] });
+      queryClient.invalidateQueries({ queryKey: ['decision-stats'] });
     },
+  });
+}
+
+export function useEvaluerResultat() {
+  const queryClient = useQueryClient();
+  const { utilisateur } = useAuth();
+
+  return useMutation({
+    mutationFn: async ({ id, resultat, commentaire }: { id: string; resultat: 'bon_choix' | 'mauvais_choix'; commentaire?: string }) => {
+      const { error } = await supabase
+        .from('hypotheses_ia')
+        .update({
+          resultat_reel: resultat,
+          resultat_commentaire: commentaire ?? null,
+          resultat_evalue_par_id: utilisateur?.id ?? null,
+          resultat_evalue_le: new Date().toISOString(),
+        })
+        .eq('id', id);
+
+      if (error) throw error;
+
+      await supabase.from('historique_decisions_ia').insert({
+        hypothese_id: id,
+        action: resultat === 'bon_choix' ? 'resultat_bon' : 'resultat_mauvais',
+        utilisateur_id: utilisateur?.id ?? '',
+        utilisateur_nom: `${utilisateur?.prenom ?? ''} ${utilisateur?.nom ?? ''}`.trim(),
+        commentaire: commentaire ?? null,
+        donnees_snapshot: { resultat },
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['hypotheses-ia'] });
+      queryClient.invalidateQueries({ queryKey: ['historique-decisions-ia'] });
+      queryClient.invalidateQueries({ queryKey: ['decision-stats'] });
+    },
+  });
+}
+
+export function useHistoriqueDecisions(hypotheseId?: string) {
+  return useQuery({
+    queryKey: ['historique-decisions-ia', hypotheseId ?? 'all'],
+    queryFn: async (): Promise<HistoriqueDecision[]> => {
+      let query = supabase
+        .from('historique_decisions_ia')
+        .select('*')
+        .order('cree_le', { ascending: false })
+        .limit(100);
+
+      if (hypotheseId) {
+        query = query.eq('hypothese_id', hypotheseId);
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+      return (data ?? []) as HistoriqueDecision[];
+    },
+    staleTime: 30_000,
+  });
+}
+
+export function useDecisionStats() {
+  const { estFormation } = useFormationFilter();
+
+  return useQuery({
+    queryKey: ['decision-stats', estFormation],
+    queryFn: async (): Promise<DecisionStats> => {
+      const [bonRes, mauvaisRes, aEvaluerRes] = await Promise.all([
+        supabase.from('hypotheses_ia').select('id', { count: 'exact', head: true })
+          .eq('est_formation', estFormation).eq('resultat_reel', 'bon_choix'),
+        supabase.from('hypotheses_ia').select('id', { count: 'exact', head: true })
+          .eq('est_formation', estFormation).eq('resultat_reel', 'mauvais_choix'),
+        supabase.from('hypotheses_ia').select('id', { count: 'exact', head: true })
+          .eq('est_formation', estFormation)
+          .in('statut', ['validee', 'rejetee'])
+          .eq('resultat_reel', 'non_evalue'),
+      ]);
+
+      const bons = bonRes.count ?? 0;
+      const mauvais = mauvaisRes.count ?? 0;
+      const totalEvaluees = bons + mauvais;
+
+      return {
+        total_evaluees: totalEvaluees,
+        bons_choix: bons,
+        mauvais_choix: mauvais,
+        taux_reussite: totalEvaluees > 0 ? Math.round((bons / totalEvaluees) * 100) : 0,
+        a_evaluer: aEvaluerRes.count ?? 0,
+      };
+    },
+    staleTime: 30_000,
   });
 }
 

@@ -4,6 +4,7 @@ import type { HypotheseIA } from '@/hooks/queries/useNotificationsIA';
 interface Props {
   hypothese: HypotheseIA;
   onValider: (h: HypotheseIA) => void;
+  onEvaluer: (h: HypotheseIA) => void;
 }
 
 const typeConfig: Record<string, { icon: (p: { className?: string }) => JSX.Element; label: string; border: string }> = {
@@ -36,21 +37,39 @@ const statutConfig: Record<string, { label: string; color: string; bg: string }>
   rejetee: { label: 'Rejetee', color: 'text-red', bg: 'bg-red/10' },
 };
 
-export function CarteHypothese({ hypothese, onValider }: Props) {
+const resultatConfig: Record<string, { label: string; color: string; bg: string; icon: string }> = {
+  bon_choix: { label: 'Bonne decision', color: 'text-green', bg: 'bg-green/10', icon: 'V' },
+  mauvais_choix: { label: 'Mauvaise decision', color: 'text-red', bg: 'bg-red/10', icon: 'X' },
+  non_evalue: { label: 'A evaluer', color: 'text-faint', bg: 'bg-white/[0.03]', icon: '?' },
+};
+
+export function CarteHypothese({ hypothese, onValider, onEvaluer }: Props) {
   const tc = typeConfig[hypothese.type] ?? typeConfig.alerte;
   const p = prioriteConfig[hypothese.priorite] ?? prioriteConfig.moyenne;
   const s = statutConfig[hypothese.statut] ?? statutConfig.en_attente;
   const Icon = tc.icon;
   const donnees = hypothese.donnees as Record<string, unknown>;
+  const isTraitee = hypothese.statut !== 'en_attente';
+  const resultat = resultatConfig[hypothese.resultat_reel] ?? resultatConfig.non_evalue;
+
+  const handleClick = () => {
+    if (hypothese.statut === 'en_attente') {
+      onValider(hypothese);
+    } else if (hypothese.resultat_reel === 'non_evalue') {
+      onEvaluer(hypothese);
+    }
+  };
+
+  const isClickable = hypothese.statut === 'en_attente' || (isTraitee && hypothese.resultat_reel === 'non_evalue');
 
   return (
     <div
       className={cn(
         'bg-bg-card border border-white/[0.06] rounded-xl p-4 border-l-[3px] transition-all hover:border-white/[0.12]',
         tc.border,
-        hypothese.statut === 'en_attente' && 'hover:shadow-lg cursor-pointer'
+        isClickable && 'hover:shadow-lg cursor-pointer'
       )}
-      onClick={hypothese.statut === 'en_attente' ? () => onValider(hypothese) : undefined}
+      onClick={isClickable ? handleClick : undefined}
     >
       <div className="flex items-start justify-between gap-3 mb-2">
         <div className="flex items-center gap-2.5 min-w-0">
@@ -62,13 +81,19 @@ export function CarteHypothese({ hypothese, onValider }: Props) {
             <div className="text-[10px] text-dim uppercase tracking-wider">{tc.label}</div>
           </div>
         </div>
-        <div className="flex items-center gap-1.5 flex-shrink-0">
+        <div className="flex items-center gap-1.5 flex-shrink-0 flex-wrap justify-end">
           <span className={cn('text-[10px] font-semibold px-1.5 py-0.5 rounded', p.color, p.bg)}>
             {p.label}
           </span>
           <span className={cn('text-[10px] font-medium px-1.5 py-0.5 rounded', s.color, s.bg)}>
             {s.label}
           </span>
+          {isTraitee && (
+            <span className={cn('text-[10px] font-medium px-1.5 py-0.5 rounded flex items-center gap-1', resultat.color, resultat.bg)}>
+              <span className="text-[9px]">{resultat.icon}</span>
+              {resultat.label}
+            </span>
+          )}
         </div>
       </div>
 
@@ -98,9 +123,14 @@ export function CarteHypothese({ hypothese, onValider }: Props) {
             Semaine {hypothese.rapport.semaine_iso}
           </span>
         )}
-        {hypothese.statut !== 'en_attente' && hypothese.validee_le && (
+        {isTraitee && hypothese.validee_le && (
           <span className="text-[11px] text-faint">
             {new Date(hypothese.validee_le).toLocaleDateString('fr-FR')}
+          </span>
+        )}
+        {hypothese.valideur && (
+          <span className="text-[11px] text-faint">
+            par {hypothese.valideur.prenom} {hypothese.valideur.nom}
           </span>
         )}
         {hypothese.statut === 'en_attente' && (
@@ -108,12 +138,35 @@ export function CarteHypothese({ hypothese, onValider }: Props) {
             Cliquer pour valider
           </span>
         )}
+        {isTraitee && hypothese.resultat_reel === 'non_evalue' && (
+          <span className="text-[11px] text-amber ml-auto">
+            Evaluer le resultat
+          </span>
+        )}
       </div>
 
-      {hypothese.commentaire_validation && (
-        <div className="mt-2.5 ml-[42px] bg-bg-deep rounded-lg p-2.5">
-          <div className="text-[10px] text-dim uppercase tracking-wider mb-0.5">Commentaire</div>
-          <div className="text-[12px] text-text/80">{hypothese.commentaire_validation}</div>
+      {(hypothese.commentaire_validation || hypothese.resultat_commentaire) && (
+        <div className="mt-2.5 ml-[42px] space-y-2">
+          {hypothese.commentaire_validation && (
+            <div className="bg-bg-deep rounded-lg p-2.5">
+              <div className="text-[10px] text-dim uppercase tracking-wider mb-0.5">Commentaire decision</div>
+              <div className="text-[12px] text-text/80">{hypothese.commentaire_validation}</div>
+            </div>
+          )}
+          {hypothese.resultat_commentaire && (
+            <div className={cn('rounded-lg p-2.5', hypothese.resultat_reel === 'bon_choix' ? 'bg-green/5' : 'bg-red/5')}>
+              <div className="text-[10px] text-dim uppercase tracking-wider mb-0.5">
+                Retour d'experience
+                {hypothese.evaluateur && (
+                  <span className="normal-case ml-1">
+                    - {hypothese.evaluateur.prenom} {hypothese.evaluateur.nom}
+                    {hypothese.resultat_evalue_le && ` le ${new Date(hypothese.resultat_evalue_le).toLocaleDateString('fr-FR')}`}
+                  </span>
+                )}
+              </div>
+              <div className="text-[12px] text-text/80">{hypothese.resultat_commentaire}</div>
+            </div>
+          )}
         </div>
       )}
     </div>

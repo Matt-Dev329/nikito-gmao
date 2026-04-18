@@ -5,12 +5,14 @@ import {
   useNotificationsStats,
   useRapportsIA,
   useGenererRapportIA,
+  useDecisionStats,
   type HypotheseIA,
 } from '@/hooks/queries/useNotificationsIA';
 import { useMaintenanceData } from '@/hooks/queries/useMaintenanceData';
 import { useAnalyseIA } from '@/hooks/queries/useAnalyseIA';
 import { CarteHypothese } from './CarteHypothese';
 import { ModaleValiderHypothese } from './ModaleValiderHypothese';
+import { ModaleEvaluerResultat } from './ModaleEvaluerResultat';
 
 type FiltreStatut = 'tous' | 'en_attente' | 'validee' | 'rejetee';
 type FiltreType = 'tous' | 'equipement_risque' | 'alerte' | 'recommandation';
@@ -33,6 +35,7 @@ export function PageNotificationsIA() {
   const [filtreStatut, setFiltreStatut] = useState<FiltreStatut>('en_attente');
   const [filtreType, setFiltreType] = useState<FiltreType>('tous');
   const [hypotheseActive, setHypotheseActive] = useState<HypotheseIA | null>(null);
+  const [hypotheseEvaluation, setHypotheseEvaluation] = useState<HypotheseIA | null>(null);
   const [rapportSelectionne, setRapportSelectionne] = useState<string | undefined>();
 
   const { data: stats } = useNotificationsStats();
@@ -41,6 +44,7 @@ export function PageNotificationsIA() {
   const { data: maintenanceData } = useMaintenanceData();
   const { analyse } = useAnalyseIA();
   const { mutate: generer, isPending: generationEnCours } = useGenererRapportIA();
+  const { data: decisionStats } = useDecisionStats();
 
   const hypothesesFiltrees = useMemo(() => {
     if (!hypotheses) return [];
@@ -87,6 +91,59 @@ export function PageNotificationsIA() {
         <StatBox label="Validees" value={stats?.validees ?? 0} color="text-green" />
         <StatBox label="Rejetees" value={stats?.rejetees ?? 0} color="text-red" />
       </div>
+
+      {decisionStats && decisionStats.total_evaluees + decisionStats.a_evaluer > 0 && (
+        <div className="bg-bg-card border border-white/[0.06] rounded-xl p-4">
+          <div className="text-[12px] font-medium mb-3 flex items-center gap-2">
+            <ChartIcon className="w-4 h-4 text-nikito-cyan" />
+            Suivi des decisions
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+            <div className="text-center">
+              <div className={cn(
+                'text-[24px] font-bold',
+                decisionStats.taux_reussite >= 70 ? 'text-green' :
+                decisionStats.taux_reussite >= 40 ? 'text-amber' : 'text-red'
+              )}>
+                {decisionStats.taux_reussite}%
+              </div>
+              <div className="text-[10px] text-dim uppercase tracking-wider">Taux reussite</div>
+            </div>
+            <div className="text-center">
+              <div className="text-[24px] font-bold text-text">{decisionStats.total_evaluees}</div>
+              <div className="text-[10px] text-dim uppercase tracking-wider">Evaluees</div>
+            </div>
+            <div className="text-center">
+              <div className="text-[24px] font-bold text-green">{decisionStats.bons_choix}</div>
+              <div className="text-[10px] text-dim uppercase tracking-wider">Bons choix</div>
+            </div>
+            <div className="text-center">
+              <div className="text-[24px] font-bold text-red">{decisionStats.mauvais_choix}</div>
+              <div className="text-[10px] text-dim uppercase tracking-wider">Mauvais choix</div>
+            </div>
+            <div className="text-center">
+              <div className="text-[24px] font-bold text-amber">{decisionStats.a_evaluer}</div>
+              <div className="text-[10px] text-dim uppercase tracking-wider">A evaluer</div>
+            </div>
+          </div>
+          {decisionStats.total_evaluees > 0 && (
+            <div className="mt-3 h-2 rounded-full bg-bg-deep overflow-hidden flex">
+              <div
+                className="h-full bg-green rounded-l-full transition-all"
+                style={{ width: `${(decisionStats.bons_choix / (decisionStats.total_evaluees + decisionStats.a_evaluer)) * 100}%` }}
+              />
+              <div
+                className="h-full bg-red transition-all"
+                style={{ width: `${(decisionStats.mauvais_choix / (decisionStats.total_evaluees + decisionStats.a_evaluer)) * 100}%` }}
+              />
+              <div
+                className="h-full bg-white/[0.08] rounded-r-full transition-all"
+                style={{ width: `${(decisionStats.a_evaluer / (decisionStats.total_evaluees + decisionStats.a_evaluer)) * 100}%` }}
+              />
+            </div>
+          )}
+        </div>
+      )}
 
       {rapports && rapports.length > 0 && (
         <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-thin">
@@ -175,6 +232,7 @@ export function PageNotificationsIA() {
               key={h.id}
               hypothese={h}
               onValider={setHypotheseActive}
+              onEvaluer={setHypotheseEvaluation}
             />
           ))}
         </div>
@@ -184,6 +242,13 @@ export function PageNotificationsIA() {
         <ModaleValiderHypothese
           hypothese={hypotheseActive}
           onClose={() => setHypotheseActive(null)}
+        />
+      )}
+
+      {hypotheseEvaluation && (
+        <ModaleEvaluerResultat
+          hypothese={hypotheseEvaluation}
+          onClose={() => setHypotheseEvaluation(null)}
         />
       )}
     </div>
@@ -235,6 +300,17 @@ function SparkIcon({ className }: { className?: string }) {
     <svg className={className} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
       <path d="M8 1v4l3-1-3 5v-4l-3 1 3-5z" />
       <circle cx="8" cy="8" r="7" />
+    </svg>
+  );
+}
+
+function ChartIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M2 14h12" />
+      <rect x="3" y="8" width="2" height="6" rx="0.5" fill="currentColor" opacity="0.3" />
+      <rect x="7" y="4" width="2" height="10" rx="0.5" fill="currentColor" opacity="0.5" />
+      <rect x="11" y="6" width="2" height="8" rx="0.5" fill="currentColor" opacity="0.4" />
     </svg>
   );
 }
