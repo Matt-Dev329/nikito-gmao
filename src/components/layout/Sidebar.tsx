@@ -60,6 +60,7 @@ const sections: { titre: string; items: NavItem[] }[] = [
       { to: '/gmao/controles-historique', label: 'Contrôles', roles: ['direction', 'chef_maintenance'] },
       { to: '/gmao/ia-predictive', label: 'IA Prédictive', roles: ['direction', 'chef_maintenance'] },
       { to: '/gmao/notifications-ia', label: 'Notifications IA', badgeKey: 'notificationsIA', badgeTone: 'amber', roles: ['direction', 'chef_maintenance'] },
+      { to: '/gmao/flotte', label: 'Flotte', roles: ['direction', 'chef_maintenance'] },
     ],
   },
   {
