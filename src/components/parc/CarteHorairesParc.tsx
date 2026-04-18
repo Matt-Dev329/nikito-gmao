@@ -92,28 +92,20 @@ export function CarteHorairesParc({ parc }: Props) {
 
   if (horairesAujourdhui.ferme) {
     statutControle = 'ferme';
-    statutMessage = 'Parc fermé aujourd\'hui — pas de contrôle requis';
+    statutMessage = 'Parc fermé — pas de contrôle requis';
   } else if (controleAujourdhui) {
     statutControle = 'fait';
     const heureValid = controleAujourdhui.date_validation
       ? new Date(controleAujourdhui.date_validation).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
       : '';
-    statutMessage = `Contrôle d'ouverture réalisé à ${heureValid} par ${controleAujourdhui.realise_par_nom ?? 'inconnu'}`;
+    statutMessage = `Contrôle réalisé à ${heureValid} par ${controleAujourdhui.realise_par_nom ?? 'inconnu'}`;
   } else if (horairesAujourdhui.ouverture) {
     const { alerteApp } = getHeureAlerte(horairesAujourdhui.ouverture);
     if (minutesDuJour >= alerteApp) {
       statutControle = 'alerte';
-      const ouvertureMin = parseInt(horairesAujourdhui.ouverture.split(':')[0]) * 60 + parseInt(horairesAujourdhui.ouverture.split(':')[1] || '0');
-      const diff = ouvertureMin - minutesDuJour;
-      if (diff > 0) {
-        const h = Math.floor(diff / 60);
-        const m = diff % 60;
-        statutMessage = `CONTRÔLE NON FAIT — Ouverture dans ${h > 0 ? h + 'h' : ''}${m}min`;
-      } else {
-        statutMessage = 'CONTRÔLE NON FAIT — Le parc devrait être ouvert';
-      }
+      statutMessage = 'CONTROLE NON FAIT';
     } else {
-      statutMessage = `Contrôle d'ouverture en attente (requis avant ${formatHeure(horairesAujourdhui.ouverture)})`;
+      statutMessage = `En attente (requis avant ${formatHeure(horairesAujourdhui.ouverture)})`;
     }
   }
 
@@ -125,49 +117,56 @@ export function CarteHorairesParc({ parc }: Props) {
             <h3 className="text-[14px] font-semibold">Horaires aujourd'hui</h3>
             <p className="text-[13px] mt-1">
               {horairesAujourdhui.ferme ? (
-                <span className="text-dim">{jourLabel} : Fermé</span>
+                <span className="text-dim">Aujourd'hui ({jourLabel.toLowerCase()}) : Fermé</span>
               ) : (
                 <span className="text-text">
-                  {jourLabel} : Ouvert de{' '}
+                  Aujourd'hui ({jourLabel.toLowerCase()}) : Ouvert de{' '}
                   <span className="font-semibold text-nikito-cyan">{formatHeure(horairesAujourdhui.ouverture)}</span>
                   {' '}à{' '}
                   <span className="font-semibold text-nikito-cyan">{formatHeure(horairesAujourdhui.fermeture)}</span>
+                  {horairesAujourdhui.estDernierDimancheVacances && (
+                    <span className="text-amber text-[12px] ml-1">(dernier dimanche de vacances)</span>
+                  )}
                 </span>
               )}
             </p>
-            {horairesAujourdhui.estDernierDimancheVacances && (
-              <p className="text-[11px] text-amber mt-1">Dernier dimanche de vacances</p>
-            )}
           </div>
           <div className="flex gap-1.5 flex-shrink-0">
             {horairesAujourdhui.estVacances && (
               <span className="bg-nikito-cyan/15 text-nikito-cyan px-2 py-0.5 rounded-md text-[10px] font-bold whitespace-nowrap">
-                Vacances
+                Vacances scolaires
               </span>
             )}
-            {horairesAujourdhui.ferme && (
+            {horairesAujourdhui.ferme ? (
               <span className="bg-white/5 text-dim px-2 py-0.5 rounded-md text-[10px] font-bold">
                 Fermé
+              </span>
+            ) : (
+              <span className="bg-green/15 text-green px-2 py-0.5 rounded-md text-[10px] font-bold">
+                Ouvert
               </span>
             )}
           </div>
         </div>
 
-        <div className={cn(
-          'rounded-xl px-3.5 py-2.5 text-[12px] font-medium flex items-center gap-2',
-          statutControle === 'fait' && 'bg-green/10 text-green',
-          statutControle === 'attente' && 'bg-amber/10 text-amber',
-          statutControle === 'alerte' && 'bg-red/10 text-red animate-pulse',
-          statutControle === 'ferme' && 'bg-white/5 text-dim'
-        )}>
-          <span className={cn(
-            'w-2 h-2 rounded-full flex-shrink-0',
-            statutControle === 'fait' && 'bg-green',
-            statutControle === 'attente' && 'bg-amber',
-            statutControle === 'alerte' && 'bg-red',
-            statutControle === 'ferme' && 'bg-white/20'
-          )} />
-          {statutMessage}
+        <div className="mt-1">
+          <p className="text-[11px] text-dim uppercase tracking-wider mb-1.5">Statut controle d'ouverture</p>
+          <div className={cn(
+            'rounded-xl px-3.5 py-2.5 text-[12px] font-medium flex items-center gap-2',
+            statutControle === 'fait' && 'bg-green/10 text-green',
+            statutControle === 'attente' && 'bg-amber/10 text-amber',
+            statutControle === 'alerte' && 'bg-red/10 text-red animate-pulse',
+            statutControle === 'ferme' && 'bg-white/5 text-dim'
+          )}>
+            <span className={cn(
+              'w-2 h-2 rounded-full flex-shrink-0',
+              statutControle === 'fait' && 'bg-green',
+              statutControle === 'attente' && 'bg-amber',
+              statutControle === 'alerte' && 'bg-red',
+              statutControle === 'ferme' && 'bg-white/20'
+            )} />
+            {statutMessage}
+          </div>
         </div>
       </div>
 
