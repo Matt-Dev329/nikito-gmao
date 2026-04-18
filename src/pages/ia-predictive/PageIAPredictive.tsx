@@ -1,4 +1,4 @@
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useState } from 'react';
 import { useMaintenanceData } from '@/hooks/queries/useMaintenanceData';
 import { useAnalyseIA } from '@/hooks/queries/useAnalyseIA';
 import { ScoreSanteGlobal } from '@/components/ia-predictive/ScoreSanteGlobal';
@@ -6,6 +6,8 @@ import { EquipementsRisque } from '@/components/ia-predictive/EquipementsRisque'
 import { AlertesIA } from '@/components/ia-predictive/AlertesIA';
 import { RecommandationsIA } from '@/components/ia-predictive/RecommandationsIA';
 import { KpiPredictionsCards } from '@/components/ia-predictive/KpiPredictionsCards';
+import { ModaleEnvoyerRapportIA } from '@/components/ia-predictive/ModaleEnvoyerRapportIA';
+import { exportIAPredictivePDF } from '@/pages/ia-predictive/exportIAPDF';
 import { supabase } from '@/lib/supabase';
 import { useFormationFilter } from '@/hooks/useFormation';
 import type { EquipementRisque, RecommandationIA } from '@/types/ia-predictive';
@@ -63,6 +65,7 @@ export function PageIAPredictive() {
   const { data: maintenanceData, isLoading: dataLoading } = useMaintenanceData();
   const { analyse, loading: iaLoading, error, lastAnalyse, lancer } = useAnalyseIA();
   const { estFormation } = useFormationFilter();
+  const [modaleEmail, setModaleEmail] = useState(false);
 
   useEffect(() => {
     if (maintenanceData && !analyse && !iaLoading && !error) {
@@ -111,11 +114,31 @@ export function PageIAPredictive() {
             Analyse automatique des donnees de maintenance par intelligence artificielle
           </div>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 flex-wrap">
           {lastAnalyse && (
-            <div className="text-[11px] text-faint">
+            <div className="text-[11px] text-faint mr-1">
               Derniere analyse : {lastAnalyse.toLocaleString('fr-FR')}
             </div>
+          )}
+          {analyse && (
+            <>
+              <button
+                onClick={() => exportIAPredictivePDF(analyse)}
+                className="bg-white/[0.04] border border-white/[0.08] text-text px-3.5 py-2.5 rounded-lg text-[12px] font-medium min-h-[44px] hover:bg-white/[0.08] transition-colors flex items-center gap-2"
+              >
+                <PdfIcon className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Telecharger PDF</span>
+                <span className="sm:hidden">PDF</span>
+              </button>
+              <button
+                onClick={() => setModaleEmail(true)}
+                className="bg-white/[0.04] border border-white/[0.08] text-text px-3.5 py-2.5 rounded-lg text-[12px] font-medium min-h-[44px] hover:bg-white/[0.08] transition-colors flex items-center gap-2"
+              >
+                <MailIcon className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Envoyer par email</span>
+                <span className="sm:hidden">Email</span>
+              </button>
+            </>
           )}
           <button
             onClick={handleRelancer}
@@ -174,6 +197,13 @@ export function PageIAPredictive() {
           <SkeletonBlock className="h-[200px] w-full" />
         </div>
       )}
+
+      {modaleEmail && analyse && (
+        <ModaleEnvoyerRapportIA
+          analyse={analyse}
+          onClose={() => setModaleEmail(false)}
+        />
+      )}
     </div>
   );
 }
@@ -183,6 +213,26 @@ function RefreshIcon({ className }: { className?: string }) {
     <svg className={className} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
       <path d="M2 8a6 6 0 0 1 10.3-4.2M14 8a6 6 0 0 1-10.3 4.2" />
       <path d="M12 1v4h-4M4 15v-4h4" />
+    </svg>
+  );
+}
+
+function MailIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="1" y="3" width="14" height="10" rx="2" />
+      <path d="M1 5l7 4 7-4" />
+    </svg>
+  );
+}
+
+function PdfIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 1h6l4 4v9a1 1 0 01-1 1H4a1 1 0 01-1-1V2a1 1 0 011-1z" />
+      <path d="M10 1v4h4" />
+      <path d="M6 9h4" />
+      <path d="M6 11.5h4" />
     </svg>
   );
 }
