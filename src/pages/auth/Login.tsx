@@ -23,17 +23,24 @@ export function Login() {
   const location = useLocation();
   const { signIn, authUser, loading: authLoading } = useAuth();
 
-  const [screen, setScreen] = useState<Screen>('login');
+  const screenRef = useRef<Screen>('login');
+  const [, forceRender] = useState(0);
+  const setScreen = (s: Screen) => {
+    screenRef.current = s;
+    forceRender((n) => n + 1);
+  };
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [pending2FA, setPending2FA] = useState<Pending2FAState | null>(null);
+
+  const pending2FA = useRef<Pending2FAState | null>(null);
 
   const [resetEmail, setResetEmail] = useState('');
   const [resetCooldown, setResetCooldown] = useState(0);
 
-  const entering2FA = useRef(false);
+  const isProcessing = useRef(false);
 
   const destination = (location.state as { from?: string })?.from || '/gmao';
 
@@ -51,24 +58,26 @@ export function Login() {
     );
   }
 
-  if (authUser && screen !== '2fa' && !entering2FA.current) {
+  const screen = screenRef.current;
+
+  if (authUser && screen !== '2fa' && !isProcessing.current) {
     return <Navigate to={destination} replace />;
   }
 
-  if (screen === '2fa' && pending2FA) {
+  if (screen === '2fa' && pending2FA.current) {
     return (
       <Verification2FA
-        email={pending2FA.email}
-        prenom={pending2FA.prenom}
-        tempPassword={pending2FA.tempPassword}
+        email={pending2FA.current.email}
+        prenom={pending2FA.current.prenom}
+        tempPassword={pending2FA.current.tempPassword}
         onSuccess={() => {
-          entering2FA.current = false;
-          setPending2FA(null);
+          isProcessing.current = false;
+          pending2FA.current = null;
           navigate(destination, { replace: true });
         }}
         onCancel={() => {
-          entering2FA.current = false;
-          setPending2FA(null);
+          isProcessing.current = false;
+          pending2FA.current = null;
           setScreen('login');
         }}
       />
@@ -80,12 +89,12 @@ export function Login() {
     setError(null);
     setLoading(true);
 
-    entering2FA.current = true;
+    isProcessing.current = true;
 
     const { data: signInData, error: signInError } = await signIn(email, password);
 
     if (signInError || !signInData.session) {
-      entering2FA.current = false;
+      isProcessing.current = false;
       setError('Email ou mot de passe incorrect');
       setLoading(false);
       return;
@@ -109,7 +118,7 @@ export function Login() {
 
     if (deviceReconnu === true) {
       await supabase.rpc('rafraichir_device', { p_device_hash: deviceHash });
-      entering2FA.current = false;
+      isProcessing.current = false;
       setLoading(false);
       navigate(destination, { replace: true });
       return;
@@ -123,7 +132,7 @@ export function Login() {
       body: { email: userEmail, code, prenom },
     });
 
-    setPending2FA({ email: userEmail, prenom, tempPassword: password });
+    pending2FA.current = { email: userEmail, prenom, tempPassword: password };
     setScreen('2fa');
 
     await supabase.auth.signOut();
