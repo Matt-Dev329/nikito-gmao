@@ -65,7 +65,7 @@ export function AlbaLoginHero() {
           <span className="text-white">LBA</span>
         </div>
         <div className="text-[13px] text-[#8b92b8] mt-1.5 tracking-wide">by Nikito</div>
-        <div className="text-[14px] text-[#5DE5FF] italic mt-2">{'\u00ab'} On prot{'\u00e8'}ge les familles d{'\u00e8'}s l'aube. {'\u00bb'}</div>
+        <div className="text-[14px] text-[#5DE5FF] italic mt-2">« On protège les familles dès l'aube. »</div>
       </div>
     </div>
   );

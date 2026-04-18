@@ -269,7 +269,7 @@ function ZonesTabs({
               pasCommence && 'bg-bg-card border border-white/[0.08] text-dim',
             )}
           >
-            {fait ? '\u2713 ' : enCours ? '\u23F5 ' : '\u25CB '}
+            {fait ? '✓ ' : enCours ? '⏵ ' : '○ '}
             {z.label}
             <span
               className={cn(
@@ -401,7 +401,7 @@ function PointRow({
             !isOK && !isDeg && !isHS && !actif && !verrouille && aRepondre && 'bg-[#2A2A5A] text-dim',
           )}
         >
-          {isOK ? '\u2713' : isDeg ? '!' : isHS ? '\u00D7' : verrouille ? '\uD83D\uDD12' : actif ? '\u25B8' : '\u25CB'}
+          {isOK ? '✓' : isDeg ? '!' : isHS ? '×' : verrouille ? '🔒' : actif ? '▸' : '○'}
         </span>
 
         <div className="flex-1 min-w-0">

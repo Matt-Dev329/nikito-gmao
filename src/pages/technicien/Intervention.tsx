@@ -36,10 +36,10 @@ export function Intervention() {
 
   const [etapeActive, setEtapeActive] = useState<Etape>('actions');
   const [diagnostic] = useState(
-    'Carte m\u00e8re HS suite \u00e0 coupure secteur. Pas de signal au d\u00e9marrage, voyant alim \u00e9teint malgr\u00e9 secteur OK test\u00e9 multim\u00e8tre.'
+    'Carte mère HS suite à coupure secteur. Pas de signal au démarrage, voyant alim éteint malgré secteur OK testé multimètre.'
   );
   const [actions, setActions] = useState(
-    'D\u00e9montage capot arri\u00e8re, remplacement carte m\u00e8re, application p\u00e2te thermique sur dissipateur CPU, test boot OK, test cycle complet ride OK.'
+    'Démontage capot arrière, remplacement carte mère, application pâte thermique sur dissipateur CPU, test boot OK, test cycle complet ride OK.'
   );
   const [premierCoup, setPremierCoup] = useState<boolean | null>(true);
   const [photoAvant, setPhotoAvant] = useState<string | null>(null);

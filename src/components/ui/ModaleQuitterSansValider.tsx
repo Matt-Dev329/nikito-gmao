@@ -19,7 +19,7 @@ export function ModaleQuitterSansValider({ open, onConfirmer, onAnnuler }: Modal
           </div>
           <h3 className="text-[15px] font-semibold mb-1.5">Quitter sans valider ?</h3>
           <p className="text-[13px] text-dim leading-relaxed">
-            Les saisies en cours seront sauvegard{'\u00e9'}es en brouillon.
+            Les saisies en cours seront sauvegardées en brouillon.
           </p>
         </div>
         <div className="flex gap-2.5">

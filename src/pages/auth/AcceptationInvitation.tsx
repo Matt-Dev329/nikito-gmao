@@ -68,7 +68,7 @@ export function AcceptationInvitation() {
       .single()
       .then(async ({ data, error }) => {
         if (error || !data) {
-          setErreur("Cette invitation est invalide, d\u00e9j\u00e0 utilis\u00e9e ou expir\u00e9e.");
+          setErreur("Cette invitation est invalide, déjà utilisée ou expirée.");
           setLoading(false);
           return;
         }
@@ -170,7 +170,7 @@ export function AcceptationInvitation() {
         } else {
           authUserId = signUpData.user?.id ?? null;
           if (!authUserId && signUpData.user === null) {
-            throw new Error("Impossible de cr\u00e9er le compte. R\u00e9essaie ou contacte le support.");
+            throw new Error("Impossible de créer le compte. Réessaie ou contacte le support.");
           }
         }
       }
@@ -230,12 +230,12 @@ export function AcceptationInvitation() {
 
             {invitation.invite_par_nom && (
               <div className="text-[12px] text-dim mb-6">
-                Invit\u00e9 par <span className="text-text font-medium">{invitation.invite_par_nom}</span>
+                Invité par <span className="text-text font-medium">{invitation.invite_par_nom}</span>
               </div>
             )}
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-              <FieldBlock label="Pr\u00e9nom" required>
+              <FieldBlock label="Prénom" required>
                 <input
                   type="text"
                   value={prenom}
@@ -256,7 +256,7 @@ export function AcceptationInvitation() {
               </FieldBlock>
             </div>
 
-            <FieldBlock label="T\u00e9l\u00e9phone portable" required className="mb-4">
+            <FieldBlock label="Téléphone portable" required className="mb-4">
               <input
                 type="tel"
                 value={telephone}
@@ -281,12 +281,12 @@ export function AcceptationInvitation() {
                     type="password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Minimum 6 caract\u00e8res"
+                    placeholder="Minimum 6 caractères"
                     className="field-input"
                   />
                   {password.length > 0 && password.length < 6 && (
                     <div className="text-[10px] text-amber mt-1.5">
-                      Encore {6 - password.length} caract\u00e8re(s)
+                      Encore {6 - password.length} caractère(s)
                     </div>
                   )}
                 </FieldBlock>
@@ -367,7 +367,7 @@ export function AcceptationInvitation() {
                 <span className="text-[#5DE5FF] underline underline-offset-2">
                   conditions d'utilisation
                 </span>{' '}
-                d'ALBA by Nikito et que mes saisies de contr\u00f4le soient enregistr\u00e9es.
+                d'ALBA by Nikito et que mes saisies de contrôle soient enregistrées.
               </span>
             </label>
           </div>
@@ -395,7 +395,7 @@ export function AcceptationInvitation() {
                   Activation en cours...
                 </span>
               ) : (
-                'Activer mon compte \u203a'
+                'Activer mon compte ›'
               )}
             </button>
           </div>

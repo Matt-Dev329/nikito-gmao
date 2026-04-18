@@ -374,7 +374,7 @@ export function ControleMensuel() {
                   pasCommence && 'bg-bg-card border border-white/[0.08] text-dim'
                 )}
               >
-                {fait ? '\u2713 ' : enCours ? '\u23F5 ' : '\u25CB '}
+                {fait ? '✓ ' : enCours ? '⏵ ' : '○ '}
                 {z.label}
                 <span className={cn('ml-1.5 px-1.5 py-px rounded-lg text-[10px]', enCours ? 'bg-white/25' : 'bg-bg-app/30')}>
                   {z.fait}/{z.count}
@@ -432,7 +432,7 @@ export function ControleMensuel() {
                           !isOK && !isDeg && !isHS && !isActive && !isVerrouille && aRepondre && 'bg-[#2A2A5A] text-dim',
                         )}
                       >
-                        {isOK ? '\u2713' : isDeg ? '!' : isHS ? '\u00D7' : isVerrouille ? '\uD83D\uDD12' : isActive ? '\u25B8' : '\u25CB'}
+                        {isOK ? '✓' : isDeg ? '!' : isHS ? '×' : isVerrouille ? '🔒' : isActive ? '▸' : '○'}
                       </span>
 
                       <div className="flex-1 min-w-0">

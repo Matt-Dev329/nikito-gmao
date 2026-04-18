@@ -7,11 +7,11 @@ interface Props {
 }
 
 const typeConfig: Record<AlerteIA['type'], { icon: string; color: string }> = {
-  garantie_expiration: { icon: '\u23F0', color: 'border-l-amber' },
-  controle_manquant: { icon: '\uD83D\uDCCB', color: 'border-l-red' },
-  stock_critique: { icon: '\uD83D\uDCE6', color: 'border-l-amber' },
-  certification_expiration: { icon: '\uD83D\uDCDC', color: 'border-l-red' },
-  tendance_degradation: { icon: '\u26A0\uFE0F', color: 'border-l-red' },
+  garantie_expiration: { icon: '⏰', color: 'border-l-amber' },
+  controle_manquant: { icon: '📋', color: 'border-l-red' },
+  stock_critique: { icon: '📦', color: 'border-l-amber' },
+  certification_expiration: { icon: '📜', color: 'border-l-red' },
+  tendance_degradation: { icon: '⚠️', color: 'border-l-red' },
 };
 
 const prioriteStyle = {
