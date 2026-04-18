@@ -42,8 +42,8 @@ export interface Invitation {
   id: string;
   token: string;
   email: string | null;
-  prenom: string;
-  nom: string;
+  prenom: string | null;
+  nom: string | null;
   role_id: string;
   parcs_assignes: string[];
   est_manager: boolean;

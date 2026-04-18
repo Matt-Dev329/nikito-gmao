@@ -1,30 +1,34 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Logo } from '@/components/ui/Logo';
+import { AlbaLoginHero } from '@/components/ui/Logo';
+import { PhotoCapture } from '@/components/shared/PhotoCapture';
 import { supabase } from '@/lib/supabase';
 import { cn } from '@/lib/utils';
-
-// ============================================================
-// Page acceptation invitation
-// URL: /invitation/:token
-//
-// Selon auth_mode de l'invitation :
-//   - email_password : champ email pré-rempli + choix mot de passe
-//   - pin_seul       : choix code 6 chiffres (avec confirmation)
-//
-// Appelle la RPC accepter_invitation au final
-// ============================================================
 
 interface InvitationDetails {
   id: string;
   email: string | null;
-  prenom: string;
-  nom: string;
   role_label: string;
-  parcs_noms: string[];
+  parcs_codes: string[];
   invite_par_nom: string;
   auth_mode: 'email_password' | 'pin_seul';
   expire_le: string;
+}
+
+const TEL_REGEX = /^(\+33|0)[67]\s?\d{2}\s?\d{2}\s?\d{2}\s?\d{2}$/;
+
+function formatTel(value: string): string {
+  const digits = value.replace(/[^\d+]/g, '');
+  if (digits.startsWith('+33')) {
+    const rest = digits.slice(3);
+    const parts = rest.match(/.{1,2}/g) ?? [];
+    return '+33 ' + parts.join(' ');
+  }
+  if (digits.startsWith('0')) {
+    const parts = digits.match(/.{1,2}/g) ?? [];
+    return parts.join(' ');
+  }
+  return value;
 }
 
 export function AcceptationInvitation() {
@@ -34,24 +38,28 @@ export function AcceptationInvitation() {
   const [loading, setLoading] = useState(true);
   const [erreur, setErreur] = useState<string | null>(null);
 
-  // Champs
+  const [prenom, setPrenom] = useState('');
+  const [nom, setNom] = useState('');
+  const [telephone, setTelephone] = useState('');
   const [password, setPassword] = useState('');
+  const [passwordConfirm, setPasswordConfirm] = useState('');
   const [pin, setPin] = useState('');
   const [pinConfirm, setPinConfirm] = useState('');
+  const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+  const [acceptCgu, setAcceptCgu] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     if (!token) {
-      setErreur('Lien d\'invitation invalide');
+      setErreur("Lien d'invitation invalide");
       setLoading(false);
       return;
     }
 
-    // Récupérer les détails de l'invitation (vue publique non-RLS à créer côté SQL)
     supabase
       .from('invitations')
       .select(
-        `id, email, prenom, nom, auth_mode, expire_le,
+        `id, email, auth_mode, expire_le, parcs_assignes,
          roles(nom),
          invite_par:utilisateurs!invitations_invite_par_id_fkey(prenom, nom)`
       )
@@ -60,23 +68,30 @@ export function AcceptationInvitation() {
       .single()
       .then(async ({ data, error }) => {
         if (error || !data) {
-          setErreur('Cette invitation est invalide, déjà utilisée ou expirée.');
+          setErreur("Cette invitation est invalide, d\u00e9j\u00e0 utilis\u00e9e ou expir\u00e9e.");
           setLoading(false);
           return;
         }
 
-        // Récupérer les noms des parcs si parcs_assignes
-        // (simplification : on charge tout sans le détail parc ici)
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const d = data as any;
+        const parcIds: string[] = d.parcs_assignes ?? [];
+
+        let parcsCodes: string[] = [];
+        if (parcIds.length > 0) {
+          const { data: parcsData } = await supabase
+            .from('parcs')
+            .select('code')
+            .in('id', parcIds);
+          parcsCodes = (parcsData ?? []).map((p: { code: string }) => p.code);
+        }
+
         setInvitation({
           id: d.id,
           email: d.email,
-          prenom: d.prenom,
-          nom: d.nom,
           role_label: d.roles?.nom ?? 'Utilisateur',
-          parcs_noms: [],
-          invite_par_nom: `${d.invite_par?.prenom ?? ''} ${d.invite_par?.nom ?? ''}`,
+          parcs_codes: parcsCodes,
+          invite_par_nom: `${d.invite_par?.prenom ?? ''} ${d.invite_par?.nom ?? ''}`.trim(),
           auth_mode: d.auth_mode,
           expire_le: d.expire_le,
         });
@@ -84,15 +99,57 @@ export function AcceptationInvitation() {
       });
   }, [token]);
 
+  const onPhotoUploaded = useCallback((url: string) => {
+    setPhotoUrl(url);
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#060918] text-dim flex items-center justify-center">
+        <div className="w-6 h-6 border-2 border-[#5DE5FF] border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (erreur && !invitation) {
+    return (
+      <div className="min-h-screen bg-[#060918] text-text flex items-center justify-center p-6">
+        <div className="bg-[#131836] rounded-2xl p-8 max-w-md text-center border border-white/[0.06]">
+          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-red/10 flex items-center justify-center">
+            <svg className="w-8 h-8 text-red" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <div className="text-lg font-semibold mb-2">Invitation invalide</div>
+          <div className="text-sm text-dim leading-relaxed">{erreur}</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!invitation) return null;
+
+  const isEmailMode = invitation.auth_mode === 'email_password';
+  const telValide = TEL_REGEX.test(telephone.replace(/\s/g, ''));
+
+  const peutValider =
+    prenom.trim().length > 0 &&
+    nom.trim().length > 0 &&
+    telValide &&
+    acceptCgu &&
+    (isEmailMode
+      ? password.length >= 6 && password === passwordConfirm
+      : pin.length === 6 && pin === pinConfirm);
+
   const accepter = async () => {
-    if (!invitation || !token) return;
+    if (!invitation || !token || !peutValider) return;
     setSubmitting(true);
     setErreur(null);
 
     try {
       let authUserId: string | null = null;
 
-      if (invitation.auth_mode === 'email_password') {
+      if (isEmailMode) {
         const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
           email: invitation.email!,
           password,
@@ -113,7 +170,7 @@ export function AcceptationInvitation() {
         } else {
           authUserId = signUpData.user?.id ?? null;
           if (!authUserId && signUpData.user === null) {
-            throw new Error('Impossible de créer le compte. Réessaie ou contacte le support.');
+            throw new Error("Impossible de cr\u00e9er le compte. R\u00e9essaie ou contacte le support.");
           }
         }
       }
@@ -121,12 +178,16 @@ export function AcceptationInvitation() {
       const { error: rpcError } = await supabase.rpc('accepter_invitation', {
         p_token: token,
         p_auth_user_id: authUserId,
-        p_pin_clair: invitation.auth_mode === 'pin_seul' ? pin : null,
+        p_pin_clair: !isEmailMode ? pin : null,
+        p_prenom: prenom.trim(),
+        p_nom: nom.trim(),
+        p_telephone: telephone.replace(/\s/g, ''),
+        p_photo_url: photoUrl,
       });
 
       if (rpcError) throw rpcError;
 
-      if (invitation.auth_mode === 'email_password' && authUserId) {
+      if (isEmailMode && authUserId) {
         const { data: session } = await supabase.auth.getSession();
         if (!session?.session) {
           await supabase.auth.signInWithPassword({
@@ -136,11 +197,7 @@ export function AcceptationInvitation() {
         }
       }
 
-      if (invitation.auth_mode === 'pin_seul') {
-        navigate('/staff/login');
-      } else {
-        navigate('/');
-      }
+      navigate(isEmailMode ? '/' : '/staff/login');
     } catch (e) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       setErreur((e as any).message ?? 'Erreur inconnue');
@@ -148,186 +205,266 @@ export function AcceptationInvitation() {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-bg-app text-dim flex items-center justify-center">
-        Chargement...
-      </div>
-    );
-  }
-
-  if (erreur && !invitation) {
-    return (
-      <div className="min-h-screen bg-bg-app text-text flex items-center justify-center p-6">
-        <div className="bg-bg-card rounded-2xl p-6 max-w-md text-center">
-          <div className="text-4xl mb-3">🔒</div>
-          <div className="text-base font-semibold mb-2">Invitation invalide</div>
-          <div className="text-sm text-dim">{erreur}</div>
-        </div>
-      </div>
-    );
-  }
-
-  if (!invitation) return null;
-
-  const peutValider =
-    invitation.auth_mode === 'email_password'
-      ? password.length >= 8
-      : pin.length === 6 && pin === pinConfirm;
-
   return (
-    <div className="min-h-screen bg-bg-app text-text flex items-center justify-center p-6">
-      <div className="w-full max-w-[520px] bg-bg-app rounded-2xl overflow-hidden border border-nikito-violet/20">
-        {/* Bandeau bienvenue */}
-        <div className="bg-gradient-cta p-7 px-6 text-center">
-          <div className="inline-flex items-center justify-center w-14 h-14 bg-bg-app/20 rounded-2xl mb-3">
-            <Logo size="md" withText={false} />
+    <div className="min-h-screen bg-[#060918] text-text flex flex-col items-center justify-start py-8 px-4 md:py-12">
+      <div className="mb-8">
+        <AlbaLoginHero />
+      </div>
+
+      <div className="w-full max-w-[520px]">
+        <div className="bg-[#131836] rounded-2xl border border-white/[0.06] overflow-hidden">
+          <div className="p-6 pb-0 md:p-8 md:pb-0">
+            <div className="flex flex-wrap items-center gap-2 mb-5">
+              <span className="inline-block bg-[#E85A9B]/15 text-[#E85A9B] text-[11px] font-bold px-3 py-1.5 rounded-full uppercase tracking-wider">
+                {invitation.role_label}
+              </span>
+              {invitation.parcs_codes.map((code) => (
+                <span
+                  key={code}
+                  className="inline-block bg-[#5DE5FF]/10 text-[#5DE5FF] text-[11px] font-bold px-3 py-1.5 rounded-full uppercase tracking-wider"
+                >
+                  {code}
+                </span>
+              ))}
+            </div>
+
+            {invitation.invite_par_nom && (
+              <div className="text-[12px] text-dim mb-6">
+                Invit\u00e9 par <span className="text-text font-medium">{invitation.invite_par_nom}</span>
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+              <FieldBlock label="Pr\u00e9nom" required>
+                <input
+                  type="text"
+                  value={prenom}
+                  onChange={(e) => setPrenom(e.target.value)}
+                  placeholder="Jean"
+                  autoFocus
+                  className="field-input"
+                />
+              </FieldBlock>
+              <FieldBlock label="Nom" required>
+                <input
+                  type="text"
+                  value={nom}
+                  onChange={(e) => setNom(e.target.value)}
+                  placeholder="Dupont"
+                  className="field-input"
+                />
+              </FieldBlock>
+            </div>
+
+            <FieldBlock label="T\u00e9l\u00e9phone portable" required className="mb-4">
+              <input
+                type="tel"
+                value={telephone}
+                onChange={(e) => setTelephone(formatTel(e.target.value))}
+                placeholder="+33 6 12 34 56 78"
+                className={cn(
+                  'field-input',
+                  telephone.length > 5 && !telValide && '!border-red/40'
+                )}
+              />
+              {telephone.length > 5 && !telValide && (
+                <div className="text-[10px] text-red mt-1.5">
+                  Format attendu : +33 6 XX XX XX XX ou 06 XX XX XX XX
+                </div>
+              )}
+            </FieldBlock>
+
+            {isEmailMode && (
+              <>
+                <FieldBlock label="Mot de passe" required className="mb-4">
+                  <input
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Minimum 6 caract\u00e8res"
+                    className="field-input"
+                  />
+                  {password.length > 0 && password.length < 6 && (
+                    <div className="text-[10px] text-amber mt-1.5">
+                      Encore {6 - password.length} caract\u00e8re(s)
+                    </div>
+                  )}
+                </FieldBlock>
+                <FieldBlock label="Confirmer le mot de passe" required className="mb-4">
+                  <input
+                    type="password"
+                    value={passwordConfirm}
+                    onChange={(e) => setPasswordConfirm(e.target.value)}
+                    placeholder="Retapez votre mot de passe"
+                    className={cn(
+                      'field-input',
+                      passwordConfirm.length > 0 && password !== passwordConfirm && '!border-red/40'
+                    )}
+                  />
+                  {passwordConfirm.length > 0 && password !== passwordConfirm && (
+                    <div className="text-[10px] text-red mt-1.5">Les mots de passe ne correspondent pas</div>
+                  )}
+                  {passwordConfirm.length > 0 && password === passwordConfirm && password.length >= 6 && (
+                    <div className="text-[10px] text-green mt-1.5">Les mots de passe correspondent</div>
+                  )}
+                </FieldBlock>
+              </>
+            )}
+
+            {!isEmailMode && (
+              <div className="mb-4">
+                <FieldBlock label="Code de connexion (6 chiffres)" required className="mb-3">
+                  <PinInput value={pin} onChange={setPin} />
+                </FieldBlock>
+                <FieldBlock label="Confirmer le code" required>
+                  <PinInput value={pinConfirm} onChange={setPinConfirm} />
+                  {pinConfirm.length === 6 && pin !== pinConfirm && (
+                    <div className="text-red text-[10px] text-center mt-2">
+                      Les codes ne correspondent pas
+                    </div>
+                  )}
+                  {pinConfirm.length === 6 && pin === pinConfirm && (
+                    <div className="text-green text-[10px] text-center mt-2">
+                      Les codes correspondent
+                    </div>
+                  )}
+                </FieldBlock>
+              </div>
+            )}
+
+            <div className="mb-5">
+              <PhotoCapture
+                bucketName="photos-profil"
+                storagePath={`invitation_${invitation.id}`}
+                onPhotoUploaded={onPhotoUploaded}
+                label="Photo de profil (optionnel)"
+              />
+            </div>
+
+            <label className="flex items-start gap-3 mb-6 cursor-pointer group">
+              <div className="relative flex-shrink-0 mt-0.5">
+                <input
+                  type="checkbox"
+                  checked={acceptCgu}
+                  onChange={(e) => setAcceptCgu(e.target.checked)}
+                  className="sr-only peer"
+                />
+                <div className={cn(
+                  'w-5 h-5 rounded-[5px] border-2 flex items-center justify-center transition-all',
+                  acceptCgu
+                    ? 'bg-[#5DE5FF] border-[#5DE5FF]'
+                    : 'border-white/20 group-hover:border-white/40'
+                )}>
+                  {acceptCgu && (
+                    <svg className="w-3 h-3 text-[#060918]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                  )}
+                </div>
+              </div>
+              <span className="text-[12px] text-dim leading-relaxed">
+                J'accepte les{' '}
+                <span className="text-[#5DE5FF] underline underline-offset-2">
+                  conditions d'utilisation
+                </span>{' '}
+                d'ALBA by Nikito et que mes saisies de contr\u00f4le soient enregistr\u00e9es.
+              </span>
+            </label>
           </div>
-          <div className="text-[11px] text-bg-app/70 tracking-[1.4px] font-semibold">
-            BIENVENUE SUR ALBA
-          </div>
-          <div className="text-[11px] text-bg-app/50 mt-0.5">by Nikito</div>
-          <div className="text-[22px] font-bold text-bg-app mt-1.5">
-            Salut {invitation.prenom} ! 👋
+
+          <div className="px-6 pb-6 md:px-8 md:pb-8">
+            {erreur && (
+              <div className="bg-red/10 border border-red/30 text-red text-xs p-3 rounded-lg mb-4">
+                {erreur}
+              </div>
+            )}
+
+            <button
+              onClick={accepter}
+              disabled={!peutValider || submitting}
+              className={cn(
+                'w-full py-4 rounded-xl text-[15px] font-bold transition-all min-h-[52px]',
+                peutValider && !submitting
+                  ? 'bg-gradient-to-r from-[#E85A9B] to-[#5DE5FF] text-white shadow-lg shadow-[#E85A9B]/20 hover:shadow-[#E85A9B]/30'
+                  : 'bg-white/[0.06] text-dim cursor-not-allowed'
+              )}
+            >
+              {submitting ? (
+                <span className="flex items-center justify-center gap-2">
+                  <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  Activation en cours...
+                </span>
+              ) : (
+                'Activer mon compte \u203a'
+              )}
+            </button>
           </div>
         </div>
 
-        <main className="p-6 px-[26px]">
-          {/* Récap */}
-          <div className="bg-bg-card rounded-xl p-3.5 px-4 mb-[22px]">
-            <div className="text-[11px] text-dim uppercase tracking-wider mb-2">
-              Tu as été invité par
-            </div>
-            <div className="text-[13px] mb-2.5">
-              <strong>{invitation.invite_par_nom}</strong>
-            </div>
-            <div className="grid grid-cols-2 gap-2.5 text-[11px] text-dim">
-              <div>
-                Rôle : <strong className="text-text">{invitation.role_label}</strong>
-              </div>
-              {invitation.email && (
-                <div>
-                  Email : <strong className="text-text">{invitation.email}</strong>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Mode email_password */}
-          {invitation.auth_mode === 'email_password' && (
-            <div className="mb-4">
-              <label className="block text-xs font-semibold mb-1.5">
-                Choisis ton mot de passe
-              </label>
-              <div className="text-[11px] text-dim mb-3.5 leading-relaxed">
-                Minimum 8 caractères. Un mélange de lettres, chiffres et symboles est conseillé.
-              </div>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full bg-bg-deep border border-white/[0.08] rounded-lg p-3 px-3.5 text-text text-sm outline-none focus:border-nikito-cyan"
-                placeholder="••••••••"
-                autoFocus
-              />
-              {password.length > 0 && password.length < 8 && (
-                <div className="text-amber text-[10px] mt-2">
-                  Encore {8 - password.length} caractère(s)
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Mode pin_seul */}
-          {invitation.auth_mode === 'pin_seul' && (
-            <div className="mb-[18px]">
-              <label className="block text-xs font-semibold mb-1.5">
-                Choisis ton code de connexion
-              </label>
-              <div className="text-[11px] text-dim mb-3.5 leading-relaxed">
-                6 chiffres. Tu l'utiliseras à chaque fois sur la tablette du parc.{' '}
-                <strong className="text-amber">
-                  Choisis-en un dont tu te souviendras facilement
-                </strong>{' '}
-                (mais évite ta date de naissance).
-              </div>
-
-              <PinInput value={pin} onChange={setPin} autoFocus />
-
-              <label className="block text-xs font-semibold mb-1.5 mt-3.5">
-                Confirme ton code
-              </label>
-              <PinInput value={pinConfirm} onChange={setPinConfirm} />
-
-              {pinConfirm.length === 6 && pin !== pinConfirm && (
-                <div className="text-red text-[10px] text-center mt-2">
-                  Les codes ne correspondent pas
-                </div>
-              )}
-              {pinConfirm.length === 6 && pin === pinConfirm && (
-                <div className="text-green text-[10px] text-center mt-2">
-                  ✓ Les codes correspondent
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* RGPD */}
-          <div className="bg-bg-deep rounded-[10px] p-3 px-3.5 mb-[18px] border border-dashed border-nikito-violet/30">
-            <div className="flex items-start gap-2">
-              <span className="text-nikito-cyan text-sm flex-shrink-0">ⓘ</span>
-              <div className="text-[11px] text-dim leading-relaxed">
-                En activant ton compte, tu acceptes qu'ALBA by Nikito enregistre{' '}
-                <strong className="text-text">tes saisies de contrôle</strong> (qui, quand, quoi).
-                Aucune donnée personnelle au-delà de ton prénom·nom n'est collectée.
-              </div>
-            </div>
-          </div>
-
-          {erreur && (
-            <div className="bg-red/10 border border-red/30 text-red text-xs p-3 rounded-lg mb-3">
-              {erreur}
-            </div>
-          )}
-
-          <button
-            onClick={accepter}
-            disabled={!peutValider || submitting}
-            className={cn(
-              'bg-gradient-cta text-text py-3.5 rounded-xl text-sm font-bold w-full mb-3',
-              (!peutValider || submitting) && 'opacity-40 cursor-not-allowed'
-            )}
-          >
-            {submitting ? 'Activation...' : 'Activer mon compte ›'}
-          </button>
-
-          <div className="text-center text-[11px] text-faint">
-            Ce lien expire le{' '}
-            {new Date(invitation.expire_le).toLocaleString('fr-FR', {
-              day: 'numeric',
-              month: 'long',
-              year: 'numeric',
-              hour: '2-digit',
-              minute: '2-digit',
-            })}
-          </div>
-        </main>
+        <div className="text-center text-[11px] text-[#6E6E96] mt-5">
+          Ce lien expire le{' '}
+          {new Date(invitation.expire_le).toLocaleString('fr-FR', {
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+          })}
+        </div>
       </div>
+
+      <style>{`
+        .field-input {
+          width: 100%;
+          background: #0a0e27;
+          border: 1px solid rgba(255,255,255,0.08);
+          border-radius: 10px;
+          padding: 12px 14px;
+          color: #ffffff;
+          font-size: 13px;
+          outline: none;
+          min-height: 44px;
+          transition: border-color 0.15s;
+        }
+        .field-input:focus {
+          border-color: #5DE5FF;
+        }
+        .field-input::placeholder {
+          color: #6E6E96;
+        }
+      `}</style>
     </div>
   );
 }
 
-// ------------------------------------------------------------
-// Sous-composant PinInput
-// ------------------------------------------------------------
+function FieldBlock({
+  label,
+  required,
+  className,
+  children,
+}: {
+  label: string;
+  required?: boolean;
+  className?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className={className}>
+      <label className="block text-[11px] text-[#A8A8C8] uppercase tracking-wider mb-2 font-medium">
+        {label}
+        {required && <span className="text-[#E85A9B] ml-0.5">*</span>}
+      </label>
+      {children}
+    </div>
+  );
+}
+
 function PinInput({
   value,
   onChange,
-  autoFocus,
 }: {
   value: string;
   onChange: (v: string) => void;
-  autoFocus?: boolean;
 }) {
   return (
     <div className="flex gap-2 justify-center">
@@ -336,7 +473,6 @@ function PinInput({
           key={i}
           type="tel"
           maxLength={1}
-          autoFocus={autoFocus && i === 0}
           value={value[i] ?? ''}
           onChange={(e) => {
             const v = e.target.value.replace(/\D/g, '');
@@ -354,8 +490,8 @@ function PinInput({
             }
           }}
           className={cn(
-            'w-[42px] h-[54px] rounded-[10px] bg-bg-deep text-center text-2xl font-bold text-nikito-cyan outline-none',
-            value[i] ? 'border-2 border-nikito-pink' : 'border border-white/[0.12]'
+            'w-[42px] h-[54px] rounded-[10px] bg-[#0a0e27] text-center text-2xl font-bold text-[#5DE5FF] outline-none min-h-[44px]',
+            value[i] ? 'border-2 border-[#E85A9B]' : 'border border-white/[0.12]'
           )}
         />
       ))}

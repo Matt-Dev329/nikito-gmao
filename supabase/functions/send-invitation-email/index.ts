@@ -15,8 +15,8 @@ function getCorsHeaders(req: Request) {
 
 interface InvitationPayload {
   destinataire_email: string;
-  destinataire_prenom: string;
-  destinataire_nom: string;
+  destinataire_prenom?: string | null;
+  destinataire_nom?: string | null;
   role_label: string;
   invitant_prenom: string;
   invitant_nom: string;
@@ -26,6 +26,9 @@ interface InvitationPayload {
 
 function buildHtml(p: InvitationPayload): string {
   const parcsText = p.parcs_labels.join(", ");
+  const greeting = p.destinataire_prenom
+    ? `Bonjour ${p.destinataire_prenom},`
+    : "Bonjour,";
 
   return `<!DOCTYPE html>
 <html lang="fr">
@@ -60,7 +63,7 @@ function buildHtml(p: InvitationPayload): string {
 
               <tr>
                 <td style="font-size:18px;color:#ffffff;font-weight:600;padding-bottom:20px;">
-                  Bonjour ${p.destinataire_prenom},
+                  ${greeting}
                 </td>
               </tr>
 
@@ -83,7 +86,7 @@ function buildHtml(p: InvitationPayload): string {
                     <tr>
                       <td align="center" style="border-radius:10px;background:linear-gradient(135deg,#ff4d8b,#5DE5FF);">
                         <a href="${p.lien_invitation}" target="_blank" style="display:inline-block;padding:14px 40px;font-size:15px;font-weight:700;color:#ffffff;text-decoration:none;border-radius:10px;">
-                          Accepter l'invitation
+                          Cr\u00e9er mon compte
                         </a>
                       </td>
                     </tr>
