@@ -143,7 +143,7 @@ function DropdownPanel({
   const posClass =
     position === 'left'
       ? 'absolute left-full top-0 ml-2'
-      : 'absolute left-0 right-0 top-full mt-1';
+      : 'absolute left-0 right-0 bottom-full mb-1';
 
   if (parcPickerFor) {
     const roleLabel = roleLabels[parcPickerFor];
