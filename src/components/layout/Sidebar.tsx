@@ -245,12 +245,6 @@ export function Sidebar({ user, roleAffiche, roleCode, realRoleCode, compact = f
       </div>
 
       <div className={cn('border-t border-white/[0.06] flex-shrink-0 relative', compact ? 'pt-3 pb-2' : 'pt-3.5 px-2.5')}>
-        {showViewAs && (
-          <div className={cn('mb-1', compact ? 'flex justify-center' : 'px-1')}>
-            <ViewAsSelector compact={compact} />
-          </div>
-        )}
-
         <button
           onClick={() => setUserMenuOpen((o) => !o)}
           title={compact ? `${user.nom} · ${user.role}` : undefined}
@@ -292,7 +286,13 @@ export function Sidebar({ user, roleAffiche, roleCode, realRoleCode, compact = f
         </button>
 
         {userMenuOpen && (
-          <div className="absolute bottom-full left-0 right-0 mb-1 px-2.5 py-2 bg-bg-card border border-white/[0.08] rounded-xl shadow-xl z-50">
+          <div className="absolute bottom-full left-0 right-0 mb-1 bg-bg-card border border-white/[0.08] rounded-xl shadow-xl z-50 py-2 px-1.5">
+            {showViewAs && (
+              <div className="px-1.5 mb-1">
+                <ViewAsSelector />
+              </div>
+            )}
+
             <NavLink
               to="/gmao/profil"
               onClick={() => { setUserMenuOpen(false); onNavClick?.(); }}
