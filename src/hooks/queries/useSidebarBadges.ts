@@ -32,7 +32,7 @@ export function useSidebarBadges() {
         supabase
           .from('incidents')
           .select('id', { count: 'exact', head: true })
-          .in('statut', ['ouvert', 'a_faire'])
+          .in('statut', ['ouvert', 'assigne'])
           .eq('est_formation', estFormation),
         supabase
           .from('invitations')
