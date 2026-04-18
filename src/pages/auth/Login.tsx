@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, Navigate, useLocation } from 'react-router-dom';
 import { AlbaLoginHero } from '@/components/ui/Logo';
 import { useAuth } from '@/hooks/useAuth';
@@ -24,6 +24,26 @@ export function Login() {
 
   const destination = (location.state as { from?: string })?.from || '/gmao';
 
+  useEffect(() => {
+    if (authLoading) return;
+    if (!authUser) return;
+
+    if (sessionStorage.getItem('alba_2fa_pending') === 'true') {
+      const stored = sessionStorage.getItem('alba_2fa_data');
+      if (stored) {
+        try {
+          const data = JSON.parse(stored) as Pending2FA;
+          setPending2FA(data);
+          return;
+        } catch {
+          sessionStorage.removeItem('alba_2fa_pending');
+          sessionStorage.removeItem('alba_2fa_data');
+        }
+      }
+      sessionStorage.removeItem('alba_2fa_pending');
+    }
+  }, [authLoading, authUser]);
+
   if (authLoading) {
     return (
       <div className="min-h-screen bg-bg-app text-text flex items-center justify-center">
@@ -32,7 +52,7 @@ export function Login() {
     );
   }
 
-  if (authUser && !pending2FA) {
+  if (authUser && !pending2FA && sessionStorage.getItem('alba_2fa_pending') !== 'true') {
     return <Navigate to={destination} replace />;
   }
 
@@ -42,10 +62,14 @@ export function Login() {
         email={pending2FA.email}
         prenom={pending2FA.prenom}
         onSuccess={() => {
+          sessionStorage.removeItem('alba_2fa_pending');
+          sessionStorage.removeItem('alba_2fa_data');
           setPending2FA(null);
           navigate(destination, { replace: true });
         }}
         onCancel={async () => {
+          sessionStorage.removeItem('alba_2fa_pending');
+          sessionStorage.removeItem('alba_2fa_data');
           await supabase.auth.signOut();
           setPending2FA(null);
         }}
@@ -83,10 +107,15 @@ export function Login() {
 
     if (deviceReconnu === true) {
       await supabase.rpc('rafraichir_device', { p_device_hash: deviceHash });
+      sessionStorage.removeItem('alba_2fa_pending');
+      sessionStorage.removeItem('alba_2fa_data');
       setLoading(false);
       navigate(destination, { replace: true });
       return;
     }
+
+    sessionStorage.setItem('alba_2fa_pending', 'true');
+    sessionStorage.setItem('alba_2fa_data', JSON.stringify({ email: userEmail, prenom }));
 
     const code = Math.floor(100000 + Math.random() * 900000).toString();
 

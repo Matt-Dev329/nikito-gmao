@@ -103,6 +103,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signOut = async () => {
+    sessionStorage.removeItem('alba_2fa_pending');
+    sessionStorage.removeItem('alba_2fa_data');
     return supabase.auth.signOut();
   };
 
