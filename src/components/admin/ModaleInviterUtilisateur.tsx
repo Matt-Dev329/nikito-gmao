@@ -120,28 +120,33 @@ export function ModaleInviterUtilisateur({
         .filter((p) => parcsChoisis.includes(p.id))
         .map((p) => p.code);
 
+      const payload = {
+        destinataire_email: email,
+        destinataire_prenom: prenom,
+        destinataire_nom: nom,
+        role_label: roleLabels[roleChoisi],
+        invitant_prenom: utilisateur.prenom,
+        invitant_nom: utilisateur.nom,
+        lien_invitation: lien,
+        parcs_labels: parcsLabels,
+      };
+      console.log('[INVITATION] Payload envoyé:', JSON.stringify(payload));
+      console.log('[INVITATION] Appel Edge Function...');
+
       const { data: fnData, error: fnError } = await supabase.functions.invoke(
         'send-invitation-email',
-        {
-          body: {
-            destinataire_email: email,
-            destinataire_prenom: prenom,
-            destinataire_nom: nom,
-            role_label: roleLabels[roleChoisi],
-            invitant_prenom: utilisateur.prenom,
-            invitant_nom: utilisateur.nom,
-            lien_invitation: lien,
-            parcs_labels: parcsLabels,
-          },
-        },
+        { body: payload },
       );
 
+      console.log('[INVITATION] fnError:', fnError);
+      console.log('[INVITATION] fnData:', fnData);
+
       if (fnError) {
-        console.error('[send-invitation-email] fnError:', fnError, 'fnData:', fnData);
+        console.error('[INVITATION] Edge Function error:', fnError);
         setEmailStatus('failed');
         setEmailErreurDetail({ error: String(fnError) });
       } else if (fnData && fnData.success === false) {
-        console.error('[send-invitation-email] Resend failure:', fnData);
+        console.error('[INVITATION] Resend failure:', fnData);
         setEmailStatus('failed');
         setEmailErreurDetail(fnData);
       } else {

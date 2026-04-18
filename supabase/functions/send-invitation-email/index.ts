@@ -1,11 +1,17 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "https://nikito.tech",
-  "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-  "Access-Control-Allow-Headers":
-    "Content-Type, Authorization, X-Client-Info, Apikey",
-};
+const allowedOrigins = ["https://nikito.tech", "https://nikito.tech:443"];
+
+function getCorsHeaders(req: Request) {
+  const origin = req.headers.get("origin") || "";
+  const corsOrigin = allowedOrigins.includes(origin) ? origin : "*";
+  return {
+    "Access-Control-Allow-Origin": corsOrigin,
+    "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+    "Access-Control-Allow-Headers":
+      "Content-Type, Authorization, X-Client-Info, Apikey",
+  };
+}
 
 interface InvitationPayload {
   destinataire_email: string;
@@ -127,8 +133,10 @@ function buildHtml(p: InvitationPayload): string {
 }
 
 Deno.serve(async (req: Request) => {
+  const cors = getCorsHeaders(req);
+
   if (req.method === "OPTIONS") {
-    return new Response(null, { status: 200, headers: corsHeaders });
+    return new Response(null, { status: 200, headers: cors });
   }
 
   try {
@@ -136,7 +144,7 @@ Deno.serve(async (req: Request) => {
     if (!apiKey) {
       return new Response(
         JSON.stringify({ success: false, error: "RESEND_API_KEY non configuree" }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        { status: 200, headers: { ...cors, "Content-Type": "application/json" } },
       );
     }
 
@@ -170,7 +178,7 @@ Deno.serve(async (req: Request) => {
           from_used: "noreply@nikito.tech",
           to_used: payload.destinataire_email,
         }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        { status: 200, headers: { ...cors, "Content-Type": "application/json" } },
       );
     }
 
@@ -178,13 +186,13 @@ Deno.serve(async (req: Request) => {
 
     return new Response(
       JSON.stringify({ success: true, resend_id: resendData.id }),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      { status: 200, headers: { ...cors, "Content-Type": "application/json" } },
     );
   } catch (err) {
     console.error("send-invitation-email error:", err);
     return new Response(
       JSON.stringify({ success: false, error: "Erreur interne", detail: String(err) }),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      { status: 200, headers: { ...cors, "Content-Type": "application/json" } },
     );
   }
 });
