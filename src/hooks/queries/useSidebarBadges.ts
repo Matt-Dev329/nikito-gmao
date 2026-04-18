@@ -9,6 +9,7 @@ interface SidebarBadges {
   invitationsPending: number;
   controlesManquants: number;
   notificationsIA: number;
+  interventionsEnCours: number;
 }
 
 export function useSidebarBadges() {
@@ -20,7 +21,7 @@ export function useSidebarBadges() {
   return useQuery({
     queryKey: ['sidebar-badges', estFormation, today],
     queryFn: async (): Promise<SidebarBadges> => {
-      const [recRes, fpRes, incRes, invRes, notifRes] = await Promise.all([
+      const [recRes, fpRes, incRes, invRes, notifRes, enCoursRes] = await Promise.all([
         supabase
           .from('vue_recurrences_actives')
           .select('equipement_id', { count: 'exact', head: true })
@@ -45,6 +46,11 @@ export function useSidebarBadges() {
           .select('id', { count: 'exact', head: true })
           .eq('statut', 'en_attente')
           .eq('est_formation', estFormation),
+        supabase
+          .from('incidents')
+          .select('id', { count: 'exact', head: true })
+          .eq('statut', 'en_cours')
+          .eq('est_formation', estFormation),
       ]);
 
       let controlesManquants = 0;
@@ -66,6 +72,7 @@ export function useSidebarBadges() {
         invitationsPending: invRes.count ?? 0,
         controlesManquants,
         notificationsIA: notifRes.count ?? 0,
+        interventionsEnCours: enCoursRes.count ?? 0,
       };
     },
     refetchInterval: 60_000,

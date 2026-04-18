@@ -38,7 +38,7 @@ interface Badge {
 interface NavItem {
   to: string;
   label: string;
-  badgeKey?: 'recurrences' | 'cinqPourquoi' | 'operations' | 'invitationsPending' | 'controlesManquants' | 'notificationsIA';
+  badgeKey?: 'recurrences' | 'cinqPourquoi' | 'operations' | 'invitationsPending' | 'controlesManquants' | 'notificationsIA' | 'interventionsEnCours';
   badgeTone?: 'red' | 'amber';
   roles: RoleUtilisateur[];
   end?: boolean;
@@ -50,7 +50,7 @@ const sections: { titre: string; items: NavItem[] }[] = [
     items: [
       { to: '/gmao', label: 'Tableau de bord', roles: ['direction', 'chef_maintenance'], end: true },
       { to: '/gmao/mon-parc', label: 'Mon parc', roles: ['manager_parc'] },
-      { to: '/gmao/operations', label: 'Opérations', badgeKey: 'operations', badgeTone: 'red', roles: ['direction', 'chef_maintenance', 'technicien'] },
+      { to: '/gmao/operations', label: 'Opérations', badgeKey: 'operations', badgeTone: 'red', roles: ['direction', 'chef_maintenance', 'technicien', 'manager_parc'] },
       { to: '/gmao/equipements', label: 'Équipements', roles: ['direction', 'chef_maintenance', 'technicien', 'manager_parc'] },
       { to: '/gmao/ia-predictive', label: 'IA Prédictive', roles: ['direction', 'chef_maintenance'] },
       { to: '/gmao/flotte', label: 'Flotte', roles: ['direction', 'chef_maintenance'] },
@@ -95,7 +95,7 @@ interface SidebarProps {
 
 function resolveBadge(
   item: NavItem,
-  badges: { recurrences: number; cinqPourquoi: number; operations: number; invitationsPending: number; controlesManquants: number; notificationsIA: number } | undefined
+  badges: { recurrences: number; cinqPourquoi: number; operations: number; invitationsPending: number; controlesManquants: number; notificationsIA: number; interventionsEnCours: number } | undefined
 ): Badge | undefined {
   if (!item.badgeKey || !badges) return undefined;
   const count = badges[item.badgeKey] ?? 0;

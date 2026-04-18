@@ -38,12 +38,15 @@ function buildItems(badges: {
   cinqPourquoi: number;
   notificationsIA: number;
   invitationsPending: number;
+  interventionsEnCours: number;
 }): NotifItem[] {
   const items: NotifItem[] = [];
   if (badges.controlesManquants > 0)
     items.push({ key: 'controlesManquants', label: 'Controles manquants', count: badges.controlesManquants, tone: 'red', to: '/staff/controle-ouverture' });
   if (badges.operations > 0)
     items.push({ key: 'operations', label: 'Incidents ouverts', count: badges.operations, tone: 'red', to: '/gmao/operations' });
+  if (badges.interventionsEnCours > 0)
+    items.push({ key: 'interventionsEnCours', label: 'Interventions en cours', count: badges.interventionsEnCours, tone: 'red', to: '/gmao/operations' });
   if (badges.recurrences > 0)
     items.push({ key: 'recurrences', label: 'Recurrences detectees', count: badges.recurrences, tone: 'red', to: '/gmao/recurrences' });
   if (badges.cinqPourquoi > 0)

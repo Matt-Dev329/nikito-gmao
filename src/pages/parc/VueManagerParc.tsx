@@ -6,6 +6,9 @@ import { useParcs } from '@/hooks/queries/useReferentiel';
 import { useFormationFilter } from '@/hooks/useFormation';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
+import { SuiviInterventions } from '@/pages/interventions/SuiviInterventions';
+
+type Onglet = 'resume' | 'interventions';
 
 export function VueManagerParc() {
   const { utilisateur } = useAuth();
@@ -19,6 +22,7 @@ export function VueManagerParc() {
   }, [allParcs, utilisateur]);
 
   const [selectedParcId, setSelectedParcId] = useState<string | null>(null);
+  const [onglet, setOnglet] = useState<Onglet>('resume');
 
   const parcId = parcsUser.length === 1 ? parcsUser[0].id : selectedParcId;
   const parc = parcsUser.find((p) => p.id === parcId) ?? null;
@@ -113,11 +117,38 @@ export function VueManagerParc() {
         )}
       </div>
 
+      {parcId && (
+        <div className="flex gap-1 bg-bg-deep rounded-lg p-0.5 mb-5 w-fit">
+          <button
+            onClick={() => setOnglet('resume')}
+            className={cn(
+              'px-4 py-2 rounded-md text-[12px] font-medium transition-colors',
+              onglet === 'resume'
+                ? 'bg-bg-card text-text shadow-sm'
+                : 'text-dim hover:text-text'
+            )}
+          >
+            Resume
+          </button>
+          <button
+            onClick={() => setOnglet('interventions')}
+            className={cn(
+              'px-4 py-2 rounded-md text-[12px] font-medium transition-colors',
+              onglet === 'interventions'
+                ? 'bg-bg-card text-text shadow-sm'
+                : 'text-dim hover:text-text'
+            )}
+          >
+            Interventions
+          </button>
+        </div>
+      )}
+
       {!parcId && (
         <div className="text-dim text-sm">Selectionnez un parc pour afficher le resume.</div>
       )}
 
-      {parcId && stats && (
+      {parcId && onglet === 'resume' && stats && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           <StatCard
             label="Equipements actifs"
@@ -142,7 +173,7 @@ export function VueManagerParc() {
             label="Incidents ouverts"
             value={stats.incidentsOuverts}
             color={stats.incidentsOuverts > 0 ? 'text-red' : 'text-green'}
-            onClick={() => navigate('/gmao/operations')}
+            onClick={() => setOnglet('interventions')}
           />
           <StatCard
             label="Dernier controle quotidien"
@@ -162,8 +193,12 @@ export function VueManagerParc() {
         </div>
       )}
 
-      {parcId && !stats && (
+      {parcId && onglet === 'resume' && !stats && (
         <div className="text-dim text-sm">Chargement des statistiques...</div>
+      )}
+
+      {parcId && onglet === 'interventions' && (
+        <SuiviInterventions parcId={parcId} />
       )}
     </div>
   );
