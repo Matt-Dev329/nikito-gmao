@@ -244,7 +244,13 @@ export function Sidebar({ user, roleAffiche, roleCode, realRoleCode, compact = f
         })}
       </div>
 
-      <div className={cn('border-t border-white/[0.06] flex-shrink-0', compact ? 'pt-3 pb-2' : 'pt-3.5 px-2.5')}>
+      <div className={cn('border-t border-white/[0.06] flex-shrink-0 relative', compact ? 'pt-3 pb-2' : 'pt-3.5 px-2.5')}>
+        {showViewAs && (
+          <div className={cn('mb-1', compact ? 'flex justify-center' : 'px-1')}>
+            <ViewAsSelector compact={compact} />
+          </div>
+        )}
+
         <button
           onClick={() => setUserMenuOpen((o) => !o)}
           title={compact ? `${user.nom} · ${user.role}` : undefined}
@@ -285,81 +291,67 @@ export function Sidebar({ user, roleAffiche, roleCode, realRoleCode, compact = f
           )}
         </button>
 
-        <div
-          className={cn(
-            'overflow-hidden transition-all duration-200 ease-in-out',
-            userMenuOpen ? 'max-h-[220px] opacity-100 mt-1' : 'max-h-0 opacity-0'
-          )}
-        >
-          {showViewAs && (
-            <div className={cn('flex items-center', compact ? 'justify-center mb-1' : 'px-3 mb-1')}>
-              <ViewAsSelector compact />
-            </div>
-          )}
-
-          <NavLink
-            to="/gmao/profil"
-            onClick={() => { setUserMenuOpen(false); onNavClick?.(); }}
-            data-tour="profil"
-            className={({ isActive }) =>
-              cn(
-                'group relative flex items-center rounded-[10px] transition-colors min-h-[38px] w-full',
-                compact ? 'justify-center px-0' : 'gap-2.5 px-3',
-                isActive
-                  ? 'bg-gradient-active border-l-2 border-nikito-pink text-text font-medium'
-                  : 'text-dim hover:text-text hover:bg-white/[0.02]'
-              )
-            }
-          >
-            <svg className="w-[18px] h-[18px] flex-shrink-0" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5">
-              <circle cx="10" cy="7" r="3.5" />
-              <path d="M3 17.5c0-3 3.13-5.5 7-5.5s7 2.5 7 5.5" strokeLinecap="round" />
-            </svg>
-            {!compact && <span className="text-[12px]">Mon profil</span>}
-          </NavLink>
-
-          <NavLink
-            to="/gmao/aide"
-            onClick={() => { setUserMenuOpen(false); onNavClick?.(); }}
-            data-tour="aide"
-            className={({ isActive }) =>
-              cn(
-                'group relative flex items-center rounded-[10px] transition-colors min-h-[38px] w-full',
-                compact ? 'justify-center px-0' : 'gap-2.5 px-3',
-                isActive
-                  ? 'bg-gradient-active border-l-2 border-nikito-pink text-text font-medium'
-                  : 'text-dim hover:text-text hover:bg-white/[0.02]'
-              )
-            }
-          >
-            <IconAide className="w-[18px] h-[18px] flex-shrink-0" />
-            {!compact && <span className="text-[12px]">Aide</span>}
-          </NavLink>
-
-          <button
-            onClick={() => { setUserMenuOpen(false); startTour(); }}
-            className={cn(
-              'flex items-center rounded-[10px] text-dim hover:text-nikito-cyan hover:bg-nikito-cyan/5 transition-colors min-h-[38px] w-full',
-              compact ? 'justify-center px-0' : 'gap-2.5 px-3'
-            )}
-          >
-            <GraduationCapTourIcon className="w-[18px] h-[18px] flex-shrink-0" />
-            {!compact && <span className="text-[12px]">Visite guidee</span>}
-          </button>
-
-          {onSignOut && (
-            <button
-              onClick={() => { setUserMenuOpen(false); onSignOut(); }}
-              className={cn(
-                'flex items-center rounded-[10px] text-dim hover:text-red hover:bg-red/10 transition-colors min-h-[38px] w-full',
-                compact ? 'justify-center px-0' : 'gap-2.5 px-3'
-              )}
+        {userMenuOpen && (
+          <div className="absolute bottom-full left-0 right-0 mb-1 px-2.5 py-2 bg-bg-card border border-white/[0.08] rounded-xl shadow-xl z-50">
+            <NavLink
+              to="/gmao/profil"
+              onClick={() => { setUserMenuOpen(false); onNavClick?.(); }}
+              data-tour="profil"
+              className={({ isActive }) =>
+                cn(
+                  'flex items-center rounded-[10px] transition-colors min-h-[38px] w-full gap-2.5 px-3',
+                  isActive
+                    ? 'bg-gradient-active border-l-2 border-nikito-pink text-text font-medium'
+                    : 'text-dim hover:text-text hover:bg-white/[0.04]'
+                )
+              }
             >
-              <IconDeconnexion className="w-[18px] h-[18px] flex-shrink-0" />
-              {!compact && <span className="text-[12px]">Se deconnecter</span>}
+              <svg className="w-[18px] h-[18px] flex-shrink-0" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5">
+                <circle cx="10" cy="7" r="3.5" />
+                <path d="M3 17.5c0-3 3.13-5.5 7-5.5s7 2.5 7 5.5" strokeLinecap="round" />
+              </svg>
+              <span className="text-[12px]">Mon profil</span>
+            </NavLink>
+
+            <NavLink
+              to="/gmao/aide"
+              onClick={() => { setUserMenuOpen(false); onNavClick?.(); }}
+              data-tour="aide"
+              className={({ isActive }) =>
+                cn(
+                  'flex items-center rounded-[10px] transition-colors min-h-[38px] w-full gap-2.5 px-3',
+                  isActive
+                    ? 'bg-gradient-active border-l-2 border-nikito-pink text-text font-medium'
+                    : 'text-dim hover:text-text hover:bg-white/[0.04]'
+                )
+              }
+            >
+              <IconAide className="w-[18px] h-[18px] flex-shrink-0" />
+              <span className="text-[12px]">Aide</span>
+            </NavLink>
+
+            <button
+              onClick={() => { setUserMenuOpen(false); startTour(); }}
+              className="flex items-center rounded-[10px] text-dim hover:text-nikito-cyan hover:bg-nikito-cyan/5 transition-colors min-h-[38px] w-full gap-2.5 px-3"
+            >
+              <GraduationCapTourIcon className="w-[18px] h-[18px] flex-shrink-0" />
+              <span className="text-[12px]">Visite guidee</span>
             </button>
-          )}
-        </div>
+
+            {onSignOut && (
+              <>
+                <div className="h-px bg-white/[0.06] mx-2 my-1" />
+                <button
+                  onClick={() => { setUserMenuOpen(false); onSignOut(); }}
+                  className="flex items-center rounded-[10px] text-dim hover:text-red hover:bg-red/10 transition-colors min-h-[38px] w-full gap-2.5 px-3"
+                >
+                  <IconDeconnexion className="w-[18px] h-[18px] flex-shrink-0" />
+                  <span className="text-[12px]">Se deconnecter</span>
+                </button>
+              </>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
