@@ -4,6 +4,7 @@ import { TabletLayout } from '@/components/layout/TabletLayout';
 import { RouteProtegee } from '@/components/auth/RouteProtegee';
 
 import { Login } from '@/pages/auth/Login';
+import { ResetPassword } from '@/pages/auth/ResetPassword';
 import { AcceptationInvitation } from '@/pages/auth/AcceptationInvitation';
 
 import { TableauDeBord } from '@/pages/direction/TableauDeBord';
@@ -56,6 +57,7 @@ export function App() {
     <Routes>
       <Route path="/" element={<Login />} />
       <Route path="/login" element={<Navigate to="/" replace />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="/invitation/:token" element={<AcceptationInvitation />} />
       <Route path="/staff/login" element={<LoginStaff />} />
 
