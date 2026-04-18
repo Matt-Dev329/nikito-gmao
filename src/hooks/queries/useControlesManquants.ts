@@ -17,10 +17,14 @@ export function useControlesOuvertureManquants() {
   return useQuery({
     queryKey: ['controles_manquants', today, estFormation],
     queryFn: async () => {
-      const { data: parcs, error: errParcs } = await supabase
+      let q = supabase
         .from('parcs')
         .select('id, code, nom')
         .eq('actif', true);
+      if (!estFormation) {
+        q = q.neq('code', 'ECO');
+      }
+      const { data: parcs, error: errParcs } = await q;
       if (errParcs) throw errParcs;
       if (!parcs?.length) return [];
 

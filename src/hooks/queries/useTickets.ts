@@ -37,8 +37,9 @@ export function useIncidents(filtres?: {
 }
 
 export function useIncident(numeroBT: string | undefined) {
+  const { estFormation } = useFormationFilter();
   return useQuery({
-    queryKey: ['incidents', 'detail', numeroBT],
+    queryKey: ['incidents', 'detail', numeroBT, estFormation],
     queryFn: async () => {
       if (!numeroBT) return null;
       const { data, error } = await supabase
@@ -51,6 +52,7 @@ export function useIncident(numeroBT: string | undefined) {
             pieces_utilisees(*, pieces_detachees(*)))`
         )
         .eq('numero_bt', numeroBT)
+        .eq('est_formation', estFormation)
         .single();
       if (error) throw error;
       return data;

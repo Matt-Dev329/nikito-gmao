@@ -96,6 +96,7 @@ export function useValiderControle() {
             statut: 'valide',
           })
           .eq('id', existant.id)
+          .eq('est_formation', estFormation)
           .select('id')
           .single();
         if (errUpd) throw errUpd;
@@ -195,6 +196,7 @@ export function useValiderControleMensuel() {
           .from('controles')
           .update(controlePayload)
           .eq('id', existant.id)
+          .eq('est_formation', estFormation)
           .select('id')
           .single();
         if (errUpd) throw errUpd;

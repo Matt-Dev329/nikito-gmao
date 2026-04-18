@@ -50,7 +50,7 @@ export function useSidebarBadges() {
       let controlesManquants = 0;
       if (heure >= 10) {
         const [parcsRes, ctrlRes] = await Promise.all([
-          supabase.from('parcs').select('id', { count: 'exact', head: true }).eq('actif', true),
+          supabase.from('parcs').select('id', { count: 'exact', head: true }).eq('actif', true).neq('code', 'ECO'),
           supabase.from('controles').select('parc_id').eq('type', 'quotidien').eq('date_planifiee', today).eq('statut', 'valide').eq('est_formation', estFormation),
         ]);
         const totalParcs = parcsRes.count ?? 0;

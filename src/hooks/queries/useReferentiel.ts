@@ -147,6 +147,7 @@ export function useCreerEquipement() {
 
 export function useModifierEquipement() {
   const qc = useQueryClient();
+  const { estFormation } = useFormationFilter();
   return useMutation({
     mutationFn: async ({ id, ...payload }: {
       id: string;
@@ -165,6 +166,7 @@ export function useModifierEquipement() {
         .from('equipements')
         .update(payload)
         .eq('id', id)
+        .eq('est_formation', estFormation)
         .select('*')
         .single();
       if (error) throw error;

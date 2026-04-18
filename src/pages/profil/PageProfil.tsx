@@ -24,6 +24,7 @@ export function PageProfil() {
         .from('parcs')
         .select('id, code, nom')
         .in('id', utilisateur.parc_ids)
+        .neq('code', 'ECO')
         .order('code');
       if (error) throw error;
       return data ?? [];

@@ -111,6 +111,7 @@ export function useCreerFiche5PDepuisRecurrence() {
 
 export function useModifierFiche5P() {
   const qc = useQueryClient();
+  const { estFormation } = useFormationFilter();
   return useMutation({
     mutationFn: async ({ id, ...payload }: {
       id: string;
@@ -132,6 +133,7 @@ export function useModifierFiche5P() {
         .from('fiches_5_pourquoi')
         .update(payload)
         .eq('id', id)
+        .eq('est_formation', estFormation)
         .select('id')
         .single();
       if (error) throw error;
