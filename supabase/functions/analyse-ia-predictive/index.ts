@@ -104,7 +104,7 @@ Deno.serve(async (req: Request) => {
         "anthropic-version": "2023-06-01",
       },
       body: JSON.stringify({
-        model: "claude-sonnet-4-20250514",
+        model: "claude-3-5-haiku-20241022",
         max_tokens: 4000,
         system: SYSTEM_PROMPT,
         messages: [{ role: "user", content: userMessage }],
@@ -117,8 +117,8 @@ Deno.serve(async (req: Request) => {
       return new Response(
         JSON.stringify({
           success: false,
-          error: "Erreur API Anthropic",
-          status: anthropicRes.status,
+          error: `Erreur API Anthropic (${anthropicRes.status})`,
+          detail: errBody,
         }),
         {
           status: 200,

@@ -1,15 +1,20 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
+import { useFormationFilter } from '@/hooks/useFormation';
 import type { AnalyseIA, AnalyseIACachee, MaintenanceData } from '@/types/ia-predictive';
 
 const env = (import.meta as unknown as { env: Record<string, string> }).env;
 
-const CACHE_KEY = 'alba_ia_predictive_cache';
+const CACHE_PREFIX = 'alba_ia_predictive_cache';
 const CACHE_DURATION = 6 * 60 * 60 * 1000;
 
-function getCache(): AnalyseIACachee | null {
+function getCacheKey(estFormation: boolean) {
+  return `${CACHE_PREFIX}_${estFormation ? 'formation' : 'production'}`;
+}
+
+function getCache(estFormation: boolean): AnalyseIACachee | null {
   try {
-    const raw = localStorage.getItem(CACHE_KEY);
+    const raw = localStorage.getItem(getCacheKey(estFormation));
     if (!raw) return null;
     const parsed: AnalyseIACachee = JSON.parse(raw);
     if (Date.now() - parsed.timestamp > CACHE_DURATION) return null;
@@ -19,13 +24,14 @@ function getCache(): AnalyseIACachee | null {
   }
 }
 
-function setCache(analyse: AnalyseIA) {
+function setCache(estFormation: boolean, analyse: AnalyseIA) {
   const cached: AnalyseIACachee = { timestamp: Date.now(), analyse };
-  localStorage.setItem(CACHE_KEY, JSON.stringify(cached));
+  localStorage.setItem(getCacheKey(estFormation), JSON.stringify(cached));
 }
 
 export function useAnalyseIA() {
-  const cached = getCache();
+  const { estFormation } = useFormationFilter();
+  const cached = getCache(estFormation);
   const [analyse, setAnalyse] = useState<AnalyseIA | null>(cached?.analyse ?? null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -33,9 +39,26 @@ export function useAnalyseIA() {
     cached ? new Date(cached.timestamp) : null
   );
 
+  const prevFormation = useRef(estFormation);
+  useEffect(() => {
+    if (prevFormation.current !== estFormation) {
+      prevFormation.current = estFormation;
+      const c = getCache(estFormation);
+      if (c) {
+        setAnalyse(c.analyse);
+        setLastAnalyse(new Date(c.timestamp));
+        setError(null);
+      } else {
+        setAnalyse(null);
+        setLastAnalyse(null);
+        setError(null);
+      }
+    }
+  }, [estFormation]);
+
   const lancer = useCallback(async (data: MaintenanceData, force = false) => {
     if (!force) {
-      const c = getCache();
+      const c = getCache(estFormation);
       if (c) {
         setAnalyse(c.analyse);
         setLastAnalyse(new Date(c.timestamp));
@@ -75,16 +98,17 @@ export function useAnalyseIA() {
 
       const ia = result.analysis as AnalyseIA;
       setAnalyse(ia);
-      setCache(ia);
+      setCache(estFormation, ia);
       setLastAnalyse(new Date());
       return ia;
     } catch (err) {
-      setError("L'analyse IA est temporairement indisponible. Reessayez dans quelques instants.");
+      const msg = err instanceof Error ? err.message : String(err);
+      setError(`L'analyse IA a echoue : ${msg}`);
       return null;
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [estFormation]);
 
   return { analyse, loading, error, lastAnalyse, lancer };
 }
