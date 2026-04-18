@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { Logo } from '@/components/ui/Logo';
@@ -109,6 +110,7 @@ export function Sidebar({ user, roleAffiche, roleCode, realRoleCode, compact = f
   const startTour = useTour((s) => s.start);
   const showViewAs = (realRoleCode ?? roleCode) === 'direction' || (realRoleCode ?? roleCode) === 'chef_maintenance';
   const showFormation = showViewAs;
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
 
   return (
     <div className={cn('h-full flex flex-col', compact ? 'p-2 gap-0.5' : 'p-5 px-3.5 gap-1.5')}>
@@ -243,19 +245,14 @@ export function Sidebar({ user, roleAffiche, roleCode, realRoleCode, compact = f
       </div>
 
       <div className={cn('border-t border-white/[0.06] flex-shrink-0', compact ? 'pt-3 pb-2' : 'pt-3.5 px-2.5')}>
-        <NavLink
-          to="/gmao/profil"
-          onClick={onNavClick}
+        <button
+          onClick={() => setUserMenuOpen((o) => !o)}
           title={compact ? `${user.nom} · ${user.role}` : undefined}
-          className={({ isActive }) =>
-            cn(
-              'group relative flex items-center rounded-[10px] transition-colors min-h-[44px] w-full',
-              compact ? 'justify-center px-0' : 'gap-2.5 px-1',
-              isActive
-                ? 'bg-gradient-active border-l-2 border-nikito-pink'
-                : 'hover:bg-white/[0.02]'
-            )
-          }
+          className={cn(
+            'group relative flex items-center rounded-[10px] transition-colors min-h-[44px] w-full',
+            compact ? 'justify-center px-0' : 'gap-2.5 px-1',
+            userMenuOpen ? 'bg-white/[0.04]' : 'hover:bg-white/[0.02]'
+          )}
         >
           <div
             className="w-[34px] h-[34px] rounded-full flex items-center justify-center font-semibold text-xs flex-shrink-0"
@@ -264,81 +261,105 @@ export function Sidebar({ user, roleAffiche, roleCode, realRoleCode, compact = f
             {user.initiales}
           </div>
           {!compact && (
-            <div className="text-xs min-w-0 flex-1">
+            <div className="text-xs min-w-0 flex-1 text-left">
               <div className="font-medium truncate">{user.nom}</div>
               <div className="text-dim text-[11px] truncate">{user.role}</div>
             </div>
           )}
-          {!compact && showViewAs && (
-            <div
-              className="ml-auto flex-shrink-0"
-              onClick={(e) => e.preventDefault()}
+          {!compact && (
+            <svg
+              className={cn(
+                'w-4 h-4 text-dim transition-transform ml-auto flex-shrink-0',
+                userMenuOpen && 'rotate-180'
+              )}
+              viewBox="0 0 20 20"
+              fill="currentColor"
             >
-              <ViewAsSelector compact />
-            </div>
+              <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clipRule="evenodd" />
+            </svg>
           )}
           {compact && (
             <span className="pointer-events-none absolute left-full ml-2 px-2.5 py-1.5 rounded-lg bg-bg-card text-text text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity z-50 shadow-lg border border-white/[0.08]">
               {user.nom}
             </span>
           )}
-        </NavLink>
-
-        {compact && showViewAs && (
-          <div className="flex justify-center mt-1">
-            <ViewAsSelector compact />
-          </div>
-        )}
-
-        <NavLink
-          to="/gmao/aide"
-          onClick={onNavClick}
-          title={compact ? 'Aide' : undefined}
-          data-tour="aide"
-          className={({ isActive }) =>
-            cn(
-              'group relative flex items-center rounded-[10px] transition-colors min-h-[40px] w-full mt-1',
-              compact ? 'justify-center px-0' : 'gap-2.5 px-3',
-              isActive
-                ? 'bg-gradient-active border-l-2 border-nikito-pink text-text font-medium'
-                : 'text-dim hover:text-text hover:bg-white/[0.02]'
-            )
-          }
-        >
-          <IconAide className="w-[18px] h-[18px] flex-shrink-0" />
-          {!compact && <span className="text-[12px]">Aide</span>}
-          {compact && (
-            <span className="pointer-events-none absolute left-full ml-2 px-2.5 py-1.5 rounded-lg bg-bg-card text-text text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity z-50 shadow-lg border border-white/[0.08]">
-              Aide
-            </span>
-          )}
-        </NavLink>
-
-        <button
-          onClick={startTour}
-          className={cn(
-            'flex items-center rounded-[10px] text-dim hover:text-nikito-cyan hover:bg-nikito-cyan/5 transition-colors min-h-[40px] w-full mt-1',
-            compact ? 'justify-center px-0' : 'gap-2.5 px-3'
-          )}
-          title={compact ? 'Visite guidee' : undefined}
-        >
-          <GraduationCapTourIcon className="w-[18px] h-[18px] flex-shrink-0" />
-          {!compact && <span className="text-[12px]">Visite guidee</span>}
         </button>
 
-        {onSignOut && (
+        <div
+          className={cn(
+            'overflow-hidden transition-all duration-200 ease-in-out',
+            userMenuOpen ? 'max-h-[220px] opacity-100 mt-1' : 'max-h-0 opacity-0'
+          )}
+        >
+          {showViewAs && (
+            <div className={cn('flex items-center', compact ? 'justify-center mb-1' : 'px-3 mb-1')}>
+              <ViewAsSelector compact />
+            </div>
+          )}
+
+          <NavLink
+            to="/gmao/profil"
+            onClick={() => { setUserMenuOpen(false); onNavClick?.(); }}
+            data-tour="profil"
+            className={({ isActive }) =>
+              cn(
+                'group relative flex items-center rounded-[10px] transition-colors min-h-[38px] w-full',
+                compact ? 'justify-center px-0' : 'gap-2.5 px-3',
+                isActive
+                  ? 'bg-gradient-active border-l-2 border-nikito-pink text-text font-medium'
+                  : 'text-dim hover:text-text hover:bg-white/[0.02]'
+              )
+            }
+          >
+            <svg className="w-[18px] h-[18px] flex-shrink-0" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5">
+              <circle cx="10" cy="7" r="3.5" />
+              <path d="M3 17.5c0-3 3.13-5.5 7-5.5s7 2.5 7 5.5" strokeLinecap="round" />
+            </svg>
+            {!compact && <span className="text-[12px]">Mon profil</span>}
+          </NavLink>
+
+          <NavLink
+            to="/gmao/aide"
+            onClick={() => { setUserMenuOpen(false); onNavClick?.(); }}
+            data-tour="aide"
+            className={({ isActive }) =>
+              cn(
+                'group relative flex items-center rounded-[10px] transition-colors min-h-[38px] w-full',
+                compact ? 'justify-center px-0' : 'gap-2.5 px-3',
+                isActive
+                  ? 'bg-gradient-active border-l-2 border-nikito-pink text-text font-medium'
+                  : 'text-dim hover:text-text hover:bg-white/[0.02]'
+              )
+            }
+          >
+            <IconAide className="w-[18px] h-[18px] flex-shrink-0" />
+            {!compact && <span className="text-[12px]">Aide</span>}
+          </NavLink>
+
           <button
-            onClick={onSignOut}
+            onClick={() => { setUserMenuOpen(false); startTour(); }}
             className={cn(
-              'flex items-center rounded-[10px] text-dim hover:text-red hover:bg-red/10 transition-colors min-h-[40px] w-full mt-1',
+              'flex items-center rounded-[10px] text-dim hover:text-nikito-cyan hover:bg-nikito-cyan/5 transition-colors min-h-[38px] w-full',
               compact ? 'justify-center px-0' : 'gap-2.5 px-3'
             )}
-            title={compact ? 'Se deconnecter' : undefined}
           >
-            <IconDeconnexion className="w-[18px] h-[18px] flex-shrink-0" />
-            {!compact && <span className="text-[12px]">Se deconnecter</span>}
+            <GraduationCapTourIcon className="w-[18px] h-[18px] flex-shrink-0" />
+            {!compact && <span className="text-[12px]">Visite guidee</span>}
           </button>
-        )}
+
+          {onSignOut && (
+            <button
+              onClick={() => { setUserMenuOpen(false); onSignOut(); }}
+              className={cn(
+                'flex items-center rounded-[10px] text-dim hover:text-red hover:bg-red/10 transition-colors min-h-[38px] w-full',
+                compact ? 'justify-center px-0' : 'gap-2.5 px-3'
+              )}
+            >
+              <IconDeconnexion className="w-[18px] h-[18px] flex-shrink-0" />
+              {!compact && <span className="text-[12px]">Se deconnecter</span>}
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );
