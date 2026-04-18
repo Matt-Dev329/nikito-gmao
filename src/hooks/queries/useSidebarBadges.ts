@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useFormationFilter } from '@/hooks/useFormation';
+import { useConfig } from '@/hooks/useConfig';
 
 interface SidebarBadges {
   recurrences: number;
@@ -14,12 +15,13 @@ interface SidebarBadges {
 
 export function useSidebarBadges() {
   const { estFormation } = useFormationFilter();
+  const { enProduction } = useConfig();
   const now = new Date();
   const heure = now.getHours();
   const today = now.toISOString().slice(0, 10);
 
   return useQuery({
-    queryKey: ['sidebar-badges', estFormation, today],
+    queryKey: ['sidebar-badges', estFormation, enProduction, today],
     queryFn: async (): Promise<SidebarBadges> => {
       const [recRes, fpRes, incRes, invRes, notifRes, enCoursRes] = await Promise.all([
         supabase
@@ -54,7 +56,7 @@ export function useSidebarBadges() {
       ]);
 
       let controlesManquants = 0;
-      if (heure >= 10) {
+      if (enProduction && heure >= 10) {
         const [parcsRes, ctrlRes] = await Promise.all([
           supabase.from('parcs').select('id', { count: 'exact', head: true }).eq('actif', true).neq('code', 'ECO'),
           supabase.from('controles').select('parc_id').eq('type', 'quotidien').eq('date_planifiee', today).eq('statut', 'valide').eq('est_formation', estFormation),
