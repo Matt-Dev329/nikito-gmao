@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useFormationFilter } from '@/hooks/useFormation';
-import type { EquipementAvecJoins, StatutEquipement } from '@/types/database';
+import type { EquipementAvecJoins, StatutEquipement, HorairesParc, ParcMeta } from '@/types/database';
 
 // ============================================================
 // Query hooks · Référentiel
@@ -204,6 +204,38 @@ export function useImporterEquipements() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['equipements'] });
+    },
+  });
+}
+
+export function useModifierHorairesParc() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, horaires }: { id: string; horaires: HorairesParc }) => {
+      const { error } = await supabase
+        .from('parcs')
+        .update({ horaires })
+        .eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['parcs'] });
+    },
+  });
+}
+
+export function useModifierMetaParc() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, meta }: { id: string; meta: ParcMeta }) => {
+      const { error } = await supabase
+        .from('parcs')
+        .update({ meta })
+        .eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['parcs'] });
     },
   });
 }

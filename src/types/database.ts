@@ -71,6 +71,28 @@ export interface NoteChantier {
   modifie_le: string;
 }
 
+export type JourSemaine = 'lundi' | 'mardi' | 'mercredi' | 'jeudi' | 'vendredi' | 'samedi' | 'dimanche';
+
+export interface HoraireJour {
+  ouverture: string | null;
+  fermeture: string | null;
+  ferme: boolean;
+}
+
+export interface HoraireVacances {
+  ouverture: string;
+  fermeture: string;
+  tous_jours: boolean;
+  dernier_dimanche_fermeture?: string;
+}
+
+export type HorairesParc = Record<JourSemaine, HoraireJour> & { vacances?: HoraireVacances };
+
+export interface ParcMeta {
+  est_vacances?: boolean;
+  date_fin_vacances?: string;
+}
+
 export interface Parc {
   id: string;
   code: 'FRA' | 'SGB' | 'DOM' | 'ALF' | 'ECO';
@@ -83,6 +105,8 @@ export interface Parc {
   surface_m2: number | null;
   ouvert_7j7: boolean;
   actif: boolean;
+  horaires: HorairesParc | null;
+  meta: ParcMeta | null;
 }
 
 export type StatutEquipement = 'actif' | 'maintenance' | 'hors_service' | 'archive';

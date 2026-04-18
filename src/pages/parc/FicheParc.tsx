@@ -4,9 +4,16 @@ import { cn } from '@/lib/utils';
 import { useParc } from '@/hooks/queries/useReferentiel';
 import { useAttractionsParc } from '@/hooks/queries/useAttractionsParc';
 import { usePointsPourParc } from '@/hooks/queries/usePointsCategoriePourParc';
+import { useAuth } from '@/hooks/useAuth';
 import { NotesChantierParc } from './NotesChantierParc';
+import { CarteHorairesParc } from '@/components/parc/CarteHorairesParc';
+import { ToggleVacancesParc } from '@/components/parc/ToggleVacancesParc';
+import { EditeurHorairesParc } from '@/components/parc/EditeurHorairesParc';
+import type { Parc } from '@/types/database';
 
 type Onglet = 'apercu' | 'configuration' | 'controles' | 'equipements' | 'equipe' | 'notes';
+
+const ROLES_EDIT_HORAIRES: string[] = ['direction', 'chef_maintenance'];
 
 export function FicheParc() {
   const { id } = useParams<{ id: string }>();
@@ -71,8 +78,8 @@ export function FicheParc() {
         </div>
       </header>
 
-      {onglet === 'apercu' && <OngletApercu />}
-      {onglet === 'configuration' && <OngletConfiguration />}
+      {onglet === 'apercu' && <OngletApercu parc={parc ?? null} />}
+      {onglet === 'configuration' && <OngletConfiguration parc={parc ?? null} />}
       {onglet === 'controles' && <OngletControles parcId={id} />}
       {onglet === 'equipements' && <OngletEquipements />}
       {onglet === 'equipe' && <OngletEquipe />}
@@ -103,12 +110,45 @@ function OngletButton({
   );
 }
 
-function OngletApercu() {
-  return <div className="p-4 md:p-6 md:px-7 text-dim text-sm">Vue d'ensemble · KPI parc, alertes du jour</div>;
+function OngletApercu({ parc }: { parc: Parc | null }) {
+  if (!parc) {
+    return (
+      <div className="p-4 md:p-7">
+        <div className="bg-bg-card rounded-xl h-32 animate-pulse" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-4 md:p-6 md:px-7 flex flex-col gap-4">
+      <CarteHorairesParc parc={parc} />
+    </div>
+  );
 }
 
-function OngletConfiguration() {
-  return <div className="p-4 md:p-6 md:px-7 text-dim text-sm">Édition identité, plan, zones, attractions</div>;
+function OngletConfiguration({ parc }: { parc: Parc | null }) {
+  const { utilisateur } = useAuth();
+  const canEdit = ROLES_EDIT_HORAIRES.includes(utilisateur?.role_code ?? '');
+
+  if (!parc) {
+    return (
+      <div className="p-4 md:p-7">
+        <div className="bg-bg-card rounded-xl h-32 animate-pulse" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-4 md:p-6 md:px-7 flex flex-col gap-4">
+      <ToggleVacancesParc parc={parc} disabled={!canEdit} />
+      <EditeurHorairesParc parc={parc} disabled={!canEdit} />
+      {!canEdit && (
+        <p className="text-[11px] text-dim text-center">
+          Seuls les rôles Direction et Chef maintenance peuvent modifier les horaires
+        </p>
+      )}
+    </div>
+  );
 }
 
 function OngletControles({ parcId }: { parcId: string | undefined }) {
