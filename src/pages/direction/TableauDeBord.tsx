@@ -16,6 +16,7 @@ import {
 import { useIncidents } from '@/hooks/queries/useTickets';
 import { useParcs } from '@/hooks/queries/useReferentiel';
 import { useControlesOuvertureManquants } from '@/hooks/queries/useControlesManquants';
+import { useConfig } from '@/hooks/useConfig';
 import type { Criticite } from '@/types/database';
 
 type Periode = '7j' | '30j' | '90j';
@@ -105,6 +106,7 @@ export function TableauDeBord() {
   const parcsQ = useParcs();
   const incidentsQ = useIncidents({ statuts: ['ouvert', 'assigne', 'en_cours'] });
   const { data: controlesManquants } = useControlesOuvertureManquants();
+  const { avantLancement, dateLancement } = useConfig();
 
   const kpiLoading = perfQ.isLoading || mtbfQ.isLoading || mttrQ.isLoading
     || premierCoupQ.isLoading || plaintesQ.isLoading;
@@ -227,7 +229,27 @@ export function TableauDeBord() {
         ))}
       </div>
 
-      {controlesManquants && controlesManquants.length > 0 && (
+      {avantLancement && dateLancement && (
+        <div className="bg-nikito-cyan/10 border border-nikito-cyan/30 rounded-xl p-4 mb-5 flex items-start gap-3">
+          <svg className="w-5 h-5 text-nikito-cyan flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <div>
+            <div className="text-[13px] font-semibold text-nikito-cyan">
+              Mode pre-lancement
+            </div>
+            <div className="text-[12px] text-dim mt-1">
+              ALBA sera operationnel le{' '}
+              <span className="text-text font-medium">
+                {dateLancement.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
+              </span>.
+              Les controles et alertes seront actives a cette date.
+            </div>
+          </div>
+        </div>
+      )}
+
+      {!avantLancement && controlesManquants && controlesManquants.length > 0 && (
         <div className="flex flex-col gap-2 mb-5">
           {controlesManquants.map((cm) => (
             <div

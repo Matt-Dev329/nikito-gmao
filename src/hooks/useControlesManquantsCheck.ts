@@ -84,7 +84,20 @@ function minutesToHHMM(minutes: number): string {
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
 }
 
+async function fetchAvantLancement(): Promise<boolean> {
+  const { data } = await supabase
+    .from('config_globale')
+    .select('valeur')
+    .eq('cle', 'date_lancement')
+    .maybeSingle();
+  if (!data?.valeur) return true;
+  return new Date() < new Date(data.valeur + 'T00:00:00');
+}
+
 async function runCheck(queryClient: ReturnType<typeof useQueryClient>) {
+  const avantLancement = await fetchAvantLancement();
+  if (avantLancement) return;
+
   const now = new Date();
   const today = now.toISOString().slice(0, 10);
   const minutesDuJour = getMinutesDuJour(now);

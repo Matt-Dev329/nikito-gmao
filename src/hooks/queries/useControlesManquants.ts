@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useFormationFilter } from '@/hooks/useFormation';
+import { useConfig } from '@/hooks/useConfig';
 
 export interface ControleManquant {
   parc_id: string;
@@ -10,6 +11,7 @@ export interface ControleManquant {
 
 export function useControlesOuvertureManquants() {
   const { estFormation } = useFormationFilter();
+  const { avantLancement } = useConfig();
   const now = new Date();
   const heure = now.getHours();
   const today = now.toISOString().slice(0, 10);
@@ -47,7 +49,7 @@ export function useControlesOuvertureManquants() {
           parc_nom: p.nom,
         })) as ControleManquant[];
     },
-    enabled: heure >= 10,
+    enabled: heure >= 10 && !avantLancement,
     refetchInterval: 5 * 60_000,
     staleTime: 2 * 60_000,
   });
