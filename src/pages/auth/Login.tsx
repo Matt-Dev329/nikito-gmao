@@ -2,7 +2,15 @@ import { useState } from 'react';
 import { useNavigate, Navigate, useLocation } from 'react-router-dom';
 import { AlbaLoginHero } from '@/components/ui/Logo';
 import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/lib/supabase';
+import { getDeviceHash } from '@/lib/deviceFingerprint';
+import { Verification2FA } from '@/components/auth/Verification2FA';
 import { cn } from '@/lib/utils';
+
+interface Pending2FA {
+  email: string;
+  prenom: string;
+}
 
 export function Login() {
   const navigate = useNavigate();
@@ -12,6 +20,9 @@ export function Login() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [pending2FA, setPending2FA] = useState<Pending2FA | null>(null);
+
+  const destination = (location.state as { from?: string })?.from || '/gmao';
 
   if (authLoading) {
     return (
@@ -21,22 +32,72 @@ export function Login() {
     );
   }
 
-  if (authUser) {
-    const destination = (location.state as { from?: string })?.from || '/gmao';
+  if (authUser && !pending2FA) {
     return <Navigate to={destination} replace />;
+  }
+
+  if (pending2FA) {
+    return (
+      <Verification2FA
+        email={pending2FA.email}
+        prenom={pending2FA.prenom}
+        onSuccess={() => {
+          setPending2FA(null);
+          navigate(destination, { replace: true });
+        }}
+        onCancel={async () => {
+          await supabase.auth.signOut();
+          setPending2FA(null);
+        }}
+      />
+    );
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setLoading(true);
-    const { error } = await signIn(email, password);
-    if (error) {
+
+    const { data: signInData, error: signInError } = await signIn(email, password);
+
+    if (signInError || !signInData.session) {
       setError('Email ou mot de passe incorrect');
       setLoading(false);
-    } else {
-      navigate('/gmao', { replace: true });
+      return;
     }
+
+    const { data: utilisateurData } = await supabase
+      .from('utilisateurs')
+      .select('id, prenom, email')
+      .eq('auth_user_id', signInData.user.id)
+      .maybeSingle();
+
+    const prenom = utilisateurData?.prenom || '';
+    const userEmail = utilisateurData?.email || email;
+
+    const deviceHash = getDeviceHash();
+    const { data: deviceReconnu } = await supabase.rpc('verifier_device_reconnu', {
+      p_email: userEmail,
+      p_device_hash: deviceHash,
+    });
+
+    if (deviceReconnu === true) {
+      await supabase.rpc('rafraichir_device', { p_device_hash: deviceHash });
+      setLoading(false);
+      navigate(destination, { replace: true });
+      return;
+    }
+
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+
+    await supabase.from('codes_2fa').insert({ email: userEmail, code });
+
+    await supabase.functions.invoke('send-code-2fa', {
+      body: { email: userEmail, code, prenom },
+    });
+
+    setLoading(false);
+    setPending2FA({ email: userEmail, prenom });
   };
 
   return (
@@ -101,7 +162,7 @@ export function Login() {
             href="/staff/login"
             className="text-center text-xs text-dim hover:text-nikito-cyan mt-2 min-h-[44px] flex items-center justify-center"
           >
-            Vous êtes staff opérationnel ? Connexion par PIN ›
+            Vous etes staff operationnel ? Connexion par PIN
           </a>
         </form>
       </div>

@@ -3,6 +3,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useFormation } from '@/hooks/useFormation';
 import { supabase } from '@/lib/supabase';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { getDeviceHash } from '@/lib/deviceFingerprint';
 import { cn } from '@/lib/utils';
 
 const roleLabels: Record<string, string> = {
@@ -80,6 +81,7 @@ export function PageProfil() {
       </div>
 
       <SectionGPS utilisateurId={utilisateur.id} initial={utilisateur.consentement_gps} />
+      <SectionAppareils utilisateurId={utilisateur.id} />
       <SectionFormation />
       <SectionMotDePasse />
     </div>
@@ -188,6 +190,144 @@ function SectionFormation() {
             )}
           />
         </button>
+      </div>
+    </div>
+  );
+}
+
+function SectionAppareils({ utilisateurId }: { utilisateurId: string }) {
+  const queryClient = useQueryClient();
+  const currentHash = getDeviceHash();
+
+  const { data: devices, isLoading } = useQuery({
+    queryKey: ['devices_reconnus', utilisateurId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('devices_reconnus')
+        .select('id, device_hash, navigateur, derniere_connexion, expire_le, actif')
+        .eq('utilisateur_id', utilisateurId)
+        .eq('actif', true)
+        .order('derniere_connexion', { ascending: false });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const revokeMutation = useMutation({
+    mutationFn: async (deviceId: string) => {
+      const { error } = await supabase
+        .from('devices_reconnus')
+        .update({ actif: false })
+        .eq('id', deviceId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['devices_reconnus'] });
+    },
+  });
+
+  const revokeAllMutation = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase
+        .from('devices_reconnus')
+        .update({ actif: false })
+        .eq('utilisateur_id', utilisateurId)
+        .neq('device_hash', currentHash);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['devices_reconnus'] });
+    },
+  });
+
+  const formatRelativeDate = (iso: string) => {
+    const diff = Date.now() - new Date(iso).getTime();
+    const minutes = Math.floor(diff / 60000);
+    if (minutes < 1) return "a l'instant";
+    if (minutes < 60) return `il y a ${minutes} min`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `il y a ${hours}h`;
+    const days = Math.floor(hours / 24);
+    return `il y a ${days}j`;
+  };
+
+  const formatExpiry = (iso: string) => {
+    return new Date(iso).toLocaleDateString('fr-FR', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    });
+  };
+
+  const browserIcon = (nav: string | null) => {
+    const n = (nav || '').toLowerCase();
+    if (n.includes('chrome')) return 'Ch';
+    if (n.includes('firefox')) return 'Ff';
+    if (n.includes('safari')) return 'Sa';
+    if (n.includes('edge')) return 'Ed';
+    return 'Nv';
+  };
+
+  return (
+    <div className="bg-bg-card rounded-2xl p-5 md:p-6 mb-4">
+      <div className="flex items-center justify-between mb-3">
+        <div className="text-[11px] text-dim uppercase tracking-wider">Appareils reconnus</div>
+        {devices && devices.length > 1 && (
+          <button
+            onClick={() => revokeAllMutation.mutate()}
+            disabled={revokeAllMutation.isPending}
+            className="text-[11px] text-red hover:text-red/80 transition-colors"
+          >
+            Revoquer tous les autres
+          </button>
+        )}
+      </div>
+
+      {isLoading && <div className="text-dim text-xs">Chargement...</div>}
+
+      {devices && devices.length === 0 && (
+        <div className="text-dim text-[13px]">Aucun appareil reconnu</div>
+      )}
+
+      <div className="flex flex-col gap-2.5">
+        {devices?.map((d) => {
+          const isCurrent = d.device_hash === currentHash;
+          return (
+            <div
+              key={d.id}
+              className={cn(
+                'flex items-center gap-3 bg-bg-deep rounded-xl p-3 px-3.5',
+                isCurrent && 'border border-nikito-cyan/20'
+              )}
+            >
+              <div className="w-9 h-9 rounded-lg bg-bg-card flex items-center justify-center text-[11px] font-bold text-nikito-cyan flex-shrink-0">
+                {browserIcon(d.navigateur)}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="text-[13px] font-medium truncate">{d.navigateur || 'Navigateur inconnu'}</span>
+                  {isCurrent && (
+                    <span className="bg-nikito-cyan/15 text-nikito-cyan px-2 py-0.5 rounded-md text-[10px] font-semibold flex-shrink-0">
+                      Cet appareil
+                    </span>
+                  )}
+                </div>
+                <div className="text-[11px] text-dim">
+                  {formatRelativeDate(d.derniere_connexion)} · Expire le {formatExpiry(d.expire_le)}
+                </div>
+              </div>
+              {!isCurrent && (
+                <button
+                  onClick={() => revokeMutation.mutate(d.id)}
+                  disabled={revokeMutation.isPending}
+                  className="text-[11px] text-red hover:text-red/80 transition-colors flex-shrink-0"
+                >
+                  Revoquer
+                </button>
+              )}
+            </div>
+          );
+        })}
       </div>
     </div>
   );
