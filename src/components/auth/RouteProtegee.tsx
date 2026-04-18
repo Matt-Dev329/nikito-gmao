@@ -23,10 +23,6 @@ export function RouteProtegee({ children, rolesAutorises }: Props) {
     return <Navigate to="/" state={{ from: location.pathname }} replace />;
   }
 
-  if (sessionStorage.getItem('alba_2fa_pending') === 'true') {
-    return <Navigate to="/login" replace />;
-  }
-
   if (rolesAutorises && utilisateur && !rolesAutorises.includes(utilisateur.role_code)) {
     return <Navigate to="/gmao" replace />;
   }

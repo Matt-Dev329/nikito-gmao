@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils';
 interface Verification2FAProps {
   email: string;
   prenom: string;
+  tempPassword: string;
   onSuccess: () => void;
   onCancel: () => void;
 }
@@ -15,7 +16,7 @@ const CODE_LENGTH = 6;
 const RESEND_COOLDOWN = 60;
 const EXPIRY_SECONDS = 10 * 60;
 
-export function Verification2FA({ email, prenom, onSuccess, onCancel }: Verification2FAProps) {
+export function Verification2FA({ email, prenom, tempPassword, onSuccess, onCancel }: Verification2FAProps) {
   const [digits, setDigits] = useState<string[]>(Array(CODE_LENGTH).fill(''));
   const [error, setError] = useState<string | null>(null);
   const [verifying, setVerifying] = useState(false);
@@ -87,12 +88,24 @@ export function Verification2FA({ email, prenom, onSuccess, onCancel }: Verifica
     setVerifying(true);
     setError(null);
 
+    const { error: signInErr } = await supabase.auth.signInWithPassword({
+      email,
+      password: tempPassword,
+    });
+
+    if (signInErr) {
+      setError('Erreur de session. Veuillez vous reconnecter.');
+      setVerifying(false);
+      return;
+    }
+
     const { data, error: rpcError } = await supabase.rpc('verifier_code_2fa', {
       p_email: email,
       p_code: code,
     });
 
     if (rpcError) {
+      await supabase.auth.signOut();
       setError('Erreur de verification. Reessayez.');
       setVerifying(false);
       return;
@@ -101,6 +114,7 @@ export function Verification2FA({ email, prenom, onSuccess, onCancel }: Verifica
     const result = data as { success: boolean; reason?: string };
 
     if (!result.success) {
+      await supabase.auth.signOut();
       if (result.reason === 'blocked') {
         setError('Trop de tentatives. Reessayez dans 15 minutes.');
       } else {
@@ -129,6 +143,16 @@ export function Verification2FA({ email, prenom, onSuccess, onCancel }: Verifica
     setResendMsg(null);
     setError(null);
 
+    const { error: signInErr } = await supabase.auth.signInWithPassword({
+      email,
+      password: tempPassword,
+    });
+
+    if (signInErr) {
+      setError('Erreur de session. Veuillez vous reconnecter.');
+      return;
+    }
+
     await supabase
       .from('codes_2fa')
       .update({ utilise: true })
@@ -142,6 +166,8 @@ export function Verification2FA({ email, prenom, onSuccess, onCancel }: Verifica
     await supabase.functions.invoke('send-code-2fa', {
       body: { email, code: newCode, prenom },
     });
+
+    await supabase.auth.signOut();
 
     setDigits(Array(CODE_LENGTH).fill(''));
     setResendCooldown(RESEND_COOLDOWN);
