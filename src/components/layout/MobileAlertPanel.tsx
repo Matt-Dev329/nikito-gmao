@@ -47,6 +47,8 @@ export function MobileAlertPanel({ open, onClose }: MobileAlertPanelProps) {
       items.push({ key: 'ia', label: 'Hypotheses IA en attente', count: badges.notificationsIA, tone: 'amber', to: '/gmao/notifications-ia' });
     if (badges.invitationsPending > 0)
       items.push({ key: 'inv', label: 'Invitations en attente', count: badges.invitationsPending, tone: 'amber', to: '/gmao/utilisateurs' });
+    if (badges.plaintesAQualifier > 0)
+      items.push({ key: 'plaintes', label: 'Plaintes a qualifier', count: badges.plaintesAQualifier, tone: 'amber', to: '/gmao/plaintes' });
   }
 
   const handleNav = (to: string) => {

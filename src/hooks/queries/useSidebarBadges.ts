@@ -11,6 +11,7 @@ interface SidebarBadges {
   controlesManquants: number;
   notificationsIA: number;
   interventionsEnCours: number;
+  plaintesAQualifier: number;
 }
 
 export function useSidebarBadges() {
@@ -23,7 +24,7 @@ export function useSidebarBadges() {
   return useQuery({
     queryKey: ['sidebar-badges', estFormation, enProduction, today],
     queryFn: async (): Promise<SidebarBadges> => {
-      const [recRes, fpRes, incRes, invRes, notifRes, enCoursRes] = await Promise.all([
+      const [recRes, fpRes, incRes, invRes, notifRes, enCoursRes, plaintesRes] = await Promise.all([
         supabase
           .from('vue_recurrences_actives')
           .select('equipement_id', { count: 'exact', head: true })
@@ -53,6 +54,11 @@ export function useSidebarBadges() {
           .select('id', { count: 'exact', head: true })
           .eq('statut', 'en_cours')
           .eq('est_formation', estFormation),
+        supabase
+          .from('plaintes_clients')
+          .select('id', { count: 'exact', head: true })
+          .eq('statut', 'a_qualifier')
+          .eq('est_formation', estFormation),
       ]);
 
       let controlesManquants = 0;
@@ -75,6 +81,7 @@ export function useSidebarBadges() {
         controlesManquants,
         notificationsIA: notifRes.count ?? 0,
         interventionsEnCours: enCoursRes.count ?? 0,
+        plaintesAQualifier: plaintesRes.count ?? 0,
       };
     },
     refetchInterval: 60_000,

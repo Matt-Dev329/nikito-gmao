@@ -39,7 +39,7 @@ interface Badge {
 interface NavItem {
   to: string;
   label: string;
-  badgeKey?: 'recurrences' | 'cinqPourquoi' | 'operations' | 'invitationsPending' | 'controlesManquants' | 'notificationsIA' | 'interventionsEnCours';
+  badgeKey?: 'recurrences' | 'cinqPourquoi' | 'operations' | 'invitationsPending' | 'controlesManquants' | 'notificationsIA' | 'interventionsEnCours' | 'plaintesAQualifier';
   badgeTone?: 'red' | 'amber';
   roles: RoleUtilisateur[];
   end?: boolean;
@@ -58,7 +58,7 @@ const sections: { titre: string; items: NavItem[] }[] = [
       { to: '/gmao/recurrences', label: 'Récurrences', badgeKey: 'recurrences', badgeTone: 'red', roles: ['direction', 'chef_maintenance'] },
       { to: '/gmao/cinq-pourquoi', label: '5 Pourquoi', badgeKey: 'cinqPourquoi', badgeTone: 'amber', roles: ['direction', 'chef_maintenance'] },
       { to: '/gmao/controles-historique', label: 'Contrôles', roles: ['direction', 'chef_maintenance'] },
-      { to: '/gmao/plaintes', label: 'Plaintes clients', roles: ['direction', 'chef_maintenance', 'manager_parc'] },
+      { to: '/gmao/plaintes', label: 'Plaintes clients', badgeKey: 'plaintesAQualifier', badgeTone: 'amber', roles: ['direction', 'chef_maintenance', 'manager_parc'] },
       { to: '/gmao/certifications', label: 'Certifications', roles: ['direction', 'chef_maintenance'] },
       { to: '/gmao/preventif', label: 'Préventif', roles: ['direction', 'chef_maintenance', 'manager_parc'] },
       { to: '/gmao/stock', label: 'Stock', roles: ['direction', 'chef_maintenance', 'technicien'] },
@@ -96,7 +96,7 @@ interface SidebarProps {
 
 function resolveBadge(
   item: NavItem,
-  badges: { recurrences: number; cinqPourquoi: number; operations: number; invitationsPending: number; controlesManquants: number; notificationsIA: number; interventionsEnCours: number } | undefined
+  badges: { recurrences: number; cinqPourquoi: number; operations: number; invitationsPending: number; controlesManquants: number; notificationsIA: number; interventionsEnCours: number; plaintesAQualifier: number } | undefined
 ): Badge | undefined {
   if (!item.badgeKey || !badges) return undefined;
   const count = badges[item.badgeKey] ?? 0;
