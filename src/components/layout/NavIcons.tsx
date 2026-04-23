@@ -247,8 +247,19 @@ const iconMap: Record<string, (props: { className?: string }) => JSX.Element> = 
   'Contrôle hebdo': IconControleHebdo,
   'Contrôle mensuel': IconControleMensuel,
   'Aide': IconAide,
+  'Administration IT': IconAdminIT,
 };
 
 export function getNavIcon(label: string) {
   return iconMap[label] ?? IconTableauBord;
+}
+
+function IconAdminIT({ className = s }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="2" y="3" width="16" height="14" rx="2" />
+      <path d="M6 8l3 2-3 2" />
+      <path d="M11 12h3" />
+    </svg>
+  );
 }

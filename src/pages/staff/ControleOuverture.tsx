@@ -2,6 +2,7 @@ import { useState, useCallback, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ControleEcran, type PointControleVue, type ZoneVue } from '@/components/controles/ControleEcran';
 import { ModaleQuitterSansValider } from '@/components/ui/ModaleQuitterSansValider';
+import { ModaleSignaler } from '@/components/forms/ModaleSignaler';
 import { SelectionParc } from '@/components/controles/SelectionParc';
 import { BoutonRetourGmao } from '@/components/controles/BoutonRetourGmao';
 import { useAuth } from '@/hooks/useAuth';
@@ -47,6 +48,7 @@ export function ControleOuverture() {
   const [zoneActive, setZoneActive] = useState<string>('');
   const [dirty, setDirty] = useState(false);
   const [showModale, setShowModale] = useState(false);
+  const [showSignaler, setShowSignaler] = useState(false);
   const [validated, setValidated] = useState(false);
 
   const zones: ZoneVue[] = useMemo(() => {
@@ -157,6 +159,16 @@ export function ControleOuverture() {
     );
   }
 
+  const signalBouton = (
+    <button
+      onClick={() => setShowSignaler(true)}
+      className="bg-red/10 border border-red/30 text-red px-3 py-2 rounded-[10px] text-[12px] font-semibold min-h-[44px] hover:bg-red/20 transition-colors flex items-center gap-1.5"
+    >
+      <AlertTriangleIcon className="w-3.5 h-3.5" />
+      Signaler une panne
+    </button>
+  );
+
   if (isLoading) {
     return (
       <div className="p-6 text-dim text-sm">Chargement des points de controle...</div>
@@ -221,13 +233,37 @@ export function ControleOuverture() {
               ? `Disponible quand tous les points sont saisis (${restants} restants)`
               : undefined
         }
-        headerRightSlot={<BoutonRetourGmao />}
+        headerRightSlot={
+          <div className="flex items-center gap-1.5">
+            {signalBouton}
+            <BoutonRetourGmao />
+          </div>
+        }
       />
       <ModaleQuitterSansValider
         open={showModale}
         onConfirmer={confirmerQuitter}
         onAnnuler={() => setShowModale(false)}
       />
+      <ModaleSignaler
+        open={showSignaler}
+        onClose={() => setShowSignaler(false)}
+        parcId={parcId!}
+        parcCode={parc?.code ?? ''}
+        parcNom={parc?.nom ?? ''}
+        userId={utilisateur?.id}
+        userPrenom={utilisateur?.prenom}
+      />
     </>
+  );
+}
+
+function AlertTriangleIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M8 1.5L1 14h14L8 1.5z" />
+      <path d="M8 6v3" />
+      <circle cx="8" cy="11.5" r="0.5" fill="currentColor" stroke="none" />
+    </svg>
   );
 }

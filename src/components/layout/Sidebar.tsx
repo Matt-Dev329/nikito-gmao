@@ -79,6 +79,7 @@ const sections: { titre: string; items: NavItem[] }[] = [
       { to: '/gmao/utilisateurs', label: 'Utilisateurs', badgeKey: 'invitationsPending', badgeTone: 'amber', roles: ['direction', 'chef_maintenance', 'manager_parc'] },
       { to: '/gmao/bibliotheque', label: 'Bibliothèque points', roles: ['direction', 'chef_maintenance'] },
       { to: '/gmao/fournisseurs', label: 'Fournisseurs', roles: ['direction', 'chef_maintenance'] },
+      { to: '/gmao/it-admin', label: 'Administration IT', roles: ['direction'] },
     ],
   },
 ];
