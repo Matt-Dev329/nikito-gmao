@@ -146,8 +146,8 @@ function StatBox({ label, value }: { label: string; value: number }) {
   );
 }
 
-function Avatar({ prenom, nom }: { prenom: string; nom: string }) {
-  const initials = `${prenom.charAt(0)}${nom.charAt(0)}`.toUpperCase();
+function Avatar({ prenom, nom }: { prenom: string | null; nom: string | null }) {
+  const initials = `${(prenom ?? '?').charAt(0)}${(nom ?? '?').charAt(0)}`.toUpperCase();
   return (
     <div className="w-9 h-9 rounded-full bg-bg-deep border border-white/[0.08] flex items-center justify-center text-[11px] font-bold text-dim shrink-0">
       {initials}
@@ -500,7 +500,7 @@ function InvitationCard({
           <div className="min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
               <span className="text-[13px] font-medium">
-                {inv.prenom} {inv.nom}
+                {inv.prenom ?? ''} {inv.nom ?? ''}
               </span>
               <RoleBadge code={inv.role_code} />
             </div>
