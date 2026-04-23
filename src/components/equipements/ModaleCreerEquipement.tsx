@@ -18,10 +18,14 @@ export function ModaleCreerEquipement({ onClose }: ModaleCreerEquipementProps) {
   const [code, setCode] = useState('');
   const [libelle, setLibelle] = useState('');
   const [numeroSerie, setNumeroSerie] = useState('');
+  const [numeroReader, setNumeroReader] = useState('');
   const [dateMiseService, setDateMiseService] = useState('');
   const [dateFinGarantie, setDateFinGarantie] = useState('');
   const [statut, setStatut] = useState<StatutEquipement>('actif');
   const [aSurveiller, setASurveiller] = useState(false);
+
+  const categorieSelectionnee = categories?.find((c) => c.id === categorieId);
+  const estArcade = categorieSelectionnee?.nom?.toLowerCase().includes('arcade') ?? false;
 
   const { data: zones } = useZonesParc(parcId || undefined);
 
@@ -36,6 +40,7 @@ export function ModaleCreerEquipement({ onClose }: ModaleCreerEquipementProps) {
       code,
       libelle,
       numero_serie: numeroSerie || null,
+      numero_reader: estArcade ? (numeroReader || null) : null,
       date_mise_service: dateMiseService || null,
       date_fin_garantie: dateFinGarantie || null,
       statut,
@@ -139,6 +144,17 @@ export function ModaleCreerEquipement({ onClose }: ModaleCreerEquipementProps) {
               className="w-full bg-bg-deep border border-white/[0.08] rounded-[10px] p-3 px-3.5 text-text text-[13px] outline-none focus:border-nikito-cyan"
             />
           </Field>
+          {estArcade && (
+            <Field label="N° Reader">
+              <input
+                type="text"
+                value={numeroReader}
+                onChange={(e) => setNumeroReader(e.target.value)}
+                placeholder="Ex: RDR-00421"
+                className="w-full bg-bg-deep border border-white/[0.08] rounded-[10px] p-3 px-3.5 text-text text-[13px] outline-none focus:border-nikito-cyan"
+              />
+            </Field>
+          )}
           <Field label="Date de mise en service">
             <input
               type="date"

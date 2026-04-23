@@ -117,6 +117,7 @@ export function useCreerEquipement() {
       code: string;
       libelle: string;
       numero_serie?: string | null;
+      numero_reader?: string | null;
       date_mise_service?: string | null;
       date_fin_garantie?: string | null;
       statut?: StatutEquipement;
@@ -128,6 +129,7 @@ export function useCreerEquipement() {
           ...payload,
           zone_id: payload.zone_id || null,
           numero_serie: payload.numero_serie || null,
+          numero_reader: payload.numero_reader || null,
           date_mise_service: payload.date_mise_service || null,
           date_fin_garantie: payload.date_fin_garantie || null,
           statut: payload.statut ?? 'actif',
@@ -157,6 +159,7 @@ export function useModifierEquipement() {
       code?: string;
       libelle?: string;
       numero_serie?: string | null;
+      numero_reader?: string | null;
       date_mise_service?: string | null;
       date_fin_garantie?: string | null;
       statut?: StatutEquipement;

@@ -17,6 +17,7 @@ interface ArcadeIncidentPayload {
   priorite: string;
   equipement_code: string;
   equipement_libelle: string;
+  numero_reader: string | null;
   parc_nom: string;
   parc_code: string;
   declare_le: string;
@@ -98,6 +99,18 @@ function buildHtml(p: ArcadeIncidentPayload): string {
                         ${p.equipement_code} &mdash; ${p.equipement_libelle}
                       </td>
                     </tr>
+                    ${
+                p.numero_reader
+                  ? `<tr>
+                      <td style="padding:12px 16px;font-size:13px;color:#8b92b8;border-bottom:1px solid #1e2344;">
+                        N&deg; Reader
+                      </td>
+                      <td style="padding:12px 16px;font-size:14px;color:#5DE5FF;border-bottom:1px solid #1e2344;font-weight:700;letter-spacing:0.5px;">
+                        ${p.numero_reader}
+                      </td>
+                    </tr>`
+                  : ""
+              }
                     <tr>
                       <td style="padding:12px 16px;font-size:13px;color:#8b92b8;border-bottom:1px solid #1e2344;">
                         Parc

@@ -95,6 +95,9 @@ function VueDetail({
         <InfoCell label="Categorie" value={eq.categories_equipement?.nom ?? '--'} />
         <InfoCell label="Zone" value={eq.zones?.nom ?? '--'} />
         <InfoCell label="N° serie" value={eq.numero_serie ?? '--'} />
+        {eq.categories_equipement?.nom?.toLowerCase().includes('arcade') && (
+          <InfoCell label="N° Reader" value={eq.numero_reader ?? '--'} />
+        )}
         <InfoCell label="Mise en service" value={formatDate(eq.date_mise_service)} />
         <InfoCell
           label="Fin de garantie"
@@ -167,10 +170,14 @@ function FormulaireEdition({
   const [code, setCode] = useState(eq.code);
   const [libelle, setLibelle] = useState(eq.libelle);
   const [numeroSerie, setNumeroSerie] = useState(eq.numero_serie ?? '');
+  const [numeroReader, setNumeroReader] = useState(eq.numero_reader ?? '');
   const [dateMiseService, setDateMiseService] = useState(eq.date_mise_service ?? '');
   const [dateFinGarantie, setDateFinGarantie] = useState(eq.date_fin_garantie ?? '');
   const [statut, setStatut] = useState<StatutEquipement>(eq.statut);
   const [aSurveiller, setASurveiller] = useState(eq.a_surveiller);
+
+  const categorieSelectionnee = categories?.find((c) => c.id === categorieId);
+  const estArcade = categorieSelectionnee?.nom?.toLowerCase().includes('arcade') ?? false;
 
   const { data: zones } = useZonesParc(parcId || undefined);
 
@@ -186,6 +193,7 @@ function FormulaireEdition({
       code,
       libelle,
       numero_serie: numeroSerie || null,
+      numero_reader: estArcade ? (numeroReader || null) : null,
       date_mise_service: dateMiseService || null,
       date_fin_garantie: dateFinGarantie || null,
       statut,
@@ -254,6 +262,13 @@ function FormulaireEdition({
           <input type="text" value={numeroSerie} onChange={(e) => setNumeroSerie(e.target.value)}
             className="w-full bg-bg-deep border border-white/[0.08] rounded-[10px] p-3 px-3.5 text-text text-[13px] outline-none focus:border-nikito-cyan" />
         </Field>
+        {estArcade && (
+          <Field label="N° Reader">
+            <input type="text" value={numeroReader} onChange={(e) => setNumeroReader(e.target.value)}
+              placeholder="Ex: RDR-00421"
+              className="w-full bg-bg-deep border border-white/[0.08] rounded-[10px] p-3 px-3.5 text-text text-[13px] outline-none focus:border-nikito-cyan" />
+          </Field>
+        )}
         <Field label="Mise en service">
           <input type="date" value={dateMiseService} onChange={(e) => setDateMiseService(e.target.value)}
             className="w-full bg-bg-deep border border-white/[0.08] rounded-[10px] p-3 px-3.5 text-text text-[13px] outline-none focus:border-nikito-cyan" />

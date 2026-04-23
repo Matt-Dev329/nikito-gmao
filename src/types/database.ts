@@ -119,6 +119,7 @@ export interface Equipement {
   code: string;
   libelle: string;
   numero_serie: string | null;
+  numero_reader: string | null;
   date_mise_service: string | null;
   date_fin_garantie: string | null;
   statut: StatutEquipement;
