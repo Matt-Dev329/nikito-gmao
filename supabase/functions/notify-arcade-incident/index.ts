@@ -18,6 +18,10 @@ interface ArcadeIncidentPayload {
   equipement_code: string;
   equipement_libelle: string;
   numero_reader: string | null;
+  numero_serie: string | null;
+  categorie_nom: string | null;
+  date_mise_service: string | null;
+  date_fin_garantie: string | null;
   parc_nom: string;
   parc_code: string;
   declare_le: string;
@@ -107,6 +111,54 @@ function buildHtml(p: ArcadeIncidentPayload): string {
                       </td>
                       <td style="padding:12px 16px;font-size:14px;color:#5DE5FF;border-bottom:1px solid #1e2344;font-weight:700;letter-spacing:0.5px;">
                         ${p.numero_reader}
+                      </td>
+                    </tr>`
+                  : ""
+              }
+                    ${
+                p.numero_serie
+                  ? `<tr>
+                      <td style="padding:12px 16px;font-size:13px;color:#8b92b8;border-bottom:1px solid #1e2344;">
+                        N&deg; S&eacute;rie
+                      </td>
+                      <td style="padding:12px 16px;font-size:14px;color:#ffffff;border-bottom:1px solid #1e2344;">
+                        ${p.numero_serie}
+                      </td>
+                    </tr>`
+                  : ""
+              }
+                    ${
+                p.categorie_nom
+                  ? `<tr>
+                      <td style="padding:12px 16px;font-size:13px;color:#8b92b8;border-bottom:1px solid #1e2344;">
+                        Marque / Type
+                      </td>
+                      <td style="padding:12px 16px;font-size:14px;color:#ffffff;border-bottom:1px solid #1e2344;">
+                        ${p.categorie_nom}
+                      </td>
+                    </tr>`
+                  : ""
+              }
+                    ${
+                p.date_mise_service
+                  ? `<tr>
+                      <td style="padding:12px 16px;font-size:13px;color:#8b92b8;border-bottom:1px solid #1e2344;">
+                        Mise en service
+                      </td>
+                      <td style="padding:12px 16px;font-size:14px;color:#ffffff;border-bottom:1px solid #1e2344;">
+                        ${new Date(p.date_mise_service).toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric" })}
+                      </td>
+                    </tr>`
+                  : ""
+              }
+                    ${
+                p.date_fin_garantie
+                  ? `<tr>
+                      <td style="padding:12px 16px;font-size:13px;color:#8b92b8;border-bottom:1px solid #1e2344;">
+                        Fin de garantie
+                      </td>
+                      <td style="padding:12px 16px;font-size:14px;color:${new Date(p.date_fin_garantie) < new Date() ? "#FF4D6D" : "#ffffff"};border-bottom:1px solid #1e2344;${new Date(p.date_fin_garantie) < new Date() ? "font-weight:700;" : ""}">
+                        ${new Date(p.date_fin_garantie).toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric" })}${new Date(p.date_fin_garantie) < new Date() ? " (expir&eacute;e)" : ""}
                       </td>
                     </tr>`
                   : ""
@@ -236,7 +288,7 @@ Deno.serve(async (req: Request) => {
       },
       body: JSON.stringify({
         from: "ALBA by Nikito <noreply@nikito.tech>",
-        to: ["joachim.miloche@ja-fg.com", "lili.marie.pellerin@ja-fg.com"],
+        to: ["joachim.miloche@ja-fg.com", "lilimarie.pellerin@ja-fg.com"],
         subject,
         html,
       }),
