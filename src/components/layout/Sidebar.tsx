@@ -122,20 +122,7 @@ export function Sidebar({ user, roleAffiche, roleCode, realRoleCode, compact = f
         )}
       </div>
 
-      <div className={cn('flex items-center gap-1 flex-shrink-0', compact ? 'justify-center' : 'px-0')}>
-        {onToggle && (
-          <button
-            onClick={onToggle}
-            className={cn(
-              'hidden md:flex items-center gap-2.5 rounded-[10px] text-dim hover:text-text hover:bg-white/[0.04] transition-colors min-h-[40px]',
-              compact ? 'justify-center px-0 flex-1' : 'px-3 flex-1'
-            )}
-            title={compact ? 'Etendre la sidebar' : 'Reduire la sidebar'}
-          >
-            <IconToggleSidebar className={cn('w-[18px] h-[18px] flex-shrink-0 transition-transform', compact && 'rotate-180')} />
-            {!compact && <span className="text-[12px]">Reduire</span>}
-          </button>
-        )}
+      <div className={cn('flex items-center gap-1 flex-shrink-0', compact ? 'justify-center' : 'px-1')}>
         <NotificationBell compact={compact} onNavClick={onNavClick} />
         {showFormation && (
           <NavLink
@@ -243,6 +230,22 @@ export function Sidebar({ user, roleAffiche, roleCode, realRoleCode, compact = f
           );
         })}
       </div>
+
+      {onToggle && (
+        <div className={cn('flex-shrink-0', compact ? 'px-2' : 'px-2.5')}>
+          <button
+            onClick={onToggle}
+            className={cn(
+              'hidden md:flex items-center gap-2.5 rounded-[10px] text-dim hover:text-text hover:bg-white/[0.04] transition-colors min-h-[40px] w-full',
+              compact ? 'justify-center px-0' : 'px-3'
+            )}
+            title={compact ? 'Etendre la sidebar' : 'Reduire la sidebar'}
+          >
+            <IconToggleSidebar className={cn('w-[18px] h-[18px] flex-shrink-0 transition-transform', compact && 'rotate-180')} />
+            {!compact && <span className="text-[12px]">Reduire</span>}
+          </button>
+        </div>
+      )}
 
       <div className={cn('border-t border-white/[0.06] flex-shrink-0 relative', compact ? 'pt-3 pb-2' : 'pt-3.5 px-2.5')}>
         <button
