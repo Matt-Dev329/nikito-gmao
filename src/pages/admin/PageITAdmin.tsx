@@ -272,10 +272,10 @@ export function PageITAdmin() {
     if (tab === 'logs' && recentErrors.length === 0) loadRecentErrors();
   }, [edgeFns.length, tableStats.length, recentErrors.length, runEdgeFnChecks, runTableChecks, loadRecentErrors]);
 
-  const isDirection = utilisateur?.role_code === 'direction' || utilisateur?.role_code === 'chef_maintenance';
-  if (!isDirection) {
+  const hasITAccess = utilisateur?.role_code === 'direction' || utilisateur?.role_code === 'chef_maintenance' || utilisateur?.role_code === 'admin_it';
+  if (!hasITAccess) {
     return (
-      <div className="p-6 text-dim text-sm">Acces reserve a la direction.</div>
+      <div className="p-6 text-dim text-sm">Acces reserve a l'administration.</div>
     );
   }
 

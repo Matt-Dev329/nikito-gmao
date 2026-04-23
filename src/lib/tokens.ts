@@ -30,13 +30,14 @@ export const criticite = {
 } as const;
 
 // Mapping rôles → libellé français (consigne stricte vocabulaire FR)
-export const roleLabels = {
+export const roleLabels: Record<string, string> = {
   direction: 'Direction',
   chef_maintenance: "Chef d'équipe",
   manager_parc: 'Manager parc',
   technicien: 'Technicien',
   staff_operationnel: 'Staff opérationnel',
-} as const;
+  admin_it: 'Admin IT',
+};
 
 // KPI labels français (consigne vocabulaire stricte du README)
 export const kpiLabels = {

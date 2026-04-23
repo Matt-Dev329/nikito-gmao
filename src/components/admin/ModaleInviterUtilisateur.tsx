@@ -21,6 +21,7 @@ const rolesParAuth: Record<AuthMode, { value: RoleUtilisateur; label: string }[]
     { value: 'chef_maintenance', label: "Chef d'équipe" },
     { value: 'manager_parc', label: 'Manager parc' },
     { value: 'technicien', label: 'Technicien' },
+    { value: 'admin_it', label: 'Admin IT' },
   ],
   pin_seul: [{ value: 'staff_operationnel', label: 'Staff opérationnel' }],
 };
@@ -55,7 +56,9 @@ export function ModaleInviterUtilisateur({
 
   if (!open) return null;
 
-  const emailValide = !email || /^[^\s@]+@(nikito\.com|nikito\.fr)$/i.test(email);
+  const emailValide = !email || (roleChoisi === 'admin_it'
+    ? /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+    : /^[^\s@]+@(nikito\.com|nikito\.fr|nikito\.tech|ja-fg\.com)$/i.test(email));
   const peutEnvoyer =
     roleChoisi !== null &&
     parcsChoisis.length > 0 &&

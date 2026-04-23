@@ -27,7 +27,8 @@ export type RoleUtilisateur =
   | 'chef_maintenance'
   | 'manager_parc'
   | 'technicien'
-  | 'staff_operationnel';
+  | 'staff_operationnel'
+  | 'admin_it';
 export type AuthMode = 'email_password' | 'pin_seul';
 export type StatutValidation = 'en_attente' | 'valide' | 'refuse' | 'desactive';
 export type CategorieNoteChantier =

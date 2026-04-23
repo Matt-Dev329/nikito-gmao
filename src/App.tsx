@@ -103,7 +103,7 @@ export function App() {
       <Route
         path="/tech"
         element={
-          <RouteProtegee rolesAutorises={['technicien', 'chef_maintenance', 'direction']}>
+          <RouteProtegee rolesAutorises={['technicien', 'chef_maintenance', 'direction', 'staff_operationnel']}>
             <TabletLayout />
           </RouteProtegee>
         }

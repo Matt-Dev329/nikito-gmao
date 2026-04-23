@@ -43,9 +43,7 @@ function getTabsForRole(roleCode: RoleUtilisateur): TabDef[] {
     {
       id: 'controles',
       label: 'Contrôles',
-      matchPaths: isStaff
-        ? ['/staff/controle-ouverture']
-        : ['/gmao/controles-historique', '/staff/controle-ouverture', '/tech/controle-hebdo', '/tech/controle-mensuel'],
+      matchPaths: ['/staff/controle-ouverture', '/tech/controle-hebdo', '/tech/controle-mensuel', '/gmao/controles-historique'],
       action: 'navigate',
       route: isStaff ? '/staff/controle-ouverture' : '/gmao/controles-historique',
     },

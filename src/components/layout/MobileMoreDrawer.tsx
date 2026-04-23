@@ -31,16 +31,23 @@ const pilotageItems: DrawerItem[] = [
   { to: '/gmao/controles-historique', label: 'Historique controles', iconLabel: 'Contrôles', roles: ['direction', 'chef_maintenance'] },
 ];
 
+const controleItems: DrawerItem[] = [
+  { to: '/staff/controle-ouverture', label: 'Controle ouverture', iconLabel: 'Contrôle d\'ouverture', roles: ['direction', 'chef_maintenance', 'staff_operationnel'] },
+  { to: '/tech/controle-hebdo', label: 'Controle hebdo', iconLabel: 'Contrôle hebdo', roles: ['direction', 'chef_maintenance', 'technicien', 'staff_operationnel'] },
+  { to: '/tech/controle-mensuel', label: 'Controle mensuel', iconLabel: 'Contrôle mensuel', roles: ['direction', 'chef_maintenance', 'technicien', 'staff_operationnel'] },
+];
+
 const configItems: DrawerItem[] = [
   { to: '/gmao/parcs', label: 'Parcs', iconLabel: 'Parcs', roles: ['direction', 'chef_maintenance'] },
   { to: '/gmao/utilisateurs', label: 'Utilisateurs', iconLabel: 'Utilisateurs', roles: ['direction', 'chef_maintenance', 'manager_parc'] },
   { to: '/gmao/bibliotheque', label: 'Bibliotheque points', iconLabel: 'Bibliothèque points', roles: ['direction', 'chef_maintenance'] },
   { to: '/gmao/fournisseurs', label: 'Fournisseurs', iconLabel: 'Fournisseurs', roles: ['direction', 'chef_maintenance'] },
+  { to: '/gmao/it-admin', label: 'Administration IT', iconLabel: 'Administration IT', roles: ['direction', 'admin_it'] },
 ];
 
 const accountItems: DrawerItem[] = [
-  { to: '/gmao/profil', label: 'Profil', iconLabel: 'Utilisateurs', roles: ['direction', 'chef_maintenance', 'manager_parc', 'technicien', 'staff_operationnel'] },
-  { to: '/gmao/aide', label: 'Aide', iconLabel: 'Aide', roles: ['direction', 'chef_maintenance', 'manager_parc', 'technicien', 'staff_operationnel'] },
+  { to: '/gmao/profil', label: 'Profil', iconLabel: 'Utilisateurs', roles: ['direction', 'chef_maintenance', 'manager_parc', 'technicien', 'staff_operationnel', 'admin_it'] },
+  { to: '/gmao/aide', label: 'Aide', iconLabel: 'Aide', roles: ['direction', 'chef_maintenance', 'manager_parc', 'technicien', 'staff_operationnel', 'admin_it'] },
 ];
 
 export function MobileMoreDrawer({ open, onClose, roleCode, onSignOut }: MobileMoreDrawerProps) {
@@ -96,6 +103,7 @@ export function MobileMoreDrawer({ open, onClose, roleCode, onSignOut }: MobileM
   const filterByRole = (items: DrawerItem[]) => items.filter((it) => it.roles.includes(roleCode));
 
   const visiblePilotage = filterByRole(pilotageItems);
+  const visibleControles = filterByRole(controleItems);
   const visibleConfig = filterByRole(configItems);
   const visibleAccount = filterByRole(accountItems);
 
@@ -136,6 +144,19 @@ export function MobileMoreDrawer({ open, onClose, roleCode, onSignOut }: MobileM
           {visiblePilotage.length > 0 && (
             <Section title="Pilotage">
               {visiblePilotage.map((item) => (
+                <DrawerRow
+                  key={item.to}
+                  item={item}
+                  active={pathname.startsWith(item.to)}
+                  onClick={() => handleNav(item.to)}
+                />
+              ))}
+            </Section>
+          )}
+
+          {visibleControles.length > 0 && (
+            <Section title="Controles">
+              {visibleControles.map((item) => (
                 <DrawerRow
                   key={item.to}
                   item={item}
