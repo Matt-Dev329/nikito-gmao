@@ -22,6 +22,7 @@ interface ArcadeIncidentPayload {
   categorie_nom: string | null;
   date_mise_service: string | null;
   date_fin_garantie: string | null;
+  revenu_journalier_estime: number | null;
   parc_nom: string;
   parc_code: string;
   declare_le: string;
@@ -198,6 +199,24 @@ function buildHtml(p: ArcadeIncidentPayload): string {
                   </table>
                 </td>
               </tr>
+
+              ${
+                p.revenu_journalier_estime
+                  ? `<tr>
+                <td style="padding-bottom:20px;">
+                  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#FF4D6D15;border:1px solid #FF4D6D40;border-radius:10px;">
+                    <tr>
+                      <td style="padding:16px 20px;text-align:center;">
+                        <div style="font-size:11px;color:#FF4D6D;text-transform:uppercase;letter-spacing:1.5px;font-weight:700;padding-bottom:6px;">Perte financi&egrave;re estim&eacute;e / jour</div>
+                        <div style="font-size:28px;color:#FF4D6D;font-weight:800;">${Number(p.revenu_journalier_estime).toLocaleString("fr-FR", { minimumFractionDigits: 0, maximumFractionDigits: 0 })} &euro;</div>
+                        <div style="font-size:11px;color:#8b92b8;padding-top:4px;">soit ~${(Number(p.revenu_journalier_estime) * 7).toLocaleString("fr-FR", { minimumFractionDigits: 0, maximumFractionDigits: 0 })} &euro; / semaine de panne</div>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>`
+                  : ""
+              }
 
               ${
                 p.description
