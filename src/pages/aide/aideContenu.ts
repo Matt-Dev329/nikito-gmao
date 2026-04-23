@@ -264,4 +264,5 @@ export const guidesParRole: Record<RoleUtilisateur, GuideAide> = {
   technicien: guideTechnicien,
   manager_parc: guideManagerParc,
   staff_operationnel: guideStaff,
+  admin_it: guideDirection,
 };
