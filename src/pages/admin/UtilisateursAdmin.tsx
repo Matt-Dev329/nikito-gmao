@@ -29,7 +29,6 @@ const roleBadgeColors: Record<RoleUtilisateur, string> = {
   manager_parc: 'bg-amber/15 text-amber',
   technicien: 'bg-green/15 text-green',
   staff_operationnel: 'bg-faint/20 text-dim',
-  admin_it: 'bg-nikito-cyan/10 text-nikito-cyan',
 };
 
 export function UtilisateursAdmin() {
@@ -280,7 +279,6 @@ const roleHomePage: Record<RoleUtilisateur, string> = {
   technicien: '/gmao/operations',
   manager_parc: '/gmao/mon-parc',
   staff_operationnel: '/staff/controle-ouverture',
-  admin_it: '/gmao/it-admin',
 };
 
 function ListeActifs() {

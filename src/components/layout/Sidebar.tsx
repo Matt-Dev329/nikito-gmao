@@ -68,8 +68,8 @@ const sections: { titre: string; items: NavItem[] }[] = [
     titre: 'Contrôles',
     items: [
       { to: '/staff/controle-ouverture', label: 'Contrôle d\'ouverture', badgeKey: 'controlesManquants', badgeTone: 'red', roles: ['direction', 'chef_maintenance', 'staff_operationnel'] },
-      { to: '/tech/controle-hebdo', label: 'Contrôle hebdo', roles: ['direction', 'chef_maintenance', 'technicien', 'staff_operationnel'] },
-      { to: '/tech/controle-mensuel', label: 'Contrôle mensuel', roles: ['direction', 'chef_maintenance', 'technicien', 'staff_operationnel'] },
+      { to: '/tech/controle-hebdo', label: 'Contrôle hebdo', roles: ['direction', 'chef_maintenance', 'technicien'] },
+      { to: '/tech/controle-mensuel', label: 'Contrôle mensuel', roles: ['direction', 'chef_maintenance', 'technicien'] },
     ],
   },
   {
@@ -79,7 +79,7 @@ const sections: { titre: string; items: NavItem[] }[] = [
       { to: '/gmao/utilisateurs', label: 'Utilisateurs', badgeKey: 'invitationsPending', badgeTone: 'amber', roles: ['direction', 'chef_maintenance', 'manager_parc'] },
       { to: '/gmao/bibliotheque', label: 'Bibliothèque points', roles: ['direction', 'chef_maintenance'] },
       { to: '/gmao/fournisseurs', label: 'Fournisseurs', roles: ['direction', 'chef_maintenance'] },
-      { to: '/gmao/it-admin', label: 'Administration IT', roles: ['direction', 'admin_it'] },
+      { to: '/gmao/it-admin', label: 'Administration IT', roles: ['direction'] },
     ],
   },
 ];

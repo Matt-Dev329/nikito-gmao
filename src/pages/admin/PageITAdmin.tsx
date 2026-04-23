@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { cn } from '@/lib/utils';
-import { supabase, supabaseUrl, supabaseAnonKey } from '@/lib/supabase';
+import { supabase, supabaseUrl } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
 import { useConfig } from '@/hooks/useConfig';
 
@@ -41,7 +41,6 @@ const EDGE_FUNCTIONS = [
   'notify-arcade-incident',
   'generer-rapport-ia-hebdo',
   'sync-roller-gxs',
-  'debug-assistant',
 ];
 
 const CORE_TABLES = [
@@ -69,7 +68,7 @@ export function PageITAdmin() {
   const [edgeFns, setEdgeFns] = useState<EdgeFnStatus[]>([]);
   const [tableStats, setTableStats] = useState<TableStats[]>([]);
   const [recentErrors, setRecentErrors] = useState<RecentError[]>([]);
-  const [activeTab, setActiveTab] = useState<'sante' | 'edge' | 'tables' | 'config' | 'logs' | 'debug'>('sante');
+  const [activeTab, setActiveTab] = useState<'sante' | 'edge' | 'tables' | 'config' | 'logs'>('sante');
   const [running, setRunning] = useState(false);
   const [lastRun, setLastRun] = useState<Date | null>(null);
 
@@ -273,10 +272,10 @@ export function PageITAdmin() {
     if (tab === 'logs' && recentErrors.length === 0) loadRecentErrors();
   }, [edgeFns.length, tableStats.length, recentErrors.length, runEdgeFnChecks, runTableChecks, loadRecentErrors]);
 
-  const hasITAccess = utilisateur?.role_code === 'direction' || utilisateur?.role_code === 'chef_maintenance' || utilisateur?.role_code === 'admin_it';
-  if (!hasITAccess) {
+  const isDirection = utilisateur?.role_code === 'direction' || utilisateur?.role_code === 'chef_maintenance';
+  if (!isDirection) {
     return (
-      <div className="p-6 text-dim text-sm">Acces reserve a l'administration.</div>
+      <div className="p-6 text-dim text-sm">Acces reserve a la direction.</div>
     );
   }
 
@@ -306,7 +305,6 @@ export function PageITAdmin() {
               else if (activeTab === 'edge') runEdgeFnChecks();
               else if (activeTab === 'tables') runTableChecks();
               else if (activeTab === 'logs') loadRecentErrors();
-              else if (activeTab === 'debug') runHealthChecks();
             }}
             disabled={running}
             className="bg-gradient-cta text-text px-4 py-2.5 rounded-lg text-[12px] font-medium min-h-[44px] disabled:opacity-50 hover:brightness-110 transition-all flex items-center gap-2"
@@ -324,7 +322,6 @@ export function PageITAdmin() {
           { key: 'tables', label: 'Tables DB' },
           { key: 'config', label: 'Configuration' },
           { key: 'logs', label: 'Incidents ouverts' },
-          { key: 'debug', label: 'Assistant Claude' },
         ] as const).map((tab) => (
           <button
             key={tab.key}
@@ -346,7 +343,6 @@ export function PageITAdmin() {
       {activeTab === 'tables' && <TabTables tables={tableStats} running={running} />}
       {activeTab === 'config' && <TabConfig />}
       {activeTab === 'logs' && <TabLogs errors={recentErrors} />}
-      {activeTab === 'debug' && <TabDebugAssistant checks={checks} edgeFns={edgeFns} />}
     </div>
   );
 }
@@ -536,332 +532,6 @@ function TabLogs({ errors }: { errors: RecentError[] }) {
         )}
       </div>
     </div>
-  );
-}
-
-interface ChatMessage {
-  role: 'user' | 'assistant';
-  content: string;
-}
-
-function TabDebugAssistant({ checks, edgeFns }: { checks: SystemCheck[]; edgeFns: EdgeFnStatus[] }) {
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [input, setInput] = useState('');
-  const [loading, setLoading] = useState(false);
-  const scrollRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
-  }, [messages]);
-
-  const buildSystemContext = useCallback(() => {
-    const ctx: Record<string, unknown> = {};
-
-    if (checks.length > 0) {
-      ctx.sante_systeme = checks.map((c) => ({
-        check: c.label,
-        status: c.status,
-        detail: c.detail,
-      }));
-    }
-
-    if (edgeFns.length > 0) {
-      ctx.edge_functions = edgeFns.map((f) => ({
-        name: f.name,
-        status: f.status,
-        latency_ms: f.latencyMs,
-      }));
-    }
-
-    ctx.navigateur = {
-      user_agent: navigator.userAgent.slice(0, 120),
-      viewport: `${window.innerWidth}x${window.innerHeight}`,
-      langue: navigator.language,
-      heure_locale: new Date().toLocaleString('fr-FR'),
-    };
-
-    return ctx;
-  }, [checks, edgeFns]);
-
-  const handleSend = useCallback(async () => {
-    const trimmed = input.trim();
-    if (!trimmed || loading) return;
-
-    const userMsg: ChatMessage = { role: 'user', content: trimmed };
-    const updated = [...messages, userMsg];
-    setMessages(updated);
-    setInput('');
-    setLoading(true);
-
-    try {
-      const apiUrl = `${supabaseUrl}/functions/v1/debug-assistant`;
-      const historyForApi = updated.slice(-10).map((m) => ({
-        role: m.role,
-        content: m.content,
-      }));
-
-      const res = await fetch(apiUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${supabaseAnonKey}`,
-        },
-        body: JSON.stringify({
-          message: trimmed,
-          system_context: buildSystemContext(),
-          history: historyForApi.slice(0, -1),
-        }),
-      });
-
-      const data = await res.json();
-
-      if (data.success && data.reply) {
-        setMessages((prev) => [...prev, { role: 'assistant', content: data.reply }]);
-      } else {
-        setMessages((prev) => [
-          ...prev,
-          { role: 'assistant', content: `Erreur : ${data.error ?? 'Reponse inattendue'}${data.detail ? `\n${data.detail}` : ''}` },
-        ]);
-      }
-    } catch (err) {
-      setMessages((prev) => [
-        ...prev,
-        { role: 'assistant', content: `Erreur reseau : ${String(err)}` },
-      ]);
-    } finally {
-      setLoading(false);
-    }
-  }, [input, loading, messages, buildSystemContext]);
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSend();
-    }
-  };
-
-  return (
-    <div className="flex flex-col h-[calc(100vh-280px)] min-h-[400px]">
-      <div className="bg-bg-card rounded-xl border border-white/[0.06] px-4 py-3 mb-3">
-        <div className="flex items-center gap-2.5">
-          <ClaudeIcon className="w-5 h-5 text-nikito-cyan flex-shrink-0" />
-          <div>
-            <div className="text-[13px] font-semibold">Assistant debug Claude</div>
-            <div className="text-[11px] text-dim">
-              Decrivez votre probleme — l'IA analyse le contexte systeme et propose des solutions
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div
-        ref={scrollRef}
-        className="flex-1 overflow-y-auto bg-bg-card rounded-xl border border-white/[0.06] p-4 mb-3 space-y-4"
-      >
-        {messages.length === 0 && (
-          <div className="flex flex-col items-center justify-center h-full gap-4 text-center">
-            <ClaudeIcon className="w-10 h-10 text-white/[0.08]" />
-            <div className="space-y-2 max-w-md">
-              <div className="text-[13px] text-dim">Posez votre question ou decrivez l'erreur rencontree</div>
-              <div className="flex flex-wrap gap-1.5 justify-center">
-                {[
-                  'La page IA Predictive ne charge pas',
-                  'Un utilisateur ne peut pas se connecter',
-                  'Les controles ne s\'enregistrent pas',
-                  'Edge function en erreur',
-                ].map((suggestion) => (
-                  <button
-                    key={suggestion}
-                    onClick={() => setInput(suggestion)}
-                    className="bg-bg-deep border border-white/[0.06] text-dim text-[11px] px-3 py-1.5 rounded-lg hover:text-text hover:border-nikito-cyan/30 transition-colors"
-                  >
-                    {suggestion}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {messages.map((msg, i) => (
-          <div
-            key={i}
-            className={cn(
-              'flex gap-3',
-              msg.role === 'user' ? 'justify-end' : 'justify-start'
-            )}
-          >
-            {msg.role === 'assistant' && (
-              <div className="w-7 h-7 rounded-lg bg-nikito-cyan/10 flex items-center justify-center flex-shrink-0 mt-0.5">
-                <ClaudeIcon className="w-4 h-4 text-nikito-cyan" />
-              </div>
-            )}
-            <div
-              className={cn(
-                'rounded-xl px-4 py-3 max-w-[85%] text-[13px] leading-relaxed',
-                msg.role === 'user'
-                  ? 'bg-nikito-cyan/10 border border-nikito-cyan/20 text-text'
-                  : 'bg-bg-deep border border-white/[0.06] text-text'
-              )}
-            >
-              {msg.role === 'assistant' ? (
-                <MarkdownLite text={msg.content} />
-              ) : (
-                <span className="whitespace-pre-wrap">{msg.content}</span>
-              )}
-            </div>
-            {msg.role === 'user' && (
-              <div className="w-7 h-7 rounded-lg bg-white/[0.06] flex items-center justify-center flex-shrink-0 mt-0.5">
-                <UserIcon className="w-4 h-4 text-dim" />
-              </div>
-            )}
-          </div>
-        ))}
-
-        {loading && (
-          <div className="flex gap-3 justify-start">
-            <div className="w-7 h-7 rounded-lg bg-nikito-cyan/10 flex items-center justify-center flex-shrink-0">
-              <ClaudeIcon className="w-4 h-4 text-nikito-cyan animate-pulse" />
-            </div>
-            <div className="bg-bg-deep border border-white/[0.06] rounded-xl px-4 py-3">
-              <div className="flex items-center gap-2">
-                <span className="w-1.5 h-1.5 rounded-full bg-nikito-cyan animate-bounce" style={{ animationDelay: '0ms' }} />
-                <span className="w-1.5 h-1.5 rounded-full bg-nikito-cyan animate-bounce" style={{ animationDelay: '150ms' }} />
-                <span className="w-1.5 h-1.5 rounded-full bg-nikito-cyan animate-bounce" style={{ animationDelay: '300ms' }} />
-                <span className="text-[12px] text-dim ml-1">Analyse en cours...</span>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-
-      <div className="flex gap-2">
-        <textarea
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder="Decrivez le probleme ou l'erreur..."
-          rows={1}
-          className="flex-1 bg-bg-card border border-white/[0.08] rounded-xl text-text text-[13px] px-4 py-3 outline-none resize-none focus:border-nikito-cyan/40 transition-colors placeholder:text-faint"
-          style={{ minHeight: 48, maxHeight: 120 }}
-        />
-        <button
-          onClick={handleSend}
-          disabled={!input.trim() || loading}
-          className={cn(
-            'px-5 rounded-xl font-medium text-[13px] min-h-[48px] transition-all flex items-center gap-2',
-            input.trim() && !loading
-              ? 'bg-gradient-cta text-text hover:brightness-110'
-              : 'bg-bg-deep text-faint cursor-not-allowed'
-          )}
-        >
-          <SendIcon className="w-4 h-4" />
-          Envoyer
-        </button>
-      </div>
-
-      {messages.length > 0 && (
-        <button
-          onClick={() => setMessages([])}
-          className="mt-2 text-[11px] text-faint hover:text-dim self-center transition-colors"
-        >
-          Effacer la conversation
-        </button>
-      )}
-    </div>
-  );
-}
-
-function MarkdownLite({ text }: { text: string }) {
-  const lines = text.split('\n');
-  const elements: React.ReactNode[] = [];
-
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-
-    if (line.startsWith('### ')) {
-      elements.push(<div key={i} className="font-semibold text-[13px] mt-3 mb-1">{line.slice(4)}</div>);
-    } else if (line.startsWith('## ')) {
-      elements.push(<div key={i} className="font-bold text-[14px] mt-3 mb-1">{line.slice(3)}</div>);
-    } else if (line.startsWith('# ')) {
-      elements.push(<div key={i} className="font-bold text-[15px] mt-3 mb-1">{line.slice(2)}</div>);
-    } else if (line.startsWith('- ') || line.startsWith('* ')) {
-      elements.push(
-        <div key={i} className="flex gap-2 ml-1">
-          <span className="text-nikito-cyan mt-0.5 flex-shrink-0">-</span>
-          <span>{renderInline(line.slice(2))}</span>
-        </div>
-      );
-    } else if (/^\d+\.\s/.test(line)) {
-      const match = line.match(/^(\d+)\.\s(.*)$/);
-      if (match) {
-        elements.push(
-          <div key={i} className="flex gap-2 ml-1">
-            <span className="text-nikito-cyan font-mono text-[12px] mt-0.5 flex-shrink-0 min-w-[18px]">{match[1]}.</span>
-            <span>{renderInline(match[2])}</span>
-          </div>
-        );
-      }
-    } else if (line.startsWith('```')) {
-      const codeLines: string[] = [];
-      i++;
-      while (i < lines.length && !lines[i].startsWith('```')) {
-        codeLines.push(lines[i]);
-        i++;
-      }
-      elements.push(
-        <pre key={i} className="bg-bg-app/50 rounded-lg p-3 text-[11px] font-mono overflow-x-auto my-2 border border-white/[0.04]">
-          {codeLines.join('\n')}
-        </pre>
-      );
-    } else if (line.trim() === '') {
-      elements.push(<div key={i} className="h-2" />);
-    } else {
-      elements.push(<div key={i}>{renderInline(line)}</div>);
-    }
-  }
-
-  return <div className="space-y-0.5">{elements}</div>;
-}
-
-function renderInline(text: string): React.ReactNode {
-  const parts = text.split(/(\*\*[^*]+\*\*|`[^`]+`)/g);
-  return parts.map((part, i) => {
-    if (part.startsWith('**') && part.endsWith('**')) {
-      return <strong key={i} className="font-semibold text-text">{part.slice(2, -2)}</strong>;
-    }
-    if (part.startsWith('`') && part.endsWith('`')) {
-      return <code key={i} className="bg-bg-app/50 text-nikito-cyan px-1 py-0.5 rounded text-[11px] font-mono">{part.slice(1, -1)}</code>;
-    }
-    return part;
-  });
-}
-
-function ClaudeIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M13.4 3.6L10 10l3.4 6.4c.4.7-.1 1.6-.9 1.6H7.5c-.8 0-1.3-.9-.9-1.6L10 10 6.6 3.6c-.4-.7.1-1.6.9-1.6h5c.8 0 1.3.9.9 1.6z" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
-    </svg>
-  );
-}
-
-function UserIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round">
-      <circle cx="8" cy="5.5" r="3" />
-      <path d="M2.5 14c0-2.5 2.5-4.5 5.5-4.5s5.5 2 5.5 4.5" />
-    </svg>
-  );
-}
-
-function SendIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M14 2L7 9" />
-      <path d="M14 2l-5 12-2-5-5-2 12-5z" />
-    </svg>
   );
 }
 

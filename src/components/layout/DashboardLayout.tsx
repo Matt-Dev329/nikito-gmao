@@ -15,7 +15,6 @@ import { useFormation } from '@/hooks/useFormation';
 import { useSidebarState } from '@/hooks/useSidebarState';
 import { useControlesManquantsCheck } from '@/hooks/useControlesManquantsCheck';
 import { useIsMobile } from '@/hooks/useIsMobile';
-import { useInactivityLogout } from '@/hooks/useInactivityLogout';
 import { roleLabels } from '@/lib/tokens';
 import { cn } from '@/lib/utils';
 
@@ -29,7 +28,6 @@ const roleAffiches: Record<string, string> = {
   manager_parc: 'MANAGER PARC',
   technicien: 'TECHNICIEN',
   staff_operationnel: 'STAFF',
-  admin_it: 'ADMIN IT',
 };
 
 function useIsDesktop() {
@@ -62,8 +60,6 @@ export function DashboardLayout() {
     await signOut();
     navigate('/', { replace: true });
   };
-
-  useInactivityLogout(handleSignOut, !!utilisateur);
 
   const userMock = {
     initiales: 'DI',
