@@ -15,6 +15,7 @@ import { useFormation } from '@/hooks/useFormation';
 import { useSidebarState } from '@/hooks/useSidebarState';
 import { useControlesManquantsCheck } from '@/hooks/useControlesManquantsCheck';
 import { useIsMobile } from '@/hooks/useIsMobile';
+import { useInactivityLogout } from '@/hooks/useInactivityLogout';
 import { roleLabels } from '@/lib/tokens';
 import { cn } from '@/lib/utils';
 
@@ -61,6 +62,8 @@ export function DashboardLayout() {
     await signOut();
     navigate('/', { replace: true });
   };
+
+  useInactivityLogout(handleSignOut, !!utilisateur);
 
   const userMock = {
     initiales: 'DI',

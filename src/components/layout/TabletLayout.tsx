@@ -1,7 +1,9 @@
 import { useState } from 'react';
-import { Outlet, NavLink } from 'react-router-dom';
+import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { MenuDrawer } from '@/components/layout/MenuDrawer';
+import { useInactivityLogout } from '@/hooks/useInactivityLogout';
+import { useAuth } from '@/hooks/useAuth';
 
 const tabs = [
   { to: '/tech/operations', label: 'Opérations', icon: '⚙' },
@@ -12,6 +14,13 @@ const tabs = [
 
 export function TabletLayout() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const { signOut } = useAuth();
+  const navigate = useNavigate();
+
+  useInactivityLogout(async () => {
+    await signOut();
+    navigate('/', { replace: true });
+  });
 
   return (
     <div className="min-h-screen bg-bg-app text-text flex flex-col max-w-[820px] mx-auto">
