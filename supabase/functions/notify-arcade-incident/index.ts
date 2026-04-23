@@ -223,7 +223,7 @@ Deno.serve(async (req: Request) => {
       },
       body: JSON.stringify({
         from: "ALBA by Nikito <noreply@nikito.tech>",
-        to: ["joachim.miloche@ja-fg.com"],
+        to: ["joachim.miloche@ja-fg.com", "lili.marie.pellerin@ja-fg.com"],
         subject,
         html,
       }),
