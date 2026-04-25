@@ -555,34 +555,6 @@ export function ListeParcs() {
         </>
       )}
 
-      {isDirection && !isLoading && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-          {parcs?.map((p) => (
-            <div
-              key={p.id}
-              onClick={() => navigate(`/gmao/parcs/${p.id}`)}
-              className="bg-bg-card rounded-2xl p-4 md:p-5 cursor-pointer hover:bg-bg-deep transition-colors"
-            >
-              <div className="flex justify-between items-start mb-3">
-                <div className="min-w-0">
-                  <div className="text-[11px] text-dim font-mono">{p.code}</div>
-                  <div className="text-base font-semibold truncate">{p.nom}</div>
-                </div>
-                {p.ouvert_7j7 && (
-                  <span className="bg-amber/20 text-amber px-2.5 py-0.5 rounded-md text-[10px] font-bold flex-shrink-0">
-                    7J/7
-                  </span>
-                )}
-              </div>
-              <div className="text-xs text-dim space-y-1">
-                <div>{p.ville} ({p.code_postal})</div>
-                <div>{p.surface_m2 ? `${p.surface_m2.toLocaleString('fr-FR')} m\u00B2` : ''}</div>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
       {modaleActiver && (
         <ModaleActiverProduction
           parc={modaleActiver}
