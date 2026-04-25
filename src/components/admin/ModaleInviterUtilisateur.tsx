@@ -21,6 +21,7 @@ const rolesParAuth: Record<AuthMode, { value: RoleUtilisateur; label: string }[]
     { value: 'chef_maintenance', label: "Chef d'équipe" },
     { value: 'manager_parc', label: 'Manager parc' },
     { value: 'technicien', label: 'Technicien' },
+    { value: 'admin_it', label: 'Admin IT' },
   ],
   pin_seul: [{ value: 'staff_operationnel', label: 'Staff opérationnel' }],
 };
@@ -240,7 +241,7 @@ export function ModaleInviterUtilisateur({
                   <CarteAuthMode
                     icon="📧"
                     titre="Email professionnel"
-                    description="Direction, Chef d'équipe, Manager, Technicien · @nikito.com"
+                    description="Direction, Chef d'équipe, Manager, Technicien, Admin IT · @nikito.com"
                     actif={authMode === 'email_password'}
                     onClick={() => {
                       setAuthMode('email_password');
