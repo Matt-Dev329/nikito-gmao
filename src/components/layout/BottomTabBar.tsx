@@ -1,6 +1,7 @@
 import { useLocation, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useSidebarBadges } from '@/hooks/queries/useSidebarBadges';
+import { canSignaler } from '@/lib/signaler';
 import type { RoleUtilisateur } from '@/types/database';
 
 interface BottomTabBarProps {
@@ -21,7 +22,9 @@ interface TabDef {
 }
 
 function getTabsForRole(roleCode: RoleUtilisateur, isTablet: boolean): TabDef[] {
+  const showSignaler = canSignaler(roleCode);
   const isStaffOrTech = roleCode === 'staff_operationnel' || roleCode === 'technicien';
+
   if (isTablet && isStaffOrTech) {
     return [
       {
@@ -59,7 +62,7 @@ function getTabsForRole(roleCode: RoleUtilisateur, isTablet: boolean): TabDef[] 
     ];
   }
 
-  return [
+  const tabs: TabDef[] = [
     {
       id: 'dashboard',
       label: 'Dashboard',
@@ -74,13 +77,26 @@ function getTabsForRole(roleCode: RoleUtilisateur, isTablet: boolean): TabDef[] 
       action: 'navigate',
       route: '/gmao/operations',
     },
-    {
+  ];
+
+  if (showSignaler) {
+    tabs.push({
+      id: 'signaler',
+      label: 'Signaler',
+      matchPaths: [],
+      action: 'signaler',
+    });
+  } else {
+    tabs.push({
       id: 'controles',
       label: 'Controles',
       matchPaths: ['/gmao/controles-historique', '/staff/controle-ouverture', '/tech/controle-hebdo', '/tech/controle-mensuel'],
       action: 'navigate',
       route: '/gmao/controles-historique',
-    },
+    });
+  }
+
+  tabs.push(
     {
       id: 'alerts',
       label: 'Alertes',
@@ -93,7 +109,9 @@ function getTabsForRole(roleCode: RoleUtilisateur, isTablet: boolean): TabDef[] 
       matchPaths: [],
       action: 'more',
     },
-  ];
+  );
+
+  return tabs;
 }
 
 function isTabActive(tab: TabDef, pathname: string): boolean {
@@ -110,7 +128,7 @@ export function BottomTabBar({ roleCode, onAlertsClick, onMoreClick, alertsOpen,
   const { data: badges } = useSidebarBadges();
   const isTablet = typeof window !== 'undefined' && localStorage.getItem('alba:device_kind') === 'tablet-fixed';
   const tabs = getTabsForRole(roleCode, isTablet);
-  const hasRaisedCenter = tabs.some((t) => t.id === 'signaler');
+  const hasSignaler = tabs.some((t) => t.id === 'signaler');
 
   const totalAlerts = badges
     ? badges.controlesManquants +
@@ -144,7 +162,7 @@ export function BottomTabBar({ roleCode, onAlertsClick, onMoreClick, alertsOpen,
     >
       <div className="flex items-stretch h-[70px]">
         {tabs.map((tab) => {
-          if (tab.id === 'signaler' && hasRaisedCenter) {
+          if (tab.id === 'signaler' && hasSignaler && isTablet) {
             return (
               <div key={tab.id} className="flex-1 flex items-center justify-center relative">
                 <button
@@ -162,6 +180,29 @@ export function BottomTabBar({ roleCode, onAlertsClick, onMoreClick, alertsOpen,
                     <path d="M12 5v14M5 12h14" />
                   </svg>
                   <span className="text-white text-[11px] font-semibold leading-none">Signaler</span>
+                </button>
+              </div>
+            );
+          }
+
+          if (tab.id === 'signaler' && hasSignaler && !isTablet) {
+            return (
+              <div key={tab.id} className="flex-1 flex items-center justify-center relative">
+                <button
+                  className="absolute -top-3 w-[56px] h-[56px] rounded-[16px] flex flex-col items-center justify-center gap-0.5 active:scale-95 transition-transform"
+                  style={{
+                    background: 'linear-gradient(135deg, #ec4899 0%, #06b6d4 100%)',
+                    boxShadow: '0 4px 20px rgba(236, 72, 153, 0.25), 0 2px 10px rgba(6, 182, 212, 0.15)',
+                  }}
+                  onClick={() => {
+                    try { navigator.vibrate?.(10); } catch { /* ignore */ }
+                    onSignalerClick?.();
+                  }}
+                >
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round">
+                    <path d="M12 5v14M5 12h14" />
+                  </svg>
+                  <span className="text-white text-[9px] font-semibold leading-none">Signaler</span>
                 </button>
               </div>
             );
