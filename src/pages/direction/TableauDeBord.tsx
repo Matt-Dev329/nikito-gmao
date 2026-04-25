@@ -17,7 +17,6 @@ import {
 import { useIncidents } from '@/hooks/queries/useTickets';
 import { useParcs } from '@/hooks/queries/useReferentiel';
 import { useControlesOuvertureManquants } from '@/hooks/queries/useControlesManquants';
-import { useConfig } from '@/hooks/useConfig';
 import type { Criticite } from '@/types/database';
 
 type Periode = '7j' | '30j' | '90j';
@@ -107,7 +106,6 @@ export function TableauDeBord() {
   const parcsQ = useParcs();
   const incidentsQ = useIncidents({ statuts: ['ouvert', 'assigne', 'en_cours'] });
   const { data: controlesManquants } = useControlesOuvertureManquants();
-  const { avantLancement, dateLancement } = useConfig();
 
   const kpiLoading = perfQ.isLoading || mtbfQ.isLoading || mttrQ.isLoading
     || premierCoupQ.isLoading || plaintesQ.isLoading;
@@ -189,6 +187,31 @@ export function TableauDeBord() {
   const parcs = parcsQ.data ?? [];
   const now = new Date();
 
+  const parcActifEnProd = useMemo(() => {
+    if (!parcActif) return null;
+    const p = parcs.find((x: Record<string, unknown>) => x.id === parcActif);
+    if (!p) return null;
+    return (p as Record<string, unknown>).en_production as boolean;
+  }, [parcs, parcActif]);
+
+  const parcsPreLancement = useMemo(() => {
+    return parcs
+      .filter((p: Record<string, unknown>) => !(p as Record<string, unknown>).en_production)
+      .map((p: Record<string, unknown>) => (p as Record<string, unknown>).code as string);
+  }, [parcs]);
+
+  const parcsEnProd = useMemo(() => {
+    return parcs
+      .filter((p: Record<string, unknown>) => (p as Record<string, unknown>).en_production)
+      .map((p: Record<string, unknown>) => (p as Record<string, unknown>).code as string);
+  }, [parcs]);
+
+  const showPreLaunchBanner = parcActif === null
+    ? parcsPreLancement.length > 0
+    : parcActifEnProd === false;
+
+  const isViewingPreLaunchParc = parcActif !== null && parcActifEnProd === false;
+
   return (
     <div className="p-4 md:p-6 md:px-7 overflow-hidden">
       <div className="text-[11px] text-dim tracking-[1.5px] uppercase mb-2">
@@ -237,7 +260,7 @@ export function TableauDeBord() {
         ))}
       </div>
 
-      {avantLancement && dateLancement && (
+      {showPreLaunchBanner && (
         <div className="bg-nikito-cyan/10 border border-nikito-cyan/30 rounded-xl p-4 mb-5 flex items-start gap-3">
           <svg className="w-5 h-5 text-nikito-cyan flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -247,17 +270,27 @@ export function TableauDeBord() {
               Mode pre-lancement
             </div>
             <div className="text-[12px] text-dim mt-1">
-              ALBA sera operationnel le{' '}
-              <span className="text-text font-medium">
-                {dateLancement.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
-              </span>.
-              Les controles et alertes seront actives a cette date.
+              {parcActif === null ? (
+                <>
+                  Pre-lancement actif sur{' '}
+                  <span className="text-text font-medium">
+                    {parcsPreLancement.length} parc{parcsPreLancement.length > 1 ? 's' : ''} ({parcsPreLancement.join(', ')})
+                  </span>
+                  {parcsEnProd.length > 0 && (
+                    <> &mdash; <span className="text-green font-medium">{parcsEnProd.join(', ')}</span> en production</>
+                  )}
+                </>
+              ) : (
+                <>
+                  Ce parc est en pre-lancement. Les controles et alertes ne sont pas actifs.
+                </>
+              )}
             </div>
           </div>
         </div>
       )}
 
-      {!avantLancement && controlesManquants && controlesManquants.length > 0 && (
+      {parcsEnProd.length > 0 && controlesManquants && controlesManquants.length > 0 && (
         <div className="flex flex-col gap-2 mb-5">
           {controlesManquants.map((cm) => (
             <div
@@ -303,40 +336,40 @@ export function TableauDeBord() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <KpiCard
               label={kpiLabels.performance}
-              valeur={kpiAgreg.performance}
-              unite="%"
-              delta={{ texte: `moy. ${periode}`, tone: 'neutre' }}
+              valeur={isViewingPreLaunchParc ? '\u2014' : kpiAgreg.performance}
+              unite={isViewingPreLaunchParc ? undefined : '%'}
+              delta={{ texte: isViewingPreLaunchParc ? 'Disponible en production' : `moy. ${periode}`, tone: 'neutre' }}
               couleur="lime"
             />
             <KpiCard
               label={kpiLabels.plaintes}
-              valeur={kpiAgreg.plaintes}
-              delta={{ texte: '7 derniers jours', tone: 'neutre' }}
+              valeur={isViewingPreLaunchParc ? '\u2014' : kpiAgreg.plaintes}
+              delta={{ texte: isViewingPreLaunchParc ? 'Disponible en production' : '7 derniers jours', tone: 'neutre' }}
               couleur="amber"
             />
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <KpiCard
               label={kpiLabels.mtbf}
-              valeur={kpiAgreg.mtbf}
-              unite=" j"
-              delta={{ texte: `moy. ${periode}`, tone: 'neutre' }}
+              valeur={isViewingPreLaunchParc ? '\u2014' : kpiAgreg.mtbf}
+              unite={isViewingPreLaunchParc ? undefined : ' j'}
+              delta={{ texte: isViewingPreLaunchParc ? 'Disponible en production' : `moy. ${periode}`, tone: 'neutre' }}
               couleur="cyan"
               compact
             />
             <KpiCard
               label={kpiLabels.mttr}
-              valeur={kpiAgreg.mttr}
-              unite=" min"
-              delta={{ texte: `moy. ${periode}`, tone: 'neutre' }}
+              valeur={isViewingPreLaunchParc ? '\u2014' : kpiAgreg.mttr}
+              unite={isViewingPreLaunchParc ? undefined : ' min'}
+              delta={{ texte: isViewingPreLaunchParc ? 'Disponible en production' : `moy. ${periode}`, tone: 'neutre' }}
               couleur="violet"
               compact
             />
             <KpiCard
               label={kpiLabels.premierCoup}
-              valeur={kpiAgreg.premierCoup}
-              unite="%"
-              delta={{ texte: `cible 90% · ${periode}`, tone: 'neutre' }}
+              valeur={isViewingPreLaunchParc ? '\u2014' : kpiAgreg.premierCoup}
+              unite={isViewingPreLaunchParc ? undefined : '%'}
+              delta={{ texte: isViewingPreLaunchParc ? 'Disponible en production' : `cible 90% · ${periode}`, tone: 'neutre' }}
               couleur="green"
               compact
             />

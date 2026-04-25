@@ -242,3 +242,43 @@ export function useModifierMetaParc() {
     },
   });
 }
+
+export function useActiverProductionParc() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ parcId, utilisateurId }: { parcId: string; utilisateurId: string }) => {
+      const { error } = await supabase
+        .from('parcs')
+        .update({
+          en_production: true,
+          date_mise_en_production: new Date().toISOString(),
+          mis_en_prod_par_id: utilisateurId,
+        })
+        .eq('id', parcId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['parcs'] });
+    },
+  });
+}
+
+export function useDesactiverProductionParc() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ parcId }: { parcId: string }) => {
+      const { error } = await supabase
+        .from('parcs')
+        .update({
+          en_production: false,
+          date_mise_en_production: null,
+          mis_en_prod_par_id: null,
+        })
+        .eq('id', parcId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['parcs'] });
+    },
+  });
+}
