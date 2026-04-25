@@ -46,7 +46,7 @@ export const scenariosStaff: Scenario[] = [
       "Un client vous signale qu'un jeu arcade ne fonctionne plus. Utilisez le formulaire de signalement pour creer un ticket rapidement depuis le terrain.",
     objectif: "Apprendre a signaler un incident sans passer par un controle.",
     difficulte: 1,
-    lien: '/tech/signaler',
+    lien: '/tech/operations',
     groupe: 'staff',
   },
 ];

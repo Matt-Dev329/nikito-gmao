@@ -17,8 +17,6 @@ import { ControleHebdo } from '@/pages/technicien/ControleHebdo';
 
 import { LoginStaff } from '@/pages/staff/LoginStaff';
 import { ControleOuverture } from '@/pages/staff/ControleOuverture';
-import { PageSignaler } from '@/pages/signaler/PageSignaler';
-
 import { ListeParcs } from '@/pages/admin/ListeParcs';
 import { CreationParcWizard } from '@/pages/admin/CreationParcWizard';
 import { UtilisateursAdmin } from '@/pages/admin/UtilisateursAdmin';
@@ -97,7 +95,6 @@ export function App() {
         <Route path="flotte" element={<PageFlotte />} />
         <Route path="aide" element={<PageAide />} />
         <Route path="formation" element={<PageFormation />} />
-        <Route path="signaler" element={<PageSignaler />} />
         <Route path="it-admin" element={<PageITAdmin />} />
       </Route>
 
@@ -115,11 +112,9 @@ export function App() {
         <Route path="controle-hebdo" element={<ControleHebdo />} />
         <Route path="controle-mensuel" element={<ControleMensuel />} />
         <Route path="stock" element={<PageTechStock />} />
-        <Route path="signaler" element={<PageSignaler />} />
       </Route>
 
       <Route path="/staff/controle-ouverture" element={<ControleOuverture />} />
-      <Route path="/staff/signaler" element={<PageSignaler />} />
       <Route path="/staff/mes-signalements" element={<MesSignalements />} />
 
       <Route path="*" element={<Navigate to="/" replace />} />

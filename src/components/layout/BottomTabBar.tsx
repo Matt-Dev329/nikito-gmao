@@ -9,18 +9,56 @@ interface BottomTabBarProps {
   onMoreClick: () => void;
   alertsOpen?: boolean;
   moreOpen?: boolean;
+  onSignalerClick?: () => void;
 }
 
 interface TabDef {
   id: string;
   label: string;
   matchPaths: string[];
-  action: 'navigate' | 'alerts' | 'more';
+  action: 'navigate' | 'alerts' | 'more' | 'signaler';
   route?: string;
 }
 
-function getTabsForRole(roleCode: RoleUtilisateur): TabDef[] {
-  const isStaff = roleCode === 'staff_operationnel';
+function getTabsForRole(roleCode: RoleUtilisateur, isTablet: boolean): TabDef[] {
+  const isStaffOrTech = roleCode === 'staff_operationnel' || roleCode === 'technicien';
+  if (isTablet && isStaffOrTech) {
+    return [
+      {
+        id: roleCode === 'technicien' ? 'operations' : 'dashboard',
+        label: roleCode === 'technicien' ? 'Interventions' : 'Dashboard',
+        matchPaths: roleCode === 'technicien' ? ['/gmao/operations'] : ['/gmao'],
+        action: 'navigate',
+        route: roleCode === 'technicien' ? '/gmao/operations' : '/gmao',
+      },
+      {
+        id: 'controles',
+        label: 'Controles',
+        matchPaths: ['/staff/controle-ouverture', '/gmao/controles-historique', '/tech/controle-hebdo', '/tech/controle-mensuel'],
+        action: 'navigate',
+        route: roleCode === 'staff_operationnel' ? '/staff/controle-ouverture' : '/gmao/controles-historique',
+      },
+      {
+        id: 'signaler',
+        label: 'Signaler',
+        matchPaths: [],
+        action: 'signaler',
+      },
+      {
+        id: 'alerts',
+        label: 'Alertes',
+        matchPaths: [],
+        action: 'alerts',
+      },
+      {
+        id: 'more',
+        label: 'Plus',
+        matchPaths: [],
+        action: 'more',
+      },
+    ];
+  }
+
   return [
     {
       id: 'dashboard',
@@ -29,32 +67,19 @@ function getTabsForRole(roleCode: RoleUtilisateur): TabDef[] {
       action: 'navigate',
       route: '/gmao',
     },
-    ...(isStaff
-      ? []
-      : [
-          {
-            id: 'operations',
-            label: 'Opérations',
-            matchPaths: ['/gmao/operations'],
-            action: 'navigate' as const,
-            route: '/gmao/operations',
-          },
-        ]),
     {
-      id: 'controles',
-      label: 'Contrôles',
-      matchPaths: isStaff
-        ? ['/staff/controle-ouverture']
-        : ['/gmao/controles-historique', '/staff/controle-ouverture', '/tech/controle-hebdo', '/tech/controle-mensuel'],
+      id: 'operations',
+      label: 'Operations',
+      matchPaths: ['/gmao/operations'],
       action: 'navigate',
-      route: isStaff ? '/staff/controle-ouverture' : '/gmao/controles-historique',
+      route: '/gmao/operations',
     },
     {
-      id: 'signaler',
-      label: 'Signaler',
-      matchPaths: isStaff ? ['/staff/signaler'] : ['/gmao/signaler'],
+      id: 'controles',
+      label: 'Controles',
+      matchPaths: ['/gmao/controles-historique', '/staff/controle-ouverture', '/tech/controle-hebdo', '/tech/controle-mensuel'],
       action: 'navigate',
-      route: isStaff ? '/staff/signaler' : '/gmao/signaler',
+      route: '/gmao/controles-historique',
     },
     {
       id: 'alerts',
@@ -79,11 +104,13 @@ function isTabActive(tab: TabDef, pathname: string): boolean {
   });
 }
 
-export function BottomTabBar({ roleCode, onAlertsClick, onMoreClick, alertsOpen, moreOpen }: BottomTabBarProps) {
+export function BottomTabBar({ roleCode, onAlertsClick, onMoreClick, alertsOpen, moreOpen, onSignalerClick }: BottomTabBarProps) {
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const { data: badges } = useSidebarBadges();
-  const tabs = getTabsForRole(roleCode);
+  const isTablet = typeof window !== 'undefined' && localStorage.getItem('alba:device_kind') === 'tablet-fixed';
+  const tabs = getTabsForRole(roleCode, isTablet);
+  const hasRaisedCenter = tabs.some((t) => t.id === 'signaler');
 
   const totalAlerts = badges
     ? badges.controlesManquants +
@@ -103,6 +130,8 @@ export function BottomTabBar({ roleCode, onAlertsClick, onMoreClick, alertsOpen,
       onAlertsClick();
     } else if (tab.action === 'more') {
       onMoreClick();
+    } else if (tab.action === 'signaler') {
+      onSignalerClick?.();
     } else if (tab.route) {
       navigate(tab.route);
     }
@@ -115,6 +144,29 @@ export function BottomTabBar({ roleCode, onAlertsClick, onMoreClick, alertsOpen,
     >
       <div className="flex items-stretch h-[70px]">
         {tabs.map((tab) => {
+          if (tab.id === 'signaler' && hasRaisedCenter) {
+            return (
+              <div key={tab.id} className="flex-1 flex items-center justify-center relative">
+                <button
+                  className="absolute -top-6 w-[88px] h-[88px] rounded-[24px] flex flex-col items-center justify-center gap-1 active:scale-95 transition-transform"
+                  style={{
+                    background: 'linear-gradient(135deg, #ec4899 0%, #06b6d4 100%)',
+                    boxShadow: '0 8px 32px rgba(236, 72, 153, 0.3), 0 4px 16px rgba(6, 182, 212, 0.2)',
+                  }}
+                  onClick={() => {
+                    try { navigator.vibrate?.(10); } catch { /* ignore */ }
+                    onSignalerClick?.();
+                  }}
+                >
+                  <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round">
+                    <path d="M12 5v14M5 12h14" />
+                  </svg>
+                  <span className="text-white text-[11px] font-semibold leading-none">Signaler</span>
+                </button>
+              </div>
+            );
+          }
+
           const active =
             (tab.id === 'alerts' && alertsOpen) ||
             (tab.id === 'more' && moreOpen) ||
@@ -178,14 +230,6 @@ function TabIcon({ id, active }: { id: string; active: boolean }) {
           <rect x="4" y="3" width="16" height="18" rx="2" />
           <path d="M8 7h8M8 11h8M8 15h5" />
           <path d="M15 15l1.5 1.5 3-3" />
-        </svg>
-      );
-    case 'signaler':
-      return (
-        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M12 3L3 21h18L12 3z" />
-          <path d="M12 9v4" />
-          <circle cx="12" cy="16" r="0.5" fill={color} stroke="none" />
         </svg>
       );
     case 'alerts':

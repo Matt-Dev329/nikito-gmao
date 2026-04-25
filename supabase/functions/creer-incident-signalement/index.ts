@@ -15,6 +15,12 @@ function jsonResponse(body: unknown, status = 200) {
   });
 }
 
+interface ModeExpert {
+  priorite_override: string | null;
+  technicien_assigne_id: string | null;
+  echeance_souhaitee: string | null;
+}
+
 interface Payload {
   parc_id: string;
   equipement_id: string | null;
@@ -25,6 +31,9 @@ interface Payload {
   priorite_escaladee: boolean;
   equipement_manquant_label: string | null;
   declare_par_id: string;
+  via?: string;
+  role_signaleur?: string;
+  mode_expert?: ModeExpert | null;
 }
 
 Deno.serve(async (req: Request) => {
@@ -72,9 +81,8 @@ Deno.serve(async (req: Request) => {
       .eq("id", body.categorie_id)
       .maybeSingle();
 
-    const criticiteCode = body.priorite_escaladee
-      ? "bloquant"
-      : (categorie?.criticite_defaut ?? "mineur");
+    const criticiteCode = body.mode_expert?.priorite_override
+      ?? (body.priorite_escaladee ? "bloquant" : (categorie?.criticite_defaut ?? "mineur"));
 
     const { data: priorite } = await supabase
       .from("niveaux_priorite")
@@ -125,13 +133,20 @@ Deno.serve(async (req: Request) => {
         photos_urls: [body.photo_url],
         validation_manager: needsManagerApproval ? "en_attente" : "auto",
         meta: {
-          via: "tablette_signalement",
+          via: body.via ?? "tablette_signalement",
+          role_signaleur: body.role_signaleur ?? roleCode,
           categorie_id: body.categorie_id,
           symptome_id: body.symptome_id,
           priorite_escaladee: body.priorite_escaladee,
           priorite_initiale: categorie?.criticite_defaut ?? "mineur",
           equipement_manquant_saisi: !!body.equipement_manquant_label,
           declarant_role: roleCode,
+          ...(body.mode_expert ? {
+            mode_expert_utilise: true,
+            priorite_override: body.mode_expert.priorite_override,
+            technicien_assigne_id: body.mode_expert.technicien_assigne_id,
+            echeance_souhaitee: body.mode_expert.echeance_souhaitee,
+          } : { mode_expert_utilise: false }),
         },
       })
       .select("id, numero_bt, validation_manager")

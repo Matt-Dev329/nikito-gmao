@@ -29,7 +29,6 @@ const TOUR_KEYS: Record<string, string> = {
   'Utilisateurs': 'utilisateurs',
   'Bibliothèque points': 'bibliotheque',
   'Fournisseurs': 'fournisseurs',
-  'Signaler': 'signaler',
 };
 
 interface Badge {
@@ -71,7 +70,6 @@ const sections: { titre: string; items: NavItem[] }[] = [
       { to: '/staff/controle-ouverture', label: 'Contrôle d\'ouverture', badgeKey: 'controlesManquants', badgeTone: 'red', roles: ['direction', 'chef_maintenance', 'staff_operationnel'] },
       { to: '/tech/controle-hebdo', label: 'Contrôle hebdo', roles: ['direction', 'chef_maintenance', 'technicien'] },
       { to: '/tech/controle-mensuel', label: 'Contrôle mensuel', roles: ['direction', 'chef_maintenance', 'technicien'] },
-      { to: '/gmao/signaler', label: 'Signaler', roles: ['direction', 'chef_maintenance', 'manager_parc', 'staff_operationnel'] },
     ],
   },
   {

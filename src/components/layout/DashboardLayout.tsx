@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Outlet, useNavigate } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { ViewAsBanner } from './ViewAsBanner';
@@ -9,12 +9,14 @@ import { MobileMoreDrawer } from './MobileMoreDrawer';
 import { MobileAlertPanel } from './MobileAlertPanel';
 import { TourOverlay } from '@/components/tour/TourOverlay';
 import { useTour, isTourCompleted } from '@/components/tour/useTour';
+import { ModaleSignalerV2, type SignalerVia } from '@/components/forms/ModaleSignalerV2';
 import { useAuth } from '@/hooks/useAuth';
 import { useViewAs, useEffectiveRole } from '@/hooks/useViewAs';
 import { useFormation } from '@/hooks/useFormation';
 import { useSidebarState } from '@/hooks/useSidebarState';
 import { useControlesManquantsCheck } from '@/hooks/useControlesManquantsCheck';
 import { useIsMobile } from '@/hooks/useIsMobile';
+import { canSignaler, hasModeExpert, getSignalerButtonVariant } from '@/lib/signaler';
 import { roleLabels } from '@/lib/tokens';
 import { cn } from '@/lib/utils';
 
@@ -53,8 +55,30 @@ export function DashboardLayout() {
 
   const [moreOpen, setMoreOpen] = useState(false);
   const [alertsOpen, setAlertsOpen] = useState(false);
+  const [signalerOpen, setSignalerOpen] = useState(false);
 
   useControlesManquantsCheck();
+
+  const isTabletFixed = typeof window !== 'undefined' && localStorage.getItem('alba:device_kind') === 'tablet-fixed';
+  const btnVariant = getSignalerButtonVariant(effectiveRole, isTabletFixed);
+  const showDesktopSignaler = !isMobile && canSignaler(effectiveRole) && btnVariant !== 'central-tablet' && btnVariant !== 'hidden';
+  const expert = hasModeExpert(effectiveRole);
+  const signalerVia: SignalerVia = isMobile || isTabletFixed ? 'tablette_signalement' : 'desktop_topbar';
+  const signalerParcId = utilisateur?.parc_ids?.length === 1 ? utilisateur.parc_ids[0] : undefined;
+
+  const openSignaler = useCallback(() => setSignalerOpen(true), []);
+
+  useEffect(() => {
+    if (!canSignaler(effectiveRole)) return;
+    const handler = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'i') {
+        e.preventDefault();
+        setSignalerOpen(true);
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [effectiveRole]);
 
   const handleSignOut = async () => {
     await signOut();
@@ -138,6 +162,7 @@ export function DashboardLayout() {
           }}
           alertsOpen={alertsOpen}
           moreOpen={moreOpen}
+          onSignalerClick={openSignaler}
         />
 
         <MobileAlertPanel
@@ -150,6 +175,14 @@ export function DashboardLayout() {
           onClose={() => setMoreOpen(false)}
           roleCode={effectiveRole}
           onSignOut={handleSignOut}
+        />
+
+        <ModaleSignalerV2
+          open={signalerOpen}
+          onClose={() => setSignalerOpen(false)}
+          via={signalerVia}
+          parcId={signalerParcId}
+          modeExpert={expert}
         />
       </div>
     );
@@ -229,6 +262,50 @@ export function DashboardLayout() {
           <Outlet />
         </main>
       </div>
+
+      {showDesktopSignaler && <DesktopSignalerButton variant={btnVariant} onClick={openSignaler} />}
+
+      <ModaleSignalerV2
+        open={signalerOpen}
+        onClose={() => setSignalerOpen(false)}
+        via={signalerVia}
+        parcId={signalerParcId}
+        modeExpert={expert}
+      />
     </div>
+  );
+}
+
+function DesktopSignalerButton({ variant, onClick }: { variant: string; onClick: () => void }) {
+  if (variant === 'icon-only') {
+    return (
+      <button
+        onClick={onClick}
+        title="Signaler un incident (Ctrl+I)"
+        className="fixed top-4 right-4 z-[90] w-12 h-12 rounded-xl border border-white/[0.08] bg-[#131836] text-dim hover:text-white hover:border-white/20 transition-all flex items-center justify-center"
+      >
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M10 2L2 17h16L10 2z" />
+          <path d="M10 7v4" />
+          <circle cx="10" cy="13.5" r="0.5" fill="currentColor" stroke="none" />
+        </svg>
+      </button>
+    );
+  }
+
+  return (
+    <button
+      onClick={onClick}
+      className="fixed top-4 right-4 z-[90] h-11 px-5 rounded-xl text-white text-[13px] font-semibold flex items-center gap-2 active:scale-[0.97] transition-transform"
+      style={{
+        background: 'linear-gradient(135deg, #ec4899 0%, #06b6d4 100%)',
+        boxShadow: '0 4px 16px rgba(236, 72, 153, 0.2)',
+      }}
+    >
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+        <path d="M8 3v10M3 8h10" />
+      </svg>
+      Signaler
+    </button>
   );
 }

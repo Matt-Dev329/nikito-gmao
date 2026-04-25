@@ -2,6 +2,7 @@ import { useState, useCallback, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ControleEcran, type PointControleVue, type ZoneVue } from '@/components/controles/ControleEcran';
 import { ModaleQuitterSansValider } from '@/components/ui/ModaleQuitterSansValider';
+import { ModaleSignalerV2 } from '@/components/forms/ModaleSignalerV2';
 import { SelectionParc } from '@/components/controles/SelectionParc';
 import { BoutonRetourGmao } from '@/components/controles/BoutonRetourGmao';
 import { useAuth } from '@/hooks/useAuth';
@@ -47,6 +48,7 @@ export function ControleOuverture() {
   const [zoneActive, setZoneActive] = useState<string>('');
   const [dirty, setDirty] = useState(false);
   const [showModale, setShowModale] = useState(false);
+  const [showSignaler, setShowSignaler] = useState(false);
   const [validated, setValidated] = useState(false);
 
   const zones: ZoneVue[] = useMemo(() => {
@@ -159,7 +161,7 @@ export function ControleOuverture() {
 
   const signalBouton = (
     <button
-      onClick={() => navigate('/staff/signaler')}
+      onClick={() => setShowSignaler(true)}
       className="bg-red/10 border border-red/30 text-red px-3 py-2 rounded-[10px] text-[12px] font-semibold min-h-[44px] hover:bg-red/20 transition-colors flex items-center gap-1.5"
     >
       <AlertTriangleIcon className="w-3.5 h-3.5" />
@@ -242,6 +244,12 @@ export function ControleOuverture() {
         open={showModale}
         onConfirmer={confirmerQuitter}
         onAnnuler={() => setShowModale(false)}
+      />
+      <ModaleSignalerV2
+        open={showSignaler}
+        onClose={() => setShowSignaler(false)}
+        via="tablette_signalement"
+        parcId={parcId}
       />
     </>
   );

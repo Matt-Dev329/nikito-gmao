@@ -1,13 +1,11 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { supabase, supabaseUrl, supabaseAnonKey } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
 import { uploadPhotoControle } from '@/lib/uploadPhotoControle';
+import type { RoleUtilisateur } from '@/types/database';
 
-// ─── Types ──────────────────────────────────────────────────────
-
-type Etape = 'categorie' | 'equipement' | 'symptome' | 'photo' | 'recap' | 'succes';
+type Etape = 'parc' | 'categorie' | 'equipement' | 'symptome' | 'photo' | 'recap' | 'succes';
 
 interface Categorie {
   id: string;
@@ -16,7 +14,7 @@ interface Categorie {
   nb: number;
 }
 
-interface Equipement {
+interface EquipementItem {
   id: string;
   code: string;
   libelle: string;
@@ -30,15 +28,24 @@ interface Symptome {
   icone: string | null;
 }
 
+interface ParcOption {
+  id: string;
+  code: string;
+  nom: string;
+}
+
 interface SignalementState {
   categorie: Categorie | null;
-  equipement: Equipement | null;
+  equipement: EquipementItem | null;
   equipementManquantLabel: string | null;
   symptome: Symptome | null;
   symptomeLibre: string | null;
   photoUrl: string | null;
   photoPreview: string | null;
   prioriteEscaladee: boolean;
+  prioriteOverride: string | null;
+  technicienAssigneId: string | null;
+  echeanceSouhaitee: string | null;
 }
 
 const INITIAL_STATE: SignalementState = {
@@ -50,30 +57,42 @@ const INITIAL_STATE: SignalementState = {
   photoUrl: null,
   photoPreview: null,
   prioriteEscaladee: false,
+  prioriteOverride: null,
+  technicienAssigneId: null,
+  echeanceSouhaitee: null,
 };
 
+export type SignalerVia = 'tablette_signalement' | 'desktop_topbar' | 'mobile_app' | 'interv_contextuel';
+
+export interface ModaleSignalerV2Props {
+  open: boolean;
+  onClose: () => void;
+  via: SignalerVia;
+  parcId?: string;
+  equipementId?: string;
+  modeExpert?: boolean;
+}
+
 const CATEGORIE_ICONS: Record<string, string> = {
-  'Arcade': '🕹️', 'Ascenseur': '🛗', 'Bowling': '🎳', 'Casier': '🔐',
-  'Château': '🏰', 'Éclairage': '💡', 'Escalator': '🪜', 'Fléchettes': '🎯',
-  'I-Quiz': '❓', 'Immersive': '🥽', 'Karaoké': '🎤', 'Karting': '🏎️',
-  'Lancer': '🪓', 'Laser': '🔫', 'Mini-golf': '⛳', 'Monte-charge': '📦',
-  'Ninja': '🧗', 'Octogone': '🥊', 'Palomano': '⚽', 'Prison': '🔒',
-  'Projecteur': '🎬', 'Sanitaire': '🚻', 'Sécurité': '🚨', 'SoftPlay': '🧸',
-  'TGBT': '⚡', 'Trampoline': '🤸',
+  'Arcade': '\u{1F579}\u{FE0F}', 'Ascenseur': '\u{1F6D7}', 'Bowling': '\u{1F3B3}', 'Casier': '\u{1F510}',
+  'Ch\u00e2teau': '\u{1F3F0}', '\u00c9clairage': '\u{1F4A1}', 'Escalator': '\u{1FA9C}', 'Fl\u00e9chettes': '\u{1F3AF}',
+  'I-Quiz': '\u{2753}', 'Immersive': '\u{1F97D}', 'Karaok\u00e9': '\u{1F3A4}', 'Karting': '\u{1F3CE}\u{FE0F}',
+  'Lancer': '\u{1FA93}', 'Laser': '\u{1F52B}', 'Mini-golf': '\u{26F3}', 'Monte-charge': '\u{1F4E6}',
+  'Ninja': '\u{1F9D7}', 'Octogone': '\u{1F94A}', 'Palomano': '\u{26BD}', 'Prison': '\u{1F512}',
+  'Projecteur': '\u{1F3AC}', 'Sanitaire': '\u{1F6BB}', 'S\u00e9curit\u00e9': '\u{1F6A8}', 'SoftPlay': '\u{1F9F8}',
+  'TGBT': '\u{26A1}', 'Trampoline': '\u{1F938}',
 };
 
 function getCategorieIcon(nom: string): string {
   for (const [key, icon] of Object.entries(CATEGORIE_ICONS)) {
     if (nom.startsWith(key)) return icon;
   }
-  return '📦';
+  return '\u{1F4E6}';
 }
 
 const SLA_MAP: Record<string, string> = {
   bloquant: '1h', majeur: '4h', mineur: '48h',
 };
-
-// ─── Hook to get current user context (auth or staff session) ───
 
 function useUserContext() {
   const { utilisateur } = useAuth();
@@ -94,7 +113,7 @@ function useUserContext() {
       userId: utilisateur.id,
       prenom: utilisateur.prenom,
       nom: utilisateur.nom,
-      roleCode: utilisateur.role_code,
+      roleCode: utilisateur.role_code as RoleUtilisateur,
       parcIds: utilisateur.parc_ids,
       isStaff: utilisateur.role_code === 'staff_operationnel',
     };
@@ -105,7 +124,7 @@ function useUserContext() {
       userId: staffSession.utilisateur.utilisateur_id,
       prenom: staffSession.utilisateur.prenom,
       nom: staffSession.utilisateur.nom,
-      roleCode: staffSession.utilisateur.role_code,
+      roleCode: staffSession.utilisateur.role_code as RoleUtilisateur,
       parcIds: [staffSession.parc.id],
       isStaff: true,
     };
@@ -114,15 +133,12 @@ function useUserContext() {
   return null;
 }
 
-// ─── Main Component ─────────────────────────────────────────────
-
-export function PageSignaler() {
-  const navigate = useNavigate();
+export function ModaleSignalerV2({ open, onClose, via, parcId: propParcId, modeExpert = false }: ModaleSignalerV2Props) {
   const userCtx = useUserContext();
-  const [etape, setEtape] = useState<Etape>('categorie');
   const [state, setState] = useState<SignalementState>(INITIAL_STATE);
-  const [parcId, setParcId] = useState<string | null>(null);
+  const [parcId, setParcId] = useState<string | null>(propParcId ?? null);
   const [parcCode, setParcCode] = useState<string>('');
+  const [etape, setEtape] = useState<Etape>('categorie');
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [resultBt, setResultBt] = useState<string | null>(null);
@@ -131,13 +147,32 @@ export function PageSignaler() {
   const [recherche, setRecherche] = useState('');
 
   useEffect(() => {
-    if (!userCtx) return;
-    if (userCtx.parcIds.length === 1) {
+    if (!open) return;
+    setState(INITIAL_STATE);
+    setSubmitting(false);
+    setSubmitError(null);
+    setResultBt(null);
+    setResultPriorite(null);
+    setResultValidation(null);
+    setRecherche('');
+
+    const resolvedParcId = propParcId ?? null;
+    setParcId(resolvedParcId);
+    setParcCode('');
+
+    if (resolvedParcId) {
+      supabase.from('parcs').select('code').eq('id', resolvedParcId).maybeSingle()
+        .then(({ data }) => { if (data) setParcCode(data.code); });
+      setEtape('categorie');
+    } else if (userCtx && userCtx.parcIds.length === 1) {
       setParcId(userCtx.parcIds[0]);
       supabase.from('parcs').select('code').eq('id', userCtx.parcIds[0]).maybeSingle()
         .then(({ data }) => { if (data) setParcCode(data.code); });
+      setEtape('categorie');
+    } else {
+      setEtape('parc');
     }
-  }, [userCtx]);
+  }, [open, propParcId, userCtx?.parcIds?.join(',')]);
 
   const update = useCallback((patch: Partial<SignalementState>) => {
     setState((prev) => ({ ...prev, ...patch }));
@@ -145,20 +180,35 @@ export function PageSignaler() {
 
   const resetFlow = useCallback(() => {
     setState(INITIAL_STATE);
-    setEtape('categorie');
     setRecherche('');
     setSubmitError(null);
     setResultBt(null);
-  }, []);
+    if (parcId) {
+      setEtape('categorie');
+    } else {
+      setEtape('parc');
+    }
+  }, [parcId]);
+
+  const STEPS: Etape[] = useMemo(() => {
+    const steps: Etape[] = [];
+    if (!propParcId && userCtx && userCtx.parcIds.length > 1) steps.push('parc');
+    steps.push('categorie', 'equipement', 'symptome', 'photo', 'recap');
+    return steps;
+  }, [propParcId, userCtx]);
 
   const goBack = useCallback(() => {
-    const order: Etape[] = ['categorie', 'equipement', 'symptome', 'photo', 'recap'];
-    const idx = order.indexOf(etape);
+    const idx = STEPS.indexOf(etape);
     if (idx > 0) {
-      setEtape(order[idx - 1]);
+      setEtape(STEPS[idx - 1]);
       setRecherche('');
+    } else {
+      onClose();
     }
-  }, [etape]);
+  }, [etape, STEPS, onClose]);
+
+  const currentStepNum = STEPS.indexOf(etape) + 1;
+  const totalSteps = STEPS.length;
 
   const handleSubmit = useCallback(async () => {
     if (!parcId || !state.categorie || !state.photoUrl || !userCtx) return;
@@ -181,6 +231,13 @@ export function PageSignaler() {
       priorite_escaladee: state.prioriteEscaladee,
       equipement_manquant_label: state.equipementManquantLabel,
       declare_par_id: userCtx.userId,
+      via,
+      role_signaleur: userCtx.roleCode,
+      mode_expert: modeExpert && (state.prioriteOverride || state.technicienAssigneId || state.echeanceSouhaitee) ? {
+        priorite_override: state.prioriteOverride,
+        technicien_assigne_id: state.technicienAssigneId,
+        echeance_souhaitee: state.echeanceSouhaitee,
+      } : null,
     };
 
     try {
@@ -199,104 +256,142 @@ export function PageSignaler() {
       setSubmitError('Erreur reseau -- verifiez votre connexion');
     }
     setSubmitting(false);
-  }, [parcId, state, userCtx]);
+  }, [parcId, state, userCtx, via, modeExpert]);
+
+  if (!open) return null;
 
   if (!userCtx) {
     return (
-      <div className="min-h-screen bg-[#0a0e27] text-text flex items-center justify-center">
+      <div className="fixed inset-0 z-[200] bg-black/70 flex items-center justify-center">
         <div className="text-dim text-sm">Chargement...</div>
       </div>
     );
   }
 
-  const prioriteCode = state.prioriteEscaladee
-    ? 'bloquant'
-    : (state.categorie?.criticite_defaut ?? 'mineur');
+  const prioriteCode = state.prioriteOverride
+    ?? (state.prioriteEscaladee ? 'bloquant' : (state.categorie?.criticite_defaut ?? 'mineur'));
+
+  const stepTitle: Record<Etape, string> = {
+    parc: 'Pour quel parc ?',
+    categorie: "Qu'est-ce qui pose probleme ?",
+    equipement: 'Lequel exactement ?',
+    symptome: "Qu'observez-vous ?",
+    photo: 'Prenez une photo',
+    recap: "Verifiez avant d'envoyer",
+    succes: '',
+  };
 
   return (
-    <div className="min-h-screen bg-[#0a0e27] text-text flex flex-col" style={{ paddingBottom: 'env(safe-area-inset-bottom, 80px)' }}>
-      {/* Header */}
-      {etape !== 'succes' && (
-        <header className="sticky top-0 z-30 bg-[#0a0e27]/95 backdrop-blur-xl border-b border-white/[0.06] px-4 py-3 flex items-center gap-3">
-          {etape !== 'categorie' && (
-            <button onClick={goBack} className="bg-[#131836] border border-white/[0.08] text-dim w-10 h-10 rounded-xl text-lg active:scale-95 transition-transform flex items-center justify-center">
-              ‹
+    <div className="fixed inset-0 z-[200] bg-black/70 flex items-end md:items-center justify-center" onClick={(e) => { if (e.target === e.currentTarget && etape !== 'succes') onClose(); }}>
+      <div
+        className="w-full md:max-w-[640px] bg-[#0a0e27] md:rounded-2xl md:border md:border-white/[0.08] text-text flex flex-col overflow-hidden"
+        style={{ maxHeight: 'min(94vh, 900px)' }}
+      >
+        {/* Header */}
+        {etape !== 'succes' && (
+          <header className="flex-shrink-0 bg-[#0a0e27] border-b border-white/[0.06] px-4 py-3 flex items-center gap-3">
+            <button
+              onClick={goBack}
+              className="bg-[#131836] border border-white/[0.08] text-dim w-10 h-10 rounded-xl text-lg active:scale-95 transition-transform flex items-center justify-center flex-shrink-0"
+            >
+              {STEPS.indexOf(etape) === 0 ? <CloseIcon /> : <ChevronLeftIcon />}
             </button>
-          )}
-          <div className="flex-1 min-w-0">
-            <div className="text-[10px] text-dim uppercase tracking-[1.4px]">Signaler un incident</div>
-            <div className="text-[15px] font-semibold text-white truncate">
-              {etape === 'categorie' && "Qu'est-ce qui pose probleme ?"}
-              {etape === 'equipement' && 'Lequel exactement ?'}
-              {etape === 'symptome' && "Qu'observez-vous ?"}
-              {etape === 'photo' && 'Prenez une photo'}
-              {etape === 'recap' && "Verifiez avant d'envoyer"}
+            <div className="flex-1 min-w-0">
+              <div className="text-[10px] text-dim uppercase tracking-[1.4px]">Signaler un incident</div>
+              <div className="text-[15px] font-semibold text-white truncate">{stepTitle[etape]}</div>
             </div>
-          </div>
-          <StepIndicator current={['categorie', 'equipement', 'symptome', 'photo', 'recap'].indexOf(etape) + 1} total={5} />
-        </header>
-      )}
+            <StepIndicator current={currentStepNum} total={totalSteps} />
+          </header>
+        )}
 
-      {/* Content */}
-      <div className="flex-1 overflow-y-auto">
-        {etape === 'categorie' && (
-          <EtapeCategorie
-            parcId={parcId}
-            recherche={recherche}
-            onRecherche={setRecherche}
-            onSelect={(cat) => { update({ categorie: cat }); setEtape('equipement'); setRecherche(''); }}
-          />
-        )}
-        {etape === 'equipement' && state.categorie && (
-          <EtapeEquipement
-            parcId={parcId}
-            categorie={state.categorie}
-            recherche={recherche}
-            onRecherche={setRecherche}
-            onSelect={(eq) => { update({ equipement: eq, equipementManquantLabel: null }); setEtape('symptome'); setRecherche(''); }}
-            onManquant={(label) => { update({ equipement: null, equipementManquantLabel: label }); setEtape('symptome'); setRecherche(''); }}
-          />
-        )}
-        {etape === 'symptome' && state.categorie && (
-          <EtapeSymptome
-            categorieId={state.categorie.id}
-            onSelect={(s, libre) => { update({ symptome: s, symptomeLibre: libre }); setEtape('photo'); }}
-          />
-        )}
-        {etape === 'photo' && (
-          <EtapePhoto
-            parcCode={parcCode}
-            userName={`${userCtx.prenom} ${userCtx.nom}`}
-            onDone={(url, preview) => { update({ photoUrl: url, photoPreview: preview }); setEtape('recap'); }}
-          />
-        )}
-        {etape === 'recap' && (
-          <EtapeRecap
-            state={state}
-            prioriteCode={prioriteCode}
-            isStaff={userCtx.isStaff}
-            onEscalade={() => update({ prioriteEscaladee: true })}
-            onModifier={goBack}
-            onEnvoyer={handleSubmit}
-            submitting={submitting}
-            error={submitError}
-          />
-        )}
-        {etape === 'succes' && (
-          <EtapeSucces
-            numeroBt={resultBt}
-            prioriteCode={resultPriorite}
-            validationManager={resultValidation}
-            onNouveau={resetFlow}
-            onRetour={() => navigate(-1)}
-          />
-        )}
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto">
+          {etape === 'parc' && (
+            <EtapeParc
+              parcIds={userCtx.parcIds}
+              onSelect={(p) => {
+                setParcId(p.id);
+                setParcCode(p.code);
+                setEtape('categorie');
+              }}
+            />
+          )}
+          {etape === 'categorie' && (
+            <EtapeCategorie
+              parcId={parcId}
+              recherche={recherche}
+              onRecherche={setRecherche}
+              onSelect={(cat) => { update({ categorie: cat }); setEtape('equipement'); setRecherche(''); }}
+            />
+          )}
+          {etape === 'equipement' && state.categorie && (
+            <EtapeEquipement
+              parcId={parcId}
+              categorie={state.categorie}
+              recherche={recherche}
+              onRecherche={setRecherche}
+              onSelect={(eq) => { update({ equipement: eq, equipementManquantLabel: null }); setEtape('symptome'); setRecherche(''); }}
+              onManquant={(label) => { update({ equipement: null, equipementManquantLabel: label }); setEtape('symptome'); setRecherche(''); }}
+            />
+          )}
+          {etape === 'symptome' && state.categorie && (
+            <EtapeSymptome
+              categorieId={state.categorie.id}
+              onSelect={(s, libre) => { update({ symptome: s, symptomeLibre: libre }); setEtape('photo'); }}
+            />
+          )}
+          {etape === 'photo' && (
+            <EtapePhoto
+              parcCode={parcCode}
+              userName={`${userCtx.prenom} ${userCtx.nom}`}
+              onDone={(url, preview) => { update({ photoUrl: url, photoPreview: preview }); setEtape('recap'); }}
+            />
+          )}
+          {etape === 'recap' && (
+            <EtapeRecap
+              state={state}
+              prioriteCode={prioriteCode}
+              isStaff={userCtx.isStaff}
+              modeExpert={modeExpert}
+              parcId={parcId}
+              onEscalade={() => update({ prioriteEscaladee: true })}
+              onPrioriteOverride={(code) => update({ prioriteOverride: code })}
+              onTechnicienAssigne={(id) => update({ technicienAssigneId: id })}
+              onEcheance={(date) => update({ echeanceSouhaitee: date })}
+              onModifier={goBack}
+              onEnvoyer={handleSubmit}
+              submitting={submitting}
+              error={submitError}
+            />
+          )}
+          {etape === 'succes' && (
+            <EtapeSucces
+              numeroBt={resultBt}
+              prioriteCode={resultPriorite}
+              validationManager={resultValidation}
+              onNouveau={resetFlow}
+              onRetour={onClose}
+            />
+          )}
+        </div>
       </div>
     </div>
   );
 }
 
-// ─── Step Indicator ─────────────────────────────────────────────
+// ─── Icons ─────────────────────────────────────────────────────
+
+function CloseIcon() {
+  return (
+    <svg className="w-4 h-4" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+      <path d="M2 2l12 12M14 2L2 14" />
+    </svg>
+  );
+}
+
+function ChevronLeftIcon() {
+  return <span className="text-lg leading-none">{'\u2039'}</span>;
+}
 
 function StepIndicator({ current, total }: { current: number; total: number }) {
   return (
@@ -315,7 +410,46 @@ function StepIndicator({ current, total }: { current: number; total: number }) {
   );
 }
 
-// ─── Step 1: Categorie ──────────────────────────────────────────
+// ─── Step 0: Parc (conditional) ────────────────────────────────
+
+function EtapeParc({ parcIds, onSelect }: { parcIds: string[]; onSelect: (p: ParcOption) => void }) {
+  const [parcs, setParcs] = useState<ParcOption[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    supabase
+      .from('parcs')
+      .select('id, code, nom')
+      .in('id', parcIds)
+      .eq('actif', true)
+      .order('nom')
+      .then(({ data }) => {
+        if (data) setParcs(data);
+        setLoading(false);
+      });
+  }, [parcIds.join(',')]);
+
+  if (loading) return <Loading />;
+
+  return (
+    <div className="p-4 pb-24">
+      <div className="flex flex-col gap-3">
+        {parcs.map((p) => (
+          <button
+            key={p.id}
+            onClick={() => onSelect(p)}
+            className="bg-[#131836] border border-white/[0.08] rounded-2xl p-5 text-left active:scale-[0.98] active:border-[#5DE5FF] transition-all min-h-[72px]"
+          >
+            <div className="text-sm font-bold text-white">{p.nom}</div>
+            <div className="text-[11px] text-dim mt-1">{p.code}</div>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── Step 1: Categorie ─────────────────────────────────────────
 
 function EtapeCategorie({
   parcId,
@@ -393,7 +527,7 @@ function EtapeCategorie({
   );
 }
 
-// ─── Step 2: Equipement ─────────────────────────────────────────
+// ─── Step 2: Equipement ────────────────────────────────────────
 
 function EtapeEquipement({
   parcId,
@@ -407,10 +541,10 @@ function EtapeEquipement({
   categorie: Categorie;
   recherche: string;
   onRecherche: (v: string) => void;
-  onSelect: (eq: Equipement) => void;
+  onSelect: (eq: EquipementItem) => void;
   onManquant: (label: string) => void;
 }) {
-  const [equipements, setEquipements] = useState<Equipement[]>([]);
+  const [equipements, setEquipements] = useState<EquipementItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [showManquant, setShowManquant] = useState(false);
   const [manquantLabel, setManquantLabel] = useState('');
@@ -444,7 +578,7 @@ function EtapeEquipement({
     : equipements;
 
   const grouped = useMemo(() => {
-    const map = new Map<string, Equipement[]>();
+    const map = new Map<string, EquipementItem[]>();
     for (const eq of filtered) {
       const zone = eq.zone_nom ?? 'Sans zone';
       if (!map.has(zone)) map.set(zone, []);
@@ -527,7 +661,7 @@ function EtapeEquipement({
   );
 }
 
-// ─── Step 3: Symptome ───────────────────────────────────────────
+// ─── Step 3: Symptome ──────────────────────────────────────────
 
 function EtapeSymptome({
   categorieId,
@@ -559,8 +693,8 @@ function EtapeSymptome({
   }, [categorieId]);
 
   const toggleVoice = useCallback(() => {
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SpeechRecognition) return;
+    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SR) return;
 
     if (listening && recognitionRef.current) {
       recognitionRef.current.stop();
@@ -568,7 +702,7 @@ function EtapeSymptome({
       return;
     }
 
-    const recognition = new SpeechRecognition();
+    const recognition = new SR();
     recognition.lang = 'fr-FR';
     recognition.interimResults = false;
     recognition.maxAlternatives = 1;
@@ -585,15 +719,15 @@ function EtapeSymptome({
 
   if (loading) return <Loading />;
 
-  const autreSymptome = symptomes.find((s) => s.libelle === 'Autre (décrire)');
-  const normalSymptomes = symptomes.filter((s) => s.libelle !== 'Autre (décrire)');
+  const autreSymptome = symptomes.find((s) => s.libelle === 'Autre (d\u00e9crire)');
+  const normalSymptomes = symptomes.filter((s) => s.libelle !== 'Autre (d\u00e9crire)');
 
   if (selected || isAutre) {
     return (
       <div className="p-4 pb-24">
         <div className="bg-[#131836] rounded-2xl p-4 mb-4 border border-[#5DE5FF]/20">
           <div className="flex items-center gap-2 mb-3">
-            <span className="text-xl">{isAutre ? '✏️' : selected?.icone}</span>
+            <span className="text-xl">{isAutre ? '\u270F\uFE0F' : selected?.icone}</span>
             <span className="text-sm font-semibold text-white">{isAutre ? 'Autre (decrivez)' : selected?.libelle}</span>
           </div>
           <div className="relative">
@@ -612,11 +746,10 @@ function EtapeSymptome({
               )}
               title="Dictee vocale"
             >
-              🎤
+              {'\u{1F3A4}'}
             </button>
           </div>
         </div>
-
         <div className="flex gap-3">
           <button
             onClick={() => { setSelected(null); setIsAutre(false); setCommentaire(''); }}
@@ -627,10 +760,7 @@ function EtapeSymptome({
           <button
             onClick={() => {
               if (isAutre && !commentaire.trim()) return;
-              onSelect(
-                isAutre ? null : selected,
-                commentaire.trim() || null,
-              );
+              onSelect(isAutre ? null : selected, commentaire.trim() || null);
             }}
             disabled={isAutre && !commentaire.trim()}
             className={cn(
@@ -654,7 +784,7 @@ function EtapeSymptome({
             onClick={() => setSelected(s)}
             className="bg-[#131836] border border-white/[0.08] rounded-2xl p-4 text-center active:scale-[0.97] active:border-[#E85A9B] transition-all min-h-[90px] flex flex-col items-center justify-center gap-2"
           >
-            <span className="text-3xl">{s.icone ?? '🔧'}</span>
+            <span className="text-3xl">{s.icone ?? '\u{1F527}'}</span>
             <span className="text-[12px] text-white leading-tight">{s.libelle}</span>
           </button>
         ))}
@@ -664,7 +794,7 @@ function EtapeSymptome({
           onClick={() => setIsAutre(true)}
           className="w-full bg-[#131836] border border-dashed border-white/[0.12] rounded-2xl p-4 text-center active:scale-[0.98] transition-all min-h-[72px] flex items-center justify-center gap-2"
         >
-          <span className="text-xl">✏️</span>
+          <span className="text-xl">{'\u270F\uFE0F'}</span>
           <span className="text-[13px] text-dim">Autre (decrire)</span>
         </button>
       )}
@@ -672,7 +802,7 @@ function EtapeSymptome({
   );
 }
 
-// ─── Step 4: Photo ──────────────────────────────────────────────
+// ─── Step 4: Photo ─────────────────────────────────────────────
 
 function EtapePhoto({
   parcCode,
@@ -715,7 +845,6 @@ function EtapePhoto({
 
       clearInterval(fakeProgress);
       setProgress(100);
-
       onDone(result.path, preview ?? '');
     } catch (err: any) {
       setError(err.message ?? 'Erreur lors de l\'upload');
@@ -734,19 +863,12 @@ function EtapePhoto({
 
   return (
     <div className="p-4 pb-24 flex flex-col items-center">
-      <input
-        ref={fileRef}
-        type="file"
-        accept="image/*"
-        capture="environment"
-        onChange={handleCapture}
-        className="hidden"
-      />
+      <input ref={fileRef} type="file" accept="image/*" capture="environment" onChange={handleCapture} className="hidden" />
 
       {!preview ? (
         <div className="flex-1 flex flex-col items-center justify-center py-12">
           <div className="w-32 h-32 bg-[#131836] rounded-3xl flex items-center justify-center mb-6 border-2 border-dashed border-white/10">
-            <span className="text-5xl">📷</span>
+            <span className="text-5xl">{'\u{1F4F7}'}</span>
           </div>
           <div className="text-sm text-dim text-center mb-6 max-w-[280px]">
             Prenez une photo de la zone concernee pour documenter l'incident
@@ -767,14 +889,9 @@ function EtapePhoto({
           {uploading && (
             <div className="mb-4">
               <div className="h-2 bg-white/10 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-gradient-to-r from-[#E85A9B] to-[#5DE5FF] rounded-full transition-all duration-300"
-                  style={{ width: `${progress}%` }}
-                />
+                <div className="h-full bg-gradient-to-r from-[#E85A9B] to-[#5DE5FF] rounded-full transition-all duration-300" style={{ width: `${progress}%` }} />
               </div>
-              <div className="text-[11px] text-dim text-center mt-1.5">
-                {progress < 100 ? `Upload en cours... ${progress}%` : 'Upload termine'}
-              </div>
+              <div className="text-[11px] text-dim text-center mt-1.5">{progress < 100 ? `Upload en cours... ${progress}%` : 'Upload termine'}</div>
             </div>
           )}
 
@@ -782,20 +899,12 @@ function EtapePhoto({
             <div className="bg-[#FF4D6D]/10 border border-[#FF4D6D]/25 rounded-xl p-3 mb-4 text-center">
               <div className="text-[#FF4D6D] text-xs font-semibold mb-1">Erreur</div>
               <div className="text-dim text-[11px]">{error}</div>
-              <button
-                onClick={() => fileRef.current?.click()}
-                className="mt-2 text-[#5DE5FF] text-xs underline"
-              >
-                Reessayer
-              </button>
+              <button onClick={() => fileRef.current?.click()} className="mt-2 text-[#5DE5FF] text-xs underline">Reessayer</button>
             </div>
           )}
 
           {!uploading && !error && (
-            <button
-              onClick={handleRetake}
-              className="w-full bg-[#131836] border border-white/[0.08] rounded-xl py-3 text-dim text-sm min-h-[48px]"
-            >
+            <button onClick={handleRetake} className="w-full bg-[#131836] border border-white/[0.08] rounded-xl py-3 text-dim text-sm min-h-[48px]">
               Refaire la photo
             </button>
           )}
@@ -805,13 +914,18 @@ function EtapePhoto({
   );
 }
 
-// ─── Step 5: Recap ──────────────────────────────────────────────
+// ─── Step 5: Recap ─────────────────────────────────────────────
 
 function EtapeRecap({
   state,
   prioriteCode,
   isStaff,
+  modeExpert,
+  parcId,
   onEscalade,
+  onPrioriteOverride,
+  onTechnicienAssigne,
+  onEcheance,
   onModifier,
   onEnvoyer,
   submitting,
@@ -820,12 +934,35 @@ function EtapeRecap({
   state: SignalementState;
   prioriteCode: string;
   isStaff: boolean;
+  modeExpert: boolean;
+  parcId: string | null;
   onEscalade: () => void;
+  onPrioriteOverride: (code: string) => void;
+  onTechnicienAssigne: (id: string | null) => void;
+  onEcheance: (date: string | null) => void;
   onModifier: () => void;
   onEnvoyer: () => void;
   submitting: boolean;
   error: string | null;
 }) {
+  const [showExpert, setShowExpert] = useState(false);
+  const [techniciens, setTechniciens] = useState<{ id: string; prenom: string; nom: string }[]>([]);
+
+  useEffect(() => {
+    if (!modeExpert || !parcId) return;
+    supabase
+      .from('utilisateurs')
+      .select('id, prenom, nom, roles!inner(code), parcs_utilisateurs!inner(parc_id)')
+      .eq('actif', true)
+      .eq('statut_validation', 'valide')
+      .eq('roles.code', 'technicien')
+      .eq('parcs_utilisateurs.parc_id', parcId)
+      .order('nom')
+      .then(({ data }) => {
+        if (data) setTechniciens(data.map((d: any) => ({ id: d.id, prenom: d.prenom, nom: d.nom })));
+      });
+  }, [modeExpert, parcId]);
+
   const prioriteColors: Record<string, string> = {
     bloquant: 'bg-[#FF4D6D]/20 text-[#FF4D6D] border-[#FF4D6D]/30',
     majeur: 'bg-[#FFB547]/20 text-[#FFB547] border-[#FFB547]/30',
@@ -834,34 +971,31 @@ function EtapeRecap({
 
   return (
     <div className="p-4 pb-32">
-      {/* Photo */}
       {state.photoPreview && (
         <div className="rounded-2xl overflow-hidden mb-4 bg-black">
           <img src={state.photoPreview} alt="" className="w-full max-h-[200px] object-cover" />
         </div>
       )}
 
-      {/* Equipement */}
       <div className="bg-[#131836] rounded-xl p-4 mb-3 border border-white/[0.06]">
         <div className="text-[10px] text-dim uppercase tracking-wider mb-1.5">Equipement</div>
         <div className="flex items-center gap-2">
-          <span className="text-lg">{state.categorie ? getCategorieIcon(state.categorie.nom) : '📦'}</span>
+          <span className="text-lg">{state.categorie ? getCategorieIcon(state.categorie.nom) : '\u{1F4E6}'}</span>
           <div>
             <div className="text-sm font-semibold text-white">
               {state.equipement?.code ?? state.equipementManquantLabel ?? 'Non specifie'}
             </div>
             <div className="text-[11px] text-dim">
-              {state.equipement?.libelle ?? state.categorie?.nom ?? ''} {state.equipement?.zone_nom ? `· ${state.equipement.zone_nom}` : ''}
+              {state.equipement?.libelle ?? state.categorie?.nom ?? ''} {state.equipement?.zone_nom ? `\u00B7 ${state.equipement.zone_nom}` : ''}
             </div>
           </div>
         </div>
       </div>
 
-      {/* Symptome */}
       <div className="bg-[#131836] rounded-xl p-4 mb-3 border border-white/[0.06]">
         <div className="text-[10px] text-dim uppercase tracking-wider mb-1.5">Symptome</div>
         <div className="flex items-center gap-2">
-          <span className="text-lg">{state.symptome?.icone ?? '✏️'}</span>
+          <span className="text-lg">{state.symptome?.icone ?? '\u270F\uFE0F'}</span>
           <div>
             <div className="text-sm font-semibold text-white">{state.symptome?.libelle ?? 'Autre'}</div>
             {state.symptomeLibre && <div className="text-[11px] text-dim">{state.symptomeLibre}</div>}
@@ -869,7 +1003,6 @@ function EtapeRecap({
         </div>
       </div>
 
-      {/* Priorite */}
       <div className="bg-[#131836] rounded-xl p-4 mb-3 border border-white/[0.06]">
         <div className="text-[10px] text-dim uppercase tracking-wider mb-1.5">Priorite deduite</div>
         <div className="flex items-center gap-2.5">
@@ -878,7 +1011,7 @@ function EtapeRecap({
           </span>
           <span className="text-dim text-[11px]">SLA {SLA_MAP[prioriteCode] ?? '?'}</span>
         </div>
-        {!state.prioriteEscaladee && prioriteCode !== 'bloquant' && (
+        {!state.prioriteEscaladee && !state.prioriteOverride && prioriteCode !== 'bloquant' && (
           <button
             onClick={onEscalade}
             className="mt-3 w-full bg-[#FF4D6D]/10 border border-[#FF4D6D]/25 rounded-xl py-3 text-[#FF4D6D] text-[12px] font-semibold active:bg-[#FF4D6D]/20 min-h-[48px]"
@@ -886,17 +1019,80 @@ function EtapeRecap({
             C'est plus grave qu'il n'y parait
           </button>
         )}
-        {state.prioriteEscaladee && (
+        {state.prioriteEscaladee && !state.prioriteOverride && (
           <div className="mt-2 text-[10px] text-[#FF4D6D]">Priorite escaladee manuellement</div>
         )}
       </div>
 
-      {/* Staff approval notice */}
       {isStaff && (
         <div className="bg-[#FFB547]/10 border border-[#FFB547]/25 rounded-xl p-3 mb-3 text-center">
           <div className="text-[#FFB547] text-[11px] font-semibold">
             Ce signalement sera soumis a l'approbation du manager de votre parc
           </div>
+        </div>
+      )}
+
+      {/* Mode expert */}
+      {modeExpert && (
+        <div className="mb-3">
+          {!showExpert ? (
+            <button
+              onClick={() => setShowExpert(true)}
+              className="w-full bg-[#131836] border border-[#5DE5FF]/20 rounded-xl py-3 text-[#5DE5FF] text-[12px] font-semibold active:bg-[#5DE5FF]/5 min-h-[48px]"
+            >
+              Options expert
+            </button>
+          ) : (
+            <div className="bg-[#131836] border border-[#5DE5FF]/20 rounded-xl p-4 space-y-4">
+              <div className="text-[10px] text-[#5DE5FF] uppercase tracking-wider font-semibold mb-2">Mode expert</div>
+
+              <div>
+                <div className="text-[11px] text-dim mb-2">Override priorite</div>
+                <div className="grid grid-cols-3 gap-2">
+                  {(['bloquant', 'majeur', 'mineur'] as const).map((p) => (
+                    <button
+                      key={p}
+                      onClick={() => onPrioriteOverride(p)}
+                      className={cn(
+                        'py-2.5 rounded-lg text-[11px] font-bold border transition-colors min-h-[40px]',
+                        state.prioriteOverride === p
+                          ? prioriteColors[p]
+                          : 'border-white/[0.08] text-dim hover:border-white/20'
+                      )}
+                    >
+                      {p.toUpperCase()}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {techniciens.length > 0 && (
+                <div>
+                  <div className="text-[11px] text-dim mb-2">Assigner un technicien</div>
+                  <select
+                    value={state.technicienAssigneId ?? ''}
+                    onChange={(e) => onTechnicienAssigne(e.target.value || null)}
+                    className="w-full bg-[#0a0e27] border border-white/[0.08] rounded-lg p-2.5 text-text text-sm outline-none min-h-[40px]"
+                  >
+                    <option value="">Auto (par rotation)</option>
+                    {techniciens.map((t) => (
+                      <option key={t.id} value={t.id}>{t.prenom} {t.nom}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              <div>
+                <div className="text-[11px] text-dim mb-2">Echeance cible</div>
+                <input
+                  type="datetime-local"
+                  value={state.echeanceSouhaitee ?? ''}
+                  onChange={(e) => onEcheance(e.target.value || null)}
+                  className="w-full bg-[#0a0e27] border border-white/[0.08] rounded-lg p-2.5 text-text text-sm outline-none min-h-[40px]"
+                />
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -906,12 +1102,8 @@ function EtapeRecap({
         </div>
       )}
 
-      {/* CTAs */}
-      <div className="fixed bottom-0 left-0 right-0 bg-[#0a0e27]/95 backdrop-blur-xl border-t border-white/[0.06] p-4 flex gap-3" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 16px)' }}>
-        <button
-          onClick={onModifier}
-          className="flex-1 bg-[#131836] border border-white/[0.08] rounded-xl py-3.5 text-dim text-sm min-h-[56px]"
-        >
+      <div className="sticky bottom-0 bg-[#0a0e27]/95 backdrop-blur-xl border-t border-white/[0.06] p-4 -mx-4 flex gap-3" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 16px)' }}>
+        <button onClick={onModifier} className="flex-1 bg-[#131836] border border-white/[0.08] rounded-xl py-3.5 text-dim text-sm min-h-[56px]">
           Modifier
         </button>
         <button
@@ -929,7 +1121,7 @@ function EtapeRecap({
   );
 }
 
-// ─── Step 6: Succes ─────────────────────────────────────────────
+// ─── Step 6: Succes ────────────────────────────────────────────
 
 function EtapeSucces({
   numeroBt,
@@ -952,7 +1144,7 @@ function EtapeSucces({
   const needsApproval = validationManager === 'en_attente';
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-6 text-center">
+    <div className="flex flex-col items-center justify-center p-6 py-16 text-center">
       <div
         className={cn(
           'w-24 h-24 rounded-full flex items-center justify-center mb-6 transition-all duration-500',
@@ -962,21 +1154,16 @@ function EtapeSucces({
       >
         <svg
           className={cn('w-12 h-12 transition-all duration-500', showCheck ? 'scale-100' : 'scale-0')}
-          viewBox="0 0 24 24"
-          fill="none"
+          viewBox="0 0 24 24" fill="none"
           stroke={needsApproval ? '#FFB547' : '#4DD09E'}
-          strokeWidth="3"
-          strokeLinecap="round"
-          strokeLinejoin="round"
+          strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"
         >
           <path d="M20 6L9 17l-5-5" />
         </svg>
       </div>
 
       {numeroBt && (
-        <div className="text-2xl font-bold text-white mb-2">
-          Signalement #{numeroBt}
-        </div>
+        <div className="text-2xl font-bold text-white mb-2">Signalement #{numeroBt}</div>
       )}
 
       {needsApproval ? (
@@ -992,24 +1179,18 @@ function EtapeSucces({
       )}
 
       <div className="flex flex-col gap-3 w-full max-w-[320px]">
-        <button
-          onClick={onNouveau}
-          className="bg-gradient-to-r from-[#E85A9B] to-[#5DE5FF] text-white py-4 rounded-2xl text-sm font-bold active:scale-95 min-h-[56px]"
-        >
+        <button onClick={onNouveau} className="bg-gradient-to-r from-[#E85A9B] to-[#5DE5FF] text-white py-4 rounded-2xl text-sm font-bold active:scale-95 min-h-[56px]">
           Nouveau signalement
         </button>
-        <button
-          onClick={onRetour}
-          className="bg-[#131836] border border-white/[0.08] text-dim py-3.5 rounded-xl text-sm min-h-[48px]"
-        >
-          Retour a l'accueil
+        <button onClick={onRetour} className="bg-[#131836] border border-white/[0.08] text-dim py-3.5 rounded-xl text-sm min-h-[48px]">
+          Fermer
         </button>
       </div>
     </div>
   );
 }
 
-// ─── Loading ────────────────────────────────────────────────────
+// ─── Loading ───────────────────────────────────────────────────
 
 function Loading() {
   return (

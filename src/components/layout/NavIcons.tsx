@@ -198,16 +198,6 @@ export function IconFournisseurs({ className = s }: { className?: string }) {
   );
 }
 
-export function IconSignaler({ className = s }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M10 2L2 17h16L10 2z" />
-      <path d="M10 7v4" />
-      <circle cx="10" cy="13.5" r="0.5" fill="currentColor" stroke="none" />
-    </svg>
-  );
-}
-
 export function IconToggleSidebar({ className = s }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
@@ -258,7 +248,6 @@ const iconMap: Record<string, (props: { className?: string }) => JSX.Element> = 
   'Contrôle mensuel': IconControleMensuel,
   'Aide': IconAide,
   'Administration IT': IconAdminIT,
-  'Signaler': IconSignaler,
 };
 
 export function getNavIcon(label: string) {

@@ -59,7 +59,6 @@ export function LoginStaff() {
       return;
     }
 
-    // Stocker la session staff dans le localStorage (pas de Supabase Auth pour staff)
     sessionStorage.setItem(
       'staff_session',
       JSON.stringify({
@@ -68,6 +67,7 @@ export function LoginStaff() {
         connecte_le: new Date().toISOString(),
       })
     );
+    localStorage.setItem('alba:device_kind', 'tablet-fixed');
     navigate('/staff/controle-ouverture', { replace: true });
   };
 
