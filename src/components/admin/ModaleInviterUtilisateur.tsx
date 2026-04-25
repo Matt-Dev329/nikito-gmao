@@ -21,7 +21,6 @@ const rolesParAuth: Record<AuthMode, { value: RoleUtilisateur; label: string }[]
     { value: 'chef_maintenance', label: "Chef d'équipe" },
     { value: 'manager_parc', label: 'Manager parc' },
     { value: 'technicien', label: 'Technicien' },
-    { value: 'admin_it', label: 'Admin IT' },
   ],
   pin_seul: [{ value: 'staff_operationnel', label: 'Staff opérationnel' }],
 };
@@ -36,12 +35,15 @@ export function ModaleInviterUtilisateur({
   const { data: parcs } = useParcs();
   const [authMode, setAuthMode] = useState<AuthMode>('email_password');
   const [email, setEmail] = useState('');
+  const [prenom, setPrenom] = useState('');
+  const [nom, setNom] = useState('');
   const [roleChoisi, setRoleChoisi] = useState<RoleUtilisateur | null>(null);
   const [parcsChoisis, setParcsChoisis] = useState<string[]>([]);
   const [estManager, setEstManager] = useState(false);
   const [methodeEnvoi, setMethodeEnvoi] = useState<'email' | 'lien'>('email');
   const [submitting, setSubmitting] = useState(false);
   const [lienGenere, setLienGenere] = useState<string | null>(null);
+  const [pinGenere, setPinGenere] = useState<string | null>(null);
   const [emailStatus, setEmailStatus] = useState<'idle' | 'sending' | 'sent' | 'failed'>('idle');
   const [emailDestinataire, setEmailDestinataire] = useState('');
   const [emailErreurDetail, setEmailErreurDetail] = useState<Record<string, unknown> | null>(null);
@@ -80,6 +82,64 @@ export function ModaleInviterUtilisateur({
     const token =
       crypto.randomUUID().replace(/-/g, '') +
       Math.random().toString(36).slice(2, 10);
+
+    if (authMode === 'pin_seul') {
+      const { data: newUser, error: userErr } = await supabase
+        .from('utilisateurs')
+        .insert({
+          email: email || null,
+          prenom: prenom || 'Staff',
+          nom: nom || '',
+          role_id: role.id,
+          auth_mode: 'pin_seul',
+          statut_validation: 'valide',
+          actif: true,
+          valide_par_id: utilisateur.id,
+          valide_le: new Date().toISOString(),
+        })
+        .select('id')
+        .single();
+
+      if (userErr || !newUser) {
+        setSubmitting(false);
+        return;
+      }
+
+      for (const parcId of parcsChoisis) {
+        await supabase.from('parcs_utilisateurs').upsert(
+          { utilisateur_id: newUser.id, parc_id: parcId },
+          { onConflict: 'utilisateur_id,parc_id' }
+        );
+      }
+
+      const { data: pinData, error: pinErr } = await supabase.functions.invoke('hash-pin', {
+        body: { action: 'generate', utilisateur_id: newUser.id },
+      });
+
+      if (pinErr || !pinData?.success) {
+        setSubmitting(false);
+        return;
+      }
+
+      await supabase.from('invitations').insert({
+        token,
+        email: email || null,
+        prenom: prenom || null,
+        nom: nom || null,
+        role_id: role.id,
+        parcs_assignes: parcsChoisis,
+        est_manager: false,
+        auth_mode: 'pin_seul',
+        invite_par_id: utilisateur.id,
+        utilisateur_cree_id: newUser.id,
+        utilise_le: new Date().toISOString(),
+        notes: `Staff PIN créé par ${utilisateur.prenom} ${utilisateur.nom}`,
+      });
+
+      setPinGenere(pinData.pin_clair);
+      setSubmitting(false);
+      return;
+    }
 
     const { error } = await supabase.from('invitations').insert({
       token,
@@ -145,7 +205,9 @@ export function ModaleInviterUtilisateur({
             <div className="text-[11px] text-dim tracking-[1.2px] uppercase">Nouveau compte</div>
             <div className="text-[19px] font-semibold mt-0.5">Inviter un utilisateur</div>
             <div className="text-xs text-dim mt-1">
-              L'invité complètera son profil lui-même (prénom, nom, téléphone)
+              {authMode === 'pin_seul'
+                ? 'Le staff recevra un code PIN à communiquer une seule fois'
+                : "L'invité complètera son profil lui-même (prénom, nom, téléphone)"}
             </div>
           </div>
           <button
@@ -156,7 +218,9 @@ export function ModaleInviterUtilisateur({
           </button>
         </div>
 
-        {lienGenere ? (
+        {pinGenere ? (
+          <SuccessPin pin={pinGenere} prenom={prenom} nom={nom} onClose={onClose} />
+        ) : lienGenere ? (
           <SuccessLien
             lien={lienGenere}
             onClose={onClose}
@@ -176,7 +240,7 @@ export function ModaleInviterUtilisateur({
                   <CarteAuthMode
                     icon="📧"
                     titre="Email professionnel"
-                    description="Direction, Chef d'équipe, Manager, Technicien, Admin IT · @nikito.com"
+                    description="Direction, Chef d'équipe, Manager, Technicien · @nikito.com"
                     actif={authMode === 'email_password'}
                     onClick={() => {
                       setAuthMode('email_password');
@@ -195,6 +259,43 @@ export function ModaleInviterUtilisateur({
                     }}
                   />
                 </div>
+              </div>
+            )}
+
+            {authMode === 'pin_seul' && (
+              <div className="grid grid-cols-2 gap-2.5 mb-3.5">
+                <Field label="Prénom (optionnel)">
+                  <input
+                    type="text"
+                    value={prenom}
+                    onChange={(e) => setPrenom(e.target.value)}
+                    placeholder="Prénom"
+                    className="w-full bg-bg-deep border border-white/[0.08] rounded-[10px] p-3 px-3.5 text-text text-[13px] outline-none min-h-[44px]"
+                  />
+                </Field>
+                <Field label="Nom (optionnel)">
+                  <input
+                    type="text"
+                    value={nom}
+                    onChange={(e) => setNom(e.target.value)}
+                    placeholder="Nom"
+                    className="w-full bg-bg-deep border border-white/[0.08] rounded-[10px] p-3 px-3.5 text-text text-[13px] outline-none min-h-[44px]"
+                  />
+                </Field>
+              </div>
+            )}
+
+            {authMode === 'pin_seul' && (
+              <div className="mb-3.5">
+                <Field label="Email (optionnel, pour envoyer le PIN)">
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="prenom.nom@nikito.com (optionnel)"
+                    className="w-full bg-bg-deep border border-white/[0.08] rounded-[10px] p-3 px-3.5 text-text text-[13px] outline-none min-h-[44px]"
+                  />
+                </Field>
               </div>
             )}
 
@@ -304,26 +405,28 @@ export function ModaleInviterUtilisateur({
               </div>
             </div>
 
-            <div className="bg-bg-deep rounded-[10px] p-3 px-3.5 mb-[18px] border border-dashed border-nikito-cyan/20">
-              <div className="text-[11px] text-dim uppercase tracking-wider mb-2.5">
-                Envoi du lien
+            {authMode === 'email_password' && (
+              <div className="bg-bg-deep rounded-[10px] p-3 px-3.5 mb-[18px] border border-dashed border-nikito-cyan/20">
+                <div className="text-[11px] text-dim uppercase tracking-wider mb-2.5">
+                  Envoi du lien
+                </div>
+                <div className="flex gap-2.5">
+                  <RadioOption
+                    selected={methodeEnvoi === 'email'}
+                    onClick={() => setMethodeEnvoi('email')}
+                    disabled={!email}
+                  >
+                    Envoyer par email
+                  </RadioOption>
+                  <RadioOption
+                    selected={methodeEnvoi === 'lien'}
+                    onClick={() => setMethodeEnvoi('lien')}
+                  >
+                    Copier le lien
+                  </RadioOption>
+                </div>
               </div>
-              <div className="flex gap-2.5">
-                <RadioOption
-                  selected={methodeEnvoi === 'email'}
-                  onClick={() => setMethodeEnvoi('email')}
-                  disabled={!email}
-                >
-                  Envoyer par email
-                </RadioOption>
-                <RadioOption
-                  selected={methodeEnvoi === 'lien'}
-                  onClick={() => setMethodeEnvoi('lien')}
-                >
-                  Copier le lien
-                </RadioOption>
-              </div>
-            </div>
+            )}
 
             <div className="flex flex-col-reverse sm:flex-row gap-2.5 sm:justify-end">
               <button
@@ -341,10 +444,10 @@ export function ModaleInviterUtilisateur({
                 )}
               >
                 {submitting
-                  ? emailStatus === 'sending'
-                    ? `Envoi de l'invitation à ${email}...`
-                    : 'Création...'
-                  : "Envoyer l'invitation ›"}
+                  ? 'Création...'
+                  : authMode === 'pin_seul'
+                    ? 'Créer le compte PIN ›'
+                    : "Envoyer l'invitation ›"}
               </button>
             </div>
           </>
@@ -432,6 +535,66 @@ function RadioOption({
       </span>
       <span className={cn('text-xs', selected ? 'text-text' : 'text-dim')}>{children}</span>
     </button>
+  );
+}
+
+function SuccessPin({
+  pin,
+  prenom,
+  nom,
+  onClose,
+}: {
+  pin: string;
+  prenom: string;
+  nom: string;
+  onClose: () => void;
+}) {
+  const [copie, setCopie] = useState(false);
+
+  const copier = async () => {
+    await navigator.clipboard.writeText(pin);
+    setCopie(true);
+    setTimeout(() => setCopie(false), 2000);
+  };
+
+  const displayName = [prenom, nom].filter(Boolean).join(' ') || 'Staff';
+
+  return (
+    <div className="text-center py-4">
+      <div className="text-4xl mb-3 font-mono text-nikito-cyan">PIN</div>
+      <div className="text-base font-semibold mb-2">
+        Compte créé pour {displayName}
+      </div>
+      <div className="text-sm text-dim mb-5">
+        Communique ce code PIN une seule fois. Il ne sera plus jamais affiché.
+      </div>
+
+      <div className="bg-bg-deep rounded-xl p-5 mb-4 border border-nikito-cyan/30">
+        <div className="text-[11px] text-dim uppercase tracking-wider mb-2">Code PIN à 6 chiffres</div>
+        <div className="font-mono text-4xl font-bold text-nikito-cyan tracking-[12px] pl-3">
+          {pin}
+        </div>
+      </div>
+
+      <div className="bg-amber/10 border border-amber/25 rounded-xl p-3 mb-5 text-[11px] text-dim">
+        Ce code est temporaire. L'agent devra le changer à sa première connexion.
+      </div>
+
+      <div className="flex gap-2.5 justify-center">
+        <button
+          onClick={copier}
+          className="bg-bg-deep border border-nikito-cyan/40 text-nikito-cyan px-5 py-2.5 rounded-lg text-xs font-semibold min-h-[44px]"
+        >
+          {copie ? '✓ Copié !' : 'Copier le PIN'}
+        </button>
+        <button
+          onClick={onClose}
+          className="bg-gradient-cta text-text px-5 py-2.5 rounded-lg text-xs font-bold min-h-[44px]"
+        >
+          Fermer
+        </button>
+      </div>
+    </div>
   );
 }
 
