@@ -50,6 +50,13 @@ function getTabsForRole(roleCode: RoleUtilisateur): TabDef[] {
       route: isStaff ? '/staff/controle-ouverture' : '/gmao/controles-historique',
     },
     {
+      id: 'signaler',
+      label: 'Signaler',
+      matchPaths: isStaff ? ['/staff/signaler'] : ['/gmao/signaler'],
+      action: 'navigate',
+      route: isStaff ? '/staff/signaler' : '/gmao/signaler',
+    },
+    {
       id: 'alerts',
       label: 'Alertes',
       matchPaths: [],
@@ -171,6 +178,14 @@ function TabIcon({ id, active }: { id: string; active: boolean }) {
           <rect x="4" y="3" width="16" height="18" rx="2" />
           <path d="M8 7h8M8 11h8M8 15h5" />
           <path d="M15 15l1.5 1.5 3-3" />
+        </svg>
+      );
+    case 'signaler':
+      return (
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M12 3L3 21h18L12 3z" />
+          <path d="M12 9v4" />
+          <circle cx="12" cy="16" r="0.5" fill={color} stroke="none" />
         </svg>
       );
     case 'alerts':

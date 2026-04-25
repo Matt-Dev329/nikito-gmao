@@ -22,15 +22,6 @@ export function PageTechStock() {
   );
 }
 
-export function PageTechSignaler() {
-  return (
-    <div className="p-4 md:p-6 md:px-7">
-      <h1 className="text-[22px] font-semibold m-0">Signaler</h1>
-      <div className="text-[13px] text-dim mt-1">Signalement d'incident - bientot disponible</div>
-    </div>
-  );
-}
-
 export function MesSignalements() {
   const navigate = useNavigate();
   return (
