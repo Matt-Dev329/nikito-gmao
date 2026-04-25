@@ -4,6 +4,7 @@ import {
   ReferenceLine, Cell, PieChart, Pie, Cell as PieCell, Tooltip,
 } from 'recharts';
 import { KpiCard } from '@/components/kpi/KpiCard';
+import { SignalerInlineButton } from '@/components/shared/SignalerInlineButton';
 import { Pill } from '@/components/ui/Pill';
 import { Card, CardHead } from '@/components/ui/Card';
 import { CritTag } from '@/components/ui/CritTag';
@@ -190,27 +191,34 @@ export function TableauDeBord() {
 
   return (
     <div className="p-4 md:p-6 md:px-7 overflow-hidden">
-      <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-start mb-[18px]">
-        <div>
-          <div className="text-[11px] text-dim tracking-[1.5px] uppercase mb-1">
-            {formatDateLong(now)} · {formatHeure(now)}
+      <div className="text-[11px] text-dim tracking-[1.5px] uppercase mb-2">
+        {formatDateLong(now)} · {formatHeure(now)}
+      </div>
+
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-5">
+        <h1 className="text-xl md:text-2xl font-semibold m-0">Pilotage temps réel</h1>
+
+        <div className="flex items-center gap-3">
+          <div className="flex gap-2">
+            {(['7j', '30j', '90j'] as Periode[]).map((p) => (
+              <button
+                key={p}
+                onClick={() => setPeriode(p)}
+                className={
+                  periode === p
+                    ? 'bg-gradient-cta text-text px-3.5 py-1.5 rounded-lg text-xs font-medium min-h-[44px] md:min-h-0'
+                    : 'bg-bg-card border border-white/[0.08] text-text px-3.5 py-1.5 rounded-lg text-xs min-h-[44px] md:min-h-0'
+                }
+              >
+                {p === '7j' ? '7 jours' : p === '30j' ? '30 jours' : '90 jours'}
+              </button>
+            ))}
           </div>
-          <h1 className="text-xl md:text-2xl lg:text-[22px] font-semibold m-0">Pilotage temps réel</h1>
-        </div>
-        <div className="flex gap-2">
-          {(['7j', '30j', '90j'] as Periode[]).map((p) => (
-            <button
-              key={p}
-              onClick={() => setPeriode(p)}
-              className={
-                periode === p
-                  ? 'bg-gradient-cta text-text px-3.5 py-1.5 rounded-lg text-xs font-medium min-h-[44px] md:min-h-0'
-                  : 'bg-bg-card border border-white/[0.08] text-text px-3.5 py-1.5 rounded-lg text-xs min-h-[44px] md:min-h-0'
-              }
-            >
-              {p === '7j' ? '7 jours' : p === '30j' ? '30 jours' : '90 jours'}
-            </button>
-          ))}
+
+          <div className="hidden md:block h-8 w-px bg-white/[0.08]" />
+          <div className="hidden md:block">
+            <SignalerInlineButton />
+          </div>
         </div>
       </div>
 

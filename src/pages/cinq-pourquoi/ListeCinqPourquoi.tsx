@@ -5,6 +5,7 @@ import { useParcs } from '@/hooks/queries/useReferentiel';
 import { Card } from '@/components/ui/Card';
 import { Pill } from '@/components/ui/Pill';
 import { cn } from '@/lib/utils';
+import { SignalerInlineButton } from '@/components/shared/SignalerInlineButton';
 import type { Fiche5PourquoiAvecJoins, Statut5Pourquoi } from '@/types/database';
 
 const STATUTS_FILTRE: Array<{ value: Statut5Pourquoi | 'tous'; label: string }> = [
@@ -63,12 +64,15 @@ export function ListeCinqPourquoi() {
 
   return (
     <div className="p-4 md:p-6 md:px-7">
-      <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-start mb-5">
+      <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center mb-5">
         <div>
           <h1 className="text-xl md:text-[22px] font-semibold m-0">5 Pourquoi</h1>
           <p className="text-[13px] text-dim mt-1">
             Analyses de cause racine &mdash; methode Lean
           </p>
+        </div>
+        <div className="hidden md:block">
+          <SignalerInlineButton />
         </div>
       </div>
 

@@ -5,6 +5,8 @@ import { useFournisseurs } from '@/hooks/queries/useReferentiel';
 import { useFormationFilter } from '@/hooks/useFormation';
 import { Pill } from '@/components/ui/Pill';
 import { cn } from '@/lib/utils';
+import { SignalerInlineButton } from '@/components/shared/SignalerInlineButton';
+import { SignalerInlineButton } from '@/components/shared/SignalerInlineButton';
 import type { PieceDetacheeAvecJoins } from '@/types/database';
 
 type FiltreCritique = 'tous' | 'critique' | 'ok';
@@ -119,7 +121,7 @@ export function PageStock() {
 
   return (
     <div className="p-4 md:p-6 md:px-7">
-      <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-start mb-5">
+      <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center mb-5">
         <div>
           <h1 className="text-xl md:text-[22px] font-semibold m-0">Stock pieces detachees</h1>
           <p className="text-[13px] text-dim mt-1">
@@ -127,12 +129,18 @@ export function PageStock() {
             <span className="text-red font-medium">{kpis.critique} en rupture</span>
           </p>
         </div>
-        <button
-          onClick={() => setModaleCreer(true)}
-          className="bg-gradient-cta text-text px-5 py-2.5 rounded-[10px] text-[13px] font-bold flex items-center gap-2 min-h-[44px] w-full sm:w-auto justify-center"
-        >
-          <span className="text-base leading-none">+</span> Nouvelle piece
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setModaleCreer(true)}
+            className="bg-gradient-cta text-text px-5 py-2.5 rounded-[10px] text-[13px] font-bold flex items-center gap-2 min-h-[44px] w-full sm:w-auto justify-center"
+          >
+            <span className="text-base leading-none">+</span> Nouvelle piece
+          </button>
+          <div className="hidden md:flex items-center gap-2 ml-1">
+            <div className="h-8 w-px bg-white/[0.08]" />
+            <SignalerInlineButton />
+          </div>
+        </div>
       </div>
 
       <div className="flex flex-wrap gap-2.5 mb-4">

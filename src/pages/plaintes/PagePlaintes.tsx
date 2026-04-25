@@ -11,6 +11,7 @@ import { cn } from '@/lib/utils';
 import { usePlaintes, useQualifierPlainte, useReclasserPlainte, useSyncRoller, type PlainteRow } from './usePlaintesQueries';
 import { ModaleCreerPlainte } from './ModaleCreerPlainte';
 import { ModaleQualifierMaintenance, ModaleQualifierHorsMaintenance } from './ModaleQualifierPlainte';
+import { SignalerInlineButton } from '@/components/shared/SignalerInlineButton';
 
 type StatutFilter = '' | 'a_qualifier' | 'maintenance_confirmee' | 'hors_maintenance' | 'traite';
 type SourceFilter = '' | 'roller_gxs' | 'manuel';
@@ -143,12 +144,12 @@ export function PagePlaintes() {
 
   return (
     <div className="p-4 md:p-6 md:px-7">
-      <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-start mb-5">
+      <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center mb-5">
         <div>
           <h1 className="text-xl md:text-[22px] font-semibold m-0">Plaintes clients</h1>
           <p className="text-[13px] text-dim mt-1">Qualification et suivi des reclamations</p>
         </div>
-        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
           {canSync && (
             <button
               onClick={handleSync}
@@ -171,6 +172,10 @@ export function PagePlaintes() {
           >
             <span className="text-base leading-none">+</span> Nouvelle plainte
           </button>
+          <div className="hidden md:flex items-center gap-2 ml-1">
+            <div className="h-8 w-px bg-white/[0.08]" />
+            <SignalerInlineButton />
+          </div>
         </div>
       </div>
 

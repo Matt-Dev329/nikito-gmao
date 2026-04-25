@@ -9,6 +9,8 @@ import { useFiches5Pourquoi } from '@/hooks/queries/useTickets';
 import { useCreerFiche5PDepuisRecurrence } from '@/hooks/queries/useFiches5P';
 import { useParcs } from '@/hooks/queries/useReferentiel';
 import { useAuth } from '@/hooks/useAuth';
+import { SignalerInlineButton } from '@/components/shared/SignalerInlineButton';
+import { SignalerInlineButton } from '@/components/shared/SignalerInlineButton';
 import type { Criticite } from '@/types/database';
 
 function SkeletonBlock({ className }: { className?: string }) {
@@ -107,14 +109,14 @@ export function Recurrences() {
 
   return (
     <div className="p-4 md:p-6 md:px-7 overflow-hidden">
-      <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-start mb-[18px]">
-        <div>
-          <div className="text-[11px] text-dim tracking-[1.5px] uppercase mb-1">
-            Boucle d'apprentissage Lean
-          </div>
-          <h1 className="text-xl md:text-[22px] font-semibold m-0">Récurrences actives · à arbitrer</h1>
-        </div>
-        <div className="flex gap-2">
+      <div className="text-[11px] text-dim tracking-[1.5px] uppercase mb-2">
+        Boucle d'apprentissage Lean
+      </div>
+
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-5">
+        <h1 className="text-xl md:text-[22px] font-semibold m-0">Récurrences actives · à arbitrer</h1>
+
+        <div className="flex items-center gap-3">
           <button
             onClick={() => setSeuilPannes(seuilPannes === 2 ? 3 : 2)}
             className={
@@ -125,6 +127,11 @@ export function Recurrences() {
           >
             {seuilPannes === 2 ? '>=2 pannes/30j' : '>=3 pannes/30j'}
           </button>
+
+          <div className="hidden md:block h-8 w-px bg-white/[0.08]" />
+          <div className="hidden md:block">
+            <SignalerInlineButton />
+          </div>
         </div>
       </div>
 

@@ -5,6 +5,7 @@ import { TableEquipements } from '@/components/equipements/TableEquipements';
 import { ModaleCreerEquipement } from '@/components/equipements/ModaleCreerEquipement';
 import { ModaleDetailEquipement } from '@/components/equipements/ModaleDetailEquipement';
 import { ModaleImportCSV } from '@/components/equipements/ModaleImportCSV';
+import { SignalerInlineButton } from '@/components/shared/SignalerInlineButton';
 import type { EquipementAvecJoins, StatutEquipement } from '@/types/database';
 
 export function PageEquipements() {
@@ -47,7 +48,7 @@ export function PageEquipements() {
 
   return (
     <div className="p-4 md:p-6 md:px-7">
-      <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-start mb-5">
+      <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center mb-5">
         <div>
           <h1 className="text-xl md:text-[22px] font-semibold m-0">Equipements</h1>
           <div className="text-[13px] text-dim mt-1">
@@ -55,7 +56,7 @@ export function PageEquipements() {
             {filtres.length !== nbTotal && ` · ${filtres.length} affiche${filtres.length !== 1 ? 's' : ''}`}
           </div>
         </div>
-        <div className="flex gap-2 w-full sm:w-auto">
+        <div className="flex items-center gap-2 w-full sm:w-auto">
           <button
             onClick={() => setModaleImport(true)}
             className="bg-bg-card border border-nikito-cyan/40 text-nikito-cyan px-3 py-2.5 rounded-[10px] text-xs font-semibold min-h-[44px] flex-1 sm:flex-none"
@@ -68,6 +69,10 @@ export function PageEquipements() {
           >
             <span className="text-base">+</span> Nouvel equipement
           </button>
+          <div className="hidden md:flex items-center gap-2 ml-1">
+            <div className="h-8 w-px bg-white/[0.08]" />
+            <SignalerInlineButton />
+          </div>
         </div>
       </div>
 

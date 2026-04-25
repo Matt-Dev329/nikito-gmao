@@ -7,6 +7,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useViewAs } from '@/hooks/useViewAs';
 import { roleLabels } from '@/lib/tokens';
 import { useParcs } from '@/hooks/queries/useReferentiel';
+import { SignalerInlineButton } from '@/components/shared/SignalerInlineButton';
 import type { RoleUtilisateur } from '@/types/database';
 import {
   useCompteursRoles,
@@ -48,21 +49,27 @@ export function UtilisateursAdmin() {
 
   return (
     <div className="p-4 md:p-6 md:px-7">
-      <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-start mb-5">
+      <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center mb-5">
         <div>
           <h1 className="text-xl md:text-[22px] font-semibold m-0">Utilisateurs</h1>
           <div className="text-[13px] text-dim mt-1">
             Gestion comptes, invitations, attribution roles et parcs
           </div>
         </div>
-        {peutInviter && (
-          <button
-            onClick={() => setModaleOuverte(true)}
-            className="bg-gradient-cta text-text px-5 py-2.5 rounded-[10px] text-[13px] font-bold flex items-center gap-2 min-h-[44px] w-full sm:w-auto justify-center sm:justify-start"
-          >
-            <span className="text-base">+</span> Inviter un utilisateur
-          </button>
-        )}
+        <div className="flex items-center gap-2">
+          {peutInviter && (
+            <button
+              onClick={() => setModaleOuverte(true)}
+              className="bg-gradient-cta text-text px-5 py-2.5 rounded-[10px] text-[13px] font-bold flex items-center gap-2 min-h-[44px] w-full sm:w-auto justify-center sm:justify-start"
+            >
+              <span className="text-base">+</span> Inviter un utilisateur
+            </button>
+          )}
+          <div className="hidden md:flex items-center gap-2 ml-1">
+            <div className="h-8 w-px bg-white/[0.08]" />
+            <SignalerInlineButton />
+          </div>
+        </div>
       </div>
 
       <div className="overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0 mb-[18px] border-b border-white/[0.06]">

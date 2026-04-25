@@ -8,6 +8,7 @@ import { ModaleDetailControle } from './ModaleDetailControle';
 import { ModaleEnvoyerRapport } from './ModaleEnvoyerRapport';
 import { exportControlesCSV } from './exportCSV';
 import { exportControlePDF } from './exportPDF';
+import { SignalerInlineButton } from '@/components/shared/SignalerInlineButton';
 import type { TypeControle, StatutControle } from '@/types/database';
 
 function get30DaysAgo(): string {
@@ -55,9 +56,14 @@ export function PageHistoriqueControles() {
 
   return (
     <div className="p-4 md:p-6 md:px-7 space-y-5">
-      <div>
-        <h1 className="text-[22px] font-semibold m-0">Historique des controles</h1>
-        <div className="text-[13px] text-dim mt-1">Registre de conformite . DGCCRF</div>
+      <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center">
+        <div>
+          <h1 className="text-[22px] font-semibold m-0">Historique des controles</h1>
+          <div className="text-[13px] text-dim mt-1">Registre de conformite . DGCCRF</div>
+        </div>
+        <div className="hidden md:block">
+          <SignalerInlineButton />
+        </div>
       </div>
 
       <FiltresHistorique

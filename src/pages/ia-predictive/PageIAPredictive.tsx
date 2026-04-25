@@ -10,6 +10,7 @@ import { ModaleEnvoyerRapportIA } from '@/components/ia-predictive/ModaleEnvoyer
 import { exportIAPredictivePDF } from '@/pages/ia-predictive/exportIAPDF';
 import { supabase } from '@/lib/supabase';
 import { useFormationFilter } from '@/hooks/useFormation';
+import { SignalerInlineButton } from '@/components/shared/SignalerInlineButton';
 import type { EquipementRisque, RecommandationIA } from '@/types/ia-predictive';
 
 function SkeletonBlock({ className }: { className?: string }) {
@@ -102,7 +103,7 @@ export function PageIAPredictive() {
 
   return (
     <div className="p-4 md:p-6 md:px-7 overflow-hidden">
-      <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-start mb-5">
+      <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center mb-5">
         <div>
           <div className="flex items-center gap-2 mb-1">
             <span className="text-xl">{'\uD83E\uDDE0'}</span>
@@ -148,6 +149,10 @@ export function PageIAPredictive() {
             <RefreshIcon className="w-3.5 h-3.5" />
             Relancer l'analyse
           </button>
+          <div className="hidden md:flex items-center gap-2">
+            <div className="h-8 w-px bg-white/[0.08]" />
+            <SignalerInlineButton />
+          </div>
         </div>
       </div>
 
