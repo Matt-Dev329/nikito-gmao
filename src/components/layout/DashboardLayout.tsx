@@ -258,12 +258,18 @@ export function DashboardLayout() {
         className="transition-[margin] duration-300 ease-out"
         style={{ marginLeft: isDesktop ? sidebarWidth : 0, paddingTop: bannerH }}
       >
+        {isDesktop && showDesktopSignaler && (
+          <div
+            className="sticky z-40 flex items-center justify-end px-7 py-2"
+            style={{ top: bannerH }}
+          >
+            <DesktopSignalerButton variant={btnVariant} onClick={openSignaler} />
+          </div>
+        )}
         <main className={cn('min-h-screen overflow-x-hidden', !isDesktop && 'pt-14')}>
           <Outlet />
         </main>
       </div>
-
-      {showDesktopSignaler && <DesktopSignalerButton variant={btnVariant} onClick={openSignaler} />}
 
       <ModaleSignalerV2
         open={signalerOpen}
@@ -282,9 +288,9 @@ function DesktopSignalerButton({ variant, onClick }: { variant: string; onClick:
       <button
         onClick={onClick}
         title="Signaler un incident (Ctrl+I)"
-        className="fixed top-4 right-4 z-[90] w-12 h-12 rounded-xl border border-white/[0.08] bg-[#131836] text-dim hover:text-white hover:border-white/20 transition-all flex items-center justify-center"
+        className="w-11 h-11 rounded-xl border border-white/[0.08] bg-[#131836] text-dim hover:text-white hover:border-white/20 transition-all flex items-center justify-center"
       >
-        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+        <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
           <path d="M10 2L2 17h16L10 2z" />
           <path d="M10 7v4" />
           <circle cx="10" cy="13.5" r="0.5" fill="currentColor" stroke="none" />
@@ -296,7 +302,7 @@ function DesktopSignalerButton({ variant, onClick }: { variant: string; onClick:
   return (
     <button
       onClick={onClick}
-      className="fixed top-4 right-4 z-[90] h-11 px-5 rounded-xl text-white text-[13px] font-semibold flex items-center gap-2 active:scale-[0.97] transition-transform"
+      className="h-11 px-5 rounded-xl text-white text-[13px] font-semibold flex items-center gap-2 active:scale-[0.97] transition-transform"
       style={{
         background: 'linear-gradient(135deg, #ec4899 0%, #06b6d4 100%)',
         boxShadow: '0 4px 16px rgba(236, 72, 153, 0.2)',
