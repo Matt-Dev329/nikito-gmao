@@ -6,7 +6,6 @@ import { useFormationFilter } from '@/hooks/useFormation';
 import { Pill } from '@/components/ui/Pill';
 import { cn } from '@/lib/utils';
 import { SignalerInlineButton } from '@/components/shared/SignalerInlineButton';
-import { SignalerInlineButton } from '@/components/shared/SignalerInlineButton';
 import type { PieceDetacheeAvecJoins } from '@/types/database';
 
 type FiltreCritique = 'tous' | 'critique' | 'ok';

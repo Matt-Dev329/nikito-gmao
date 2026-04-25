@@ -1,5 +1,4 @@
 import { createContext, useContext } from 'react';
-import { createContext, useContext } from 'react';
 import type { RoleUtilisateur } from '@/types/database';
 
 export function canSignaler(role: RoleUtilisateur): boolean {
@@ -17,22 +16,6 @@ export function getSignalerButtonVariant(role: RoleUtilisateur, isTabletFixed: b
   if (isTabletFixed && (role === 'staff_operationnel' || role === 'technicien')) return 'central-tablet';
   if (role === 'direction') return 'icon-only';
   return 'full';
-
-interface SignalerContextValue {
-  openSignaler: () => void;
-  variant: SignalerButtonVariant;
-  visible: boolean;
-}
-
-export const SignalerContext = createContext<SignalerContextValue>({
-  openSignaler: () => {},
-  variant: 'hidden',
-  visible: false,
-});
-
-export function useSignaler() {
-  return useContext(SignalerContext);
-}
 }
 
 interface SignalerContextValue {

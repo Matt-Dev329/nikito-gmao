@@ -7,7 +7,6 @@ import { Card } from '@/components/ui/Card';
 import { Pill } from '@/components/ui/Pill';
 import { cn } from '@/lib/utils';
 import { SignalerInlineButton } from '@/components/shared/SignalerInlineButton';
-import { SignalerInlineButton } from '@/components/shared/SignalerInlineButton';
 import type { MaintenancePreventiveAvecJoins } from '@/types/database';
 
 type FiltreStatut = 'tous' | 'planifie' | 'en_retard' | 'fait';

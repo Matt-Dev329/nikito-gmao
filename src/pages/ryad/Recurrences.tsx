@@ -10,7 +10,6 @@ import { useCreerFiche5PDepuisRecurrence } from '@/hooks/queries/useFiches5P';
 import { useParcs } from '@/hooks/queries/useReferentiel';
 import { useAuth } from '@/hooks/useAuth';
 import { SignalerInlineButton } from '@/components/shared/SignalerInlineButton';
-import { SignalerInlineButton } from '@/components/shared/SignalerInlineButton';
 import type { Criticite } from '@/types/database';
 
 function SkeletonBlock({ className }: { className?: string }) {
