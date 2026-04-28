@@ -45,6 +45,8 @@ const SYSTEM_ACCOUNTS_TO_EXCLUDE = [
   "Franconville_All Manager",
 ];
 
+const MANAGER_ROLES = new Set(["manager_parc", "direction"]);
+
 const TRIVIAL_PINS = new Set([
   "000000", "111111", "222222", "333333", "444444",
   "555555", "666666", "777777", "888888", "999999",
@@ -493,7 +495,7 @@ Deno.serve(async (req: Request) => {
         }
 
         await supabase.from("parcs_utilisateurs").upsert(
-          { utilisateur_id: linkedUser.id, parc_id: parcData.id, est_manager: false },
+          { utilisateur_id: linkedUser.id, parc_id: parcData.id, est_manager: MANAGER_ROLES.has(albaRoleCode) },
           { onConflict: "utilisateur_id,parc_id" },
         );
 
@@ -585,7 +587,7 @@ Deno.serve(async (req: Request) => {
         }
 
         await supabase.from("parcs_utilisateurs").upsert(
-          { utilisateur_id: preExisting.id, parc_id: parcData.id, est_manager: false },
+          { utilisateur_id: preExisting.id, parc_id: parcData.id, est_manager: MANAGER_ROLES.has(albaRoleCode) },
           { onConflict: "utilisateur_id,parc_id" },
         );
 
@@ -650,7 +652,7 @@ Deno.serve(async (req: Request) => {
       }
 
       await supabase.from("parcs_utilisateurs").upsert(
-        { utilisateur_id: newUser.id, parc_id: parcData.id, est_manager: false },
+        { utilisateur_id: newUser.id, parc_id: parcData.id, est_manager: MANAGER_ROLES.has(albaRoleCode) },
         { onConflict: "utilisateur_id,parc_id" },
       );
 
