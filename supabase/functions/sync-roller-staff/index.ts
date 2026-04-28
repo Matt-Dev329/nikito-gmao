@@ -68,116 +68,83 @@ async function getAccessToken(
   return data.access_token;
 }
 
+interface FetchResult {
+  staff: RollerStaffMember[];
+  rawSample: unknown;
+  responseKeys: string[];
+}
+
 async function fetchRollerStaff(
   apiUrl: string,
   token: string,
-): Promise<RollerStaffMember[]> {
+): Promise<FetchResult> {
   const allStaff: RollerStaffMember[] = [];
   const headers = {
     Authorization: `Bearer ${token}`,
     "Content-Type": "application/json;charset=UTF-8",
   };
 
-  // The Roller REST API staff endpoint is POST /staff (confirmed: GET returns 405)
-  // It requires the "staff" scope to be enabled on the API key (Roller support request)
-  const endpoints = [
-    { url: `${apiUrl}/staff`, method: "POST", body: "{}" },
-    { url: `${apiUrl}/staff`, method: "GET", body: undefined },
-    { url: `${apiUrl}/data/staff`, method: "GET", body: undefined },
-  ];
+  const staffUrl = `${apiUrl}/data/staffs`;
+  console.log(`[sync-roller-staff] GET ${staffUrl}`);
+  const res = await fetch(staffUrl, { method: "GET", headers });
 
-  let response: Response | null = null;
-  let usedEndpoint = "";
-  const tried: string[] = [];
-
-  for (const ep of endpoints) {
-    try {
-      const fetchOpts: RequestInit = { method: ep.method, headers };
-      if (ep.body) fetchOpts.body = ep.body;
-      const res = await fetch(ep.url, fetchOpts);
-      const status = res.status;
-      tried.push(`${ep.method} ${ep.url} -> ${status}`);
-      console.log(`[sync-roller-staff] ${ep.method} ${ep.url} -> ${status}`);
-
-      if (res.ok) {
-        response = res;
-        usedEndpoint = ep.url;
-        break;
-      }
-      if (status === 403) {
-        const body403 = await res.text().catch(() => "");
-        throw new Error(
-          `Endpoint ${ep.url} retourne 403 Forbidden. ` +
-          `Le scope "staff" n'est probablement pas active pour cette cle API Roller. ` +
-          `Contactez le support Roller pour activer l'acces staff. Detail: ${body403}`,
-        );
-      }
-      // Consume body to free connection
-      await res.text().catch(() => {});
-    } catch (e) {
-      if (e instanceof Error && e.message.includes("403")) throw e;
-      tried.push(`${ep.method} ${ep.url} -> ERROR: ${e}`);
-      continue;
-    }
-  }
-
-  if (!response) {
+  if (!res.ok) {
+    const detail = await res.text().catch(() => "");
     throw new Error(
-      `Aucun endpoint staff Roller accessible. Essais: ${tried.join(" | ")}`,
+      `GET ${staffUrl} retourne ${res.status}. Detail: ${detail}`,
     );
   }
 
+  const response = res;
+  const usedEndpoint = staffUrl;
+
   const body = await response.json();
+  const responseKeys = Array.isArray(body) ? ["(array)"] : Object.keys(body);
   console.log(
-    `[sync-roller-staff] Endpoint ${usedEndpoint} OK, response keys: ${Object.keys(body)}`,
+    `[sync-roller-staff] Endpoint ${usedEndpoint} OK, response keys: ${responseKeys}`,
   );
 
-  // Handle different response shapes
-  const staffList: RollerStaffMember[] = Array.isArray(body)
+  // Roller returns paginated: { items, currentPage, totalPages, totalItems, itemsPerPage }
+  const staffList = Array.isArray(body)
     ? body
-    : body.data || body.staff || body.items || body.results || [];
+    : body.items || body.data || body.staff || body.results || [];
+  const rawSample = staffList[0] || null;
+
+  function parseStaff(s: Record<string, unknown>): RollerStaffMember {
+    return {
+      id: (s.staffId as number) || (s.id as number) || 0,
+      uniqueId: (s.uniqueId as string) || String(s.staffId || s.id),
+      firstName: (s.firstName as string) || "",
+      lastName: (s.lastName as string) || "",
+      email: (s.email as string) || null,
+      phone: (s.phone as string) || (s.mobile as string) || null,
+      role: (s.role as string) || (s.roleName as string) || null,
+      isActive: s.isLocked === true ? false : true,
+    };
+  }
 
   for (const s of staffList) {
-    allStaff.push({
-      id: s.id,
-      uniqueId: s.uniqueId || String(s.id),
-      firstName: s.firstName || s.first_name || "",
-      lastName: s.lastName || s.last_name || "",
-      email: s.email || s.emailAddress || null,
-      phone: s.phone || s.mobile || s.phoneNumber || s.mobileNumber || null,
-      role: s.role || s.roleName || s.role_name || null,
-      isActive: s.isActive !== undefined ? s.isActive : s.status !== "inactive",
-    });
+    allStaff.push(parseStaff(s));
   }
 
-  // Handle pagination if present
-  let nextPage = body.nextPageUrl || body.next || null;
-  let pageCount = 1;
-  while (nextPage && pageCount < 50) {
-    const pageRes = await fetch(nextPage, { headers });
+  // Handle pagination: Roller uses { currentPage, totalPages }
+  const totalPages = body.totalPages || 1;
+  let currentPage = body.currentPage || 1;
+  while (currentPage < totalPages) {
+    currentPage++;
+    const pageRes = await fetch(`${staffUrl}?pageNumber=${currentPage}`, {
+      method: "GET",
+      headers,
+    });
     if (!pageRes.ok) break;
     const pageBody = await pageRes.json();
-    const pageList = Array.isArray(pageBody)
-      ? pageBody
-      : pageBody.data || pageBody.staff || pageBody.items || [];
-    for (const s of pageList) {
-      allStaff.push({
-        id: s.id,
-        uniqueId: s.uniqueId || String(s.id),
-        firstName: s.firstName || s.first_name || "",
-        lastName: s.lastName || s.last_name || "",
-        email: s.email || s.emailAddress || null,
-        phone: s.phone || s.mobile || s.phoneNumber || s.mobileNumber || null,
-        role: s.role || s.roleName || s.role_name || null,
-        isActive:
-          s.isActive !== undefined ? s.isActive : s.status !== "inactive",
-      });
+    const pageItems = pageBody.items || [];
+    for (const s of pageItems) {
+      allStaff.push(parseStaff(s));
     }
-    nextPage = pageBody.nextPageUrl || pageBody.next || null;
-    pageCount++;
   }
 
-  return allStaff;
+  return { staff: allStaff, rawSample, responseKeys };
 }
 
 Deno.serve(async (req: Request) => {
@@ -187,7 +154,7 @@ Deno.serve(async (req: Request) => {
 
   try {
     const body = await req.json().catch(() => ({}));
-    const parcCode: string = body.parc_code || "FRA";
+    const parcCode: string = body.venue_code || body.parc_code || "FRA";
     const dryRun: boolean = body.dry_run === true;
 
     const venueKey = VENUE_SECRET_KEYS[parcCode];
@@ -229,7 +196,8 @@ Deno.serve(async (req: Request) => {
     );
 
     // 2. Fetch staff from Roller
-    const rollerStaff = await fetchRollerStaff(apiUrl, accessToken);
+    const fetchResult = await fetchRollerStaff(apiUrl, accessToken);
+    const rollerStaff = fetchResult.staff;
     console.log(
       `[sync-roller-staff] ${parcCode}: ${rollerStaff.length} staff membres recuperes de Roller`,
     );
@@ -504,6 +472,12 @@ Deno.serve(async (req: Request) => {
         parc_nom: parcData.nom,
         roller_staff_count: rollerStaff.length,
         ...result,
+        ...(dryRun
+          ? {
+              roller_response_keys: fetchResult.responseKeys,
+              roller_raw_sample: fetchResult.rawSample,
+            }
+          : {}),
       }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
