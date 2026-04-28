@@ -312,15 +312,20 @@ Deno.serve(async (req: Request) => {
       roleIdByCode.set(r.code, r.id);
     }
 
-    // ── 8. Get existing roller-synced users ──────────
-    const { data: existingUsers } = await supabase
+    // ── 8. Get ALL existing users (for matching by roller_id OR email/name)
+    const { data: allExistingUsers } = await supabase
       .from("utilisateurs")
-      .select("id, roller_unique_id, prenom, nom, email, role_id, actif")
-      .not("roller_unique_id", "is", null);
+      .select("id, roller_unique_id, prenom, nom, email, role_id, actif");
 
-    const existingByRollerId = new Map<string, (typeof existingUsers)[0]>();
-    for (const u of existingUsers || []) {
+    type ExistingUser = NonNullable<typeof allExistingUsers>[0];
+    const existingByRollerId = new Map<string, ExistingUser>();
+    const existingByEmail = new Map<string, ExistingUser>();
+    const existingByName = new Map<string, ExistingUser>();
+    for (const u of allExistingUsers || []) {
       if (u.roller_unique_id) existingByRollerId.set(u.roller_unique_id, u);
+      if (u.email) existingByEmail.set(u.email.toLowerCase(), u);
+      const nameKey = `${(u.prenom || "").toLowerCase()}|${(u.nom || "").toLowerCase()}`;
+      if (nameKey !== "|") existingByName.set(nameKey, u);
     }
 
     // ── 9. Process staff ─────────────────────────────
@@ -436,16 +441,15 @@ Deno.serve(async (req: Request) => {
         continue;
       }
 
-      // Check if already exists
-      const existing = existingByRollerId.get(staff.uniqueId);
-
-      if (existing) {
+      // ── Case A: already linked by roller_unique_id (re-sync)
+      const linkedUser = existingByRollerId.get(staff.uniqueId);
+      if (linkedUser) {
         if (dryRun) {
           stats.already_exists++;
           details.push({
             roller_id: staff.uniqueId,
             name: fullName,
-            action: "ALREADY_EXISTS (dry_run)",
+            action: "ALREADY_LINKED (dry_run)",
             roller_role_raw: rawRole,
             roller_role_name: rollerRoleName,
             alba_role: albaRoleCode,
@@ -458,12 +462,12 @@ Deno.serve(async (req: Request) => {
           .update({
             prenom: staff.firstName,
             nom: staff.lastName,
-            email: isNoEmailPlaceholder(staff.email) ? existing.email : (staff.email || existing.email),
+            email: isNoEmailPlaceholder(staff.email) ? linkedUser.email : (staff.email || linkedUser.email),
             role_id: albaRoleId,
             actif: true,
             last_synced_at: new Date().toISOString(),
           })
-          .eq("id", existing.id);
+          .eq("id", linkedUser.id);
 
         if (updateErr) {
           details.push({
@@ -475,7 +479,7 @@ Deno.serve(async (req: Request) => {
         }
 
         await supabase.from("parcs_utilisateurs").upsert(
-          { utilisateur_id: existing.id, parc_id: parcData.id, est_manager: false },
+          { utilisateur_id: linkedUser.id, parc_id: parcData.id, est_manager: false },
           { onConflict: "utilisateur_id,parc_id" },
         );
 
@@ -490,7 +494,65 @@ Deno.serve(async (req: Request) => {
         continue;
       }
 
-      // New user
+      // ── Case B: pre-existing user WITHOUT roller_unique_id (match by email or name)
+      const rollerEmail = isNoEmailPlaceholder(staff.email) ? null : staff.email;
+      const nameKey = `${staff.firstName.toLowerCase()}|${staff.lastName.toLowerCase()}`;
+      const preExisting =
+        (rollerEmail ? existingByEmail.get(rollerEmail.toLowerCase()) : null) ||
+        existingByName.get(nameKey) ||
+        null;
+
+      if (preExisting) {
+        if (dryRun) {
+          stats.already_exists++;
+          details.push({
+            roller_id: staff.uniqueId,
+            name: fullName,
+            action: "LINK_EXISTING (dry_run)",
+            roller_role_raw: rawRole,
+            roller_role_name: rollerRoleName,
+            alba_role: albaRoleCode,
+            matched_by: rollerEmail && existingByEmail.has(rollerEmail.toLowerCase()) ? "email" : "name",
+            existing_email: preExisting.email,
+          } as typeof details[0] & { matched_by: string; existing_email: string | null });
+          continue;
+        }
+
+        // ONLY set roller_unique_id + last_synced_at. Do NOT touch role_id, auth_mode, code_pin_hash, statut_validation.
+        const { error: linkErr } = await supabase
+          .from("utilisateurs")
+          .update({
+            roller_unique_id: staff.uniqueId,
+            last_synced_at: new Date().toISOString(),
+          })
+          .eq("id", preExisting.id);
+
+        if (linkErr) {
+          details.push({
+            roller_id: staff.uniqueId,
+            name: fullName,
+            action: `LINK_ERROR: ${linkErr.message}`,
+          });
+          continue;
+        }
+
+        await supabase.from("parcs_utilisateurs").upsert(
+          { utilisateur_id: preExisting.id, parc_id: parcData.id, est_manager: false },
+          { onConflict: "utilisateur_id,parc_id" },
+        );
+
+        stats.updated++;
+        details.push({
+          roller_id: staff.uniqueId,
+          name: fullName,
+          action: "LINKED_EXISTING",
+          roller_role_name: rollerRoleName,
+          alba_role: albaRoleCode,
+        });
+        continue;
+      }
+
+      // ── Case C: truly new user
       if (dryRun) {
         stats.inserted++;
         details.push({
@@ -505,14 +567,13 @@ Deno.serve(async (req: Request) => {
       }
 
       const authMode = albaRoleCode === "staff_operationnel" ? "pin_seul" : "email_password";
-      const realEmail = isNoEmailPlaceholder(staff.email) ? null : staff.email;
 
       const { data: newUser, error: insertErr } = await supabase
         .from("utilisateurs")
         .insert({
           prenom: staff.firstName,
           nom: staff.lastName,
-          email: realEmail,
+          email: rollerEmail,
           role_id: albaRoleId,
           auth_mode: authMode,
           statut_validation: "valide",
@@ -551,7 +612,7 @@ Deno.serve(async (req: Request) => {
         userId: newUser.id,
         prenom: staff.firstName,
         nom: staff.lastName,
-        email: realEmail,
+        email: rollerEmail,
         roleCode: albaRoleCode,
       });
     }
