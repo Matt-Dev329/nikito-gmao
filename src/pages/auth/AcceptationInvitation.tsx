@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { AlbaLoginHero } from '@/components/ui/Logo';
 import { PhotoCapture } from '@/components/shared/PhotoCapture';
@@ -31,12 +31,51 @@ function formatTel(value: string): string {
   return value;
 }
 
+async function fetchInvitation(token: string): Promise<InvitationDetails | null> {
+  const { data, error } = await supabase
+    .from('invitations')
+    .select(
+      `id, email, auth_mode, expire_le, parcs_assignes,
+       roles(nom),
+       invite_par:utilisateurs!invitations_invite_par_id_fkey(prenom, nom)`
+    )
+    .eq('token', token)
+    .is('utilise_le', null)
+    .maybeSingle();
+
+  if (error || !data) return null;
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const d = data as any;
+  const parcIds: string[] = d.parcs_assignes ?? [];
+
+  let parcsCodes: string[] = [];
+  if (parcIds.length > 0) {
+    const { data: parcsData } = await supabase
+      .from('parcs')
+      .select('code')
+      .in('id', parcIds);
+    parcsCodes = (parcsData ?? []).map((p: { code: string }) => p.code);
+  }
+
+  return {
+    id: d.id,
+    email: d.email,
+    role_label: d.roles?.nom ?? 'Utilisateur',
+    parcs_codes: parcsCodes,
+    invite_par_nom: `${d.invite_par?.prenom ?? ''} ${d.invite_par?.nom ?? ''}`.trim(),
+    auth_mode: d.auth_mode,
+    expire_le: d.expire_le,
+  };
+}
+
 export function AcceptationInvitation() {
   const { token } = useParams<{ token: string }>();
   const navigate = useNavigate();
   const [invitation, setInvitation] = useState<InvitationDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [erreur, setErreur] = useState<string | null>(null);
+  const [attenteConfirmation, setAttenteConfirmation] = useState(false);
 
   const [prenom, setPrenom] = useState('');
   const [nom, setNom] = useState('');
@@ -49,6 +88,10 @@ export function AcceptationInvitation() {
   const [acceptCgu, setAcceptCgu] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
+  const autoAcceptAttempted = useRef(false);
+
+  // On load: fetch invitation, then check if user arrives already authenticated
+  // (returning from email confirmation redirect)
   useEffect(() => {
     if (!token) {
       setErreur("Lien d'invitation invalide");
@@ -56,48 +99,39 @@ export function AcceptationInvitation() {
       return;
     }
 
-    supabase
-      .from('invitations')
-      .select(
-        `id, email, auth_mode, expire_le, parcs_assignes,
-         roles(nom),
-         invite_par:utilisateurs!invitations_invite_par_id_fkey(prenom, nom)`
-      )
-      .eq('token', token)
-      .is('utilise_le', null)
-      .single()
-      .then(async ({ data, error }) => {
-        if (error || !data) {
-          setErreur("Cette invitation est invalide, déjà utilisée ou expirée.");
-          setLoading(false);
-          return;
-        }
-
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const d = data as any;
-        const parcIds: string[] = d.parcs_assignes ?? [];
-
-        let parcsCodes: string[] = [];
-        if (parcIds.length > 0) {
-          const { data: parcsData } = await supabase
-            .from('parcs')
-            .select('code')
-            .in('id', parcIds);
-          parcsCodes = (parcsData ?? []).map((p: { code: string }) => p.code);
-        }
-
-        setInvitation({
-          id: d.id,
-          email: d.email,
-          role_label: d.roles?.nom ?? 'Utilisateur',
-          parcs_codes: parcsCodes,
-          invite_par_nom: `${d.invite_par?.prenom ?? ''} ${d.invite_par?.nom ?? ''}`.trim(),
-          auth_mode: d.auth_mode,
-          expire_le: d.expire_le,
-        });
+    (async () => {
+      const inv = await fetchInvitation(token);
+      if (!inv) {
+        setErreur("Cette invitation est invalide, déjà utilisée ou expirée.");
         setLoading(false);
-      });
-  }, [token]);
+        return;
+      }
+      setInvitation(inv);
+      setLoading(false);
+
+      // Check if user is returning from email confirmation with an active session
+      if (inv.auth_mode === 'email_password' && !autoAcceptAttempted.current) {
+        autoAcceptAttempted.current = true;
+        const { data: sessionData } = await supabase.auth.getSession();
+        const user = sessionData?.session?.user;
+        if (user && user.email?.toLowerCase() === inv.email?.toLowerCase()) {
+          const { error: rpcError } = await supabase.rpc('accepter_invitation', {
+            p_token: token,
+            p_auth_user_id: user.id,
+            p_pin_clair: null,
+            p_prenom: user.user_metadata?.prenom || '',
+            p_nom: user.user_metadata?.nom || '',
+            p_telephone: null,
+            p_photo_url: null,
+          });
+          if (!rpcError) {
+            navigate('/');
+            return;
+          }
+        }
+      }
+    })();
+  }, [token, navigate]);
 
   const onPhotoUploaded = useCallback((url: string) => {
     setPhotoUrl(url);
@@ -129,6 +163,32 @@ export function AcceptationInvitation() {
 
   if (!invitation) return null;
 
+  // Show "check your email" screen after signUp when email confirmation is required
+  if (attenteConfirmation) {
+    return (
+      <div className="min-h-screen bg-[#060918] text-text flex items-center justify-center p-6">
+        <div className="bg-[#131836] rounded-2xl p-8 max-w-md text-center border border-white/[0.06]">
+          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-[#5DE5FF]/10 flex items-center justify-center">
+            <svg className="w-8 h-8 text-[#5DE5FF]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
+            </svg>
+          </div>
+          <div className="text-lg font-semibold mb-2">Confirmez votre adresse email</div>
+          <div className="text-sm text-dim leading-relaxed mb-4">
+            Un email de confirmation a ete envoye a{' '}
+            <span className="text-[#5DE5FF] font-medium">{invitation.email}</span>.
+            Cliquez sur le lien dans cet email pour activer votre compte.
+          </div>
+          <div className="bg-[#0a0e27] rounded-xl p-4 text-[12px] text-dim leading-relaxed">
+            <div className="font-semibold text-text mb-1">Vous ne trouvez pas l'email ?</div>
+            Verifiez vos spams ou dossier courrier indesirable. L'email provient de{' '}
+            <span className="text-text">noreply@nikito.tech</span>.
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   const isEmailMode = invitation.auth_mode === 'email_password';
   const telValide = TEL_REGEX.test(telephone.replace(/\s/g, ''));
 
@@ -150,27 +210,60 @@ export function AcceptationInvitation() {
       let authUserId: string | null = null;
 
       if (isEmailMode) {
-        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-          email: invitation.email!,
-          password,
-        });
-
-        if (signUpError) {
-          if (signUpError.message?.includes('already registered')) {
-            const { data: signInData, error: signInError } =
-              await supabase.auth.signInWithPassword({
-                email: invitation.email!,
-                password,
-              });
-            if (signInError) throw signInError;
-            authUserId = signInData.user?.id ?? null;
-          } else {
-            throw signUpError;
-          }
+        // First, check if user already has an active session (e.g. returning visit)
+        const { data: existingSession } = await supabase.auth.getSession();
+        const existingUser = existingSession?.session?.user;
+        if (existingUser && existingUser.email?.toLowerCase() === invitation.email?.toLowerCase()) {
+          authUserId = existingUser.id;
         } else {
-          authUserId = signUpData.user?.id ?? null;
-          if (!authUserId && signUpData.user === null) {
-            throw new Error("Impossible de créer le compte. Réessaie ou contacte le support.");
+          // Try to sign up
+          const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+            email: invitation.email!,
+            password,
+            options: {
+              emailRedirectTo: `${window.location.origin}/invitation/${token}`,
+              data: {
+                prenom: prenom.trim(),
+                nom: nom.trim(),
+              },
+            },
+          });
+
+          if (signUpError) {
+            if (signUpError.message?.includes('already registered')) {
+              // User already exists in auth.users -- try to sign in
+              const { data: signInData, error: signInError } =
+                await supabase.auth.signInWithPassword({
+                  email: invitation.email!,
+                  password,
+                });
+              if (signInError) {
+                throw new Error(
+                  "Ce compte existe deja avec un mot de passe different. " +
+                  "Essayez avec le mot de passe que vous avez utilise precedemment, " +
+                  "ou contactez le support."
+                );
+              }
+              authUserId = signInData.user?.id ?? null;
+            } else {
+              throw signUpError;
+            }
+          } else {
+            // signUp succeeded -- check if user is auto-confirmed or needs email confirmation
+            const user = signUpData.user;
+            const session = signUpData.session;
+
+            if (session && user) {
+              // Auto-confirmed (or email confirmation disabled) -- proceed immediately
+              authUserId = user.id;
+            } else if (user && !session) {
+              // Email confirmation is required. Show the waiting screen.
+              setAttenteConfirmation(true);
+              setSubmitting(false);
+              return;
+            } else {
+              throw new Error("Impossible de creer le compte. Reessayez ou contactez le support.");
+            }
           }
         }
       }
@@ -230,12 +323,12 @@ export function AcceptationInvitation() {
 
             {invitation.invite_par_nom && (
               <div className="text-[12px] text-dim mb-6">
-                Invité par <span className="text-text font-medium">{invitation.invite_par_nom}</span>
+                Invite par <span className="text-text font-medium">{invitation.invite_par_nom}</span>
               </div>
             )}
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-              <FieldBlock label="Prénom" required>
+              <FieldBlock label="Prenom" required>
                 <input
                   type="text"
                   value={prenom}
@@ -256,7 +349,7 @@ export function AcceptationInvitation() {
               </FieldBlock>
             </div>
 
-            <FieldBlock label="Téléphone portable" required className="mb-4">
+            <FieldBlock label="Telephone portable" required className="mb-4">
               <input
                 type="tel"
                 value={telephone}
@@ -281,12 +374,12 @@ export function AcceptationInvitation() {
                     type="password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Minimum 6 caractères"
+                    placeholder="Minimum 6 caracteres"
                     className="field-input"
                   />
                   {password.length > 0 && password.length < 6 && (
                     <div className="text-[10px] text-amber mt-1.5">
-                      Encore {6 - password.length} caractère(s)
+                      Encore {6 - password.length} caractere(s)
                     </div>
                   )}
                 </FieldBlock>
@@ -367,7 +460,7 @@ export function AcceptationInvitation() {
                 <span className="text-[#5DE5FF] underline underline-offset-2">
                   conditions d'utilisation
                 </span>{' '}
-                d'ALBA by Nikito et que mes saisies de contrôle soient enregistrées.
+                d'ALBA by Nikito et que mes saisies de controle soient enregistrees.
               </span>
             </label>
           </div>
@@ -395,7 +488,7 @@ export function AcceptationInvitation() {
                   Activation en cours...
                 </span>
               ) : (
-                'Activer mon compte ›'
+                'Activer mon compte'
               )}
             </button>
           </div>
