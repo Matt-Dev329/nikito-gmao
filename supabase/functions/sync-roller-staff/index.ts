@@ -320,12 +320,16 @@ Deno.serve(async (req: Request) => {
     type ExistingUser = NonNullable<typeof allExistingUsers>[0];
     const existingByRollerId = new Map<string, ExistingUser>();
     const existingByEmail = new Map<string, ExistingUser>();
-    const existingByName = new Map<string, ExistingUser>();
+    const existingByName = new Map<string, ExistingUser[]>();
     for (const u of allExistingUsers || []) {
       if (u.roller_unique_id) existingByRollerId.set(u.roller_unique_id, u);
-      if (u.email) existingByEmail.set(u.email.toLowerCase(), u);
-      const nameKey = `${(u.prenom || "").toLowerCase()}|${(u.nom || "").toLowerCase()}`;
-      if (nameKey !== "|") existingByName.set(nameKey, u);
+      if (u.email) existingByEmail.set(u.email.toLowerCase().trim(), u);
+      const nameKey = `${(u.prenom || "").trim().toLowerCase()}|${(u.nom || "").trim().toLowerCase()}`;
+      if (nameKey !== "|") {
+        const arr = existingByName.get(nameKey) || [];
+        arr.push(u);
+        existingByName.set(nameKey, arr);
+      }
     }
 
     // ── 9. Process staff ─────────────────────────────
@@ -335,16 +339,26 @@ Deno.serve(async (req: Request) => {
       no_role_skipped: 0,
       unmapped_role_skipped: 0,
       locked_skipped: 0,
+      ambiguous_skipped: 0,
+      linked_existing: 0,
       inserted: 0,
       updated: 0,
-      already_exists: 0,
+      already_linked: 0,
     };
     const skippedDetails = {
       system_accounts: [] as string[],
       no_role: [] as Array<{ name: string; email: string | null }>,
       unmapped_roles: [] as string[],
       locked: [] as string[],
+      ambiguous: [] as Array<{ name: string; email: string | null; candidates: number }>,
     };
+    const linkedExistingDetails: Array<{
+      prenom: string;
+      nom: string;
+      email: string | null;
+      matched_by: "email" | "name";
+      alba_email: string | null;
+    }> = [];
     const details: Array<{
       roller_id: string;
       name: string;
@@ -445,7 +459,7 @@ Deno.serve(async (req: Request) => {
       const linkedUser = existingByRollerId.get(staff.uniqueId);
       if (linkedUser) {
         if (dryRun) {
-          stats.already_exists++;
+          stats.already_linked++;
           details.push({
             roller_id: staff.uniqueId,
             name: fullName,
@@ -494,17 +508,54 @@ Deno.serve(async (req: Request) => {
         continue;
       }
 
-      // ── Case B: pre-existing user WITHOUT roller_unique_id (match by email or name)
+      // ── Case B: pre-existing user WITHOUT roller_unique_id
+      // Priority 1: match by email (unique, authoritative)
+      // Priority 2: match by name ONLY if no Roller email, and unambiguous
       const rollerEmail = isNoEmailPlaceholder(staff.email) ? null : staff.email;
-      const nameKey = `${staff.firstName.toLowerCase()}|${staff.lastName.toLowerCase()}`;
-      const preExisting =
-        (rollerEmail ? existingByEmail.get(rollerEmail.toLowerCase()) : null) ||
-        existingByName.get(nameKey) ||
-        null;
+      let preExisting: ExistingUser | null = null;
+      let matchedBy: "email" | "name" | null = null;
 
-      if (preExisting) {
+      if (rollerEmail) {
+        const byEmail = existingByEmail.get(rollerEmail.toLowerCase().trim());
+        if (byEmail && !byEmail.roller_unique_id) {
+          preExisting = byEmail;
+          matchedBy = "email";
+        }
+      } else {
+        const nameKey = `${staff.firstName.trim().toLowerCase()}|${staff.lastName.trim().toLowerCase()}`;
+        const candidates = existingByName.get(nameKey) || [];
+        const unlinkedCandidates = candidates.filter((c) => !c.roller_unique_id);
+        if (unlinkedCandidates.length === 1) {
+          preExisting = unlinkedCandidates[0];
+          matchedBy = "name";
+        } else if (unlinkedCandidates.length > 1) {
+          stats.ambiguous_skipped++;
+          skippedDetails.ambiguous.push({
+            name: fullName,
+            email: staff.email,
+            candidates: unlinkedCandidates.length,
+          });
+          details.push({
+            roller_id: staff.uniqueId,
+            name: fullName,
+            action: "SKIP_AMBIGUOUS_NAME",
+            roller_role_name: rollerRoleName,
+            alba_role: albaRoleCode,
+          });
+          continue;
+        }
+      }
+
+      if (preExisting && matchedBy) {
         if (dryRun) {
-          stats.already_exists++;
+          stats.linked_existing++;
+          linkedExistingDetails.push({
+            prenom: staff.firstName,
+            nom: staff.lastName,
+            email: rollerEmail,
+            matched_by: matchedBy,
+            alba_email: preExisting.email,
+          });
           details.push({
             roller_id: staff.uniqueId,
             name: fullName,
@@ -512,13 +563,10 @@ Deno.serve(async (req: Request) => {
             roller_role_raw: rawRole,
             roller_role_name: rollerRoleName,
             alba_role: albaRoleCode,
-            matched_by: rollerEmail && existingByEmail.has(rollerEmail.toLowerCase()) ? "email" : "name",
-            existing_email: preExisting.email,
-          } as typeof details[0] & { matched_by: string; existing_email: string | null });
+          });
           continue;
         }
 
-        // ONLY set roller_unique_id + last_synced_at. Do NOT touch role_id, auth_mode, code_pin_hash, statut_validation.
         const { error: linkErr } = await supabase
           .from("utilisateurs")
           .update({
@@ -541,7 +589,14 @@ Deno.serve(async (req: Request) => {
           { onConflict: "utilisateur_id,parc_id" },
         );
 
-        stats.updated++;
+        stats.linked_existing++;
+        linkedExistingDetails.push({
+          prenom: staff.firstName,
+          nom: staff.lastName,
+          email: rollerEmail,
+          matched_by: matchedBy,
+          alba_email: preExisting.email,
+        });
         details.push({
           roller_id: staff.uniqueId,
           name: fullName,
@@ -698,6 +753,7 @@ Deno.serve(async (req: Request) => {
       parc_nom: parcData.nom,
       stats,
       skipped_details: skippedDetails,
+      linked_existing: linkedExistingDetails,
       details,
     };
 
