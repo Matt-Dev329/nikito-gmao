@@ -14,12 +14,25 @@ import { formatHeure, formatDateLong } from '@/lib/utils';
 
 type Etape = 'parc' | 'pin';
 
+function loadTabletParc(): { id: string; code: string; nom: string } | null {
+  try {
+    const raw = localStorage.getItem('alba:tablet_parc');
+    if (!raw) return null;
+    const p = JSON.parse(raw);
+    if (p?.id && p?.code && p?.nom) return p;
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 export function LoginStaff() {
   const navigate = useNavigate();
   const { data: parcs } = useParcs();
-  const [etape, setEtape] = useState<Etape>('parc');
+  const savedParc = loadTabletParc();
+  const [etape, setEtape] = useState<Etape>(savedParc ? 'pin' : 'parc');
   const [parcChoisi, setParcChoisi] = useState<{ id: string; code: string; nom: string } | null>(
-    null
+    savedParc
   );
   const [pin, setPin] = useState('');
   const [erreur, setErreur] = useState<string | null>(null);
@@ -68,6 +81,7 @@ export function LoginStaff() {
       })
     );
     localStorage.setItem('alba:device_kind', 'tablet-fixed');
+    localStorage.setItem('alba:tablet_parc', JSON.stringify({ id: parcChoisi.id, code: parcChoisi.code, nom: parcChoisi.nom }));
     navigate('/staff/controle-ouverture', { replace: true });
   };
 
@@ -127,7 +141,11 @@ export function LoginStaff() {
     <div className="min-h-screen bg-bg-app text-text">
       <header className="px-[22px] py-[18px] bg-bg-sidebar flex items-center gap-3.5 border-b border-white/[0.06]">
         <button
-          onClick={() => setEtape('parc')}
+          onClick={() => {
+            localStorage.removeItem('alba:tablet_parc');
+            setParcChoisi(null);
+            setEtape('parc');
+          }}
           className="bg-bg-deep border border-white/[0.08] text-dim w-8 h-8 rounded-lg text-sm"
         >
           ‹

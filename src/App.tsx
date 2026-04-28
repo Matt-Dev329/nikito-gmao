@@ -17,6 +17,7 @@ import { ControleHebdo } from '@/pages/technicien/ControleHebdo';
 
 import { LoginStaff } from '@/pages/staff/LoginStaff';
 import { ControleOuverture } from '@/pages/staff/ControleOuverture';
+import { SelectParcPage } from '@/pages/auth/SelectParcPage';
 import { ListeParcs } from '@/pages/admin/ListeParcs';
 import { CreationParcWizard } from '@/pages/admin/CreationParcWizard';
 import { UtilisateursAdmin } from '@/pages/admin/UtilisateursAdmin';
@@ -59,6 +60,15 @@ export function App() {
       <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="/invitation/:token" element={<AcceptationInvitation />} />
       <Route path="/staff/login" element={<LoginStaff />} />
+
+      <Route
+        path="/gmao/select-parc"
+        element={
+          <RouteProtegee skipParcCheck>
+            <SelectParcPage />
+          </RouteProtegee>
+        }
+      />
 
       <Route
         path="/gmao"

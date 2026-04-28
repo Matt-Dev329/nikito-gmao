@@ -19,6 +19,7 @@ import { useIsMobile } from '@/hooks/useIsMobile';
 import { canSignaler, hasModeExpert, getSignalerButtonVariant, SignalerContext } from '@/lib/signaler';
 import { roleLabels } from '@/lib/tokens';
 import { cn } from '@/lib/utils';
+import { useParcCourant } from '@/hooks/useParcCourant';
 
 const SIDEBAR_W_EXPANDED = 256;
 const SIDEBAR_W_COMPACT = 72;
@@ -56,6 +57,7 @@ export function DashboardLayout() {
   const [moreOpen, setMoreOpen] = useState(false);
   const [alertsOpen, setAlertsOpen] = useState(false);
   const [signalerOpen, setSignalerOpen] = useState(false);
+  const clearParc = useParcCourant((s) => s.clear);
 
   useControlesManquantsCheck();
 
@@ -64,7 +66,8 @@ export function DashboardLayout() {
   const showDesktopSignaler = !isMobile && canSignaler(effectiveRole) && btnVariant !== 'central-tablet' && btnVariant !== 'hidden';
   const expert = hasModeExpert(effectiveRole);
   const signalerVia: SignalerVia = isMobile || isTabletFixed ? 'tablette_signalement' : 'desktop_topbar';
-  const signalerParcId = utilisateur?.parc_ids?.length === 1 ? utilisateur.parc_ids[0] : undefined;
+  const parcCourant = useParcCourant((s) => s.parc);
+  const signalerParcId = parcCourant?.id ?? (utilisateur?.parc_ids?.length === 1 ? utilisateur.parc_ids[0] : undefined);
 
   const openSignaler = useCallback(() => setSignalerOpen(true), []);
 
@@ -81,6 +84,7 @@ export function DashboardLayout() {
   }, [effectiveRole]);
 
   const handleSignOut = async () => {
+    clearParc();
     await signOut();
     navigate('/', { replace: true });
   };
