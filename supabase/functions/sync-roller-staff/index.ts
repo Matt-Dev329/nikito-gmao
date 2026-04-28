@@ -676,47 +676,35 @@ Deno.serve(async (req: Request) => {
     const pinsToCommunciate: PinEntry[] = [];
     const emailStats = { sent: 0, failed: 0, no_email_in_roller: 0 };
 
+    let pinHashFailures = 0;
+
     if (!dryRun && usersNeedingPin.length > 0) {
-      // Phase A: generate all PINs and store hashes
+      // Phase A: generate PINs, hash+store via RPC, collect for email
       for (const u of usersNeedingPin) {
         const pin = generateSecurePin6();
 
-        // Call hash-pin edge function to hash and store
-        const hashRes = await fetch(
-          `${supabaseUrl}/functions/v1/hash-pin`,
-          {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${supabaseKey}`,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              action: "generate",
-              utilisateur_id: u.userId,
-            }),
-          },
-        );
+        const { error: hashErr } = await supabase.rpc("hash_and_set_pin", {
+          p_utilisateur_id: u.userId,
+          p_pin_clair: pin,
+        });
 
-        let actualPin = pin;
-        if (hashRes.ok) {
-          const hashData = await hashRes.json();
-          if (hashData.success && hashData.pin) {
-            actualPin = hashData.pin;
-          }
-        } else {
-          console.error(`[sync-roller-staff] hash-pin failed for ${u.prenom} ${u.nom}`);
+        if (hashErr) {
+          console.error(
+            `[sync-roller-staff] hash_and_set_pin FAILED for ${u.prenom} ${u.nom}: ${hashErr.message}`,
+          );
+          pinHashFailures++;
         }
 
         pinsToCommunciate.push({
           prenom: u.prenom,
           nom: u.nom,
           email: u.email,
-          pin: actualPin,
+          pin,
           email_sent: false,
         });
       }
 
-      // Phase B: send emails (only for staff_operationnel with real email)
+      // Phase B: send emails (only for users with real email)
       if (resendApiKey) {
         for (const entry of pinsToCommunciate) {
           if (!entry.email || isNoEmailPlaceholder(entry.email)) {
@@ -739,15 +727,40 @@ Deno.serve(async (req: Request) => {
             entry.email_error = result.error;
           }
 
-          // Rate limit Resend
           await new Promise((r) => setTimeout(r, 150));
         }
       }
     }
 
-    // ── 11. Build response ───────────────────────────
+    // ── 11. Post-sync verification: confirm all PINs were hashed ──
+    let pinVerification: Record<string, unknown> | undefined;
+
+    if (!dryRun && usersNeedingPin.length > 0) {
+      const createdIds = usersNeedingPin.map((u) => u.userId);
+      const { data: pinCheck } = await supabase
+        .from("utilisateurs")
+        .select("id, prenom, nom, code_pin_hash")
+        .in("id", createdIds);
+
+      const withHash = (pinCheck || []).filter((u) => u.code_pin_hash !== null).length;
+      const withoutHash = (pinCheck || []).filter((u) => u.code_pin_hash === null);
+
+      pinVerification = {
+        expected: usersNeedingPin.length,
+        hashed_ok: withHash,
+        missing_hash: withoutHash.length,
+        rpc_call_failures: pinHashFailures,
+        users_missing_hash: withoutHash.map((u) => `${u.prenom} ${u.nom}`),
+      };
+    }
+
+    const allPinsHashed = !pinVerification || pinVerification.missing_hash === 0;
+    const status = allPinsHashed ? "success" : "partial_success";
+
+    // ── 12. Build response ───────────────────────────
     const response: Record<string, unknown> = {
-      success: true,
+      success: allPinsHashed,
+      status,
       venue_code: parcCode,
       dry_run: dryRun,
       parc_nom: parcData.nom,
@@ -756,6 +769,10 @@ Deno.serve(async (req: Request) => {
       linked_existing: linkedExistingDetails,
       details,
     };
+
+    if (pinVerification) {
+      response.pin_verification = pinVerification;
+    }
 
     if (dryRun) {
       response.roller_roles_loaded = Object.fromEntries(rollerRoleIdToName);
