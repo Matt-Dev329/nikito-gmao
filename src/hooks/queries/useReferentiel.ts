@@ -99,7 +99,7 @@ export function useEquipements(parcId?: string) {
         .select('*, parcs(code, nom), categories_equipement(nom, criticite_defaut), zones(nom)')
         .eq('est_formation', estFormation);
       if (parcId) q = q.eq('parc_id', parcId);
-      const { data, error } = await q.order('code');
+      const { data, error } = await q.order('code').range(0, 4999);
       if (error) throw error;
       return (data ?? []) as EquipementAvecJoins[];
     },
