@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { useEquipements } from '@/hooks/queries/useReferentiel';
+import { useEquipements, useEquipementsCount } from '@/hooks/queries/useReferentiel';
 import { FiltresEquipements } from '@/components/equipements/FiltresEquipements';
 import { TableEquipements } from '@/components/equipements/TableEquipements';
 import { ModaleCreerEquipement } from '@/components/equipements/ModaleCreerEquipement';
@@ -19,6 +19,7 @@ export function PageEquipements() {
   const [equipementSelectionne, setEquipementSelectionne] = useState<EquipementAvecJoins | null>(null);
 
   const { data: equipements, isLoading } = useEquipements(parcFilter);
+  const { data: nbTotal = 0 } = useEquipementsCount(parcFilter);
 
   const filtres = useMemo(() => {
     let result = equipements ?? [];
@@ -43,8 +44,6 @@ export function PageEquipements() {
 
     return result;
   }, [equipements, categorieFilter, statutFilter, recherche]);
-
-  const nbTotal = equipements?.length ?? 0;
 
   return (
     <div className="p-4 md:p-6 md:px-7">

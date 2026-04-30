@@ -106,6 +106,23 @@ export function useEquipements(parcId?: string) {
   });
 }
 
+export function useEquipementsCount(parcId?: string) {
+  const { estFormation } = useFormationFilter();
+  return useQuery({
+    queryKey: ['equipements-count', parcId, estFormation],
+    queryFn: async () => {
+      let q = supabase
+        .from('equipements')
+        .select('*', { count: 'exact', head: true })
+        .eq('est_formation', estFormation);
+      if (parcId) q = q.eq('parc_id', parcId);
+      const { count, error } = await q;
+      if (error) throw error;
+      return count ?? 0;
+    },
+  });
+}
+
 export function useCreerEquipement() {
   const qc = useQueryClient();
   const { estFormation } = useFormationFilter();
