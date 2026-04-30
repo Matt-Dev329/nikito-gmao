@@ -272,8 +272,8 @@ export function PageITAdmin() {
     if (tab === 'logs' && recentErrors.length === 0) loadRecentErrors();
   }, [edgeFns.length, tableStats.length, recentErrors.length, runEdgeFnChecks, runTableChecks, loadRecentErrors]);
 
-  const isDirection = utilisateur?.role_code === 'direction' || utilisateur?.role_code === 'chef_maintenance';
-  if (!isDirection) {
+  const hasAccess = utilisateur?.role_code === 'direction' || utilisateur?.role_code === 'chef_maintenance' || utilisateur?.role_code === 'admin_it';
+  if (!hasAccess) {
     return (
       <div className="p-6 text-dim text-sm">Acces reserve a la direction.</div>
     );
