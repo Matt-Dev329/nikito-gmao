@@ -19,28 +19,29 @@ interface DrawerItem {
 }
 
 const pilotageItems: DrawerItem[] = [
-  { to: '/gmao/equipements', label: 'Equipements', iconLabel: 'Équipements', roles: ['direction', 'chef_maintenance', 'technicien', 'manager_parc'] },
-  { to: '/gmao/ia-predictive', label: 'IA Predictive', iconLabel: 'IA Prédictive', roles: ['direction', 'chef_maintenance'] },
-  { to: '/gmao/flotte', label: 'Flotte', iconLabel: 'Flotte', roles: ['direction', 'chef_maintenance'] },
-  { to: '/gmao/recurrences', label: 'Recurrences', iconLabel: 'Récurrences', roles: ['direction', 'chef_maintenance'] },
-  { to: '/gmao/cinq-pourquoi', label: '5 Pourquoi', iconLabel: '5 Pourquoi', roles: ['direction', 'chef_maintenance'] },
-  { to: '/gmao/stock', label: 'Stock', iconLabel: 'Stock', roles: ['direction', 'chef_maintenance', 'technicien'] },
-  { to: '/gmao/preventif', label: 'Preventif', iconLabel: 'Préventif', roles: ['direction', 'chef_maintenance', 'manager_parc'] },
-  { to: '/gmao/certifications', label: 'Certifications', iconLabel: 'Certifications', roles: ['direction', 'chef_maintenance'] },
-  { to: '/gmao/plaintes', label: 'Plaintes clients', iconLabel: 'Plaintes clients', roles: ['direction', 'chef_maintenance', 'manager_parc'] },
-  { to: '/gmao/controles-historique', label: 'Historique controles', iconLabel: 'Contrôles', roles: ['direction', 'chef_maintenance'] },
+  { to: '/gmao/equipements', label: 'Equipements', iconLabel: 'Équipements', roles: ['direction', 'chef_maintenance', 'technicien', 'manager_parc', 'admin_it'] },
+  { to: '/gmao/ia-predictive', label: 'IA Predictive', iconLabel: 'IA Prédictive', roles: ['direction', 'chef_maintenance', 'admin_it'] },
+  { to: '/gmao/flotte', label: 'Flotte', iconLabel: 'Flotte', roles: ['direction', 'chef_maintenance', 'admin_it'] },
+  { to: '/gmao/recurrences', label: 'Recurrences', iconLabel: 'Récurrences', roles: ['direction', 'chef_maintenance', 'admin_it'] },
+  { to: '/gmao/cinq-pourquoi', label: '5 Pourquoi', iconLabel: '5 Pourquoi', roles: ['direction', 'chef_maintenance', 'admin_it'] },
+  { to: '/gmao/stock', label: 'Stock', iconLabel: 'Stock', roles: ['direction', 'chef_maintenance', 'technicien', 'admin_it'] },
+  { to: '/gmao/preventif', label: 'Preventif', iconLabel: 'Préventif', roles: ['direction', 'chef_maintenance', 'manager_parc', 'admin_it'] },
+  { to: '/gmao/certifications', label: 'Certifications', iconLabel: 'Certifications', roles: ['direction', 'chef_maintenance', 'admin_it'] },
+  { to: '/gmao/plaintes', label: 'Plaintes clients', iconLabel: 'Plaintes clients', roles: ['direction', 'chef_maintenance', 'manager_parc', 'admin_it'] },
+  { to: '/gmao/controles-historique', label: 'Historique controles', iconLabel: 'Contrôles', roles: ['direction', 'chef_maintenance', 'admin_it'] },
 ];
 
 const configItems: DrawerItem[] = [
-  { to: '/gmao/parcs', label: 'Parcs', iconLabel: 'Parcs', roles: ['direction', 'chef_maintenance'] },
-  { to: '/gmao/utilisateurs', label: 'Utilisateurs', iconLabel: 'Utilisateurs', roles: ['direction', 'chef_maintenance', 'manager_parc'] },
-  { to: '/gmao/bibliotheque', label: 'Bibliotheque points', iconLabel: 'Bibliothèque points', roles: ['direction', 'chef_maintenance'] },
-  { to: '/gmao/fournisseurs', label: 'Fournisseurs', iconLabel: 'Fournisseurs', roles: ['direction', 'chef_maintenance'] },
+  { to: '/gmao/parcs', label: 'Parcs', iconLabel: 'Parcs', roles: ['direction', 'chef_maintenance', 'admin_it'] },
+  { to: '/gmao/utilisateurs', label: 'Utilisateurs', iconLabel: 'Utilisateurs', roles: ['direction', 'chef_maintenance', 'manager_parc', 'admin_it'] },
+  { to: '/gmao/bibliotheque', label: 'Bibliotheque points', iconLabel: 'Bibliothèque points', roles: ['direction', 'chef_maintenance', 'admin_it'] },
+  { to: '/gmao/fournisseurs', label: 'Fournisseurs', iconLabel: 'Fournisseurs', roles: ['direction', 'chef_maintenance', 'admin_it'] },
+  { to: '/gmao/it-admin', label: 'Administration IT', iconLabel: 'Administration IT', roles: ['direction', 'admin_it'] },
 ];
 
 const accountItems: DrawerItem[] = [
-  { to: '/gmao/profil', label: 'Profil', iconLabel: 'Utilisateurs', roles: ['direction', 'chef_maintenance', 'manager_parc', 'technicien', 'staff_operationnel'] },
-  { to: '/gmao/aide', label: 'Aide', iconLabel: 'Aide', roles: ['direction', 'chef_maintenance', 'manager_parc', 'technicien', 'staff_operationnel'] },
+  { to: '/gmao/profil', label: 'Profil', iconLabel: 'Utilisateurs', roles: ['direction', 'chef_maintenance', 'manager_parc', 'technicien', 'staff_operationnel', 'admin_it'] },
+  { to: '/gmao/aide', label: 'Aide', iconLabel: 'Aide', roles: ['direction', 'chef_maintenance', 'manager_parc', 'technicien', 'staff_operationnel', 'admin_it'] },
 ];
 
 export function MobileMoreDrawer({ open, onClose, roleCode, onSignOut }: MobileMoreDrawerProps) {

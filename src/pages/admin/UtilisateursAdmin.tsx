@@ -297,7 +297,7 @@ function ListeActifs() {
   const supprimerMutation = useSupprimerUtilisateur();
   const { activate } = useViewAs();
   const navigate = useNavigate();
-  const isDirection = utilisateur?.role_code === 'direction';
+  const isDirection = utilisateur?.role_code === 'direction' || utilisateur?.role_code === 'admin_it';
   const canEdit = isDirection || utilisateur?.role_code === 'chef_maintenance';
   const canViewAs = canEdit;
   const [editUser, setEditUser] = useState<UtilisateurRow | null>(null);
@@ -353,7 +353,7 @@ function ListeActifs() {
 function ListeAValider() {
   const { utilisateur } = useAuth();
   const { data, isLoading } = useUtilisateursAValider();
-  const canEdit = utilisateur?.role_code === 'direction' || utilisateur?.role_code === 'chef_maintenance';
+  const canEdit = utilisateur?.role_code === 'direction' || utilisateur?.role_code === 'chef_maintenance' || utilisateur?.role_code === 'admin_it';
   const [editUser, setEditUser] = useState<UtilisateurRow | null>(null);
 
   if (isLoading) return <div className="text-dim text-sm text-center py-8">Chargement...</div>;
@@ -392,7 +392,7 @@ function ListeDesactives() {
   const { utilisateur } = useAuth();
   const { data, isLoading } = useUtilisateursDesactives();
   const reactiverMutation = useReactiverUtilisateur();
-  const isDirection = utilisateur?.role_code === 'direction';
+  const isDirection = utilisateur?.role_code === 'direction' || utilisateur?.role_code === 'admin_it';
   const canEdit = isDirection || utilisateur?.role_code === 'chef_maintenance';
   const [editUser, setEditUser] = useState<UtilisateurRow | null>(null);
 

@@ -78,11 +78,11 @@ function useParcsVisibles() {
   const parcsVisibles: ParcOption[] = useMemo(() => {
     if (!allParcs) return [];
     const raw = allParcs as ParcOption[];
-    if (role === 'direction' || role === 'chef_maintenance') return raw;
+    if (role === 'direction' || role === 'chef_maintenance' || role === 'admin_it') return raw;
     return raw.filter((p) => parcIds.includes(p.id));
   }, [allParcs, role, parcIds]);
 
-  const peutVoirTous = role === 'direction' || role === 'chef_maintenance';
+  const peutVoirTous = role === 'direction' || role === 'chef_maintenance' || role === 'admin_it';
 
   return { parcsVisibles, peutVoirTous, isLoading };
 }
