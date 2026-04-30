@@ -10,6 +10,7 @@ const simulableRoles: { code: RoleUtilisateur; label: string; needsParc: boolean
   { code: 'technicien', label: 'Technicien', needsParc: false },
   { code: 'manager_parc', label: 'Manager Parc', needsParc: true },
   { code: 'staff_operationnel', label: 'Staff operationnel', needsParc: true },
+  { code: 'admin_it', label: 'Admin IT', needsParc: false },
 ];
 
 interface ViewAsSelectorProps {
