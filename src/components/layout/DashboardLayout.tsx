@@ -31,6 +31,7 @@ const roleAffiches: Record<string, string> = {
   manager_parc: 'MANAGER PARC',
   technicien: 'TECHNICIEN',
   staff_operationnel: 'STAFF',
+  admin_it: 'ADMIN IT',
 };
 
 function useIsDesktop() {
