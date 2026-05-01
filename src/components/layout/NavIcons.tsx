@@ -224,6 +224,15 @@ export function IconAide({ className = s }: { className?: string }) {
   );
 }
 
+export function IconConformite({ className = s }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M10 2L3 5v5c0 4.4 3 7.5 7 9 4-1.5 7-4.6 7-9V5l-7-3z" />
+      <path d="M7 10l2 2 4-4" />
+    </svg>
+  );
+}
+
 const iconMap: Record<string, (props: { className?: string }) => JSX.Element> = {
   'Tableau de bord': IconTableauBord,
   'Mon parc': IconParc,
@@ -246,6 +255,7 @@ const iconMap: Record<string, (props: { className?: string }) => JSX.Element> = 
   'Contrôle d\'ouverture': IconControleOuverture,
   'Contrôle hebdo': IconControleHebdo,
   'Contrôle mensuel': IconControleMensuel,
+  'Conformité': IconConformite,
   'Aide': IconAide,
   'Administration IT': IconAdminIT,
 };

@@ -2,6 +2,8 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useSidebarBadges } from '@/hooks/queries/useSidebarBadges';
+import { useNotificationsConformite, useMarkNotificationRead } from '@/hooks/queries/useConformite';
+import { useAuth } from '@/hooks/useAuth';
 
 const STORAGE_KEY = 'notif_bell_seen';
 
@@ -71,11 +73,15 @@ export function NotificationBell({ compact, onNavClick }: Props) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const { data: badges } = useSidebarBadges();
+  const { utilisateur } = useAuth();
+  const { data: notifsConformite } = useNotificationsConformite(utilisateur?.id);
+  const markRead = useMarkNotificationRead();
   const navigate = useNavigate();
   const [seenSnapshot, setSeenSnapshot] = useState(getSeenSnapshot);
 
   const items = badges ? buildItems(badges) : [];
-  const unseenCount = computeUnseenCount(items, seenSnapshot);
+  const conformiteCount = notifsConformite?.length ?? 0;
+  const unseenCount = computeUnseenCount(items, seenSnapshot) + conformiteCount;
 
   const markAsSeen = useCallback(() => {
     const snapshot: Record<string, number> = {};
@@ -134,26 +140,52 @@ export function NotificationBell({ compact, onNavClick }: Props) {
           <div className="px-3 py-1.5 text-[10px] text-faint uppercase tracking-wider">
             Notifications
           </div>
-          {items.length === 0 ? (
+          {items.length === 0 && conformiteCount === 0 ? (
             <div className="px-3 py-4 text-[12px] text-dim text-center">
               Aucune notification
             </div>
           ) : (
-            items.map((item) => (
-              <button
-                key={item.to}
-                onClick={() => handleNav(item.to)}
-                className="flex items-center gap-2.5 w-full px-3 py-2 text-[12px] text-dim hover:text-text hover:bg-white/[0.04] transition-colors"
-              >
-                <span className={cn(
-                  'flex-shrink-0 text-[10px] font-bold px-1.5 py-0.5 rounded text-bg-app min-w-[22px] text-center',
-                  item.tone === 'red' ? 'bg-red' : 'bg-amber'
-                )}>
-                  {item.count}
-                </span>
-                <span className="truncate">{item.label}</span>
-              </button>
-            ))
+            <>
+              {items.map((item) => (
+                <button
+                  key={item.to}
+                  onClick={() => handleNav(item.to)}
+                  className="flex items-center gap-2.5 w-full px-3 py-2 text-[12px] text-dim hover:text-text hover:bg-white/[0.04] transition-colors"
+                >
+                  <span className={cn(
+                    'flex-shrink-0 text-[10px] font-bold px-1.5 py-0.5 rounded text-bg-app min-w-[22px] text-center',
+                    item.tone === 'red' ? 'bg-red' : 'bg-amber'
+                  )}>
+                    {item.count}
+                  </span>
+                  <span className="truncate">{item.label}</span>
+                </button>
+              ))}
+              {notifsConformite && notifsConformite.length > 0 && (
+                <>
+                  <div className="px-3 py-1.5 text-[10px] text-faint uppercase tracking-wider mt-1">
+                    Conformite
+                  </div>
+                  {notifsConformite.slice(0, 5).map((n) => (
+                    <button
+                      key={n.id}
+                      onClick={() => {
+                        markRead.mutate(n.id);
+                        const to = n.prescription_id ? '/gmao/conformite/reserves' : n.commission_id ? '/gmao/conformite/commissions' : '/gmao/conformite';
+                        handleNav(to);
+                      }}
+                      className="flex items-center gap-2.5 w-full px-3 py-2 text-[12px] text-dim hover:text-text hover:bg-white/[0.04] transition-colors"
+                    >
+                      <span className={cn(
+                        'flex-shrink-0 w-2 h-2 rounded-full',
+                        n.type_notification.includes('retard') ? 'bg-red' : n.type_notification.includes('commission') ? 'bg-amber' : 'bg-nikito-cyan'
+                      )} />
+                      <span className="truncate">{n.titre}</span>
+                    </button>
+                  ))}
+                </>
+              )}
+            </>
           )}
         </div>
       )}

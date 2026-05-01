@@ -68,6 +68,11 @@
     @apply bg-bg-deep text-dim px-2.5 py-1 rounded-md text-xs font-mono;
   }
 
+  /* Form input field */
+  .input-field {
+    @apply w-full bg-bg-deep border border-white/[0.08] rounded-lg px-3 py-2.5 text-[13px] text-text;
+  }
+
   /* Tag criticité */
   .crit-tag {
     @apply px-2.5 py-0.5 rounded-md text-[11px] font-bold tracking-wide text-bg-app;

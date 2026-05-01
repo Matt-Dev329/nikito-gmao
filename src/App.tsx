@@ -51,6 +51,12 @@ import { PageFormation } from '@/pages/formation/PageFormation';
 import { PageIAPredictive } from '@/pages/ia-predictive/PageIAPredictive';
 import { PageNotificationsIA } from '@/pages/notifications/PageNotificationsIA';
 import { PageFlotte } from '@/pages/flotte/PageFlotte';
+import { LayoutConformite } from '@/pages/conformite/LayoutConformite';
+import { PageConformite } from '@/pages/conformite/PageConformite';
+import { PageReserves } from '@/pages/conformite/PageReserves';
+import { PageCommissions } from '@/pages/conformite/PageCommissions';
+import { PageDocuments } from '@/pages/conformite/PageDocuments';
+import { PageActeurs } from '@/pages/conformite/PageActeurs';
 
 export function App() {
   return (
@@ -103,6 +109,13 @@ export function App() {
         <Route path="ia-predictive" element={<PageIAPredictive />} />
         <Route path="notifications-ia" element={<PageNotificationsIA />} />
         <Route path="flotte" element={<PageFlotte />} />
+        <Route path="conformite" element={<LayoutConformite />}>
+          <Route index element={<PageConformite />} />
+          <Route path="reserves" element={<PageReserves />} />
+          <Route path="commissions" element={<PageCommissions />} />
+          <Route path="documents" element={<PageDocuments />} />
+          <Route path="acteurs" element={<PageActeurs />} />
+        </Route>
         <Route path="aide" element={<PageAide />} />
         <Route path="formation" element={<PageFormation />} />
         <Route path="it-admin" element={<PageITAdmin />} />

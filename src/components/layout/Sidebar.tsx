@@ -59,11 +59,17 @@ const sections: { titre: string; items: NavItem[] }[] = [
       { to: '/gmao/flotte', label: 'Flotte', roles: ['direction', 'chef_maintenance', 'admin_it'] },
       { to: '/gmao/recurrences', label: 'Récurrences', badgeKey: 'recurrences', badgeTone: 'red', roles: ['direction', 'chef_maintenance', 'admin_it'] },
       { to: '/gmao/cinq-pourquoi', label: '5 Pourquoi', badgeKey: 'cinqPourquoi', badgeTone: 'amber', roles: ['direction', 'chef_maintenance', 'admin_it'] },
-      { to: '/gmao/controles-historique', label: 'Contrôles', roles: ['direction', 'chef_maintenance', 'admin_it'] },
       { to: '/gmao/plaintes', label: 'Plaintes clients', badgeKey: 'plaintesAQualifier', badgeTone: 'amber', roles: ['direction', 'chef_maintenance', 'manager_parc', 'admin_it'] },
       { to: '/gmao/certifications', label: 'Certifications', roles: ['direction', 'chef_maintenance', 'admin_it'] },
       { to: '/gmao/preventif', label: 'Préventif', roles: ['direction', 'chef_maintenance', 'manager_parc', 'admin_it'] },
       { to: '/gmao/stock', label: 'Stock', roles: ['direction', 'chef_maintenance', 'technicien', 'admin_it'] },
+    ],
+  },
+  {
+    titre: 'Réglementaire',
+    items: [
+      { to: '/gmao/conformite', label: 'Conformité', roles: ['direction', 'admin_it', 'chef_maintenance', 'manager_parc'] },
+      { to: '/gmao/controles-historique', label: 'Contrôles', roles: ['direction', 'chef_maintenance', 'admin_it'] },
     ],
   },
   {

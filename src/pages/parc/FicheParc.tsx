@@ -9,9 +9,10 @@ import { NotesChantierParc } from './NotesChantierParc';
 import { CarteHorairesParc } from '@/components/parc/CarteHorairesParc';
 import { ToggleVacancesParc } from '@/components/parc/ToggleVacancesParc';
 import { EditeurHorairesParc } from '@/components/parc/EditeurHorairesParc';
+import { OngletConformiteParc } from '@/pages/conformite/OngletConformiteParc';
 import type { Parc } from '@/types/database';
 
-type Onglet = 'apercu' | 'configuration' | 'controles' | 'equipements' | 'equipe' | 'notes';
+type Onglet = 'apercu' | 'configuration' | 'controles' | 'equipements' | 'equipe' | 'notes' | 'conformite';
 
 const ROLES_EDIT_HORAIRES: string[] = ['direction', 'chef_maintenance'];
 
@@ -75,6 +76,9 @@ export function FicheParc() {
           <OngletButton actif={onglet === 'notes'} onClick={() => setOnglet('notes')}>
             Notes chantier
           </OngletButton>
+          <OngletButton actif={onglet === 'conformite'} onClick={() => setOnglet('conformite')}>
+            Conformite
+          </OngletButton>
         </div>
       </header>
 
@@ -84,6 +88,7 @@ export function FicheParc() {
       {onglet === 'equipements' && <OngletEquipements />}
       {onglet === 'equipe' && <OngletEquipe />}
       {onglet === 'notes' && <NotesChantierParc />}
+      {onglet === 'conformite' && <OngletConformiteParc parcId={id} />}
     </div>
   );
 }
