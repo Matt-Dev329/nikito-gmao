@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { usePrescriptions, useUpdatePrescriptionStatut, type Prescription } from '@/hooks/queries/useConformite';
 import { useAuth } from '@/hooks/useAuth';
@@ -15,7 +16,10 @@ const GRAVITES = ['bloquante', 'majeure', 'mineure'] as const;
 
 export function PageReserves() {
   const { utilisateur } = useAuth();
-  const { data: prescriptions, isLoading } = usePrescriptions();
+  const navigate = useNavigate();
+  const { data: prescriptions, isLoading } = usePrescriptions({
+    statut: ['brouillon', 'a_lever', 'en_cours', 'levee_proposee', 'levee_validee'],
+  });
   const updateStatut = useUpdatePrescriptionStatut();
 
   const [filtreParc, setFiltreParc] = useState<string>('');
@@ -130,13 +134,38 @@ export function PageReserves() {
 
       {/* Kanban */}
       {isLoading ? (
-        <div className="flex-1 grid grid-cols-4 gap-3">
-          {[1, 2, 3, 4].map((i) => (
+        <div className="flex-1 grid grid-cols-5 gap-3">
+          {[1, 2, 3, 4, 5].map((i) => (
             <div key={i} className="bg-bg-card rounded-xl h-64 animate-pulse" />
           ))}
         </div>
       ) : (
-        <div className="flex-1 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3 min-h-0 overflow-x-auto">
+        <div className="flex-1 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-3 min-h-0 overflow-x-auto">
+          {/* Colonne Extraits IA */}
+          <div className="flex flex-col min-h-[300px]">
+            <div className="flex items-center gap-2 mb-3 pb-2 border-b-2 border-dashed border-pink-400/60">
+              <RobotSmallIcon className="w-4 h-4 text-pink-400" />
+              <span className="text-[12px] font-semibold uppercase tracking-wide bg-gradient-to-r from-pink-400 to-cyan-400 bg-clip-text text-transparent">
+                Extraits IA
+              </span>
+              <span className="text-[11px] text-dim bg-white/[0.06] px-1.5 py-0.5 rounded">
+                {filtered.filter((p) => p.statut === 'brouillon').length}
+              </span>
+            </div>
+            <div className="flex-1 space-y-2 overflow-y-auto pr-1">
+              {filtered.filter((p) => p.statut === 'brouillon').map((item) => (
+                <BrouillonCard
+                  key={item.id}
+                  item={item}
+                  onClick={() => item.extraction_id && navigate(`/gmao/conformite/extractions/${item.extraction_id}`)}
+                />
+              ))}
+              {filtered.filter((p) => p.statut === 'brouillon').length === 0 && (
+                <div className="text-[11px] text-faint text-center py-8">Aucun brouillon</div>
+              )}
+            </div>
+          </div>
+
           {COLONNES.map((col) => {
             const items = filtered.filter((p) => p.statut === col.statut);
             return (
@@ -224,6 +253,53 @@ function PrescriptionCard({ item, onDragStart, isDragging }: { item: Prescriptio
         </div>
       )}
     </div>
+  );
+}
+
+function BrouillonCard({ item, onClick }: { item: Prescription; onClick: () => void }) {
+  const confiance = item.confiance_extraction ?? null;
+  const conf = confiance != null ? Math.round(confiance * 100) : null;
+  const confColor = conf == null ? 'text-dim' : conf >= 80 ? 'text-green' : conf >= 60 ? 'text-amber' : 'text-red';
+
+  return (
+    <button
+      onClick={onClick}
+      className="w-full text-left bg-bg-deep rounded-lg p-3 border border-dashed border-pink-400/30 hover:border-pink-400/60 hover:bg-bg-deep/80 transition-all"
+    >
+      <div className="flex items-center justify-between mb-1.5">
+        <span className="inline-flex items-center gap-1 text-[9px] uppercase tracking-wider font-bold text-pink-400">
+          <RobotSmallIcon className="w-3 h-3" />
+          IA
+        </span>
+        {conf != null && (
+          <span className={cn('text-[10px] font-semibold', confColor)}>{conf}%</span>
+        )}
+      </div>
+      <p className="text-[12px] font-medium leading-snug mb-1.5 line-clamp-2">{item.intitule}</p>
+      <div className="flex items-center justify-between">
+        <span className="text-[10px] text-dim">{item.categorie}</span>
+        <GraviteBadge gravite={item.gravite} />
+      </div>
+      {item.parcs && (
+        <div className="mt-2 pt-2 border-t border-white/[0.04]">
+          <span className="text-[9px] font-bold font-mono bg-nikito-cyan/10 text-nikito-cyan px-1.5 py-0.5 rounded">
+            {item.parcs.code}
+          </span>
+        </div>
+      )}
+    </button>
+  );
+}
+
+function RobotSmallIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="8" width="18" height="12" rx="2" />
+      <path d="M12 2v4M8 2v2M16 2v2" />
+      <circle cx="9" cy="14" r="1" />
+      <circle cx="15" cy="14" r="1" />
+      <path d="M9 18h6" />
+    </svg>
   );
 }
 

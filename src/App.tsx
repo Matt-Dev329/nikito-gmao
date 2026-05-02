@@ -57,6 +57,7 @@ import { PageReserves } from '@/pages/conformite/PageReserves';
 import { PageCommissions } from '@/pages/conformite/PageCommissions';
 import { PageDocuments } from '@/pages/conformite/PageDocuments';
 import { PageActeurs } from '@/pages/conformite/PageActeurs';
+import { PageExtractionRevue } from '@/pages/conformite/PageExtractionRevue';
 
 export function App() {
   return (
@@ -115,6 +116,7 @@ export function App() {
           <Route path="commissions" element={<PageCommissions />} />
           <Route path="documents" element={<PageDocuments />} />
           <Route path="acteurs" element={<PageActeurs />} />
+          <Route path="extractions/:id" element={<PageExtractionRevue />} />
         </Route>
         <Route path="aide" element={<PageAide />} />
         <Route path="formation" element={<PageFormation />} />

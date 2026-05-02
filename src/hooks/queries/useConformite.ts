@@ -58,8 +58,32 @@ export interface Prescription {
   modifie_par_id: string | null;
   cree_le: string;
   modifie_le: string;
+  extrait_par_ia?: boolean | null;
+  extraction_id?: string | null;
+  confiance_extraction?: number | null;
   parcs?: { code: string; nom: string } | null;
   responsable?: { id: string; prenom: string; nom: string } | null;
+}
+
+export interface ExtractionPv {
+  id: string;
+  commission_id: string;
+  document_id: string | null;
+  parc_id: string;
+  pv_url: string;
+  pv_filename: string | null;
+  statut: string;
+  nb_prescriptions_extraites: number;
+  nb_prescriptions_validees: number;
+  nb_prescriptions_rejetees: number;
+  raw_response_claude: Record<string, unknown> | null;
+  duree_traitement_ms: number | null;
+  cout_estime: number | null;
+  erreur_message: string | null;
+  cree_par_id: string | null;
+  cree_le: string;
+  validee_le: string | null;
+  commissions_securite?: { date_visite: string; type_commission: string; parcs?: { code: string; nom: string } | null } | null;
 }
 
 export interface DocumentChantier {
@@ -379,6 +403,91 @@ export function useCreatePhase() {
         .single();
       if (error) throw error;
       return data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['conformite'] });
+    },
+  });
+}
+
+// Extraction IA - fetch one by id
+export function useExtraction(id: string | undefined) {
+  return useQuery({
+    queryKey: ['conformite', 'extraction', id],
+    enabled: !!id,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('extractions_pv')
+        .select('*, commissions_securite(date_visite, type_commission, parcs(code, nom))')
+        .eq('id', id!)
+        .maybeSingle();
+      if (error) throw error;
+      return data as ExtractionPv | null;
+    },
+  });
+}
+
+// Prescriptions d'une extraction (y compris brouillons)
+export function usePrescriptionsExtraction(extractionId: string | undefined) {
+  return useQuery({
+    queryKey: ['conformite', 'prescriptions-extraction', extractionId],
+    enabled: !!extractionId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('prescriptions_securite')
+        .select('*, parcs(code, nom), responsable:utilisateurs!prescriptions_securite_responsable_id_fkey(id, prenom, nom)')
+        .eq('extraction_id', extractionId!)
+        .order('confiance_extraction', { ascending: false, nullsFirst: false });
+      if (error) throw error;
+      return data as Prescription[];
+    },
+  });
+}
+
+// Extractions existantes pour un document
+export function useExtractionsDocument(documentId: string | undefined) {
+  return useQuery({
+    queryKey: ['conformite', 'extractions-doc', documentId],
+    enabled: !!documentId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('extractions_pv')
+        .select('*')
+        .eq('document_id', documentId!)
+        .order('cree_le', { ascending: false });
+      if (error) throw error;
+      return data as ExtractionPv[];
+    },
+  });
+}
+
+// Mutation: update prescription (champs multiples)
+export function useUpdatePrescription() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, patch }: { id: string; patch: Partial<Prescription> }) => {
+      const { error } = await supabase
+        .from('prescriptions_securite')
+        .update({ ...patch, modifie_le: new Date().toISOString() })
+        .eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['conformite'] });
+    },
+  });
+}
+
+// Mutation: update extraction
+export function useUpdateExtraction() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, patch }: { id: string; patch: Partial<ExtractionPv> }) => {
+      const { error } = await supabase
+        .from('extractions_pv')
+        .update(patch)
+        .eq('id', id);
+      if (error) throw error;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['conformite'] });

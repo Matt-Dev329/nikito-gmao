@@ -1,8 +1,9 @@
 import { useState, useMemo } from 'react';
 import { cn } from '@/lib/utils';
-import { useCommissions, useCreateCommission, type Commission } from '@/hooks/queries/useConformite';
+import { useCommissions, useCreateCommission, useExtractionsDocument, type Commission } from '@/hooks/queries/useConformite';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
+import { ModaleExtractionPV } from './ModaleExtractionPV';
 
 const TYPE_LABELS: Record<string, string> = {
   initiale_ouverture: 'Initiale (ouverture)',
@@ -103,6 +104,8 @@ export function PageCommissions() {
 }
 
 function VueListe({ commissions, isLoading }: { commissions: Commission[]; isLoading: boolean }) {
+  const [extractCommission, setExtractCommission] = useState<Commission | null>(null);
+
   if (isLoading) {
     return <div className="bg-bg-card rounded-xl h-64 animate-pulse" />;
   }
@@ -116,43 +119,95 @@ function VueListe({ commissions, isLoading }: { commissions: Commission[]; isLoa
   }
 
   return (
-    <div className="bg-bg-card rounded-xl border border-white/[0.06] overflow-hidden">
-      <div className="overflow-x-auto">
-        <table className="w-full text-[12px]">
-          <thead>
-            <tr className="border-b border-white/[0.06] text-dim text-left">
-              <th className="px-4 py-3 font-medium">Date</th>
-              <th className="px-4 py-3 font-medium">Parc</th>
-              <th className="px-4 py-3 font-medium">Type</th>
-              <th className="px-4 py-3 font-medium">Resultat</th>
-              <th className="px-4 py-3 font-medium">Prochaine visite</th>
-            </tr>
-          </thead>
-          <tbody>
-            {commissions.map((c) => {
-              const res = c.resultat ? RESULTAT_LABELS[c.resultat] : null;
-              return (
-                <tr key={c.id} className="border-b border-white/[0.04] hover:bg-white/[0.02] transition-colors">
-                  <td className="px-4 py-3 font-medium">{formatDate(c.date_visite)}</td>
-                  <td className="px-4 py-3">
-                    {c.parcs && (
-                      <span className="text-[10px] font-bold font-mono bg-nikito-cyan/10 text-nikito-cyan px-1.5 py-0.5 rounded">
-                        {c.parcs.code}
-                      </span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-dim">{TYPE_LABELS[c.type_commission] ?? c.type_commission}</td>
-                  <td className="px-4 py-3">
-                    {res ? <span className={cn('font-medium', res.color)}>{res.label}</span> : <span className="text-faint">—</span>}
-                  </td>
-                  <td className="px-4 py-3 text-dim">{c.prochaine_visite_prevue ? formatDate(c.prochaine_visite_prevue) : '—'}</td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+    <>
+      <div className="bg-bg-card rounded-xl border border-white/[0.06] overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-[12px]">
+            <thead>
+              <tr className="border-b border-white/[0.06] text-dim text-left">
+                <th className="px-4 py-3 font-medium">Date</th>
+                <th className="px-4 py-3 font-medium">Parc</th>
+                <th className="px-4 py-3 font-medium">Type</th>
+                <th className="px-4 py-3 font-medium">Resultat</th>
+                <th className="px-4 py-3 font-medium">Prochaine visite</th>
+                <th className="px-4 py-3 font-medium">PV</th>
+              </tr>
+            </thead>
+            <tbody>
+              {commissions.map((c) => {
+                const res = c.resultat ? RESULTAT_LABELS[c.resultat] : null;
+                const hasPv = !!c.pv_url;
+                return (
+                  <tr key={c.id} className="border-b border-white/[0.04] hover:bg-white/[0.02] transition-colors">
+                    <td className="px-4 py-3 font-medium">{formatDate(c.date_visite)}</td>
+                    <td className="px-4 py-3">
+                      {c.parcs && (
+                        <span className="text-[10px] font-bold font-mono bg-nikito-cyan/10 text-nikito-cyan px-1.5 py-0.5 rounded">
+                          {c.parcs.code}
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-dim">{TYPE_LABELS[c.type_commission] ?? c.type_commission}</td>
+                    <td className="px-4 py-3">
+                      {res ? <span className={cn('font-medium', res.color)}>{res.label}</span> : <span className="text-faint">—</span>}
+                    </td>
+                    <td className="px-4 py-3 text-dim">{c.prochaine_visite_prevue ? formatDate(c.prochaine_visite_prevue) : '—'}</td>
+                    <td className="px-4 py-3">
+                      {hasPv ? (
+                        <button
+                          onClick={() => setExtractCommission(c)}
+                          className="inline-flex items-center gap-1.5 bg-gradient-to-br from-pink-500 to-cyan-400 text-white text-[11px] font-semibold px-3 py-1.5 rounded-lg hover:opacity-90 transition-opacity"
+                          title="Extraire les prescriptions via Claude IA"
+                        >
+                          <span>Extraire (IA)</span>
+                        </button>
+                      ) : (
+                        <span className="text-faint">—</span>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       </div>
-    </div>
+
+      {extractCommission && (
+        <ExtractionLauncher
+          commission={extractCommission}
+          onClose={() => setExtractCommission(null)}
+        />
+      )}
+    </>
+  );
+}
+
+function ExtractionLauncher({ commission, onClose }: { commission: Commission; onClose: () => void }) {
+  const { data: extractions } = useExtractionsDocument(undefined);
+  const { data: extractionsByComm } = useQuery({
+    queryKey: ['conformite', 'extractions-comm', commission.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('extractions_pv')
+        .select('id, statut')
+        .eq('commission_id', commission.id)
+        .order('cree_le', { ascending: false });
+      if (error) throw error;
+      return data as Array<{ id: string; statut: string }>;
+    },
+  });
+
+  const existing = extractionsByComm?.find((e) => ['reussie', 'validee', 'partiellement_validee'].includes(e.statut));
+  void extractions;
+
+  return (
+    <ModaleExtractionPV
+      commissionId={commission.id}
+      commissionLabel={`${commission.parcs?.code ?? ''} - ${formatDate(commission.date_visite)}`}
+      existingExtractionId={existing?.id ?? null}
+      onClose={onClose}
+    />
   );
 }
 
