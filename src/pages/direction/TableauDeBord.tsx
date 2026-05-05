@@ -210,8 +210,6 @@ export function TableauDeBord() {
     ? parcsPreLancement.length > 0
     : parcActifEnProd === false;
 
-  const isViewingPreLaunchParc = parcActif !== null && parcActifEnProd === false;
-
   return (
     <div className="p-4 md:p-6 md:px-7 overflow-hidden">
       <div className="text-[11px] text-dim tracking-[1.5px] uppercase mb-2">
@@ -336,40 +334,40 @@ export function TableauDeBord() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <KpiCard
               label={kpiLabels.performance}
-              valeur={isViewingPreLaunchParc ? '\u2014' : kpiAgreg.performance}
-              unite={isViewingPreLaunchParc ? undefined : '%'}
-              delta={{ texte: isViewingPreLaunchParc ? 'Disponible en production' : `moy. ${periode}`, tone: 'neutre' }}
+              valeur={kpiAgreg.performance}
+              unite="%"
+              delta={{ texte: `moy. ${periode}`, tone: 'neutre' }}
               couleur="lime"
             />
             <KpiCard
               label={kpiLabels.plaintes}
-              valeur={isViewingPreLaunchParc ? '\u2014' : kpiAgreg.plaintes}
-              delta={{ texte: isViewingPreLaunchParc ? 'Disponible en production' : '7 derniers jours', tone: 'neutre' }}
+              valeur={kpiAgreg.plaintes}
+              delta={{ texte: '7 derniers jours', tone: 'neutre' }}
               couleur="amber"
             />
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <KpiCard
               label={kpiLabels.mtbf}
-              valeur={isViewingPreLaunchParc ? '\u2014' : kpiAgreg.mtbf}
-              unite={isViewingPreLaunchParc ? undefined : ' j'}
-              delta={{ texte: isViewingPreLaunchParc ? 'Disponible en production' : `moy. ${periode}`, tone: 'neutre' }}
+              valeur={kpiAgreg.mtbf}
+              unite=" j"
+              delta={{ texte: `moy. ${periode}`, tone: 'neutre' }}
               couleur="cyan"
               compact
             />
             <KpiCard
               label={kpiLabels.mttr}
-              valeur={isViewingPreLaunchParc ? '\u2014' : kpiAgreg.mttr}
-              unite={isViewingPreLaunchParc ? undefined : ' min'}
-              delta={{ texte: isViewingPreLaunchParc ? 'Disponible en production' : `moy. ${periode}`, tone: 'neutre' }}
+              valeur={kpiAgreg.mttr}
+              unite=" min"
+              delta={{ texte: `moy. ${periode}`, tone: 'neutre' }}
               couleur="violet"
               compact
             />
             <KpiCard
               label={kpiLabels.premierCoup}
-              valeur={isViewingPreLaunchParc ? '\u2014' : kpiAgreg.premierCoup}
-              unite={isViewingPreLaunchParc ? undefined : '%'}
-              delta={{ texte: isViewingPreLaunchParc ? 'Disponible en production' : `cible 90% · ${periode}`, tone: 'neutre' }}
+              valeur={kpiAgreg.premierCoup}
+              unite="%"
+              delta={{ texte: `cible 90% · ${periode}`, tone: 'neutre' }}
               couleur="green"
               compact
             />
