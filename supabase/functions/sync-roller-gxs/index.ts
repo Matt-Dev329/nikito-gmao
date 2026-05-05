@@ -15,6 +15,9 @@ const VENUE_SECRET_KEYS: Record<string, string> = {
   DOM: "ROSNY",
 };
 
+const BACKFILL_DAYS = 30;
+const RATE_LIMIT_DELAY_MS = 600;
+
 const MOTS_PROBLEME = [
   "casse", "cassee", "casser",
   "panne", "en panne", "hors service", "hs",
@@ -70,6 +73,29 @@ function detecterPriorite(rating: number): string {
   return "normale";
 }
 
+function isoDay(d: Date): string {
+  return d.toISOString().split("T")[0];
+}
+
+function yesterday(): string {
+  const d = new Date();
+  d.setDate(d.getDate() - 1);
+  return isoDay(d);
+}
+
+function daysRange(endDayStr: string, nbDays: number): string[] {
+  const end = new Date(endDayStr);
+  const out: string[] = [];
+  for (let i = nbDays - 1; i >= 0; i--) {
+    const d = new Date(end);
+    d.setDate(d.getDate() - i);
+    out.push(isoDay(d));
+  }
+  return out;
+}
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
 async function getAccessToken(
   tokenUrl: string,
   clientId: string,
@@ -87,27 +113,18 @@ async function getAccessToken(
   return (await res.json()).access_token;
 }
 
-async function getDateDepart(
+async function hasExistingGxs(
   supabase: SupabaseClient,
   parcId: string,
-): Promise<string> {
-  const { data: lastAvis } = await supabase
+): Promise<boolean> {
+  const { data } = await supabase
     .from("plaintes_clients")
-    .select("date_visite")
+    .select("id")
     .eq("parc_id", parcId)
     .eq("source", "roller_gxs")
-    .order("date_visite", { ascending: false })
     .limit(1)
     .maybeSingle();
-
-  if (lastAvis?.date_visite) {
-    const d = new Date(lastAvis.date_visite);
-    d.setDate(d.getDate() - 1);
-    return d.toISOString().split("T")[0];
-  }
-  const d = new Date();
-  d.setDate(d.getDate() - 30);
-  return d.toISOString().split("T")[0];
+  return !!data;
 }
 
 async function logStart(
@@ -116,6 +133,7 @@ async function logStart(
   venueRoller: string,
   startDate: string,
   endDate: string,
+  mode: "nightly" | "rattrapage",
 ): Promise<string | null> {
   const { data, error } = await supabase
     .from("roller_sync_log")
@@ -131,6 +149,7 @@ async function logStart(
         parc_code: parcCode,
         venue_code_roller: venueRoller,
         modifiedDate_envoye: startDate,
+        mode,
       },
     })
     .select("id")
@@ -156,6 +175,124 @@ async function logEnd(
   if (error) console.error("[GXS] logEnd error:", error.message);
 }
 
+interface DayResult {
+  day: string;
+  http_status: number;
+  items_received: number;
+  items_inserted: number;
+  skipRating: number;
+  skipKeywords: number;
+  skipDedup: number;
+  skipOther: number;
+  error?: string;
+}
+
+async function syncOneDay(
+  supabase: SupabaseClient,
+  apiUrl: string,
+  token: string,
+  parcId: string,
+  albaCode: string,
+  day: string,
+): Promise<DayResult> {
+  const res: DayResult = {
+    day,
+    http_status: 0,
+    items_received: 0,
+    items_inserted: 0,
+    skipRating: 0,
+    skipKeywords: 0,
+    skipDedup: 0,
+    skipOther: 0,
+  };
+
+  const url = `${apiUrl}/reporting/gxs?startDate=${day}&endDate=${day}`;
+  const gxsRes = await fetch(url, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json;charset=UTF-8",
+    },
+  });
+  res.http_status = gxsRes.status;
+
+  if (!gxsRes.ok) {
+    res.error = (await gxsRes.text()).slice(0, 300);
+    return res;
+  }
+
+  const gxsData = await gxsRes.json();
+  const reponses: any[] = Array.isArray(gxsData)
+    ? gxsData
+    : gxsData.data || gxsData.results || gxsData.items || [];
+  res.items_received = reponses.length;
+
+  for (const r of reponses) {
+    const rating = Number(
+      r.rating ?? r.overallRating ?? r.score ?? r.stars ?? 0,
+    );
+    const commentaire = String(
+      r.comment ?? r.feedback ?? r.text ?? r.verbatim ?? "",
+    );
+
+    if (rating === 0) {
+      res.skipOther++;
+      continue;
+    }
+
+    if (!shouldImport(commentaire, rating)) {
+      if (rating >= 4) res.skipRating++;
+      else res.skipKeywords++;
+      continue;
+    }
+
+    const rollerId = String(
+      r.id ?? r.responseId ?? r.surveyId ?? r.guestId ??
+        `gxs_${albaCode}_${r.visitDate ?? day}_${Math.random().toString(36).slice(2, 10)}`,
+    );
+
+    const { data: existing } = await supabase
+      .from("plaintes_clients")
+      .select("id")
+      .eq("source_externe_id", rollerId)
+      .limit(1);
+
+    if (existing && existing.length > 0) {
+      res.skipDedup++;
+      continue;
+    }
+
+    const dateVisite = r.visitDate ?? r.date ?? r.bookingDate ?? r.responseDate ?? day;
+
+    const { error: insErr } = await supabase
+      .from("plaintes_clients")
+      .insert({
+        parc_id: parcId,
+        source: "roller_gxs",
+        source_externe_id: rollerId,
+        client_nom: r.customerName ?? r.name ?? r.guestName ?? "Client anonyme",
+        client_email: r.customerEmail ?? r.email ?? r.guestEmail ?? null,
+        client_telephone: r.customerPhone ?? r.phone ?? r.guestPhone ?? null,
+        date_visite: dateVisite,
+        note_globale: rating,
+        commentaire: commentaire || null,
+        categorie: "maintenance",
+        statut: "a_qualifier",
+        priorite: detecterPriorite(rating),
+        est_formation: false,
+      });
+
+    if (insErr) {
+      res.skipOther++;
+      console.error(`[GXS][${albaCode}][${day}] insert error:`, insErr.message);
+      continue;
+    }
+
+    res.items_inserted++;
+  }
+
+  return res;
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 200, headers: corsHeaders });
@@ -169,6 +306,12 @@ Deno.serve(async (req: Request) => {
     const apiUrl = Deno.env.get("ROLLER_API_URL") || "https://api.roller.app";
     const tokenUrl = Deno.env.get("ROLLER_TOKEN_URL") || `${apiUrl}/token`;
 
+    let forceBackfill = false;
+    try {
+      const body = await req.json();
+      forceBackfill = body?.mode === "rattrapage" || body?.backfill === true;
+    } catch (_) { /* empty body is fine */ }
+
     const { data: parcs, error: parcsErr } = await supabase
       .from("parcs")
       .select("id, code")
@@ -176,7 +319,7 @@ Deno.serve(async (req: Request) => {
 
     if (parcsErr || !parcs) throw parcsErr ?? new Error("Parcs vides");
 
-    const today = new Date().toISOString().split("T")[0];
+    const jHier = yesterday();
 
     const totaux = {
       total_received: 0,
@@ -192,15 +335,25 @@ Deno.serve(async (req: Request) => {
     for (const parc of parcs) {
       const albaCode = parc.code;
       const venueKey = VENUE_SECRET_KEYS[albaCode];
-      const startDate = await getDateDepart(supabase, parc.id);
-      const logId = await logStart(supabase, albaCode, venueKey, startDate, today);
+
+      const aDejaImporte = await hasExistingGxs(supabase, parc.id);
+      const mode: "nightly" | "rattrapage" =
+        forceBackfill || !aDejaImporte ? "rattrapage" : "nightly";
+
+      const jours = mode === "nightly"
+        ? [jHier]
+        : daysRange(jHier, BACKFILL_DAYS);
+      const startDate = jours[0];
+      const endDate = jours[jours.length - 1];
+
+      const logId = await logStart(supabase, albaCode, venueKey, startDate, endDate, mode);
 
       const clientId = Deno.env.get(`ROLLER_${venueKey}_CLIENT_ID`);
       const clientSecret = Deno.env.get(`ROLLER_${venueKey}_CLIENT_SECRET`);
 
       if (!clientId || !clientSecret) {
         const errMsg = `Secrets ROLLER_${venueKey}_CLIENT_ID/SECRET manquants`;
-        metaParParc[albaCode] = { venue_code_roller: venueKey, error: errMsg };
+        metaParParc[albaCode] = { venue_code_roller: venueKey, mode, error: errMsg };
         await logEnd(supabase, logId, {
           status: "error",
           error_message: errMsg,
@@ -208,6 +361,7 @@ Deno.serve(async (req: Request) => {
             parc_code: albaCode,
             venue_code_roller: venueKey,
             modifiedDate_envoye: startDate,
+            mode,
             error: errMsg,
           },
         });
@@ -219,7 +373,7 @@ Deno.serve(async (req: Request) => {
         token = await getAccessToken(tokenUrl, clientId, clientSecret);
       } catch (e: any) {
         const errMsg = String(e?.message ?? e).slice(0, 500);
-        metaParParc[albaCode] = { venue_code_roller: venueKey, auth_error: errMsg };
+        metaParParc[albaCode] = { venue_code_roller: venueKey, mode, auth_error: errMsg };
         await logEnd(supabase, logId, {
           status: "error",
           error_message: errMsg,
@@ -227,149 +381,88 @@ Deno.serve(async (req: Request) => {
             parc_code: albaCode,
             venue_code_roller: venueKey,
             modifiedDate_envoye: startDate,
+            mode,
             auth_error: errMsg,
           },
         });
         continue;
       }
 
-      const url = `${apiUrl}/reporting/gxs?startDate=${startDate}&endDate=${today}`;
-      const gxsRes = await fetch(url, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json;charset=UTF-8",
-        },
-      });
+      let totalReceived = 0;
+      let totalInserted = 0;
+      let totalSkipRating = 0;
+      let totalSkipKeywords = 0;
+      let totalSkipDedup = 0;
+      let totalSkipOther = 0;
+      let firstHttpError: { day: string; http_status: number; error: string } | null = null;
+      const perDay: Array<Record<string, unknown>> = [];
 
-      if (!gxsRes.ok) {
-        const detail = (await gxsRes.text()).slice(0, 300);
-        metaParParc[albaCode] = {
-          venue_code_roller: venueKey,
-          modifiedDate_envoye: startDate,
-          http_status: gxsRes.status,
-          error: detail,
-        };
-        await logEnd(supabase, logId, {
-          status: "error",
-          http_status: gxsRes.status,
-          error_message: detail,
-          meta: {
-            parc_code: albaCode,
-            venue_code_roller: venueKey,
-            modifiedDate_envoye: startDate,
-            http_status: gxsRes.status,
-            error: detail,
-          },
+      for (let i = 0; i < jours.length; i++) {
+        const day = jours[i];
+        const res = await syncOneDay(supabase, apiUrl, token, parc.id, albaCode, day);
+
+        totalReceived += res.items_received;
+        totalInserted += res.items_inserted;
+        totalSkipRating += res.skipRating;
+        totalSkipKeywords += res.skipKeywords;
+        totalSkipDedup += res.skipDedup;
+        totalSkipOther += res.skipOther;
+
+        perDay.push({
+          day,
+          http_status: res.http_status,
+          items_received: res.items_received,
+          items_inserted: res.items_inserted,
+          ...(res.error ? { error: res.error } : {}),
         });
-        continue;
+
+        if (!firstHttpError && res.http_status !== 200 && res.error) {
+          firstHttpError = {
+            day,
+            http_status: res.http_status,
+            error: res.error,
+          };
+        }
+
+        if (i < jours.length - 1) await sleep(RATE_LIMIT_DELAY_MS);
       }
 
-      const gxsData = await gxsRes.json();
-      const reponses: any[] = Array.isArray(gxsData)
-        ? gxsData
-        : gxsData.data || gxsData.results || gxsData.items || [];
-
-      let skipRating = 0;
-      let skipKeywords = 0;
-      let skipDedup = 0;
-      let skipOther = 0;
-      let inserted = 0;
-
-      for (const r of reponses) {
-        const rating = Number(
-          r.rating ?? r.overallRating ?? r.score ?? r.stars ?? 0,
-        );
-        const commentaire = String(
-          r.comment ?? r.feedback ?? r.text ?? r.verbatim ?? "",
-        );
-
-        if (rating === 0) {
-          skipOther++;
-          continue;
-        }
-
-        if (!shouldImport(commentaire, rating)) {
-          if (rating >= 4) skipRating++;
-          else skipKeywords++;
-          continue;
-        }
-
-        const rollerId = String(
-          r.id ?? r.responseId ?? r.surveyId ?? r.guestId ??
-            `gxs_${albaCode}_${r.visitDate ?? today}_${Math.random().toString(36).slice(2, 10)}`,
-        );
-
-        const { data: existing } = await supabase
-          .from("plaintes_clients")
-          .select("id")
-          .eq("source_externe_id", rollerId)
-          .limit(1);
-
-        if (existing && existing.length > 0) {
-          skipDedup++;
-          continue;
-        }
-
-        const dateVisite = r.visitDate ?? r.date ?? r.bookingDate ?? r.responseDate ?? today;
-
-        const { error: insErr } = await supabase
-          .from("plaintes_clients")
-          .insert({
-            parc_id: parc.id,
-            source: "roller_gxs",
-            source_externe_id: rollerId,
-            client_nom:
-              r.customerName ?? r.name ?? r.guestName ?? "Client anonyme",
-            client_email: r.customerEmail ?? r.email ?? r.guestEmail ?? null,
-            client_telephone:
-              r.customerPhone ?? r.phone ?? r.guestPhone ?? null,
-            date_visite: dateVisite,
-            note_globale: rating,
-            commentaire: commentaire || null,
-            categorie: "maintenance",
-            statut: "a_qualifier",
-            priorite: detecterPriorite(rating),
-            est_formation: false,
-          });
-
-        if (insErr) {
-          skipOther++;
-          console.error(`[GXS][${albaCode}] insert error:`, insErr.message);
-          continue;
-        }
-
-        inserted++;
-      }
+      const finalStatus = firstHttpError && totalReceived === 0 ? "error" : "success";
 
       const meta = {
         parc_code: albaCode,
         venue_code_roller: venueKey,
+        mode,
         modifiedDate_envoye: startDate,
-        items_recus_de_roller: reponses.length,
-        items_filtres_par_score: skipRating,
-        items_filtres_par_keywords: skipKeywords,
-        items_skipped_dedup: skipDedup,
-        items_skipped_other: skipOther,
-        items_inseres_finalement: inserted,
+        range_jours_couverts: `${startDate} -> ${endDate} (${jours.length}j)`,
+        items_recus_de_roller: totalReceived,
+        items_filtres_par_score: totalSkipRating,
+        items_filtres_par_keywords: totalSkipKeywords,
+        items_skipped_dedup: totalSkipDedup,
+        items_skipped_other: totalSkipOther,
+        items_inseres_finalement: totalInserted,
+        per_day: perDay,
+        ...(firstHttpError ? { first_http_error: firstHttpError } : {}),
       };
 
       metaParParc[albaCode] = meta;
 
       await logEnd(supabase, logId, {
-        status: "success",
-        http_status: 200,
-        items_received: reponses.length,
-        items_inserted: inserted,
-        items_skipped: skipRating + skipKeywords + skipDedup + skipOther,
+        status: finalStatus,
+        http_status: firstHttpError?.http_status ?? 200,
+        items_received: totalReceived,
+        items_inserted: totalInserted,
+        items_skipped: totalSkipRating + totalSkipKeywords + totalSkipDedup + totalSkipOther,
+        error_message: firstHttpError?.error ?? null,
         meta,
       });
 
-      totaux.total_received += reponses.length;
-      totaux.total_inserted += inserted;
-      totaux.total_skipped_dedup += skipDedup;
-      totaux.total_skipped_rating += skipRating;
-      totaux.total_skipped_keywords += skipKeywords;
-      totaux.total_skipped_other += skipOther;
+      totaux.total_received += totalReceived;
+      totaux.total_inserted += totalInserted;
+      totaux.total_skipped_dedup += totalSkipDedup;
+      totaux.total_skipped_rating += totalSkipRating;
+      totaux.total_skipped_keywords += totalSkipKeywords;
+      totaux.total_skipped_other += totalSkipOther;
     }
 
     return new Response(
