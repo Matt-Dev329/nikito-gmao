@@ -110,20 +110,50 @@ async function getDateDepart(
   return d.toISOString().split("T")[0];
 }
 
-async function logSync(
+async function logStart(
   supabase: SupabaseClient,
-  entry: Record<string, unknown>,
-): Promise<void> {
-  try {
-    await supabase.from("roller_sync_log").insert({
+  parcCode: string,
+  venueRoller: string,
+  startDate: string,
+  endDate: string,
+): Promise<string | null> {
+  const { data, error } = await supabase
+    .from("roller_sync_log")
+    .insert({
       sync_type: "gxs",
       endpoint: "/reporting/gxs",
-      finished_at: new Date().toISOString(),
-      ...entry,
-    });
-  } catch (e) {
-    console.error("[GXS] log insert error:", e);
+      venue_code: parcCode,
+      start_date: startDate,
+      end_date: endDate,
+      started_at: new Date().toISOString(),
+      status: "running",
+      meta: {
+        parc_code: parcCode,
+        venue_code_roller: venueRoller,
+        modifiedDate_envoye: startDate,
+      },
+    })
+    .select("id")
+    .maybeSingle();
+
+  if (error) {
+    console.error(`[GXS][${parcCode}] logStart error:`, error.message);
+    return null;
   }
+  return data?.id ?? null;
+}
+
+async function logEnd(
+  supabase: SupabaseClient,
+  logId: string | null,
+  patch: Record<string, unknown>,
+): Promise<void> {
+  if (!logId) return;
+  const { error } = await supabase
+    .from("roller_sync_log")
+    .update({ ...patch, finished_at: new Date().toISOString() })
+    .eq("id", logId);
+  if (error) console.error("[GXS] logEnd error:", error.message);
 }
 
 Deno.serve(async (req: Request) => {
@@ -131,7 +161,6 @@ Deno.serve(async (req: Request) => {
     return new Response(null, { status: 200, headers: corsHeaders });
   }
 
-  const startedAt = new Date().toISOString();
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
   const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
   const supabase = createClient(supabaseUrl, supabaseKey);
@@ -145,14 +174,7 @@ Deno.serve(async (req: Request) => {
       .select("id, code")
       .in("code", Object.keys(VENUE_SECRET_KEYS));
 
-    if (parcsErr || !parcs) {
-      await logSync(supabase, {
-        started_at: startedAt,
-        status: "error",
-        error_message: `Parcs load failed: ${parcsErr?.message}`,
-      });
-      throw parcsErr ?? new Error("Parcs vides");
-    }
+    if (parcsErr || !parcs) throw parcsErr ?? new Error("Parcs vides");
 
     const today = new Date().toISOString().split("T")[0];
 
@@ -170,14 +192,25 @@ Deno.serve(async (req: Request) => {
     for (const parc of parcs) {
       const albaCode = parc.code;
       const venueKey = VENUE_SECRET_KEYS[albaCode];
+      const startDate = await getDateDepart(supabase, parc.id);
+      const logId = await logStart(supabase, albaCode, venueKey, startDate, today);
+
       const clientId = Deno.env.get(`ROLLER_${venueKey}_CLIENT_ID`);
       const clientSecret = Deno.env.get(`ROLLER_${venueKey}_CLIENT_SECRET`);
 
       if (!clientId || !clientSecret) {
-        metaParParc[albaCode] = {
-          venue_key: venueKey,
-          error: `Secrets ROLLER_${venueKey}_CLIENT_ID/SECRET manquants`,
-        };
+        const errMsg = `Secrets ROLLER_${venueKey}_CLIENT_ID/SECRET manquants`;
+        metaParParc[albaCode] = { venue_code_roller: venueKey, error: errMsg };
+        await logEnd(supabase, logId, {
+          status: "error",
+          error_message: errMsg,
+          meta: {
+            parc_code: albaCode,
+            venue_code_roller: venueKey,
+            modifiedDate_envoye: startDate,
+            error: errMsg,
+          },
+        });
         continue;
       }
 
@@ -185,14 +218,21 @@ Deno.serve(async (req: Request) => {
       try {
         token = await getAccessToken(tokenUrl, clientId, clientSecret);
       } catch (e: any) {
-        metaParParc[albaCode] = {
-          venue_key: venueKey,
-          auth_error: String(e?.message ?? e).slice(0, 300),
-        };
+        const errMsg = String(e?.message ?? e).slice(0, 500);
+        metaParParc[albaCode] = { venue_code_roller: venueKey, auth_error: errMsg };
+        await logEnd(supabase, logId, {
+          status: "error",
+          error_message: errMsg,
+          meta: {
+            parc_code: albaCode,
+            venue_code_roller: venueKey,
+            modifiedDate_envoye: startDate,
+            auth_error: errMsg,
+          },
+        });
         continue;
       }
 
-      const startDate = await getDateDepart(supabase, parc.id);
       const url = `${apiUrl}/reporting/gxs?startDate=${startDate}&endDate=${today}`;
       const gxsRes = await fetch(url, {
         headers: {
@@ -202,13 +242,25 @@ Deno.serve(async (req: Request) => {
       });
 
       if (!gxsRes.ok) {
+        const detail = (await gxsRes.text()).slice(0, 300);
         metaParParc[albaCode] = {
-          venue_key: venueKey,
-          startDate,
-          endDate: today,
+          venue_code_roller: venueKey,
+          modifiedDate_envoye: startDate,
           http_status: gxsRes.status,
-          error: (await gxsRes.text()).slice(0, 300),
+          error: detail,
         };
+        await logEnd(supabase, logId, {
+          status: "error",
+          http_status: gxsRes.status,
+          error_message: detail,
+          meta: {
+            parc_code: albaCode,
+            venue_code_roller: venueKey,
+            modifiedDate_envoye: startDate,
+            http_status: gxsRes.status,
+            error: detail,
+          },
+        });
         continue;
       }
 
@@ -289,17 +341,28 @@ Deno.serve(async (req: Request) => {
         inserted++;
       }
 
-      metaParParc[albaCode] = {
-        venue_key: venueKey,
-        startDate,
-        endDate: today,
-        items_received: reponses.length,
-        items_skipped_rating: skipRating,
-        items_skipped_keywords: skipKeywords,
+      const meta = {
+        parc_code: albaCode,
+        venue_code_roller: venueKey,
+        modifiedDate_envoye: startDate,
+        items_recus_de_roller: reponses.length,
+        items_filtres_par_score: skipRating,
+        items_filtres_par_keywords: skipKeywords,
         items_skipped_dedup: skipDedup,
         items_skipped_other: skipOther,
-        items_inserted: inserted,
+        items_inseres_finalement: inserted,
       };
+
+      metaParParc[albaCode] = meta;
+
+      await logEnd(supabase, logId, {
+        status: "success",
+        http_status: 200,
+        items_received: reponses.length,
+        items_inserted: inserted,
+        items_skipped: skipRating + skipKeywords + skipDedup + skipOther,
+        meta,
+      });
 
       totaux.total_received += reponses.length;
       totaux.total_inserted += inserted;
@@ -308,17 +371,6 @@ Deno.serve(async (req: Request) => {
       totaux.total_skipped_keywords += skipKeywords;
       totaux.total_skipped_other += skipOther;
     }
-
-    await logSync(supabase, {
-      started_at: startedAt,
-      status: "success",
-      http_status: 200,
-      items_received: totaux.total_received,
-      items_inserted: totaux.total_inserted,
-      items_skipped: totaux.total_skipped_dedup + totaux.total_skipped_rating +
-        totaux.total_skipped_keywords + totaux.total_skipped_other,
-      meta: { par_parc: metaParParc, totaux },
-    });
 
     return new Response(
       JSON.stringify({
@@ -330,11 +382,6 @@ Deno.serve(async (req: Request) => {
     );
   } catch (err: any) {
     console.error("[GXS] Error:", err);
-    await logSync(supabase, {
-      started_at: startedAt,
-      status: "error",
-      error_message: String(err?.message ?? err).slice(0, 500),
-    });
     return new Response(JSON.stringify({ error: err.message }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
