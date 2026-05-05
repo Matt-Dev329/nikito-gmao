@@ -8,6 +8,13 @@ const corsHeaders = {
     "Content-Type, Authorization, X-Client-Info, Apikey",
 };
 
+const VENUE_SECRET_KEYS: Record<string, string> = {
+  ALF: "ALF",
+  FRA: "FRA",
+  SGB: "SGB",
+  DOM: "ROSNY",
+};
+
 const MOTS_PROBLEME = [
   "casse", "cassee", "casser",
   "panne", "en panne", "hors service", "hs",
@@ -63,29 +70,21 @@ function detecterPriorite(rating: number): string {
   return "normale";
 }
 
-const ALBA_TO_ROLLER: Record<string, string> = {
-  ALF: "ALF",
-  FRA: "FRA",
-  SGB: "SGB",
-  DOM: "ROSNY",
-};
-
-const ROLLER_TO_ALBA: Record<string, string> = {
-  ALF: "ALF",
-  FRA: "FRA",
-  SGB: "SGB",
-  ROSNY: "DOM",
-};
-
-function detecterParcAlba(venueCodeOrName: string): string | null {
-  const v = venueCodeOrName.toUpperCase().trim();
-  if (ROLLER_TO_ALBA[v]) return ROLLER_TO_ALBA[v];
-  const low = v.toLowerCase();
-  if (low.includes("alfortville")) return "ALF";
-  if (low.includes("franconville")) return "FRA";
-  if (low.includes("genevieve") || low.includes("ste ge") || low.includes("sainte-ge")) return "SGB";
-  if (low.includes("rosny") || low.includes("domus")) return "DOM";
-  return null;
+async function getAccessToken(
+  tokenUrl: string,
+  clientId: string,
+  clientSecret: string,
+): Promise<string> {
+  const res = await fetch(tokenUrl, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ client_id: clientId, client_secret: clientSecret }),
+  });
+  if (!res.ok) {
+    const detail = await res.text();
+    throw new Error(`Auth Roller echouee (${res.status}): ${detail.slice(0, 300)}`);
+  }
+  return (await res.json()).access_token;
 }
 
 async function getDateDepart(
@@ -119,7 +118,6 @@ async function logSync(
     await supabase.from("roller_sync_log").insert({
       sync_type: "gxs",
       endpoint: "/reporting/gxs",
-      started_at: entry.started_at,
       finished_at: new Date().toISOString(),
       ...entry,
     });
@@ -139,54 +137,13 @@ Deno.serve(async (req: Request) => {
   const supabase = createClient(supabaseUrl, supabaseKey);
 
   try {
-    const clientId = Deno.env.get("ROLLER_CLIENT_ID");
-    const clientSecret = Deno.env.get("ROLLER_CLIENT_SECRET");
     const apiUrl = Deno.env.get("ROLLER_API_URL") || "https://api.roller.app";
-
-    if (!clientId || !clientSecret) {
-      return new Response(
-        JSON.stringify({
-          error: "Secrets ROLLER_CLIENT_ID et ROLLER_CLIENT_SECRET manquants",
-        }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
-      );
-    }
-
-    const tokenRes = await fetch(`${apiUrl}/token`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        client_id: clientId,
-        client_secret: clientSecret,
-      }),
-    });
-
-    if (!tokenRes.ok) {
-      const detail = await tokenRes.text();
-      await logSync(supabase, {
-        started_at: startedAt,
-        status: "error",
-        http_status: tokenRes.status,
-        error_message: `Auth Roller echouee: ${detail.slice(0, 500)}`,
-      });
-      return new Response(
-        JSON.stringify({ error: "Auth Roller echouee", detail }),
-        {
-          status: 401,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
-      );
-    }
-
-    const token = (await tokenRes.json()).access_token;
+    const tokenUrl = Deno.env.get("ROLLER_TOKEN_URL") || `${apiUrl}/token`;
 
     const { data: parcs, error: parcsErr } = await supabase
       .from("parcs")
       .select("id, code")
-      .in("code", ["ALF", "FRA", "SGB", "DOM"]);
+      .in("code", Object.keys(VENUE_SECRET_KEYS));
 
     if (parcsErr || !parcs) {
       await logSync(supabase, {
@@ -197,7 +154,6 @@ Deno.serve(async (req: Request) => {
       throw parcsErr ?? new Error("Parcs vides");
     }
 
-    const parcByCode = new Map(parcs.map((p) => [p.code, p.id]));
     const today = new Date().toISOString().split("T")[0];
 
     const totaux = {
@@ -211,12 +167,33 @@ Deno.serve(async (req: Request) => {
 
     const metaParParc: Record<string, Record<string, unknown>> = {};
 
-    for (const [albaCode, parcId] of parcByCode) {
-      const rollerVenue = ALBA_TO_ROLLER[albaCode] ?? albaCode;
-      const startDate = await getDateDepart(supabase, parcId);
+    for (const parc of parcs) {
+      const albaCode = parc.code;
+      const venueKey = VENUE_SECRET_KEYS[albaCode];
+      const clientId = Deno.env.get(`ROLLER_${venueKey}_CLIENT_ID`);
+      const clientSecret = Deno.env.get(`ROLLER_${venueKey}_CLIENT_SECRET`);
 
-      const url =
-        `${apiUrl}/reporting/gxs?startDate=${startDate}&endDate=${today}&venueCode=${rollerVenue}`;
+      if (!clientId || !clientSecret) {
+        metaParParc[albaCode] = {
+          venue_key: venueKey,
+          error: `Secrets ROLLER_${venueKey}_CLIENT_ID/SECRET manquants`,
+        };
+        continue;
+      }
+
+      let token: string;
+      try {
+        token = await getAccessToken(tokenUrl, clientId, clientSecret);
+      } catch (e: any) {
+        metaParParc[albaCode] = {
+          venue_key: venueKey,
+          auth_error: String(e?.message ?? e).slice(0, 300),
+        };
+        continue;
+      }
+
+      const startDate = await getDateDepart(supabase, parc.id);
+      const url = `${apiUrl}/reporting/gxs?startDate=${startDate}&endDate=${today}`;
       const gxsRes = await fetch(url, {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -226,7 +203,7 @@ Deno.serve(async (req: Request) => {
 
       if (!gxsRes.ok) {
         metaParParc[albaCode] = {
-          venue_envoye: rollerVenue,
+          venue_key: venueKey,
           startDate,
           endDate: today,
           http_status: gxsRes.status,
@@ -286,7 +263,7 @@ Deno.serve(async (req: Request) => {
         const { error: insErr } = await supabase
           .from("plaintes_clients")
           .insert({
-            parc_id: parcId,
+            parc_id: parc.id,
             source: "roller_gxs",
             source_externe_id: rollerId,
             client_nom:
@@ -313,7 +290,7 @@ Deno.serve(async (req: Request) => {
       }
 
       metaParParc[albaCode] = {
-        venue_envoye: rollerVenue,
+        venue_key: venueKey,
         startDate,
         endDate: today,
         items_received: reponses.length,
