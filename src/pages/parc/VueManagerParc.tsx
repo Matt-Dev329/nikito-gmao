@@ -37,14 +37,15 @@ export function VueManagerParc() {
           .from('equipements')
           .select('statut')
           .eq('parc_id', parcId)
-          .eq('est_formation', estFormation),
+          .eq('est_formation', estFormation)
+          .range(0, 4999),
         supabase
           .from('incidents')
           .select('id')
           .eq('statut', 'ouvert')
           .eq('est_formation', estFormation)
           .in('equipement_id',
-            (await supabase.from('equipements').select('id').eq('parc_id', parcId).eq('est_formation', estFormation)).data?.map((e) => e.id) ?? []
+            (await supabase.from('equipements').select('id').eq('parc_id', parcId).eq('est_formation', estFormation).range(0, 4999)).data?.map((e) => e.id) ?? []
           ),
         supabase
           .from('controles')

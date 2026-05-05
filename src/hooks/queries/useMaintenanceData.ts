@@ -20,7 +20,8 @@ async function fetchMaintenanceData(estFormation: boolean): Promise<MaintenanceD
       .from('equipements')
       .select('id, code, libelle, parc_id, statut, date_mise_service, date_fin_garantie, a_surveiller, parcs(code, nom)')
       .neq('statut', 'archive')
-      .eq('est_formation', estFormation),
+      .eq('est_formation', estFormation)
+      .range(0, 4999),
     supabase
       .from('incidents')
       .select('id, equipement_id, declare_le, statut')

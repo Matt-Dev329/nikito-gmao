@@ -473,6 +473,7 @@ function EtapeCategorie({
       .select('categorie_id, categories_equipement!inner(id, nom, criticite_defaut)')
       .eq('parc_id', parcId)
       .eq('statut', 'actif')
+      .range(0, 4999)
       .then(({ data }) => {
         if (!data) { setLoading(false); return; }
         const map = new Map<string, Categorie>();
@@ -559,6 +560,7 @@ function EtapeEquipement({
       .eq('categorie_id', categorie.id)
       .eq('statut', 'actif')
       .order('code')
+      .range(0, 4999)
       .then(({ data }) => {
         if (data) {
           setEquipements(data.map((e: any) => ({
