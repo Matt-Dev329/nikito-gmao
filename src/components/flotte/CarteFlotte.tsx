@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import L from 'leaflet';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -6,16 +6,10 @@ import { cn } from '@/lib/utils';
 import {
   type VehiculeAvecPosition,
   getStatutVehicule,
+  useParcs,
 } from '@/hooks/queries/useFlotte';
 
-const PARCS = [
-  { code: 'ALF', nom: 'Nikito Alfortville', lat: 48.8049, lng: 2.4212 },
-  { code: 'DOM', nom: 'Nikito Domaine (Rosny)', lat: 48.8709, lng: 2.4866 },
-  { code: 'FRA', nom: 'Nikito Franconville', lat: 48.9892, lng: 2.2288 },
-  { code: 'SGB', nom: 'Nikito Saint-Germain-en-Laye', lat: 48.6349, lng: 2.3327 },
-];
-
-const CENTER: [number, number] = [48.85, 2.35];
+const FALLBACK_CENTER: [number, number] = [48.85, 2.35];
 const DEFAULT_ZOOM = 10;
 
 const statutColors: Record<string, string> = {
@@ -98,11 +92,24 @@ interface Props {
 
 export function CarteFlotte({ vehicules, vehiculeFocus, onSelectVehicule, onDetailVehicule }: Props) {
   const parcIcon = useRef(createParcIcon());
+  const { data: parcs } = useParcs();
+
+  const parcsAvecCoords = useMemo(
+    () => (parcs ?? []).filter((p) => p.latitude != null && p.longitude != null),
+    [parcs],
+  );
+
+  const center = useMemo<[number, number]>(() => {
+    if (parcsAvecCoords.length === 0) return FALLBACK_CENTER;
+    const sumLat = parcsAvecCoords.reduce((s, p) => s + (p.latitude ?? 0), 0);
+    const sumLng = parcsAvecCoords.reduce((s, p) => s + (p.longitude ?? 0), 0);
+    return [sumLat / parcsAvecCoords.length, sumLng / parcsAvecCoords.length];
+  }, [parcsAvecCoords]);
 
   return (
     <div className="w-full h-full relative rounded-xl overflow-hidden border border-white/[0.06]">
       <MapContainer
-        center={CENTER}
+        center={center}
         zoom={DEFAULT_ZOOM}
         className="w-full h-full z-0"
         style={{ background: '#0B0B2E' }}
@@ -114,12 +121,16 @@ export function CarteFlotte({ vehicules, vehiculeFocus, onSelectVehicule, onDeta
         />
         <RecenterMap vehiculeId={vehiculeFocus} vehicules={vehicules} />
 
-        {PARCS.map((p) => (
-          <Marker key={p.code} position={[p.lat, p.lng]} icon={parcIcon.current}>
+        {parcsAvecCoords.map((p) => (
+          <Marker
+            key={p.id}
+            position={[p.latitude as number, p.longitude as number]}
+            icon={parcIcon.current}
+          >
             <Popup className="leaflet-popup-dark">
               <div className="text-[12px]">
                 <div className="font-semibold">{p.nom}</div>
-                <div className="text-gray-400 text-[11px]">{p.code}</div>
+                <div className="text-gray-400 text-[11px]">{p.code}{p.ville ? ` - ${p.ville}` : ''}</div>
               </div>
             </Popup>
           </Marker>

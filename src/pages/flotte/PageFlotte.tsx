@@ -18,6 +18,7 @@ const filtresStatut: { value: FiltreStatutVehicule; label: string }[] = [
   { value: 'en_route', label: 'En route' },
   { value: 'stationne', label: 'Stationne' },
   { value: 'hors_service', label: 'HS' },
+  { value: 'sans_tracker', label: 'Sans tracker' },
 ];
 
 export function PageFlotte() {
@@ -31,13 +32,22 @@ export function PageFlotte() {
   const { data: vehicules, isLoading } = useVehiculesAvecPositions();
   const formationActive = useFormation((s) => s.active);
 
-  const vehiculeVeh02 = vehicules.find((v) => v.code === 'VEH-02');
+  const vehiculeSimulation = useMemo(() => {
+    if (vehiculeFocus) {
+      const v = vehicules.find((x) => x.id === vehiculeFocus);
+      if (v && v.statut === 'actif') return v;
+    }
+    return vehicules.find((v) => v.statut === 'actif');
+  }, [vehicules, vehiculeFocus]);
 
   const vehiculesFiltres = useMemo(() => {
     let result = vehicules;
 
     if (filtre !== 'tous') {
       result = result.filter((v) => {
+        if (filtre === 'sans_tracker') {
+          return !v.tracker_type || v.tracker_type === 'aucun';
+        }
         const s = getStatutVehicule(v.derniere_position, v);
         if (filtre === 'en_route') return s === 'en_route';
         if (filtre === 'stationne') return s === 'stationne' || s === 'attention';
@@ -135,7 +145,7 @@ export function PageFlotte() {
         </button>
 
         {formationActive && (
-          <SimulationTrajet vehiculeId={vehiculeVeh02?.id} />
+          <SimulationTrajet vehiculeId={vehiculeSimulation?.id} />
         )}
       </div>
 

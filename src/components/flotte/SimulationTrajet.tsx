@@ -3,14 +3,14 @@ import { cn } from '@/lib/utils';
 import { useInsererPosition } from '@/hooks/queries/useFlotte';
 
 const TRAJET = [
-  { lat: 48.8709, lng: 2.4866, speed: 0, addr: 'Depart DOM' },
-  { lat: 48.878, lng: 2.47, speed: 45, addr: 'A86 Est' },
-  { lat: 48.89, lng: 2.44, speed: 60, addr: 'A86 - Bobigny' },
-  { lat: 48.91, lng: 2.39, speed: 70, addr: 'A1 Nord' },
-  { lat: 48.93, lng: 2.35, speed: 65, addr: 'A1 - Saint-Denis' },
-  { lat: 48.95, lng: 2.31, speed: 55, addr: 'A15 Ouest' },
-  { lat: 48.97, lng: 2.27, speed: 40, addr: 'Approche Franconville' },
-  { lat: 48.9892, lng: 2.2288, speed: 0, addr: 'Arrivee FRA' },
+  { lat: 48.8665, lng: 2.4869, speed: 0, addr: 'Depart DOM - Rosny-sous-Bois' },
+  { lat: 48.8891, lng: 2.4512, speed: 55, addr: 'A86 - Bobigny / Drancy' },
+  { lat: 48.9215, lng: 2.4038, speed: 75, addr: 'A86 - Stains' },
+  { lat: 48.9358, lng: 2.3472, speed: 90, addr: 'A1 - Saint-Denis Universite' },
+  { lat: 48.9547, lng: 2.3032, speed: 95, addr: 'A15 - Argenteuil' },
+  { lat: 48.9702, lng: 2.2651, speed: 80, addr: 'A15 - Sannois / Ermont' },
+  { lat: 48.9823, lng: 2.2421, speed: 50, addr: 'Sortie Franconville' },
+  { lat: 48.9876, lng: 2.2298, speed: 0, addr: 'Arrivee FRA - Nikito Franconville' },
 ];
 
 interface Props {

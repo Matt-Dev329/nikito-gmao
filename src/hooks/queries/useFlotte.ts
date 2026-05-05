@@ -41,7 +41,28 @@ export interface VehiculeAvecPosition extends Vehicule {
   derniere_position: VehiculePosition | null;
 }
 
-export type FiltreStatutVehicule = 'tous' | 'en_route' | 'stationne' | 'hors_service';
+export interface Parc {
+  id: string;
+  code: string;
+  nom: string;
+  ville: string | null;
+  latitude: number | null;
+  longitude: number | null;
+}
+
+export interface UtilisateurAssignable {
+  id: string;
+  prenom: string;
+  nom: string;
+  role_code: string;
+}
+
+export type FiltreStatutVehicule =
+  | 'tous'
+  | 'en_route'
+  | 'stationne'
+  | 'hors_service'
+  | 'sans_tracker';
 
 export function useVehicules() {
   return useQuery({
@@ -83,26 +104,12 @@ export function useDernieresPositions() {
   return useQuery({
     queryKey: ['vehicules-positions-latest'],
     queryFn: async (): Promise<VehiculePosition[]> => {
-      const { data: vehicules } = await supabase
-        .from('vehicules')
-        .select('id');
+      const { data, error } = await supabase
+        .from('v_vehicules_dernieres_positions')
+        .select('*');
 
-      if (!vehicules || vehicules.length === 0) return [];
-
-      const results: VehiculePosition[] = [];
-      for (const v of vehicules) {
-        const { data } = await supabase
-          .from('vehicules_positions')
-          .select('*')
-          .eq('vehicule_id', v.id)
-          .order('enregistre_le', { ascending: false })
-          .limit(1)
-          .maybeSingle();
-
-        if (data) results.push(data as VehiculePosition);
-      }
-
-      return results;
+      if (error) throw error;
+      return (data ?? []) as VehiculePosition[];
     },
     staleTime: 15_000,
     refetchInterval: 30_000,
@@ -128,21 +135,63 @@ export function useHistoriquePositions(vehiculeId: string | undefined, limit = 5
   });
 }
 
+export function useParcs() {
+  return useQuery({
+    queryKey: ['parcs-flotte'],
+    queryFn: async (): Promise<Parc[]> => {
+      const { data, error } = await supabase
+        .from('parcs')
+        .select('id, code, nom, ville, latitude, longitude')
+        .eq('actif', true)
+        .order('code', { ascending: true });
+
+      if (error) throw error;
+      return (data ?? []) as Parc[];
+    },
+    staleTime: 5 * 60_000,
+  });
+}
+
+export function useUtilisateursAssignables() {
+  return useQuery({
+    queryKey: ['utilisateurs-assignables-flotte'],
+    queryFn: async (): Promise<UtilisateurAssignable[]> => {
+      const { data, error } = await supabase
+        .from('utilisateurs')
+        .select('id, prenom, nom, roles!inner(code)')
+        .eq('actif', true)
+        .in('roles.code', ['technicien', 'chef_maintenance', 'direction'])
+        .order('prenom', { ascending: true });
+
+      if (error) throw error;
+      return (data ?? []).map((u) => {
+        const rec = u as unknown as { id: string; prenom: string; nom: string; roles: { code: string } };
+        return { id: rec.id, prenom: rec.prenom, nom: rec.nom, role_code: rec.roles.code };
+      });
+    },
+    staleTime: 5 * 60_000,
+  });
+}
+
+export interface AjouterVehiculePayload {
+  code: string;
+  libelle: string;
+  immatriculation?: string;
+  marque?: string;
+  modele?: string;
+  parc_id?: string;
+  assigne_a_id?: string;
+  tracker_type?: 'gemstone' | 'autre' | 'aucun';
+  tracker_id?: string;
+  statut?: 'actif' | 'maintenance';
+  photo_url?: string;
+}
+
 export function useAjouterVehicule() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (payload: {
-      code: string;
-      libelle: string;
-      immatriculation?: string;
-      marque?: string;
-      modele?: string;
-      parc_id?: string;
-      assigne_a_id?: string;
-      tracker_id?: string;
-      photo_url?: string;
-    }) => {
+    mutationFn: async (payload: AjouterVehiculePayload) => {
       const { data, error } = await supabase
         .from('vehicules')
         .insert(payload)
