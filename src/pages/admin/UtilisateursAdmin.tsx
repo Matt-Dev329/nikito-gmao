@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils';
 import { ModaleInviterUtilisateur } from '@/components/admin/ModaleInviterUtilisateur';
 import { ModaleEditerUtilisateur } from '@/components/admin/ModaleEditerUtilisateur';
 import { useAuth } from '@/hooks/useAuth';
-import { useViewAs } from '@/hooks/useViewAs';
+import { useViewAs, useEffectiveRole } from '@/hooks/useViewAs';
 import { roleLabels } from '@/lib/tokens';
 import { useParcs } from '@/hooks/queries/useReferentiel';
 import { SignalerInlineButton } from '@/components/shared/SignalerInlineButton';
@@ -35,15 +35,16 @@ const roleBadgeColors: Record<RoleUtilisateur, string> = {
 
 export function UtilisateursAdmin() {
   const { utilisateur } = useAuth();
+  const effectiveRole = useEffectiveRole(utilisateur?.role_code ?? 'staff_operationnel');
   const [tab, setTab] = useState<Tab>('actifs');
   const [modaleOuverte, setModaleOuverte] = useState(false);
   const { data: compteurs } = useCompteursRoles();
   const { data: aValider } = useUtilisateursAValider();
 
   const peutInviter =
-    utilisateur?.role_code === 'direction' ||
-    utilisateur?.role_code === 'chef_maintenance' ||
-    utilisateur?.role_code === 'manager_parc';
+    effectiveRole === 'direction' ||
+    effectiveRole === 'chef_maintenance' ||
+    effectiveRole === 'manager_parc';
 
   const nbAValider = aValider?.length ?? 0;
 
@@ -106,7 +107,7 @@ export function UtilisateursAdmin() {
       <ModaleInviterUtilisateur
         open={modaleOuverte}
         onClose={() => setModaleOuverte(false)}
-        roleInviteur={utilisateur?.role_code ?? 'direction'}
+        roleInviteur={effectiveRole}
         parcsInviteur={utilisateur?.parc_ids ?? []}
       />
     </div>
@@ -292,14 +293,15 @@ const roleHomePage: Record<RoleUtilisateur, string> = {
 
 function ListeActifs() {
   const { utilisateur } = useAuth();
+  const effectiveRole = useEffectiveRole(utilisateur?.role_code ?? 'staff_operationnel');
   const { data, isLoading } = useUtilisateursActifs();
   const { data: parcs } = useParcs();
   const supprimerMutation = useSupprimerUtilisateur();
   const { activate } = useViewAs();
   const navigate = useNavigate();
-  const isDirection = utilisateur?.role_code === 'direction' || utilisateur?.role_code === 'admin_it';
-  const isManager = utilisateur?.role_code === 'manager_parc';
-  const canEdit = isDirection || utilisateur?.role_code === 'chef_maintenance';
+  const isDirection = effectiveRole === 'direction' || effectiveRole === 'admin_it';
+  const isManager = effectiveRole === 'manager_parc';
+  const canEdit = isDirection || effectiveRole === 'chef_maintenance';
   const canViewAs = canEdit;
   const [editUser, setEditUser] = useState<UtilisateurRow | null>(null);
 
@@ -360,8 +362,9 @@ function ListeActifs() {
 
 function ListeAValider() {
   const { utilisateur } = useAuth();
+  const effectiveRole = useEffectiveRole(utilisateur?.role_code ?? 'staff_operationnel');
   const { data, isLoading } = useUtilisateursAValider();
-  const canEdit = utilisateur?.role_code === 'direction' || utilisateur?.role_code === 'chef_maintenance' || utilisateur?.role_code === 'admin_it';
+  const canEdit = effectiveRole === 'direction' || effectiveRole === 'chef_maintenance' || effectiveRole === 'admin_it';
   const [editUser, setEditUser] = useState<UtilisateurRow | null>(null);
 
   if (isLoading) return <div className="text-dim text-sm text-center py-8">Chargement...</div>;
@@ -398,10 +401,11 @@ function ListeAValider() {
 
 function ListeDesactives() {
   const { utilisateur } = useAuth();
+  const effectiveRole = useEffectiveRole(utilisateur?.role_code ?? 'staff_operationnel');
   const { data, isLoading } = useUtilisateursDesactives();
   const reactiverMutation = useReactiverUtilisateur();
-  const isDirection = utilisateur?.role_code === 'direction' || utilisateur?.role_code === 'admin_it';
-  const canEdit = isDirection || utilisateur?.role_code === 'chef_maintenance';
+  const isDirection = effectiveRole === 'direction' || effectiveRole === 'admin_it';
+  const canEdit = isDirection || effectiveRole === 'chef_maintenance';
   const [editUser, setEditUser] = useState<UtilisateurRow | null>(null);
 
   if (isLoading) return <div className="text-dim text-sm text-center py-8">Chargement...</div>;
