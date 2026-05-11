@@ -298,6 +298,7 @@ function ListeActifs() {
   const { activate } = useViewAs();
   const navigate = useNavigate();
   const isDirection = utilisateur?.role_code === 'direction' || utilisateur?.role_code === 'admin_it';
+  const isManager = utilisateur?.role_code === 'manager_parc';
   const canEdit = isDirection || utilisateur?.role_code === 'chef_maintenance';
   const canViewAs = canEdit;
   const [editUser, setEditUser] = useState<UtilisateurRow | null>(null);
@@ -306,6 +307,13 @@ function ListeActifs() {
   if (!data || data.length === 0) return <EmptyState text="Aucun utilisateur actif." />;
 
   const parcMap = new Map((parcs ?? []).map((p) => [p.id, p]));
+
+  const peutSupprimer = (u: UtilisateurRow) => {
+    if (u.id === utilisateur?.id) return false;
+    if (isDirection) return true;
+    if (isManager) return u.role_code === 'staff_operationnel';
+    return false;
+  };
 
   const supprimer = (id: string, nom: string) => {
     if (confirm(`Desactiver le compte de ${nom} ?`)) {
@@ -334,7 +342,7 @@ function ListeActifs() {
             user={u}
             onViewAs={canViewAs && u.id !== utilisateur?.id ? () => handleViewAs(u) : undefined}
             onEditer={canEdit && u.id !== utilisateur?.id ? () => setEditUser(u) : undefined}
-            onSupprimer={isDirection && u.id !== utilisateur?.id ? () => supprimer(u.id, `${u.prenom} ${u.nom}`) : undefined}
+            onSupprimer={peutSupprimer(u) ? () => supprimer(u.id, `${u.prenom} ${u.nom}`) : undefined}
             supprimant={supprimerMutation.isPending}
           />
         ))}
