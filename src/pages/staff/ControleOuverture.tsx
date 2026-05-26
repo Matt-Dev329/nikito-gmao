@@ -17,12 +17,34 @@ function formatDuree(sec: number): string {
   return `${m}min`;
 }
 
+function loadStaffSession(): { utilisateur: { id: string; prenom: string; nom: string; trigramme: string | null; role_code: string; pin_must_change: boolean }; parc: { id: string; code: string; nom: string } } | null {
+  try {
+    const raw = sessionStorage.getItem('staff_session');
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch { return null; }
+}
+
 export function ControleOuverture() {
   const navigate = useNavigate();
-  const { utilisateur } = useAuth();
+  const { utilisateur: authUtilisateur } = useAuth();
   const { data: allParcs } = useParcs();
 
-  const [parcChoisi, setParcChoisi] = useState<{ id: string; code: string; nom: string } | null>(null);
+  const staffSession = loadStaffSession();
+  const utilisateur = authUtilisateur ?? (staffSession ? {
+    id: staffSession.utilisateur.id,
+    email: '',
+    nom: staffSession.utilisateur.nom,
+    prenom: staffSession.utilisateur.prenom,
+    trigramme: staffSession.utilisateur.trigramme,
+    role_code: (staffSession.utilisateur.role_code || 'staff_operationnel') as 'staff_operationnel',
+    parc_ids: [staffSession.parc.id],
+    consentement_gps: false,
+  } : null);
+
+  const [parcChoisi, setParcChoisi] = useState<{ id: string; code: string; nom: string } | null>(
+    staffSession?.parc ?? null
+  );
 
   const handleSelectParc = useCallback((p: { id: string; code: string; nom: string }) => {
     setParcChoisi(p);
