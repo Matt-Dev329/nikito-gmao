@@ -193,7 +193,7 @@ export function ControleOuverture() {
   const restants = totalPoints - totalFaits;
 
   const handleValider = async () => {
-    if (!parcId || !utilisateur || !pointsBruts) return;
+    if (!parcId || !utilisateur || !utilisateur.id || !pointsBruts) return;
     setErreurValidation(null);
 
     const datePlanifiee = new Date().toISOString().slice(0, 10);
