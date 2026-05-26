@@ -19,12 +19,29 @@ function formatDuree(sec: number): string {
   return `${m}min`;
 }
 
-function loadStaffSession(): { utilisateur: { id: string; prenom: string; nom: string; trigramme: string | null; role_code: string; pin_must_change: boolean }; parc: { id: string; code: string; nom: string } } | null {
+interface StaffSessionData {
+  utilisateur: {
+    utilisateur_id?: string;
+    id?: string;
+    prenom: string;
+    nom: string;
+    trigramme: string | null;
+    role_code: string;
+    pin_must_change: boolean;
+  };
+  parc: { id: string; code: string; nom: string };
+}
+
+function loadStaffSession(): StaffSessionData | null {
   try {
     const raw = sessionStorage.getItem('staff_session');
     if (!raw) return null;
     return JSON.parse(raw);
   } catch { return null; }
+}
+
+function getStaffUserId(u: StaffSessionData['utilisateur']): string {
+  return u.utilisateur_id ?? u.id ?? '';
 }
 
 export function ControleOuverture() {
@@ -34,7 +51,7 @@ export function ControleOuverture() {
 
   const staffSession = loadStaffSession();
   const utilisateur = authUtilisateur ?? (staffSession ? {
-    id: staffSession.utilisateur.id,
+    id: getStaffUserId(staffSession.utilisateur),
     email: '',
     nom: staffSession.utilisateur.nom,
     prenom: staffSession.utilisateur.prenom,
@@ -106,6 +123,7 @@ export function ControleOuverture() {
   const [showModale, setShowModale] = useState(false);
   const [showSignaler, setShowSignaler] = useState(false);
   const [validated, setValidated] = useState(false);
+  const [erreurValidation, setErreurValidation] = useState<string | null>(null);
 
   const zones: ZoneVue[] = useMemo(() => {
     if (!pointsBruts?.length) return [];
@@ -176,6 +194,7 @@ export function ControleOuverture() {
 
   const handleValider = async () => {
     if (!parcId || !utilisateur || !pointsBruts) return;
+    setErreurValidation(null);
 
     const datePlanifiee = new Date().toISOString().slice(0, 10);
 
@@ -187,17 +206,21 @@ export function ControleOuverture() {
         photo_url: photoUrls[p.point_id] ?? null,
       }));
 
-    await validerMutation.mutateAsync({
-      parc_id: parcId,
-      type: 'quotidien',
-      date_planifiee: datePlanifiee,
-      realise_par_id: utilisateur.id,
-      realise_par_nom: `${utilisateur.prenom} ${utilisateur.nom}`,
-      realise_par_role: utilisateur.role_code,
-      items,
-    });
-
-    setValidated(true);
+    try {
+      await validerMutation.mutateAsync({
+        parc_id: parcId,
+        type: 'quotidien',
+        date_planifiee: datePlanifiee,
+        realise_par_id: utilisateur.id,
+        realise_par_nom: `${utilisateur.prenom} ${utilisateur.nom}`,
+        realise_par_role: utilisateur.role_code,
+        items,
+      });
+      setValidated(true);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Erreur inconnue';
+      setErreurValidation(msg);
+    }
   };
 
   const today = new Date().toLocaleDateString('fr-FR', {
@@ -285,9 +308,11 @@ export function ControleOuverture() {
         validationDisabledRaison={
           validerMutation.isPending
             ? 'Enregistrement en cours...'
-            : restants > 0
-              ? `Disponible quand tous les points sont saisis (${restants} restants)`
-              : undefined
+            : erreurValidation
+              ? erreurValidation
+              : restants > 0
+                ? `Disponible quand tous les points sont saisis (${restants} restants)`
+                : undefined
         }
         headerRightSlot={
           <div className="flex items-center gap-1.5">
