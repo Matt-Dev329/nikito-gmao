@@ -7,7 +7,9 @@ import { SelectionParc } from '@/components/controles/SelectionParc';
 import { BoutonRetourGmao } from '@/components/controles/BoutonRetourGmao';
 import { useAuth } from '@/hooks/useAuth';
 import { useParcs } from '@/hooks/queries/useReferentiel';
-import { usePointsControle, useValiderControle } from '@/hooks/queries/useControles';
+import { usePointsControle } from '@/hooks/queries/useControles';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/lib/supabase';
 import type { EtatControleItem } from '@/types/database';
 
 function formatDuree(sec: number): string {
@@ -54,7 +56,39 @@ export function ControleOuverture() {
   const parc = parcChoisi ?? allParcs?.find((p) => p.id === parcId);
 
   const { data: pointsBruts, isLoading } = usePointsControle(parcId, 'quotidien');
-  const validerMutation = useValiderControle();
+  const qc = useQueryClient();
+  const validerMutation = useMutation({
+    mutationFn: async (params: {
+      parc_id: string;
+      type: string;
+      date_planifiee: string;
+      realise_par_id: string;
+      realise_par_nom: string;
+      realise_par_role: string;
+      items: { point_id: string; etat: EtatControleItem; photo_url?: string | null }[];
+    }) => {
+      const { data, error } = await supabase.rpc('valider_controle_staff', {
+        p_parc_id: params.parc_id,
+        p_type: params.type,
+        p_date_planifiee: params.date_planifiee,
+        p_realise_par_id: params.realise_par_id,
+        p_realise_par_nom: params.realise_par_nom,
+        p_realise_par_role: params.realise_par_role,
+        p_items: params.items.map((i) => ({
+          point_id: i.point_id,
+          etat: i.etat,
+          commentaire: null,
+          photo_url: i.photo_url ?? null,
+        })),
+      });
+      if (error) throw error;
+      return { id: data as string };
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['controles'] });
+      qc.invalidateQueries({ queryKey: ['historique_controles'] });
+    },
+  });
 
   const [startTime] = useState(() => Date.now());
   const [elapsed, setElapsed] = useState(0);
