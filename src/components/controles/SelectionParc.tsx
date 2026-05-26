@@ -9,13 +9,23 @@ interface SelectionParcProps {
   onSelect: (parc: { id: string; code: string; nom: string }) => void;
 }
 
+function getStaffParcIds(): string[] {
+  try {
+    const raw = sessionStorage.getItem('staff_session');
+    if (!raw) return [];
+    const s = JSON.parse(raw);
+    return s?.parc?.id ? [s.parc.id] : [];
+  } catch { return []; }
+}
+
 export function SelectionParc({ titre, onSelect }: SelectionParcProps) {
   const navigate = useNavigate();
   const { utilisateur, signOut } = useAuth();
   const { data: allParcs, isLoading } = useParcs();
 
+  const staffParcIds = getStaffParcIds();
   const role = utilisateur?.role_code;
-  const parcIds = utilisateur?.parc_ids ?? [];
+  const parcIds = utilisateur?.parc_ids?.length ? utilisateur.parc_ids : staffParcIds;
 
   const parcsVisibles = useMemo(() => {
     if (!allParcs) return [];
