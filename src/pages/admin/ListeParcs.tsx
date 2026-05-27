@@ -277,19 +277,15 @@ function CarteProductionParc({
         </div>
       )}
 
-      {!enProd && !estInactif && (
+      {!enProd && (
         <div className="text-[12px] text-dim mb-4">
-          Ce parc est en attente d'activation. Les controles et alertes ne sont pas actifs.
+          {estInactif
+            ? 'Ce parc est en preparation. Activez la production quand il sera pret.'
+            : 'Ce parc est en attente d\'activation. Les controles et alertes ne sont pas actifs.'}
         </div>
       )}
 
-      {estInactif && (
-        <div className="text-[12px] text-dim mb-4">
-          Ce parc n'est pas encore active. Activez-le d'abord avant de le mettre en production.
-        </div>
-      )}
-
-      {isDirection && !estInactif && (
+      {isDirection && (
         <div>
           {enProd ? (
             <button
