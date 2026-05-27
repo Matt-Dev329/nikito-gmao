@@ -50,9 +50,11 @@ export function Login() {
     return () => clearInterval(t);
   }, [resetCooldown]);
 
+  const searchParams = new URLSearchParams(window.location.search);
   const isRecoveryLink =
     window.location.hash.includes('type=recovery') ||
-    new URLSearchParams(window.location.search).get('type') === 'recovery';
+    searchParams.get('type') === 'recovery' ||
+    searchParams.has('code');
 
   if (isRecoveryLink) {
     window.location.replace(`/reset-password${window.location.search}${window.location.hash}`);

@@ -44,6 +44,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { data: listener } = supabase.auth.onAuthStateChange((event, newSession) => {
       if (event === 'PASSWORD_RECOVERY') {
         setMustChangePassword(true);
+        if (window.location.pathname !== '/reset-password') {
+          window.location.replace('/reset-password');
+          return;
+        }
       }
       if (event === 'SIGNED_IN' && newSession?.user?.user_metadata?.password_must_change) {
         setMustChangePassword(true);
