@@ -1,4 +1,6 @@
 import { useState, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/lib/supabase';
 import { useBibliothequePoints } from '@/hooks/queries/useBibliotheque';
 import { FiltresBibliotheque } from '@/components/bibliotheque/FiltresBibliotheque';
 import { TableBibliotheque } from '@/components/bibliotheque/TableBibliotheque';
@@ -18,6 +20,47 @@ export function PageBibliotheque() {
   const [pointSelectionne, setPointSelectionne] = useState<PointBibliothequeAvecJoins | null>(null);
 
   const { data: points, isLoading } = useBibliothequePoints();
+
+  const { data: parcsActifs } = useQuery({
+    queryKey: ['parcs_list_simple'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('parcs')
+        .select('id, code, nom')
+        .eq('actif', true)
+        .order('code');
+      if (error) throw error;
+      return data as { id: string; code: string; nom: string }[];
+    },
+    staleTime: 60_000,
+  });
+
+  const { data: parcPointsOverrides } = useQuery({
+    queryKey: ['parc_points_actifs_all'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('parc_points_actifs')
+        .select('parc_id, point_id, actif');
+      if (error) throw error;
+      return data as { parc_id: string; point_id: string; actif: boolean }[];
+    },
+    staleTime: 30_000,
+  });
+
+  const parcsParPoint = useMemo(() => {
+    if (!parcsActifs) return {};
+    const map: Record<string, string[]> = {};
+    const allParcs = parcsActifs;
+    for (const p of (points ?? [])) {
+      const overridesForPoint = (parcPointsOverrides ?? []).filter((o) => o.point_id === p.id);
+      const activeParcs = allParcs.filter((parc) => {
+        const override = overridesForPoint.find((o) => o.parc_id === parc.id);
+        return !override || override.actif;
+      });
+      map[p.id] = activeParcs.map((pc) => pc.code);
+    }
+    return map;
+  }, [points, parcsActifs, parcPointsOverrides]);
 
   const filtres = useMemo(() => {
     let result = points ?? [];
@@ -116,6 +159,8 @@ export function PageBibliotheque() {
             points={filtres}
             onSelect={setPointSelectionne}
             onCreer={() => setModaleCreer(true)}
+            parcsParPoint={parcsParPoint}
+            totalParcs={parcsActifs?.length ?? 0}
           />
         </>
       )}

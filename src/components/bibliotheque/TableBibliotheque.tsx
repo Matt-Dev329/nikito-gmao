@@ -17,6 +17,8 @@ interface TableBibliothequeProps {
   points: PointBibliothequeAvecJoins[];
   onSelect: (p: PointBibliothequeAvecJoins) => void;
   onCreer: () => void;
+  parcsParPoint?: Record<string, string[]>;
+  totalParcs?: number;
 }
 
 interface Groupe {
@@ -25,7 +27,7 @@ interface Groupe {
   points: PointBibliothequeAvecJoins[];
 }
 
-export function TableBibliotheque({ points, onSelect, onCreer }: TableBibliothequeProps) {
+export function TableBibliotheque({ points, onSelect, onCreer, parcsParPoint, totalParcs }: TableBibliothequeProps) {
   const groupes = useMemo(() => {
     const map = new Map<string, Groupe>();
     for (const p of points) {
@@ -68,12 +70,13 @@ export function TableBibliotheque({ points, onSelect, onCreer }: TableBibliotheq
                   <th className="text-[10px] text-dim uppercase tracking-wider font-medium py-2 px-2 w-16 text-center">Bloq.</th>
                   <th className="text-[10px] text-dim uppercase tracking-wider font-medium py-2 px-2 w-16 text-center">Photo</th>
                   <th className="text-[10px] text-dim uppercase tracking-wider font-medium py-2 px-2 w-[120px]">Norme</th>
+                  <th className="text-[10px] text-dim uppercase tracking-wider font-medium py-2 px-2 w-[100px]">Parcs</th>
                   <th className="text-[10px] text-dim uppercase tracking-wider font-medium py-2 px-2 w-14 text-center">Actif</th>
                 </tr>
               </thead>
               <tbody>
                 {g.points.map((p) => (
-                  <DesktopRow key={p.id} point={p} onSelect={() => onSelect(p)} />
+                  <DesktopRow key={p.id} point={p} onSelect={() => onSelect(p)} parcsCodes={parcsParPoint?.[p.id]} totalParcs={totalParcs} />
                 ))}
               </tbody>
             </table>
@@ -99,8 +102,9 @@ export function TableBibliotheque({ points, onSelect, onCreer }: TableBibliotheq
   );
 }
 
-function DesktopRow({ point: p, onSelect }: { point: PointBibliothequeAvecJoins; onSelect: () => void }) {
+function DesktopRow({ point: p, onSelect, parcsCodes, totalParcs }: { point: PointBibliothequeAvecJoins; onSelect: () => void; parcsCodes?: string[]; totalParcs?: number }) {
   const typeCfg = TYPE_CONFIG[p.type_controle];
+  const allParcs = totalParcs && parcsCodes && parcsCodes.length === totalParcs;
   return (
     <tr
       onClick={onSelect}
@@ -129,6 +133,25 @@ function DesktopRow({ point: p, onSelect }: { point: PointBibliothequeAvecJoins;
         {p.photo_obligatoire && <span className="text-dim text-[12px]" title="Photo obligatoire">&#128247;</span>}
       </td>
       <td className="py-2.5 px-2 text-dim text-[11px] truncate max-w-[120px]">{p.norme_associee ?? '--'}</td>
+      <td className="py-2.5 px-2">
+        {parcsCodes ? (
+          allParcs ? (
+            <span className="text-[10px] text-dim">Tous</span>
+          ) : parcsCodes.length === 0 ? (
+            <span className="text-[10px] text-red font-semibold">Aucun</span>
+          ) : (
+            <div className="flex flex-wrap gap-0.5">
+              {parcsCodes.map((code) => (
+                <span key={code} className="text-[9px] font-mono font-bold bg-nikito-cyan/10 text-nikito-cyan px-1 py-0.5 rounded">
+                  {code}
+                </span>
+              ))}
+            </div>
+          )
+        ) : (
+          <span className="text-[10px] text-dim">--</span>
+        )}
+      </td>
       <td className="py-2.5 px-2 text-center">
         {p.actif
           ? <span className="bg-green/15 text-green text-[10px] font-bold px-1.5 py-0.5 rounded-md">Oui</span>
