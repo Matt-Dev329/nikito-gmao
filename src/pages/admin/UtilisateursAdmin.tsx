@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { ModaleInviterUtilisateur } from '@/components/admin/ModaleInviterUtilisateur';
@@ -38,6 +38,7 @@ export function UtilisateursAdmin() {
   const effectiveRole = useEffectiveRole(utilisateur?.role_code ?? 'staff_operationnel');
   const [tab, setTab] = useState<Tab>('actifs');
   const [modaleOuverte, setModaleOuverte] = useState(false);
+  const [recherche, setRecherche] = useState('');
   const { data: compteurs } = useCompteursRoles();
   const { data: aValider } = useUtilisateursAValider();
 
@@ -97,11 +98,24 @@ export function UtilisateursAdmin() {
         <StatBox label="Staff (PIN)" value={compteurs?.staff ?? 0} />
       </div>
 
+      <div className="relative mb-3">
+        <svg className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-dim" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+        </svg>
+        <input
+          type="text"
+          value={recherche}
+          onChange={(e) => setRecherche(e.target.value)}
+          placeholder="Rechercher par nom, prenom ou email..."
+          className="w-full bg-bg-card border border-white/[0.08] rounded-xl pl-10 pr-4 py-2.5 text-[13px] text-text outline-none focus:border-nikito-cyan/50 min-h-[44px] placeholder:text-dim"
+        />
+      </div>
+
       <div className="bg-bg-card rounded-2xl py-4 px-4 md:py-5 md:px-5">
-        {tab === 'a_valider' && <ListeAValider />}
-        {tab === 'actifs' && <ListeActifs />}
-        {tab === 'invitations' && <ListeInvitations />}
-        {tab === 'desactives' && <ListeDesactives />}
+        {tab === 'a_valider' && <ListeAValider recherche={recherche} />}
+        {tab === 'actifs' && <ListeActifs recherche={recherche} />}
+        {tab === 'invitations' && <ListeInvitations recherche={recherche} />}
+        {tab === 'desactives' && <ListeDesactives recherche={recherche} />}
       </div>
 
       <ModaleInviterUtilisateur
@@ -291,7 +305,17 @@ const roleHomePage: Record<RoleUtilisateur, string> = {
   admin_it: '/gmao/admin-it',
 };
 
-function ListeActifs() {
+function filtrerUtilisateurs(users: UtilisateurRow[], q: string): UtilisateurRow[] {
+  if (!q.trim()) return users;
+  const lower = q.toLowerCase().trim();
+  return users.filter((u) =>
+    (u.prenom ?? '').toLowerCase().includes(lower) ||
+    (u.nom ?? '').toLowerCase().includes(lower) ||
+    (u.email ?? '').toLowerCase().includes(lower)
+  );
+}
+
+function ListeActifs({ recherche }: { recherche: string }) {
   const { utilisateur } = useAuth();
   const effectiveRole = useEffectiveRole(utilisateur?.role_code ?? 'staff_operationnel');
   const { data, isLoading } = useUtilisateursActifs();
@@ -305,8 +329,11 @@ function ListeActifs() {
   const canViewAs = canEdit;
   const [editUser, setEditUser] = useState<UtilisateurRow | null>(null);
 
+  const filtres = useMemo(() => filtrerUtilisateurs(data ?? [], recherche), [data, recherche]);
+
   if (isLoading) return <div className="text-dim text-sm text-center py-8">Chargement...</div>;
   if (!data || data.length === 0) return <EmptyState text="Aucun utilisateur actif." />;
+  if (filtres.length === 0) return <EmptyState text={`Aucun resultat pour "${recherche}"`} />;
 
   const parcMap = new Map((parcs ?? []).map((p) => [p.id, p]));
 
@@ -338,7 +365,7 @@ function ListeActifs() {
   return (
     <>
       <div>
-        {data.map((u) => (
+        {filtres.map((u) => (
           <UserRow
             key={u.id}
             user={u}
@@ -360,12 +387,14 @@ function ListeActifs() {
   );
 }
 
-function ListeAValider() {
+function ListeAValider({ recherche }: { recherche: string }) {
   const { utilisateur } = useAuth();
   const effectiveRole = useEffectiveRole(utilisateur?.role_code ?? 'staff_operationnel');
   const { data, isLoading } = useUtilisateursAValider();
   const canEdit = effectiveRole === 'direction' || effectiveRole === 'chef_maintenance' || effectiveRole === 'admin_it';
   const [editUser, setEditUser] = useState<UtilisateurRow | null>(null);
+
+  const filtres = useMemo(() => filtrerUtilisateurs(data ?? [], recherche), [data, recherche]);
 
   if (isLoading) return <div className="text-dim text-sm text-center py-8">Chargement...</div>;
   if (!data || data.length === 0) {
@@ -376,11 +405,12 @@ function ListeAValider() {
       />
     );
   }
+  if (filtres.length === 0) return <EmptyState text={`Aucun resultat pour "${recherche}"`} />;
 
   return (
     <>
       <div>
-        {data.map((u) => (
+        {filtres.map((u) => (
           <UserRow
             key={u.id}
             user={u}
@@ -399,7 +429,7 @@ function ListeAValider() {
   );
 }
 
-function ListeDesactives() {
+function ListeDesactives({ recherche }: { recherche: string }) {
   const { utilisateur } = useAuth();
   const effectiveRole = useEffectiveRole(utilisateur?.role_code ?? 'staff_operationnel');
   const { data, isLoading } = useUtilisateursDesactives();
@@ -408,8 +438,11 @@ function ListeDesactives() {
   const canEdit = isDirection || effectiveRole === 'chef_maintenance';
   const [editUser, setEditUser] = useState<UtilisateurRow | null>(null);
 
+  const filtres = useMemo(() => filtrerUtilisateurs(data ?? [], recherche), [data, recherche]);
+
   if (isLoading) return <div className="text-dim text-sm text-center py-8">Chargement...</div>;
   if (!data || data.length === 0) return <EmptyState text="Aucun compte desactive." />;
+  if (filtres.length === 0) return <EmptyState text={`Aucun resultat pour "${recherche}"`} />;
 
   const reactiver = (id: string, nom: string) => {
     if (confirm(`Reactiver le compte de ${nom} ?`)) {
@@ -420,7 +453,7 @@ function ListeDesactives() {
   return (
     <>
       <div>
-        {data.map((u) => (
+        {filtres.map((u) => (
           <UserRow
             key={u.id}
             user={u}
@@ -441,13 +474,24 @@ function ListeDesactives() {
   );
 }
 
-function ListeInvitations() {
+function ListeInvitations({ recherche }: { recherche: string }) {
   const { data, isLoading } = useInvitationsEnCours();
   const { data: parcs } = useParcs();
   const annulerMutation = useAnnulerInvitation();
 
+  const filtres = useMemo(() => {
+    if (!data || !recherche.trim()) return data ?? [];
+    const lower = recherche.toLowerCase().trim();
+    return data.filter((inv) =>
+      (inv.prenom ?? '').toLowerCase().includes(lower) ||
+      (inv.nom ?? '').toLowerCase().includes(lower) ||
+      (inv.email ?? '').toLowerCase().includes(lower)
+    );
+  }, [data, recherche]);
+
   if (isLoading) return <div className="text-dim text-sm text-center py-8">Chargement...</div>;
   if (!data || data.length === 0) return <EmptyState text="Aucune invitation en cours." />;
+  if (filtres.length === 0) return <EmptyState text={`Aucun resultat pour "${recherche}"`} />;
 
   const parcMap = new Map((parcs ?? []).map((p) => [p.id, p.code]));
 
@@ -463,7 +507,7 @@ function ListeInvitations() {
 
   return (
     <div className="space-y-2">
-      {data.map((inv) => (
+      {filtres.map((inv) => (
         <InvitationCard
           key={inv.id}
           inv={inv}
