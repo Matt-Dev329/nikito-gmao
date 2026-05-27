@@ -48,6 +48,8 @@ export function CarteHorairesParc({ parc }: Props) {
         .eq('date_planifiee', today)
         .eq('statut', 'valide')
         .eq('est_formation', estFormation)
+        .order('date_validation', { ascending: false })
+        .limit(1)
         .maybeSingle();
       if (error) throw error;
       return data;
