@@ -87,7 +87,7 @@ export function FicheParc() {
       {onglet === 'apercu' && <OngletApercu parc={parc ?? null} />}
       {onglet === 'configuration' && <OngletConfiguration parc={parc ?? null} />}
       {onglet === 'controles' && <OngletControles parcId={id} />}
-      {onglet === 'equipements' && <OngletEquipements />}
+      {onglet === 'equipements' && <OngletEquipements parcId={id} />}
       {onglet === 'equipe' && <OngletEquipe parcId={id} />}
       {onglet === 'notes' && <NotesChantierParc />}
       {onglet === 'conformite' && <OngletConformiteParc parcId={id} />}
@@ -259,8 +259,92 @@ function OngletControles({ parcId }: { parcId: string | undefined }) {
   );
 }
 
-function OngletEquipements() {
-  return <div className="p-4 md:p-6 md:px-7 text-dim text-sm">Liste détaillée des équipements de ce parc</div>;
+function OngletEquipements({ parcId }: { parcId: string | undefined }) {
+  const { data: equipements, isLoading } = useQuery({
+    queryKey: ['equipements_parc_fiche', parcId],
+    queryFn: async () => {
+      if (!parcId) return [];
+      const { data, error } = await supabase
+        .from('equipements')
+        .select('id, code, libelle, statut, categories_equipement(nom), zones(nom)')
+        .eq('parc_id', parcId)
+        .eq('est_formation', false)
+        .order('code');
+      if (error) throw error;
+      return data ?? [];
+    },
+    enabled: !!parcId,
+  });
+
+  const grouped = useMemo(() => {
+    if (!equipements) return [];
+    const map = new Map<string, typeof equipements>();
+    for (const eq of equipements) {
+      const cat = (eq.categories_equipement as unknown as { nom: string } | null)?.nom ?? 'Sans categorie';
+      if (!map.has(cat)) map.set(cat, []);
+      map.get(cat)!.push(eq);
+    }
+    return Array.from(map.entries()).sort((a, b) => a[0].localeCompare(b[0]));
+  }, [equipements]);
+
+  if (isLoading) {
+    return (
+      <div className="p-4 md:p-7 flex flex-col gap-3">
+        {[1, 2, 3].map((i) => <div key={i} className="bg-bg-card rounded-xl h-14 animate-pulse" />)}
+      </div>
+    );
+  }
+
+  if (!equipements || equipements.length === 0) {
+    return (
+      <div className="p-4 md:p-7">
+        <div className="bg-bg-card rounded-xl p-8 text-center border border-white/[0.06]">
+          <p className="text-dim text-sm">Aucun equipement configure pour ce parc</p>
+        </div>
+      </div>
+    );
+  }
+
+  const statutColor: Record<string, string> = {
+    actif: 'text-green bg-green/10',
+    en_panne: 'text-red bg-red/10',
+    maintenance: 'text-amber bg-amber/10',
+    hors_service: 'text-red bg-red/10',
+    a_installer: 'text-dim bg-white/[0.06]',
+  };
+
+  return (
+    <div className="p-4 md:p-7 flex flex-col gap-5">
+      <div className="text-[13px] text-dim">{equipements.length} equipement{equipements.length > 1 ? 's' : ''}</div>
+      {grouped.map(([cat, items]) => (
+        <div key={cat}>
+          <div className="text-[11px] text-dim uppercase tracking-wider mb-2">{cat} ({items.length})</div>
+          <div className="flex flex-col gap-1.5">
+            {items.map((eq) => {
+              const zone = (eq.zones as unknown as { nom: string } | null)?.nom;
+              return (
+                <div
+                  key={eq.id}
+                  className="bg-bg-card rounded-xl px-4 py-3 border border-white/[0.06] flex items-center gap-3"
+                >
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[12px] font-mono text-nikito-cyan font-bold">{eq.code}</span>
+                      <span className="text-[13px] font-medium truncate">{eq.libelle}</span>
+                    </div>
+                    {zone && <div className="text-[11px] text-dim mt-0.5">{zone}</div>}
+                  </div>
+                  <span className={`text-[10px] px-2 py-0.5 rounded font-medium flex-shrink-0 ${statutColor[eq.statut] ?? 'text-dim bg-white/[0.06]'}`}>
+                    {eq.statut.replace('_', ' ')}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
 }
 
 interface MembreEquipe {
