@@ -1,6 +1,5 @@
 import { create } from 'zustand';
-
-const TOUR_STORAGE_KEY = 'alba_tour_completed';
+import { supabase } from '@/lib/supabase';
 
 interface TourState {
   active: boolean;
@@ -10,6 +9,17 @@ interface TourState {
   skip: () => void;
   setStepCount: (count: number) => void;
   _stepCount: number;
+}
+
+function persistTourCompleted() {
+  supabase.auth.getUser().then(({ data }) => {
+    if (!data.user) return;
+    supabase
+      .from('utilisateurs')
+      .update({ tour_vu: true })
+      .eq('auth_user_id', data.user.id)
+      .then(() => {});
+  });
 }
 
 export const useTour = create<TourState>((set, get) => ({
@@ -24,7 +34,7 @@ export const useTour = create<TourState>((set, get) => ({
   next: () => {
     const { stepIndex, _stepCount } = get();
     if (stepIndex + 1 >= _stepCount) {
-      localStorage.setItem(TOUR_STORAGE_KEY, 'true');
+      persistTourCompleted();
       set({ active: false, stepIndex: 0 });
     } else {
       set({ stepIndex: stepIndex + 1 });
@@ -32,11 +42,7 @@ export const useTour = create<TourState>((set, get) => ({
   },
 
   skip: () => {
-    localStorage.setItem(TOUR_STORAGE_KEY, 'true');
+    persistTourCompleted();
     set({ active: false, stepIndex: 0 });
   },
 }));
-
-export function isTourCompleted(): boolean {
-  return localStorage.getItem(TOUR_STORAGE_KEY) === 'true';
-}

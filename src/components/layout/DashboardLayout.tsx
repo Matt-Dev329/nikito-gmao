@@ -8,7 +8,7 @@ import { BottomTabBar } from './BottomTabBar';
 import { MobileMoreDrawer } from './MobileMoreDrawer';
 import { MobileAlertPanel } from './MobileAlertPanel';
 import { TourOverlay } from '@/components/tour/TourOverlay';
-import { useTour, isTourCompleted } from '@/components/tour/useTour';
+import { useTour } from '@/components/tour/useTour';
 import { ModaleSignalerV2, type SignalerVia } from '@/components/forms/ModaleSignalerV2';
 import { useAuth } from '@/hooks/useAuth';
 import { useViewAs, useEffectiveRole } from '@/hooks/useViewAs';
@@ -112,7 +112,7 @@ export function DashboardLayout() {
   const tourActive = useTour((s) => s.active);
 
   useEffect(() => {
-    if (!loading && utilisateur && !isTourCompleted() && !tourActive) {
+    if (!loading && utilisateur && !utilisateur.tour_vu && !tourActive) {
       const timer = setTimeout(() => startTour(), 800);
       return () => clearTimeout(timer);
     }

@@ -11,6 +11,7 @@ export interface UtilisateurMetier {
   role_code: 'direction' | 'chef_maintenance' | 'manager_parc' | 'technicien' | 'staff_operationnel' | 'admin_it';
   parc_ids: string[];
   consentement_gps: boolean;
+  tour_vu: boolean;
 }
 
 interface AuthContextValue {
@@ -65,7 +66,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     supabase
       .from('utilisateurs')
       .select(
-        `id, email, nom, prenom, trigramme, consentement_gps,
+        `id, email, nom, prenom, trigramme, consentement_gps, tour_vu,
          roles!inner(code),
          parcs_utilisateurs(parc_id)`
       )
@@ -86,6 +87,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             prenom: d.prenom as string,
             trigramme: d.trigramme as string | null,
             consentement_gps: d.consentement_gps as boolean,
+            tour_vu: (d.tour_vu as boolean) ?? false,
             role_code: roles.code as UtilisateurMetier['role_code'],
             parc_ids: pu.map((p) => p.parc_id),
           });
