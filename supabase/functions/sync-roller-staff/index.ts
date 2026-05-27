@@ -212,6 +212,88 @@ async function sendPinEmail(
   }
 }
 
+// ── Welcome + Password Setup Email ────────────────────
+
+function buildWelcomePasswordHtml(prenom: string, siteUrl: string): string {
+  const resetUrl = `${siteUrl}`;
+  return `<!DOCTYPE html>
+<html lang="fr">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background-color:#0a0e27;font-family:Arial,Helvetica,sans-serif;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#0a0e27;">
+  <tr><td align="center" style="padding:40px 16px;">
+    <table role="presentation" width="560" cellpadding="0" cellspacing="0" border="0" style="max-width:560px;width:100%;">
+      <tr><td align="center" style="padding:0 0 32px 0;">
+        <span style="font-size:24px;font-weight:700;letter-spacing:4px;color:#ffffff;">
+          <span style="color:#5DE5FF;">A</span>LBA <span style="color:#8b92b8;font-size:14px;font-weight:400;">by Nikito</span>
+        </span>
+      </td></tr>
+      <tr><td style="background-color:#131836;border-radius:16px;padding:36px 32px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+          <tr><td style="font-size:18px;color:#ffffff;font-weight:600;padding-bottom:20px;">
+            Bonjour ${prenom},
+          </td></tr>
+          <tr><td style="font-size:15px;color:#8b92b8;line-height:24px;padding-bottom:20px;">
+            Bienvenue sur <strong style="color:#ffffff;">ALBA</strong>, l'application de gestion maintenance NIKITO.
+            Votre compte a &eacute;t&eacute; cr&eacute;&eacute; avec succ&egrave;s.
+          </td></tr>
+          <tr><td style="font-size:15px;color:#8b92b8;line-height:24px;padding-bottom:24px;">
+            Pour d&eacute;finir votre mot de passe et acc&eacute;der &agrave; l'application, cliquez sur le bouton ci-dessous :
+          </td></tr>
+          <tr><td align="center" style="padding:0 0 24px 0;">
+            <a href="${resetUrl}" style="display:inline-block;background:linear-gradient(135deg,#5DE5FF 0%,#e91e8c 100%);color:#0a0e27;padding:14px 36px;border-radius:10px;text-decoration:none;font-size:14px;font-weight:700;">
+              Definir mon mot de passe
+            </a>
+          </td></tr>
+          <tr><td style="font-size:13px;color:#8b92b8;line-height:22px;">
+            Ou rendez-vous sur <a href="${resetUrl}" style="color:#5DE5FF;">${resetUrl}</a> et cliquez sur "Mot de passe oubli&eacute;" pour recevoir votre lien de cr&eacute;ation de mot de passe.
+          </td></tr>
+          <tr><td style="font-size:14px;color:#8b92b8;padding-top:20px;">
+            En cas de probl&egrave;me, contactez votre manager ou l'&eacute;quipe IT.
+          </td></tr>
+        </table>
+      </td></tr>
+      <tr><td style="padding:28px 0 0 0;text-align:center;">
+        <div style="font-size:11px;color:#8b92b8;line-height:20px;">Cet email a &eacute;t&eacute; envoy&eacute; automatiquement, ne pas r&eacute;pondre.</div>
+        <div style="font-size:10px;color:#6E6E96;padding-top:16px;">&copy; Nikito Group &middot; ALBA</div>
+      </td></tr>
+    </table>
+  </td></tr>
+</table>
+</body>
+</html>`;
+}
+
+async function sendWelcomePasswordEmail(
+  resendApiKey: string,
+  email: string,
+  prenom: string,
+  siteUrl: string,
+): Promise<{ sent: boolean; error?: string }> {
+  try {
+    const res = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${resendApiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        from: "ALBA by Nikito <noreply@nikito.tech>",
+        to: [email],
+        subject: "Bienvenue sur ALBA - Definissez votre mot de passe",
+        html: buildWelcomePasswordHtml(prenom, siteUrl),
+      }),
+    });
+    if (!res.ok) {
+      const errBody = await res.text();
+      return { sent: false, error: `Resend ${res.status}: ${errBody}` };
+    }
+    return { sent: true };
+  } catch (e) {
+    return { sent: false, error: String(e) };
+  }
+}
+
 // ── Main ───────────────────────────────────────────────
 
 Deno.serve(async (req: Request) => {
@@ -377,6 +459,12 @@ Deno.serve(async (req: Request) => {
       nom: string;
       email: string | null;
       roleCode: string;
+    }> = [];
+
+    // Collect email_password users that need a password reset invitation
+    const usersNeedingPasswordReset: Array<{
+      email: string;
+      prenom: string;
     }> = [];
 
     for (const staff of rollerStaff) {
@@ -625,6 +713,34 @@ Deno.serve(async (req: Request) => {
 
       const authMode = albaRoleCode === "staff_operationnel" ? "pin_seul" : "email_password";
 
+      // For email_password users, create auth.users account first
+      let authUserId: string | null = null;
+      if (authMode === "email_password" && rollerEmail) {
+        const tempPassword = crypto.randomUUID() + "Aa1!";
+        const { data: authData, error: authErr } = await supabase.auth.admin.createUser({
+          email: rollerEmail,
+          password: tempPassword,
+          email_confirm: true,
+        });
+
+        if (authErr) {
+          // If user already exists in auth, try to find them
+          if (authErr.message?.includes("already been registered") || authErr.message?.includes("already exists")) {
+            const { data: listData } = await supabase.auth.admin.listUsers();
+            const existing = listData?.users?.find(
+              (u) => u.email?.toLowerCase() === rollerEmail.toLowerCase()
+            );
+            if (existing) {
+              authUserId = existing.id;
+            }
+          } else {
+            console.error(`[sync-roller-staff] auth.admin.createUser FAILED for ${fullName}: ${authErr.message}`);
+          }
+        } else if (authData?.user) {
+          authUserId = authData.user.id;
+        }
+      }
+
       const { data: newUser, error: insertErr } = await supabase
         .from("utilisateurs")
         .insert({
@@ -633,11 +749,12 @@ Deno.serve(async (req: Request) => {
           email: rollerEmail,
           role_id: albaRoleId,
           auth_mode: authMode,
+          auth_user_id: authUserId,
           statut_validation: "valide",
           actif: true,
           roller_unique_id: staff.uniqueId,
           last_synced_at: new Date().toISOString(),
-          pin_must_change: true,
+          pin_must_change: authMode === "pin_seul" ? true : false,
         })
         .select("id")
         .single();
@@ -660,18 +777,26 @@ Deno.serve(async (req: Request) => {
       details.push({
         roller_id: staff.uniqueId,
         name: fullName,
-        action: "CREATED",
+        action: authUserId ? "CREATED_WITH_AUTH" : "CREATED",
         roller_role_name: rollerRoleName,
         alba_role: albaRoleCode,
       });
 
-      usersNeedingPin.push({
-        userId: newUser.id,
-        prenom: staff.firstName,
-        nom: staff.lastName,
-        email: rollerEmail,
-        roleCode: albaRoleCode,
-      });
+      // For email_password users, send password reset email instead of PIN
+      if (authMode === "email_password" && authUserId && rollerEmail) {
+        usersNeedingPasswordReset.push({
+          email: rollerEmail,
+          prenom: staff.firstName,
+        });
+      } else if (authMode === "pin_seul") {
+        usersNeedingPin.push({
+          userId: newUser.id,
+          prenom: staff.firstName,
+          nom: staff.lastName,
+          email: rollerEmail,
+          roleCode: albaRoleCode,
+        });
+      }
     }
 
     // ── 10. Generate PINs and send emails ────────────
@@ -734,6 +859,40 @@ Deno.serve(async (req: Request) => {
       }
     }
 
+    // ── 10b. Send password reset emails for email_password users ──
+    const passwordResetStats = { sent: 0, failed: 0 };
+
+    if (!dryRun && usersNeedingPasswordReset.length > 0) {
+      const siteUrl = Deno.env.get("SITE_URL") || "https://nikito.tech";
+      for (const u of usersNeedingPasswordReset) {
+        const { error: resetErr } = await supabase.auth.admin.generateLink({
+          type: "magiclink",
+          email: u.email,
+          options: { redirectTo: `${siteUrl}/reset-password` },
+        });
+
+        if (resetErr) {
+          console.error(`[sync-roller-staff] generateLink FAILED for ${u.email}: ${resetErr.message}`);
+        }
+
+        // Send welcome + password setup email via Resend
+        if (resendApiKey) {
+          const emailResult = await sendWelcomePasswordEmail(
+            resendApiKey,
+            u.email,
+            u.prenom,
+            siteUrl,
+          );
+          if (emailResult.sent) {
+            passwordResetStats.sent++;
+          } else {
+            passwordResetStats.failed++;
+          }
+          await new Promise((r) => setTimeout(r, 150));
+        }
+      }
+    }
+
     // ── 11. Post-sync verification: confirm all PINs were hashed ──
     let pinVerification: Record<string, unknown> | undefined;
 
@@ -783,6 +942,11 @@ Deno.serve(async (req: Request) => {
     if (!dryRun && pinsToCommunciate.length > 0) {
       response.emails = emailStats;
       response.pins_to_communicate = pinsToCommunciate;
+    }
+
+    if (!dryRun && usersNeedingPasswordReset.length > 0) {
+      response.password_reset_emails = passwordResetStats;
+      response.users_needing_password_setup = usersNeedingPasswordReset.map((u) => u.email);
     }
 
     return new Response(JSON.stringify(response), {
