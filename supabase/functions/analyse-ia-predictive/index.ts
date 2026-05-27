@@ -62,6 +62,58 @@ Règles :
 - Les dates de panne estimées doivent être réalistes (dans les 30 prochains jours)
 - Limite à 10 équipements à risque max, 10 alertes max, 5 recommandations max`;
 
+const MAX_EQUIPEMENTS = 80;
+const MAX_PROMPT_CHARS = 600000;
+
+interface EquipementData {
+  equipement_id: string;
+  code: string;
+  libelle: string;
+  parc_code: string;
+  parc_nom: string;
+  statut: string;
+  date_mise_service: string | null;
+  date_fin_garantie: string | null;
+  a_surveiller: boolean;
+  incidents_total: number;
+  incidents_30j: number;
+  incidents_60j: number;
+  incidents_90j: number;
+  recurrences: number;
+  pannes_30j: number;
+}
+
+interface MaintenancePayload {
+  equipements: EquipementData[];
+  parcs: unknown[];
+  date_analyse: string;
+}
+
+function trimData(data: MaintenancePayload): MaintenancePayload {
+  const relevant = data.equipements.filter(
+    (e) =>
+      e.incidents_total > 0 ||
+      e.recurrences > 0 ||
+      e.a_surveiller ||
+      e.statut === "panne" ||
+      e.statut === "maintenance"
+  );
+
+  relevant.sort((a, b) => {
+    const scoreA = a.incidents_30j * 3 + a.incidents_60j * 2 + a.incidents_90j + (a.a_surveiller ? 5 : 0);
+    const scoreB = b.incidents_30j * 3 + b.incidents_60j * 2 + b.incidents_90j + (b.a_surveiller ? 5 : 0);
+    return scoreB - scoreA;
+  });
+
+  const trimmed = relevant.slice(0, MAX_EQUIPEMENTS);
+
+  return {
+    equipements: trimmed,
+    parcs: data.parcs,
+    date_analyse: data.date_analyse,
+  };
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 200, headers: corsHeaders });
@@ -94,7 +146,17 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const userMessage = `Voici les données de maintenance des 90 derniers jours au format JSON :\n\n${JSON.stringify(maintenance_data, null, 2)}`;
+    const trimmedData = trimData(maintenance_data as MaintenancePayload);
+
+    let userMessage = `Voici les données de maintenance au format JSON (${trimmedData.equipements.length} équipements pertinents sur ${(maintenance_data as MaintenancePayload).equipements?.length ?? 0} total) :\n\n${JSON.stringify(trimmedData)}`;
+
+    if (userMessage.length > MAX_PROMPT_CHARS) {
+      const furtherTrimmed = {
+        ...trimmedData,
+        equipements: trimmedData.equipements.slice(0, 40),
+      };
+      userMessage = `Voici les données de maintenance au format JSON (${furtherTrimmed.equipements.length} équipements les plus critiques) :\n\n${JSON.stringify(furtherTrimmed)}`;
+    }
 
     const anthropicRes = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
