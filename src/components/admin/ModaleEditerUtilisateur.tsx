@@ -204,12 +204,17 @@ export function ModaleEditerUtilisateur({ open, onClose, utilisateur }: Props) {
             <button
               onClick={async () => {
                 setResetLoading(true);
+                setErreur(null);
                 const redirectUrl = `${window.location.origin}/reset-password`;
-                await supabase.auth.resetPasswordForEmail(utilisateur.email!, {
+                const { error } = await supabase.auth.resetPasswordForEmail(utilisateur.email!, {
                   redirectTo: redirectUrl,
                 });
                 setResetLoading(false);
-                setResetSent(true);
+                if (error) {
+                  setErreur(`Echec envoi : ${error.message}`);
+                } else {
+                  setResetSent(true);
+                }
               }}
               disabled={resetSent || resetLoading}
               className={cn(
