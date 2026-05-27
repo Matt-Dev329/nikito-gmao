@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { supabase, supabaseUrl, supabaseAnonKey } from '@/lib/supabase';
 import { buildIAPdfBase64 } from '@/pages/ia-predictive/exportIAPDF';
+import { useUtilisateursActifs } from '@/hooks/queries/useUtilisateurs';
 import type { AnalyseIA } from '@/types/ia-predictive';
 
 interface Props {
@@ -11,8 +12,36 @@ interface Props {
 
 export function ModaleEnvoyerRapportIA({ analyse, onClose }: Props) {
   const [email, setEmail] = useState('');
+  const [showSuggestions, setShowSuggestions] = useState(false);
   const [enCours, setEnCours] = useState(false);
   const [resultat, setResultat] = useState<{ ok: boolean; message: string } | null>(null);
+  const { data: utilisateurs } = useUtilisateursActifs();
+  const inputRef = useRef<HTMLInputElement>(null);
+  const suggestionsRef = useRef<HTMLDivElement>(null);
+
+  const suggestions = (utilisateurs ?? []).filter((u) => {
+    if (!email) return true;
+    const search = email.toLowerCase();
+    return (
+      u.email.toLowerCase().includes(search) ||
+      `${u.prenom} ${u.nom}`.toLowerCase().includes(search)
+    );
+  });
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (
+        suggestionsRef.current &&
+        !suggestionsRef.current.contains(e.target as Node) &&
+        inputRef.current &&
+        !inputRef.current.contains(e.target as Node)
+      ) {
+        setShowSuggestions(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const handleEnvoyer = async () => {
     if (!email) return;
@@ -89,15 +118,40 @@ export function ModaleEnvoyerRapportIA({ analyse, onClose }: Props) {
         </div>
 
         <div className="space-y-3.5">
-          <div>
+          <div className="relative">
             <label className="block text-[10px] text-dim uppercase tracking-wider mb-1.5">Destinataire</label>
             <input
+              ref={inputRef}
               type="email"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => { setEmail(e.target.value); setShowSuggestions(true); }}
+              onFocus={() => setShowSuggestions(true)}
               placeholder="email@exemple.com"
               className="w-full bg-bg-deep border border-white/[0.08] rounded-[10px] p-3 px-3.5 text-text text-[13px] outline-none focus:border-nikito-cyan"
             />
+            {showSuggestions && suggestions.length > 0 && (
+              <div
+                ref={suggestionsRef}
+                className="absolute z-10 top-full left-0 right-0 mt-1 bg-bg-deep border border-white/[0.12] rounded-[10px] shadow-xl max-h-[180px] overflow-y-auto"
+              >
+                {suggestions.slice(0, 8).map((u) => (
+                  <button
+                    key={u.id}
+                    type="button"
+                    onClick={() => { setEmail(u.email); setShowSuggestions(false); }}
+                    className="w-full text-left px-3.5 py-2.5 hover:bg-white/[0.05] transition-colors flex items-center gap-2.5 border-b border-white/[0.04] last:border-0"
+                  >
+                    <div className="w-7 h-7 rounded-full bg-nikito-cyan/20 flex items-center justify-center text-[10px] font-bold text-nikito-cyan flex-shrink-0">
+                      {u.prenom[0]}{u.nom[0]}
+                    </div>
+                    <div className="min-w-0">
+                      <div className="text-[12px] text-text truncate">{u.prenom} {u.nom}</div>
+                      <div className="text-[11px] text-dim truncate">{u.email}</div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="bg-bg-deep rounded-xl p-3.5 space-y-1.5">
