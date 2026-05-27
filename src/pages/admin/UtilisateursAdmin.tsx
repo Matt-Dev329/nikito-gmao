@@ -217,24 +217,29 @@ function UserRow({
 }) {
   return (
     <div className="flex items-center gap-3 py-3 px-1 border-b border-white/[0.04] last:border-b-0">
-      <Avatar prenom={user.prenom} nom={user.nom} />
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-[13px] font-medium truncate">
-            {user.prenom} {user.nom}
-          </span>
-          <RoleBadge code={user.role_code} />
-          {user.parcs.some((p) => p.est_manager) && (
-            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber/15 text-amber">
-              MGR
+      <div
+        className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer hover:opacity-80 transition-opacity"
+        onClick={onEditer}
+      >
+        <Avatar prenom={user.prenom} nom={user.nom} />
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-[13px] font-medium truncate">
+              {user.prenom} {user.nom}
             </span>
-          )}
+            <RoleBadge code={user.role_code} />
+            {user.parcs.some((p) => p.est_manager) && (
+              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber/15 text-amber">
+                MGR
+              </span>
+            )}
+          </div>
+          <div className="text-[11px] text-dim truncate mt-0.5">
+            {user.email || user.auth_mode === 'pin_seul' ? (user.email || 'Connexion PIN') : '--'}
+          </div>
         </div>
-        <div className="text-[11px] text-dim truncate mt-0.5">
-          {user.email || user.auth_mode === 'pin_seul' ? (user.email || 'Connexion PIN') : '--'}
-        </div>
+        <ParcBadges parcs={user.parcs} />
       </div>
-      <ParcBadges parcs={user.parcs} />
       <div className="flex gap-1.5 shrink-0">
         {onViewAs && (
           <button
@@ -281,6 +286,7 @@ function UserRow({
     </div>
   );
 }
+
 
 function EmptyState({ text, sub }: { text: string; sub?: string }) {
   return (

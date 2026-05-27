@@ -721,6 +721,7 @@ Deno.serve(async (req: Request) => {
           email: rollerEmail,
           password: tempPassword,
           email_confirm: true,
+          user_metadata: { password_must_change: true },
         });
 
         if (authErr) {

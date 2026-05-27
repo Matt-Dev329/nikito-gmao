@@ -19,6 +19,7 @@ interface AuthContextValue {
   authUser: User | null;
   utilisateur: UtilisateurMetier | null;
   loading: boolean;
+  mustChangePassword: boolean;
   signIn: (email: string, password: string) => ReturnType<typeof supabase.auth.signInWithPassword>;
   signOut: () => ReturnType<typeof supabase.auth.signOut>;
 }
@@ -31,6 +32,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [utilisateur, setUtilisateur] = useState<UtilisateurMetier | null>(null);
   const [loading, setLoading] = useState(true);
   const [sessionChecked, setSessionChecked] = useState(false);
+  const [mustChangePassword, setMustChangePassword] = useState(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -39,7 +41,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSessionChecked(true);
     });
 
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, newSession) => {
+    const { data: listener } = supabase.auth.onAuthStateChange((event, newSession) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        setMustChangePassword(true);
+      }
+      if (event === 'SIGNED_IN' && newSession?.user?.user_metadata?.password_must_change) {
+        setMustChangePassword(true);
+      }
       setSession((prev) => (prev?.access_token === newSession?.access_token ? prev : newSession));
       setAuthUser((prev) => {
         const next = newSession?.user ?? null;
@@ -109,7 +117,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ session, authUser, utilisateur, loading, signIn, signOut }}>
+    <AuthContext.Provider value={{ session, authUser, utilisateur, loading, mustChangePassword, signIn, signOut }}>
       {children}
     </AuthContext.Provider>
   );

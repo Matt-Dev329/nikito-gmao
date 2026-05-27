@@ -53,12 +53,13 @@ Deno.serve(async (req: Request) => {
     for (const user of orphans) {
       if (!user.email) continue;
 
-      // Create auth account with random password
+      // Create auth account with random password + force password change
       const tempPassword = crypto.randomUUID() + "Aa1!";
       const { data: authData, error: authErr } = await supabase.auth.admin.createUser({
         email: user.email,
         password: tempPassword,
         email_confirm: true,
+        user_metadata: { password_must_change: true },
       });
 
       let authUserId: string | null = null;
