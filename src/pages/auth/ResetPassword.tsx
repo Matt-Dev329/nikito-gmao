@@ -40,7 +40,18 @@ export function ResetPassword() {
     });
 
     const hash = window.location.hash;
-    if (hash && (hash.includes('type=recovery') || hash.includes('access_token'))) {
+    const searchParams = new URLSearchParams(window.location.search);
+    const code = searchParams.get('code');
+
+    if (code) {
+      supabase.auth.exchangeCodeForSession(code).then(({ error }) => {
+        if (error) {
+          setTokenError(true);
+        } else {
+          setReady(true);
+        }
+      });
+    } else if (hash && (hash.includes('type=recovery') || hash.includes('access_token'))) {
       const params = new URLSearchParams(hash.replace('#', ''));
       const accessToken = params.get('access_token');
       const refreshToken = params.get('refresh_token');

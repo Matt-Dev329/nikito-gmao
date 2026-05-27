@@ -50,7 +50,14 @@ export function Login() {
     return () => clearInterval(t);
   }, [resetCooldown]);
 
-  const isRecoveryLink = window.location.hash.includes('type=recovery');
+  const isRecoveryLink =
+    window.location.hash.includes('type=recovery') ||
+    new URLSearchParams(window.location.search).get('type') === 'recovery';
+
+  if (isRecoveryLink) {
+    window.location.replace(`/reset-password${window.location.search}${window.location.hash}`);
+    return null;
+  }
 
   if (authLoading) {
     return (
@@ -58,10 +65,6 @@ export function Login() {
         <div className="text-dim text-sm">Chargement...</div>
       </div>
     );
-  }
-
-  if (isRecoveryLink) {
-    return <Navigate to={`/reset-password${window.location.hash}`} replace />;
   }
 
   const screen = screenRef.current;
