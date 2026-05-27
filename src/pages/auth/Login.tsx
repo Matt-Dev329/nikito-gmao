@@ -50,12 +50,18 @@ export function Login() {
     return () => clearInterval(t);
   }, [resetCooldown]);
 
+  const isRecoveryLink = window.location.hash.includes('type=recovery');
+
   if (authLoading) {
     return (
       <div className="min-h-screen bg-bg-app text-text flex items-center justify-center">
         <div className="text-dim text-sm">Chargement...</div>
       </div>
     );
+  }
+
+  if (isRecoveryLink) {
+    return <Navigate to={`/reset-password${window.location.hash}`} replace />;
   }
 
   const screen = screenRef.current;
