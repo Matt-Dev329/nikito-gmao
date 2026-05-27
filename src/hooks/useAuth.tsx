@@ -41,16 +41,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSessionChecked(true);
     });
 
+    let recoveryDetected = false;
+
     const { data: listener } = supabase.auth.onAuthStateChange((event, newSession) => {
       if (event === 'PASSWORD_RECOVERY') {
+        recoveryDetected = true;
         setMustChangePassword(true);
         if (window.location.pathname !== '/reset-password') {
           window.location.replace('/reset-password');
           return;
         }
       }
-      if (event === 'SIGNED_IN' && newSession?.user?.user_metadata?.password_must_change) {
-        setMustChangePassword(true);
+      if (event === 'SIGNED_OUT') {
+        recoveryDetected = false;
+        setMustChangePassword(false);
+      }
+      if (event === 'SIGNED_IN') {
+        if (!recoveryDetected) {
+          if (newSession?.user?.user_metadata?.password_must_change) {
+            setMustChangePassword(true);
+          } else {
+            setMustChangePassword(false);
+          }
+        }
       }
       setSession((prev) => (prev?.access_token === newSession?.access_token ? prev : newSession));
       setAuthUser((prev) => {
