@@ -105,10 +105,13 @@ export function SelectionParc({ titre, onSelect }: SelectionParcProps) {
               <button
                 key={p.id}
                 onClick={() => onSelect({ id: p.id, code: p.code, nom: p.nom })}
-                className="bg-bg-card border border-white/[0.08] rounded-2xl p-6 px-[18px] text-left hover:border-nikito-pink transition-colors"
+                className={`bg-bg-card border rounded-2xl p-6 px-[18px] text-left transition-colors ${
+                  p.actif ? 'border-white/[0.08] hover:border-nikito-pink' : 'border-white/[0.04] opacity-60 hover:border-white/[0.12] hover:opacity-80'
+                }`}
               >
                 <div className="flex justify-between items-center mb-2.5">
                   <span className="text-lg font-bold font-mono text-nikito-cyan">{p.code}</span>
+                  {!p.actif && <span className="text-[10px] text-dim bg-white/[0.06] px-2 py-0.5 rounded">Inactif</span>}
                 </div>
                 <div className="text-sm font-semibold mb-1">{p.nom}</div>
               </button>

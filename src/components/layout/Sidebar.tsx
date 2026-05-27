@@ -123,7 +123,8 @@ export function Sidebar({ user, roleAffiche, roleCode, realRoleCode, compact = f
   const { utilisateur } = useAuth();
   const parcCourant = useParcCourant((s) => s.parc);
   const navigate = useNavigate();
-  const isMultiParc = (utilisateur?.parc_ids?.length ?? 0) > 1;
+  const isAdminRole = roleCode === 'direction' || roleCode === 'chef_maintenance' || roleCode === 'admin_it';
+  const isMultiParc = isAdminRole || (utilisateur?.parc_ids?.length ?? 0) > 1;
 
   return (
     <div className={cn('h-full flex flex-col', compact ? 'p-2 gap-0.5' : 'p-5 px-3.5 gap-1.5')}>
