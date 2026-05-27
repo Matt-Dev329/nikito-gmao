@@ -108,8 +108,9 @@ export function useHistoriqueControles(filtres: FiltresHistorique) {
       let result = (data ?? []).map((row: Record<string, unknown>) => {
         const parc = row.parcs as { code: string; nom: string };
         const items = row.controle_items as { id: string; etat: string }[];
-        const nbOk = items.filter((i) => i.etat === 'ok').length;
-        const nbKo = items.filter((i) => i.etat !== 'ok').length;
+        const saisis = items.filter((i) => i.etat !== 'non_saisi');
+        const nbOk = saisis.filter((i) => i.etat === 'ok').length;
+        const nbKo = saisis.filter((i) => i.etat !== 'ok').length;
 
         return {
           id: row.id as string,
@@ -133,7 +134,7 @@ export function useHistoriqueControles(filtres: FiltresHistorique) {
           motif_correction: row.motif_correction as string | null,
           nb_ok: nbOk,
           nb_ko: nbKo,
-          nb_total: items.length,
+          nb_total: saisis.length,
         } satisfies ControleHistorique;
       });
 
