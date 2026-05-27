@@ -1,6 +1,8 @@
 import { useState, useMemo } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { cn } from '@/lib/utils';
+import { supabase } from '@/lib/supabase';
 import { useParc } from '@/hooks/queries/useReferentiel';
 import { useAttractionsParc } from '@/hooks/queries/useAttractionsParc';
 import { usePointsPourParc } from '@/hooks/queries/usePointsCategoriePourParc';
@@ -86,7 +88,7 @@ export function FicheParc() {
       {onglet === 'configuration' && <OngletConfiguration parc={parc ?? null} />}
       {onglet === 'controles' && <OngletControles parcId={id} />}
       {onglet === 'equipements' && <OngletEquipements />}
-      {onglet === 'equipe' && <OngletEquipe />}
+      {onglet === 'equipe' && <OngletEquipe parcId={id} />}
       {onglet === 'notes' && <NotesChantierParc />}
       {onglet === 'conformite' && <OngletConformiteParc parcId={id} />}
     </div>
@@ -261,6 +263,116 @@ function OngletEquipements() {
   return <div className="p-4 md:p-6 md:px-7 text-dim text-sm">Liste détaillée des équipements de ce parc</div>;
 }
 
-function OngletEquipe() {
-  return <div className="p-4 md:p-6 md:px-7 text-dim text-sm">Utilisateurs assignés à ce parc</div>;
+interface MembreEquipe {
+  id: string;
+  nom: string;
+  prenom: string;
+  email: string;
+  actif: boolean;
+  role_code: string;
+  role_nom: string;
+}
+
+function useEquipeParc(parcId: string | undefined) {
+  return useQuery({
+    queryKey: ['equipe_parc', parcId],
+    queryFn: async () => {
+      if (!parcId) return [];
+      const { data, error } = await supabase
+        .from('parcs_utilisateurs')
+        .select('utilisateurs!inner(id, nom, prenom, email, actif, roles!inner(code, nom))')
+        .eq('parc_id', parcId);
+      if (error) throw error;
+      return (data ?? []).map((row: Record<string, unknown>) => {
+        const u = row.utilisateurs as Record<string, unknown>;
+        const r = u.roles as { code: string; nom: string };
+        return {
+          id: u.id as string,
+          nom: u.nom as string,
+          prenom: u.prenom as string,
+          email: u.email as string,
+          actif: u.actif as boolean,
+          role_code: r.code,
+          role_nom: r.nom,
+        } as MembreEquipe;
+      });
+    },
+    enabled: !!parcId,
+  });
+}
+
+const ROLE_ORDER: Record<string, number> = {
+  direction: 1,
+  chef_maintenance: 2,
+  admin_it: 3,
+  manager_parc: 4,
+  technicien: 5,
+  staff_operationnel: 6,
+};
+
+function OngletEquipe({ parcId }: { parcId: string | undefined }) {
+  const { data: membres, isLoading } = useEquipeParc(parcId);
+
+  const grouped = useMemo(() => {
+    if (!membres) return [];
+    const sorted = [...membres].sort((a, b) => (ROLE_ORDER[a.role_code] ?? 9) - (ROLE_ORDER[b.role_code] ?? 9) || a.nom.localeCompare(b.nom));
+    const groups: { role: string; membres: MembreEquipe[] }[] = [];
+    for (const m of sorted) {
+      const last = groups[groups.length - 1];
+      if (last && last.role === m.role_nom) {
+        last.membres.push(m);
+      } else {
+        groups.push({ role: m.role_nom, membres: [m] });
+      }
+    }
+    return groups;
+  }, [membres]);
+
+  if (isLoading) {
+    return (
+      <div className="p-4 md:p-7 flex flex-col gap-3">
+        {[1, 2, 3].map((i) => <div key={i} className="bg-bg-card rounded-xl h-14 animate-pulse" />)}
+      </div>
+    );
+  }
+
+  if (!membres || membres.length === 0) {
+    return (
+      <div className="p-4 md:p-7">
+        <div className="bg-bg-card rounded-xl p-8 text-center border border-white/[0.06]">
+          <p className="text-dim text-sm">Aucun utilisateur assigne a ce parc</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-4 md:p-7 flex flex-col gap-5">
+      <div className="text-[13px] text-dim">{membres.length} membre{membres.length > 1 ? 's' : ''} dans l'equipe</div>
+      {grouped.map((g) => (
+        <div key={g.role}>
+          <div className="text-[11px] text-dim uppercase tracking-wider mb-2">{g.role} ({g.membres.length})</div>
+          <div className="flex flex-col gap-1.5">
+            {g.membres.map((m) => (
+              <div
+                key={m.id}
+                className="bg-bg-card rounded-xl px-4 py-3 border border-white/[0.06] flex items-center gap-3"
+              >
+                <div className="w-8 h-8 rounded-full bg-nikito-cyan/10 text-nikito-cyan flex items-center justify-center text-[11px] font-bold flex-shrink-0">
+                  {m.prenom[0]}{m.nom[0] || ''}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-[13px] font-medium truncate">{m.prenom} {m.nom}</div>
+                  <div className="text-[11px] text-dim truncate">{m.email}</div>
+                </div>
+                {!m.actif && (
+                  <span className="text-[10px] text-amber bg-amber/10 px-2 py-0.5 rounded flex-shrink-0">Inactif</span>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
 }
