@@ -68,7 +68,7 @@ export function PageITAdmin() {
   const [edgeFns, setEdgeFns] = useState<EdgeFnStatus[]>([]);
   const [tableStats, setTableStats] = useState<TableStats[]>([]);
   const [recentErrors, setRecentErrors] = useState<RecentError[]>([]);
-  const [activeTab, setActiveTab] = useState<'sante' | 'edge' | 'tables' | 'config' | 'logs' | 'debug'>('sante');
+  const [activeTab, setActiveTab] = useState<'sante' | 'edge' | 'tables' | 'config' | 'logs' | 'acces' | 'debug'>('sante');
   const [running, setRunning] = useState(false);
   const [lastRun, setLastRun] = useState<Date | null>(null);
 
@@ -322,6 +322,7 @@ export function PageITAdmin() {
           { key: 'edge', label: 'Edge Functions' },
           { key: 'tables', label: 'Tables DB' },
           { key: 'config', label: 'Configuration' },
+          { key: 'acces', label: 'Acces / Modules' },
           { key: 'logs', label: 'Incidents ouverts' },
           { key: 'debug', label: 'Assistant Claude' },
         ] as const).map((tab) => (
@@ -344,6 +345,7 @@ export function PageITAdmin() {
       {activeTab === 'edge' && <TabEdgeFunctions fns={edgeFns} running={running} />}
       {activeTab === 'tables' && <TabTables tables={tableStats} running={running} />}
       {activeTab === 'config' && <TabConfig />}
+      {activeTab === 'acces' && <TabAccesModules />}
       {activeTab === 'logs' && <TabLogs errors={recentErrors} />}
       {activeTab === 'debug' && <TabDebugAssistant checks={checks} edgeFns={edgeFns} />}
     </div>
@@ -449,6 +451,172 @@ function TabTables({ tables, running }: { tables: TableStats[]; running: boolean
         ))}
       </div>
     </div>
+  );
+}
+
+const ALL_ROLES: { code: string; label: string }[] = [
+  { code: 'direction', label: 'Direction' },
+  { code: 'chef_maintenance', label: 'Chef maint.' },
+  { code: 'manager_parc', label: 'Manager' },
+  { code: 'technicien', label: 'Technicien' },
+  { code: 'staff_operationnel', label: 'Staff' },
+  { code: 'admin_it', label: 'Admin IT' },
+];
+
+interface FeatureFlag {
+  id: string;
+  feature_code: string;
+  feature_label: string;
+  description: string;
+  ordre: number;
+  actif_global: boolean;
+  roles_autorises: string[];
+}
+
+function TabAccesModules() {
+  const [features, setFeatures] = useState<FeatureFlag[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState<string | null>(null);
+
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase
+        .from('feature_flags')
+        .select('*')
+        .order('ordre');
+      setFeatures((data ?? []) as FeatureFlag[]);
+      setLoading(false);
+    })();
+  }, []);
+
+  const toggleGlobal = async (feature: FeatureFlag) => {
+    setSaving(feature.id);
+    const newVal = !feature.actif_global;
+    const { error } = await supabase
+      .from('feature_flags')
+      .update({ actif_global: newVal, modifie_le: new Date().toISOString() })
+      .eq('id', feature.id);
+    if (!error) {
+      setFeatures((prev) =>
+        prev.map((f) => (f.id === feature.id ? { ...f, actif_global: newVal } : f))
+      );
+    }
+    setSaving(null);
+  };
+
+  const toggleRole = async (feature: FeatureFlag, roleCode: string) => {
+    setSaving(feature.id);
+    const hasRole = feature.roles_autorises.includes(roleCode);
+    const newRoles = hasRole
+      ? feature.roles_autorises.filter((r) => r !== roleCode)
+      : [...feature.roles_autorises, roleCode];
+
+    const { error } = await supabase
+      .from('feature_flags')
+      .update({ roles_autorises: newRoles, modifie_le: new Date().toISOString() })
+      .eq('id', feature.id);
+    if (!error) {
+      setFeatures((prev) =>
+        prev.map((f) => (f.id === feature.id ? { ...f, roles_autorises: newRoles } : f))
+      );
+    }
+    setSaving(null);
+  };
+
+  if (loading) return <LoadingState label="Chargement des modules..." />;
+
+  return (
+    <div className="space-y-4">
+      <div className="bg-bg-card rounded-xl border border-white/[0.06] px-4 py-3">
+        <div className="text-[13px] font-semibold">Mapping des acces par role</div>
+        <div className="text-[11px] text-dim mt-0.5">
+          Activez ou desactivez les modules pour chaque role. Le switch global desactive le module pour tous les utilisateurs.
+        </div>
+      </div>
+
+      <div className="bg-bg-card rounded-xl border border-white/[0.06] overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[700px]">
+            <thead>
+              <tr className="border-b border-white/[0.06]">
+                <th className="text-left px-4 py-3 text-[10px] text-dim uppercase tracking-wider font-semibold w-[200px]">Module</th>
+                <th className="text-center px-2 py-3 text-[10px] text-dim uppercase tracking-wider font-semibold w-[70px]">Global</th>
+                {ALL_ROLES.map((role) => (
+                  <th key={role.code} className="text-center px-2 py-3 text-[10px] text-dim uppercase tracking-wider font-semibold">
+                    {role.label}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-white/[0.04]">
+              {features.map((feature) => (
+                <tr key={feature.id} className={cn(!feature.actif_global && 'opacity-40')}>
+                  <td className="px-4 py-2.5">
+                    <div className="text-[12px] font-medium">{feature.feature_label}</div>
+                    <div className="text-[10px] text-dim">{feature.description}</div>
+                  </td>
+                  <td className="text-center px-2 py-2.5">
+                    <button
+                      onClick={() => toggleGlobal(feature)}
+                      disabled={saving === feature.id}
+                      className={cn(
+                        'w-9 h-5 rounded-full relative transition-colors inline-flex items-center',
+                        feature.actif_global ? 'bg-green' : 'bg-white/[0.12]'
+                      )}
+                    >
+                      <span className={cn(
+                        'absolute w-3.5 h-3.5 rounded-full bg-white transition-transform shadow-sm',
+                        feature.actif_global ? 'translate-x-[18px]' : 'translate-x-[3px]'
+                      )} />
+                    </button>
+                  </td>
+                  {ALL_ROLES.map((role) => {
+                    const hasAccess = feature.roles_autorises.includes(role.code);
+                    return (
+                      <td key={role.code} className="text-center px-2 py-2.5">
+                        <button
+                          onClick={() => toggleRole(feature, role.code)}
+                          disabled={saving === feature.id || !feature.actif_global}
+                          className={cn(
+                            'w-8 h-8 rounded-lg transition-all inline-flex items-center justify-center',
+                            hasAccess
+                              ? 'bg-nikito-cyan/15 text-nikito-cyan border border-nikito-cyan/30'
+                              : 'bg-white/[0.03] text-faint border border-white/[0.06] hover:border-white/[0.12]',
+                            !feature.actif_global && 'cursor-not-allowed'
+                          )}
+                        >
+                          {hasAccess ? (
+                            <CheckIcon className="w-3.5 h-3.5" />
+                          ) : (
+                            <XSmallIcon className="w-3.5 h-3.5" />
+                          )}
+                        </button>
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CheckIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 8.5l3.5 3.5 6.5-7" />
+    </svg>
+  );
+}
+
+function XSmallIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+      <path d="M5 5l6 6M11 5l-6 6" />
+    </svg>
   );
 }
 
