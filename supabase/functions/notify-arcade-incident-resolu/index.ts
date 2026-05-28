@@ -7,6 +7,12 @@ const corsHeaders = {
     "Content-Type, Authorization, X-Client-Info, Apikey",
 };
 
+interface PieceUtilisee {
+  nom: string;
+  reference: string | null;
+  quantite: number;
+}
+
 interface ArcadeResoluPayload {
   incident_id: string;
   numero_bt: string;
@@ -25,6 +31,14 @@ interface ArcadeResoluPayload {
   resolu_le: string | null;
   resolu_par_nom: string | null;
   duree_minutes: number | null;
+  diagnostic: string | null;
+  actions_realisees: string | null;
+  resolu_premier_coup: boolean | null;
+  technicien_nom: string | null;
+  binome_nom: string | null;
+  debut_intervention: string | null;
+  fin_intervention: string | null;
+  pieces_utilisees: PieceUtilisee[];
 }
 
 function formatDuree(minutes: number | null): string {
@@ -38,8 +52,9 @@ function formatDuree(minutes: number | null): string {
   return rh > 0 ? `${j}j ${rh}h` : `${j}j`;
 }
 
-function buildHtml(p: ArcadeResoluPayload): string {
-  const dateDeclaration = new Date(p.declare_le).toLocaleString("fr-FR", {
+function formatDate(iso: string | null): string {
+  if (!iso) return "N/A";
+  return new Date(iso).toLocaleString("fr-FR", {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
@@ -47,19 +62,38 @@ function buildHtml(p: ArcadeResoluPayload): string {
     minute: "2-digit",
     timeZone: "Europe/Paris",
   });
+}
 
-  const dateResolution = p.resolu_le
-    ? new Date(p.resolu_le).toLocaleString("fr-FR", {
-        day: "2-digit",
-        month: "2-digit",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-        timeZone: "Europe/Paris",
-      })
-    : "N/A";
-
+function buildHtml(p: ArcadeResoluPayload): string {
+  const dateDeclaration = formatDate(p.declare_le);
+  const dateResolution = formatDate(p.resolu_le);
   const dureeStr = formatDuree(p.duree_minutes);
+
+  const interventionDureeMin =
+    p.debut_intervention && p.fin_intervention
+      ? Math.round(
+          (new Date(p.fin_intervention).getTime() -
+            new Date(p.debut_intervention).getTime()) /
+            60000
+        )
+      : null;
+
+  const piecesHtml =
+    p.pieces_utilisees && p.pieces_utilisees.length > 0
+      ? p.pieces_utilisees
+          .map(
+            (pc) =>
+              `<tr>
+              <td style="padding:8px 12px;font-size:13px;color:#ffffff;border-bottom:1px solid #1e2344;">
+                ${pc.nom}${pc.reference ? ` <span style="color:#8b92b8;">(${pc.reference})</span>` : ""}
+              </td>
+              <td style="padding:8px 12px;font-size:13px;color:#5DE5FF;border-bottom:1px solid #1e2344;text-align:center;font-weight:600;">
+                x${pc.quantite}
+              </td>
+            </tr>`
+          )
+          .join("")
+      : "";
 
   return `<!DOCTYPE html>
 <html lang="fr">
@@ -122,7 +156,7 @@ function buildHtml(p: ArcadeResoluPayload): string {
                 </td>
               </tr>
 
-              <!-- Info table -->
+              <!-- Equipment info table -->
               <tr>
                 <td style="padding-bottom:24px;">
                   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid #1e2344;border-radius:10px;overflow:hidden;">
@@ -137,77 +171,154 @@ function buildHtml(p: ArcadeResoluPayload): string {
                     ${
     p.numero_reader
       ? `<tr>
-                      <td style="padding:12px 16px;font-size:13px;color:#8b92b8;border-bottom:1px solid #1e2344;">
-                        N&deg; Reader
-                      </td>
-                      <td style="padding:12px 16px;font-size:14px;color:#5DE5FF;border-bottom:1px solid #1e2344;font-weight:700;letter-spacing:0.5px;">
-                        ${p.numero_reader}
-                      </td>
+                      <td style="padding:12px 16px;font-size:13px;color:#8b92b8;border-bottom:1px solid #1e2344;">N&deg; Reader</td>
+                      <td style="padding:12px 16px;font-size:14px;color:#5DE5FF;border-bottom:1px solid #1e2344;font-weight:700;letter-spacing:0.5px;">${p.numero_reader}</td>
                     </tr>`
       : ""
   }
                     ${
     p.numero_serie
       ? `<tr>
-                      <td style="padding:12px 16px;font-size:13px;color:#8b92b8;border-bottom:1px solid #1e2344;">
-                        N&deg; S&eacute;rie
-                      </td>
-                      <td style="padding:12px 16px;font-size:14px;color:#ffffff;border-bottom:1px solid #1e2344;">
-                        ${p.numero_serie}
-                      </td>
+                      <td style="padding:12px 16px;font-size:13px;color:#8b92b8;border-bottom:1px solid #1e2344;">N&deg; S&eacute;rie</td>
+                      <td style="padding:12px 16px;font-size:14px;color:#ffffff;border-bottom:1px solid #1e2344;">${p.numero_serie}</td>
                     </tr>`
       : ""
   }
                     ${
     p.categorie_nom
       ? `<tr>
-                      <td style="padding:12px 16px;font-size:13px;color:#8b92b8;border-bottom:1px solid #1e2344;">
-                        Cat&eacute;gorie
-                      </td>
-                      <td style="padding:12px 16px;font-size:14px;color:#ffffff;border-bottom:1px solid #1e2344;">
-                        ${p.categorie_nom}
-                      </td>
+                      <td style="padding:12px 16px;font-size:13px;color:#8b92b8;border-bottom:1px solid #1e2344;">Cat&eacute;gorie</td>
+                      <td style="padding:12px 16px;font-size:14px;color:#ffffff;border-bottom:1px solid #1e2344;">${p.categorie_nom}</td>
                     </tr>`
       : ""
   }
                     <tr>
-                      <td style="padding:12px 16px;font-size:13px;color:#8b92b8;border-bottom:1px solid #1e2344;">
-                        Parc
-                      </td>
-                      <td style="padding:12px 16px;font-size:14px;color:#ffffff;border-bottom:1px solid #1e2344;">
-                        ${p.parc_nom} (${p.parc_code})
-                      </td>
+                      <td style="padding:12px 16px;font-size:13px;color:#8b92b8;border-bottom:1px solid #1e2344;">Parc</td>
+                      <td style="padding:12px 16px;font-size:14px;color:#ffffff;border-bottom:1px solid #1e2344;">${p.parc_nom} (${p.parc_code})</td>
                     </tr>
                     <tr>
-                      <td style="padding:12px 16px;font-size:13px;color:#8b92b8;border-bottom:1px solid #1e2344;">
-                        D&eacute;clar&eacute; le
-                      </td>
-                      <td style="padding:12px 16px;font-size:14px;color:#ffffff;border-bottom:1px solid #1e2344;">
-                        ${dateDeclaration}
-                      </td>
+                      <td style="padding:12px 16px;font-size:13px;color:#8b92b8;border-bottom:1px solid #1e2344;">D&eacute;clar&eacute; le</td>
+                      <td style="padding:12px 16px;font-size:14px;color:#ffffff;border-bottom:1px solid #1e2344;">${dateDeclaration}</td>
                     </tr>
                     <tr>
-                      <td style="padding:12px 16px;font-size:13px;color:#8b92b8;border-bottom:1px solid #1e2344;">
-                        R&eacute;solu le
-                      </td>
-                      <td style="padding:12px 16px;font-size:14px;color:#22C55E;border-bottom:1px solid #1e2344;font-weight:600;">
-                        ${dateResolution}
-                      </td>
+                      <td style="padding:12px 16px;font-size:13px;color:#8b92b8;border-bottom:1px solid #1e2344;">R&eacute;solu le</td>
+                      <td style="padding:12px 16px;font-size:14px;color:#22C55E;border-bottom:1px solid #1e2344;font-weight:600;">${dateResolution}</td>
                     </tr>
                     <tr>
-                      <td style="padding:12px 16px;font-size:13px;color:#8b92b8;">
-                        Priorit&eacute;
-                      </td>
-                      <td style="padding:12px 16px;font-size:14px;color:#ffffff;">
-                        ${p.priorite}
-                      </td>
+                      <td style="padding:12px 16px;font-size:13px;color:#8b92b8;">Priorit&eacute;</td>
+                      <td style="padding:12px 16px;font-size:14px;color:#ffffff;">${p.priorite}</td>
                     </tr>
                   </table>
                 </td>
               </tr>
 
+              <!-- Intervention details section -->
+              ${
+    p.diagnostic || p.actions_realisees || p.technicien_nom
+      ? `<tr>
+                <td style="padding-bottom:8px;">
+                  <div style="font-size:14px;color:#5DE5FF;font-weight:700;text-transform:uppercase;letter-spacing:1px;padding-bottom:12px;border-bottom:1px solid #1e2344;">
+                    D&eacute;tails de l'intervention
+                  </div>
+                </td>
+              </tr>
+
+              <!-- Technician -->
+              ${
+          p.technicien_nom
+            ? `<tr>
+                <td style="padding:12px 0;">
+                  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                    <tr>
+                      <td style="font-size:13px;color:#8b92b8;padding-bottom:4px;">Technicien</td>
+                    </tr>
+                    <tr>
+                      <td style="font-size:14px;color:#ffffff;font-weight:600;">
+                        ${p.technicien_nom}${p.binome_nom ? ` <span style="color:#8b92b8;font-weight:400;">+ ${p.binome_nom}</span>` : ""}
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>`
+            : ""
+        }
+
+              <!-- Intervention duration -->
+              ${
+          interventionDureeMin
+            ? `<tr>
+                <td style="padding:8px 0 12px 0;">
+                  <span style="font-size:13px;color:#8b92b8;">Dur&eacute;e intervention : </span>
+                  <span style="font-size:14px;color:#ffffff;font-weight:600;">${formatDuree(interventionDureeMin)}</span>
+                </td>
+              </tr>`
+            : ""
+        }
+
+              <!-- Premier coup -->
+              ${
+          p.resolu_premier_coup !== null
+            ? `<tr>
+                <td style="padding:4px 0 12px 0;">
+                  <span style="font-size:13px;color:#8b92b8;">R&eacute;solu du premier coup : </span>
+                  <span style="font-size:14px;color:${p.resolu_premier_coup ? "#22C55E" : "#FFB547"};font-weight:600;">
+                    ${p.resolu_premier_coup ? "Oui" : "Non"}
+                  </span>
+                </td>
+              </tr>`
+            : ""
+        }
+
+              <!-- Diagnostic -->
+              ${
+          p.diagnostic
+            ? `<tr>
+                <td style="padding:12px 0;">
+                  <div style="font-size:13px;color:#8b92b8;padding-bottom:6px;">Diagnostic</div>
+                  <div style="font-size:14px;color:#ffffff;line-height:22px;background-color:#0a0e27;border-radius:8px;padding:12px 16px;">
+                    ${p.diagnostic}
+                  </div>
+                </td>
+              </tr>`
+            : ""
+        }
+
+              <!-- Actions realisees -->
+              ${
+          p.actions_realisees
+            ? `<tr>
+                <td style="padding:12px 0;">
+                  <div style="font-size:13px;color:#8b92b8;padding-bottom:6px;">Actions r&eacute;alis&eacute;es</div>
+                  <div style="font-size:14px;color:#ffffff;line-height:22px;background-color:#0a0e27;border-radius:8px;padding:12px 16px;">
+                    ${p.actions_realisees}
+                  </div>
+                </td>
+              </tr>`
+            : ""
+        }
+
+              <!-- Pieces utilisees -->
+              ${
+          piecesHtml
+            ? `<tr>
+                <td style="padding:12px 0 0 0;">
+                  <div style="font-size:13px;color:#8b92b8;padding-bottom:8px;">Pi&egrave;ces utilis&eacute;es</div>
+                  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid #1e2344;border-radius:8px;overflow:hidden;">
+                    <tr>
+                      <td style="padding:8px 12px;font-size:11px;color:#8b92b8;text-transform:uppercase;letter-spacing:0.5px;border-bottom:1px solid #1e2344;background-color:#0a0e27;">Pi&egrave;ce</td>
+                      <td style="padding:8px 12px;font-size:11px;color:#8b92b8;text-transform:uppercase;letter-spacing:0.5px;border-bottom:1px solid #1e2344;background-color:#0a0e27;text-align:center;">Qt&eacute;</td>
+                    </tr>
+                    ${piecesHtml}
+                  </table>
+                </td>
+              </tr>`
+            : ""
+        }`
+      : ""
+  }
+
               <tr>
-                <td style="font-size:13px;color:#8b92b8;text-align:center;padding-top:4px;line-height:20px;">
+                <td style="font-size:13px;color:#8b92b8;text-align:center;padding-top:24px;line-height:20px;">
                   Cet &eacute;quipement est de nouveau op&eacute;rationnel.
                 </td>
               </tr>

@@ -1,11 +1,13 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { TabletHeader } from '@/components/layout/TabletHeader';
 import { CritTag } from '@/components/ui/CritTag';
 import { PhotoCapture } from '@/components/shared/PhotoCapture';
 import { ModaleQuitterSansValider } from '@/components/ui/ModaleQuitterSansValider';
 import { useChrono } from '@/hooks/useChrono';
+import { useIncident } from '@/hooks/queries/useTickets';
 import { formatChrono, cn } from '@/lib/utils';
+import type { Criticite } from '@/types/database';
 
 type Etape = 'diagnostic' | 'pieces' | 'actions' | 'cloture';
 const etapes: { code: Etape; label: string }[] = [
@@ -23,29 +25,81 @@ interface PieceUtilisee {
   quantite: number;
 }
 
-const piecesMock: PieceUtilisee[] = [
-  { id: '1', nom: 'Carte mère Submarine v3', reference: 'SUB-CM-V3', stockApres: 1, quantite: 1 },
-  { id: '2', nom: 'Pâte thermique', reference: 'THERM-G2', stockApres: 8, quantite: 1 },
-];
-
 export function Intervention() {
   const { btNumero } = useParams();
   const navigate = useNavigate();
-  const [debutISO] = useState('2026-04-15T14:09:00.000Z');
+
+  const { data: incident, isLoading } = useIncident(btNumero);
+
+  const equip = incident?.equipements as Record<string, unknown> | null;
+  const priorite = incident?.niveaux_priorite as Record<string, unknown> | null;
+  const zone = equip?.zones as Record<string, unknown> | null;
+  const parc = equip?.parcs as Record<string, unknown> | null;
+  const interventions = (incident?.interventions ?? []) as Record<string, unknown>[];
+
+  const latestIntervention = useMemo(() => {
+    if (!interventions.length) return null;
+    return interventions.sort((a, b) => {
+      const da = new Date(a.cree_le as string).getTime();
+      const db = new Date(b.cree_le as string).getTime();
+      return db - da;
+    })[0];
+  }, [interventions]);
+
+  const debutISO = latestIntervention?.debut as string | null ?? null;
   const secondes = useChrono(debutISO);
 
-  const [etapeActive, setEtapeActive] = useState<Etape>('actions');
-  const [diagnostic] = useState(
-    'Carte mère HS suite à coupure secteur. Pas de signal au démarrage, voyant alim éteint malgré secteur OK testé multimètre.'
-  );
-  const [actions, setActions] = useState(
-    'Démontage capot arrière, remplacement carte mère, application pâte thermique sur dissipateur CPU, test boot OK, test cycle complet ride OK.'
-  );
-  const [premierCoup, setPremierCoup] = useState<boolean | null>(true);
+  const criticite: Criticite = useMemo(() => {
+    const code = (priorite?.code as string) ?? '';
+    if (code === 'bloquant') return 'bloquant';
+    if (code === 'majeur') return 'majeur';
+    return 'mineur';
+  }, [priorite]);
+
+  const piecesExistantes: PieceUtilisee[] = useMemo(() => {
+    if (!latestIntervention) return [];
+    const pu = (latestIntervention.pieces_utilisees ?? []) as Record<string, unknown>[];
+    return pu.map((p) => {
+      const pd = p.pieces_detachees as Record<string, unknown> | null;
+      return {
+        id: p.id as string,
+        nom: (pd?.nom as string) ?? 'Pièce',
+        reference: (pd?.reference as string) ?? '',
+        stockApres: ((pd?.stock_actuel as number) ?? 0) - ((p.quantite as number) ?? 1),
+        quantite: (p.quantite as number) ?? 1,
+      };
+    });
+  }, [latestIntervention]);
+
+  const existingDiagnostic = (latestIntervention?.diagnostic as string) ?? '';
+  const existingActions = (latestIntervention?.actions_realisees as string) ?? '';
+  const existingPremierCoup = latestIntervention?.resolu_premier_coup as boolean | null ?? null;
+
+  const hasIntervention = !!latestIntervention;
+  const currentEtape: Etape = useMemo(() => {
+    if (!hasIntervention) return 'diagnostic';
+    if (!existingDiagnostic) return 'diagnostic';
+    if (!existingActions) return 'actions';
+    return 'actions';
+  }, [hasIntervention, existingDiagnostic, existingActions]);
+
+  const [etapeActive, setEtapeActive] = useState<Etape>(currentEtape);
+  const [diagnostic, setDiagnostic] = useState('');
+  const [actions, setActions] = useState('');
+  const [premierCoup, setPremierCoup] = useState<boolean | null>(null);
   const [photoAvant, setPhotoAvant] = useState<string | null>(null);
   const [photoApres, setPhotoApres] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
   const [showModale, setShowModale] = useState(false);
+  const [initialized, setInitialized] = useState(false);
+
+  if (incident && !initialized) {
+    setDiagnostic(existingDiagnostic);
+    setActions(existingActions);
+    setPremierCoup(existingPremierCoup);
+    setEtapeActive(currentEtape);
+    setInitialized(true);
+  }
 
   const handleBack = useCallback(() => {
     if (dirty) {
@@ -62,25 +116,58 @@ export function Intervention() {
 
   const etapeIndex = etapes.findIndex((e) => e.code === etapeActive);
 
+  const equipLibelle = (equip?.libelle as string) ?? '';
+  const equipCode = (equip?.code as string) ?? '';
+  const parcNom = (parc?.nom as string) ?? '';
+  const zoneName = (zone?.nom as string) ?? '';
+  const titre = incident?.titre as string ?? equipLibelle;
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-bg-app flex items-center justify-center">
+        <div className="text-dim text-sm animate-pulse">Chargement de l'intervention...</div>
+      </div>
+    );
+  }
+
+  if (!incident) {
+    return (
+      <div className="min-h-screen bg-bg-app flex flex-col items-center justify-center gap-3">
+        <div className="text-dim text-sm">Incident introuvable : {btNumero}</div>
+        <button onClick={() => navigate(-1)} className="text-nikito-cyan text-sm underline">
+          Retour
+        </button>
+      </div>
+    );
+  }
+
   return (
     <>
       <TabletHeader
-        parc="Submarine"
+        parc={equipLibelle}
         parcCode="INTERVENTION EN COURS"
-        titre={`${btNumero} · Submarine`}
+        titre={`${btNumero} · ${titre}`}
         showBack
         onBack={handleBack}
         rightSlot={
-          <div className="bg-gradient-danger text-text px-3.5 py-2 rounded-xl font-mono text-lg font-bold tracking-wider">
-            ⏱ {formatChrono(secondes)}
-          </div>
+          debutISO ? (
+            <div className="bg-gradient-danger text-text px-3.5 py-2 rounded-xl font-mono text-lg font-bold tracking-wider">
+              {formatChrono(secondes)}
+            </div>
+          ) : undefined
         }
       />
 
       <div className="bg-bg-deep px-[18px] py-3.5 flex items-center gap-2.5 border-b border-white/[0.04]">
-        <CritTag niveau="bloquant" />
-        <span className="text-[13px] text-dim">DOM-ATR-SUB-01 · zone Attractions</span>
-        <span className="ml-auto text-[11px] text-green">● démarré 14:09</span>
+        <CritTag niveau={criticite} />
+        <span className="text-[13px] text-dim">
+          {equipCode}{zoneName ? ` · ${zoneName}` : ''}{parcNom ? ` · ${parcNom}` : ''}
+        </span>
+        {debutISO && (
+          <span className="ml-auto text-[11px] text-green">
+            ● démarré {new Date(debutISO).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+          </span>
+        )}
       </div>
 
       <main className="p-4 px-[18px] bg-bg-app flex flex-col gap-3.5">
@@ -118,15 +205,28 @@ export function Intervention() {
           </div>
         </div>
 
-        {/* Diagnostic (étape validée) */}
+        {/* Diagnostic */}
         <div className="bg-bg-card rounded-xl p-3.5 px-4">
           <div className="flex justify-between items-center mb-2.5">
-            <div className="text-[13px] font-semibold text-green">&#10003; Diagnostic</div>
-            <button onClick={() => setEtapeActive('diagnostic')} className="bg-transparent border-none text-nikito-cyan text-[11px]">
-              Modifier
-            </button>
+            <div className={cn('text-[13px] font-semibold', diagnostic ? 'text-green' : 'text-nikito-cyan')}>
+              {diagnostic ? '✓' : '▸'} Diagnostic
+            </div>
+            {diagnostic && (
+              <button onClick={() => setEtapeActive('diagnostic')} className="bg-transparent border-none text-nikito-cyan text-[11px]">
+                Modifier
+              </button>
+            )}
           </div>
-          <div className="text-[13px] text-text leading-relaxed bg-bg-deep p-3 rounded-lg">{diagnostic}</div>
+          {diagnostic ? (
+            <div className="text-[13px] text-text leading-relaxed bg-bg-deep p-3 rounded-lg">{diagnostic}</div>
+          ) : (
+            <textarea
+              value={diagnostic}
+              onChange={(e) => { setDiagnostic(e.target.value); setDirty(true); }}
+              placeholder="Décrire le diagnostic..."
+              className="w-full bg-bg-deep border border-white/[0.08] rounded-lg text-text p-3 text-[13px] resize-y min-h-[90px] outline-none focus:border-nikito-cyan"
+            />
+          )}
           <div className="mt-3">
             <PhotoCapture
               bucketName="alba-interventions"
@@ -139,33 +239,39 @@ export function Intervention() {
           </div>
         </div>
 
-        {/* Pièces (étape validée) */}
+        {/* Pièces */}
         <div className="bg-bg-card rounded-xl p-3.5 px-4">
           <div className="flex justify-between items-center mb-3">
-            <div className="text-[13px] font-semibold text-green">✓ Pièces utilisées</div>
+            <div className={cn('text-[13px] font-semibold', piecesExistantes.length > 0 ? 'text-green' : 'text-dim')}>
+              {piecesExistantes.length > 0 ? '✓' : '○'} Pièces utilisées
+            </div>
             <button className="bg-transparent border border-nikito-cyan text-nikito-cyan px-2.5 py-1 rounded-md text-[11px]">
               + Ajouter
             </button>
           </div>
-          <div className="flex flex-col gap-2">
-            {piecesMock.map((p) => (
-              <div key={p.id} className="bg-bg-deep p-2.5 px-3.5 rounded-lg flex items-center gap-3">
-                <div className="flex-1">
-                  <div className="text-[13px] font-medium">{p.nom}</div>
-                  <div className="text-[11px] text-dim font-mono">
-                    {p.reference} · stock après : {p.stockApres}
+          {piecesExistantes.length > 0 ? (
+            <div className="flex flex-col gap-2">
+              {piecesExistantes.map((p) => (
+                <div key={p.id} className="bg-bg-deep p-2.5 px-3.5 rounded-lg flex items-center gap-3">
+                  <div className="flex-1">
+                    <div className="text-[13px] font-medium">{p.nom}</div>
+                    <div className="text-[11px] text-dim font-mono">
+                      {p.reference}{p.reference ? ' · ' : ''}stock après : {p.stockApres}
+                    </div>
+                  </div>
+                  <div className="bg-nikito-cyan/20 text-nikito-cyan px-2.5 py-1 rounded-md text-xs font-semibold">
+                    x{p.quantite}
                   </div>
                 </div>
-                <div className="bg-nikito-violet text-bg-app px-2.5 py-1 rounded-md text-xs font-semibold">
-                  ×{p.quantite}
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-[12px] text-dim text-center py-4">Aucune pièce ajoutée</div>
+          )}
         </div>
 
-        {/* Actions (étape active) */}
-        <div className="bg-bg-card rounded-xl p-3.5 px-4 border border-nikito-cyan">
+        {/* Actions */}
+        <div className={cn('bg-bg-card rounded-xl p-3.5 px-4', etapeActive === 'actions' && 'border border-nikito-cyan')}>
           <div className="flex justify-between items-center mb-3">
             <div className="text-[13px] font-semibold text-nikito-cyan">
               ▸ Actions réalisées <span className="text-red text-[11px] ml-1">obligatoire</span>
@@ -174,6 +280,7 @@ export function Intervention() {
           <textarea
             value={actions}
             onChange={(e) => { setActions(e.target.value); setDirty(true); }}
+            placeholder="Décrire les actions réalisées..."
             className="w-full bg-bg-deep border border-white/[0.08] rounded-lg text-text p-3 text-[13px] resize-y min-h-[90px] outline-none focus:border-nikito-cyan"
           />
           <div className="mt-3.5">
@@ -201,7 +308,7 @@ export function Intervention() {
                   : 'bg-bg-deep border border-white/10 text-text'
               )}
             >
-              ✓ Oui
+              Oui
             </button>
             <button
               onClick={() => { setPremierCoup(false); setDirty(true); }}
@@ -212,7 +319,7 @@ export function Intervention() {
                   : 'bg-bg-deep border border-white/10 text-text'
               )}
             >
-              Non · à revoir
+              Non
             </button>
           </div>
         </div>
