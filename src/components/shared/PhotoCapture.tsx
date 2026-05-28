@@ -173,6 +173,8 @@ export function PhotoCapture({
     setState('idle');
   };
 
+  const [zoomed, setZoomed] = useState(false);
+
   if (state === 'done' && photoUrl) {
     return (
       <div className="flex flex-col gap-2">
@@ -182,19 +184,28 @@ export function PhotoCapture({
             {required && <span className="text-red ml-1">*</span>}
           </div>
         )}
-        <div className="flex items-center gap-3">
+        <div className="relative rounded-xl overflow-hidden border border-white/[0.08] bg-black">
           <img
             src={photoUrl}
             alt="Photo"
-            className="w-[120px] h-[120px] rounded-xl object-cover border border-white/[0.08]"
+            className="w-full max-h-[240px] object-contain cursor-zoom-in"
+            onClick={() => setZoomed(true)}
           />
           <button
             onClick={reprendre}
-            className="bg-bg-deep border border-white/[0.08] text-dim px-3 py-2 rounded-lg text-[12px] min-h-[44px]"
+            className="absolute top-2 right-2 bg-black/60 backdrop-blur text-white px-3 py-1.5 rounded-lg text-[11px] font-medium min-h-[34px]"
           >
             Reprendre
           </button>
         </div>
+        {zoomed && (
+          <div
+            className="fixed inset-0 z-[100] bg-black/90 flex items-center justify-center p-4 cursor-zoom-out"
+            onClick={() => setZoomed(false)}
+          >
+            <img src={photoUrl} alt="Photo plein ecran" className="max-w-full max-h-full object-contain" />
+          </div>
+        )}
       </div>
     );
   }

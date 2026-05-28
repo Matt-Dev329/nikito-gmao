@@ -82,7 +82,7 @@ export function ControleOuverture() {
       realise_par_id: string;
       realise_par_nom: string;
       realise_par_role: string;
-      items: { point_id: string; etat: EtatControleItem; photo_url?: string | null }[];
+      items: { point_id: string; etat: EtatControleItem; photo_url?: string | null; commentaire?: string | null }[];
     }) => {
       const { data, error } = await supabase.rpc('valider_controle_staff', {
         p_parc_id: params.parc_id,
@@ -94,7 +94,7 @@ export function ControleOuverture() {
         p_items: params.items.map((i) => ({
           point_id: i.point_id,
           etat: i.etat,
-          commentaire: null,
+          commentaire: i.commentaire ?? null,
           photo_url: i.photo_url ?? null,
         })),
       });
@@ -118,6 +118,7 @@ export function ControleOuverture() {
 
   const [etats, setEtats] = useState<Record<string, { etat: EtatControleItem; saisiPar: string }>>({});
   const [photoUrls, setPhotoUrls] = useState<Record<string, string>>({});
+  const [commentaires, setCommentaires] = useState<Record<string, string>>({});
   const [zoneActive, setZoneActive] = useState<string>('');
   const [dirty, setDirty] = useState(false);
   const [showModale, setShowModale] = useState(false);
@@ -158,8 +159,9 @@ export function ControleOuverture() {
         etat: etats[p.point_id]?.etat ?? null,
         saisiPar: etats[p.point_id]?.saisiPar,
         photoUrl: photoUrls[p.point_id],
+        commentaire: commentaires[p.point_id],
       }));
-  }, [pointsBruts, activeZone, etats, photoUrls]);
+  }, [pointsBruts, activeZone, etats, photoUrls, commentaires]);
 
   const trigramme = utilisateur?.trigramme ?? utilisateur?.prenom?.slice(0, 2).toUpperCase() ?? '??';
 
@@ -170,6 +172,11 @@ export function ControleOuverture() {
 
   const handlePhotoUploaded = useCallback((pointId: string, url: string) => {
     setPhotoUrls((prev) => ({ ...prev, [pointId]: url }));
+    setDirty(true);
+  }, []);
+
+  const handleCommentaire = useCallback((pointId: string, commentaire: string) => {
+    setCommentaires((prev) => ({ ...prev, [pointId]: commentaire }));
     setDirty(true);
   }, []);
 
@@ -204,6 +211,7 @@ export function ControleOuverture() {
         point_id: p.point_id,
         etat: etats[p.point_id].etat,
         photo_url: photoUrls[p.point_id] ?? null,
+        commentaire: commentaires[p.point_id] || null,
       }));
 
     try {
@@ -301,6 +309,7 @@ export function ControleOuverture() {
         onChangeZone={setZoneActive}
         onSetEtat={setEtatPoint}
         onPhotoUploaded={handlePhotoUploaded}
+        onCommentaire={handleCommentaire}
         onRetour={handleRetour}
         onChangerAgent={() => navigate('/staff/login')}
         onValider={handleValider}
