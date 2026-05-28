@@ -31,7 +31,8 @@ function formatTel(value: string): string {
   return value;
 }
 
-async function fetchInvitation(token: string): Promise<InvitationDetails | null> {
+async function fetchInvitation(token: string): Promise<InvitationDetails | 'used' | 'expired' | null> {
+  // First try: unused invitation (anon policy = utilise_le IS NULL)
   const { data, error } = await supabase
     .from('invitations')
     .select(
@@ -44,6 +45,8 @@ async function fetchInvitation(token: string): Promise<InvitationDetails | null>
     .maybeSingle();
 
   if (error || !data) return null;
+
+  if (new Date(data.expire_le) < new Date()) return 'expired';
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const d = data as any;
@@ -100,12 +103,18 @@ export function AcceptationInvitation() {
     }
 
     (async () => {
-      const inv = await fetchInvitation(token);
-      if (!inv) {
-        setErreur("Cette invitation est invalide, déjà utilisée ou expirée.");
+      const result = await fetchInvitation(token);
+      if (result === 'expired') {
+        setErreur("Cette invitation a expiré. Demandez à votre responsable de vous renvoyer une invitation.");
         setLoading(false);
         return;
       }
+      if (result === 'used' || !result) {
+        setErreur("Ce lien d'invitation est invalide ou a déjà été utilisé. Vérifiez que vous utilisez bien le dernier lien reçu par email.");
+        setLoading(false);
+        return;
+      }
+      const inv = result;
       setInvitation(inv);
       setLoading(false);
 
