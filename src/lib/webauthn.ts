@@ -45,6 +45,7 @@ export async function registerPasskey(deviceName: string): Promise<{ success: bo
     const res = await fetch(`${WEBAUTHN_FN_URL}/register-options`, {
       method: 'POST',
       headers: getHeaders(session.access_token),
+      body: JSON.stringify({}),
     });
 
     const options = await res.json();
