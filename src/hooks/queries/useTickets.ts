@@ -48,12 +48,11 @@ export function useIncident(numeroBT: string | undefined) {
           `*,
           equipements(*, parcs(code, nom), zones(nom), categories_equipement(nom)),
           niveaux_priorite(*),
-          interventions(*, utilisateurs!technicien_id(prenom, nom, trigramme),
-            pieces_utilisees(*, pieces_detachees(*)))`
+          interventions(*, pieces_utilisees(*, pieces_detachees(*)))`
         )
         .eq('numero_bt', numeroBT)
         .eq('est_formation', estFormation)
-        .single();
+        .maybeSingle();
       if (error) throw error;
       return data;
     },
