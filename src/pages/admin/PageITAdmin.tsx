@@ -272,11 +272,9 @@ export function PageITAdmin() {
     if (tab === 'logs' && recentErrors.length === 0) loadRecentErrors();
   }, [edgeFns.length, tableStats.length, recentErrors.length, runEdgeFnChecks, runTableChecks, loadRecentErrors]);
 
-  if (!utilisateur) {
-    return <div className="p-6 text-dim text-sm">Chargement...</div>;
-  }
-  const hasAccess = utilisateur.role_code === 'direction' || utilisateur.role_code === 'admin_it';
-  if (!hasAccess) {
+  const roleCode = utilisateur?.role_code;
+  const hasAccess = roleCode === 'direction' || roleCode === 'admin_it';
+  if (utilisateur && !hasAccess) {
     return (
       <div className="p-6 text-dim text-sm">Acces reserve a la direction.</div>
     );
