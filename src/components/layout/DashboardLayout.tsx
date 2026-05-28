@@ -28,6 +28,7 @@ const SIDEBAR_W_MOBILE = 280;
 const roleAffiches: Record<string, string> = {
   direction: 'DIRECTION',
   chef_maintenance: "CHEF D'EQUIPE",
+  directeur_parc: 'DIRECTEUR DE PARC',
   manager_parc: 'MANAGER PARC',
   technicien: 'TECHNICIEN',
   staff_operationnel: 'STAFF',

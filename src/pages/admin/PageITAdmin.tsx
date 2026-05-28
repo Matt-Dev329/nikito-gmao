@@ -272,7 +272,7 @@ export function PageITAdmin() {
     if (tab === 'logs' && recentErrors.length === 0) loadRecentErrors();
   }, [edgeFns.length, tableStats.length, recentErrors.length, runEdgeFnChecks, runTableChecks, loadRecentErrors]);
 
-  const hasAccess = utilisateur?.role_code === 'direction' || utilisateur?.role_code === 'chef_maintenance' || utilisateur?.role_code === 'admin_it';
+  const hasAccess = utilisateur?.role_code === 'direction' || utilisateur?.role_code === 'chef_maintenance' || utilisateur?.role_code === 'directeur_parc' || utilisateur?.role_code === 'admin_it';
   if (!hasAccess) {
     return (
       <div className="p-6 text-dim text-sm">Acces reserve a la direction.</div>
@@ -457,6 +457,7 @@ function TabTables({ tables, running }: { tables: TableStats[]; running: boolean
 const ALL_ROLES: { code: string; label: string }[] = [
   { code: 'direction', label: 'Direction' },
   { code: 'chef_maintenance', label: 'Chef maint.' },
+  { code: 'directeur_parc', label: 'Directeur de parc' },
   { code: 'manager_parc', label: 'Manager' },
   { code: 'technicien', label: 'Technicien' },
   { code: 'staff_operationnel', label: 'Staff' },

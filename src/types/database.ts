@@ -25,6 +25,7 @@ export type Criticite = 'bloquant' | 'majeur' | 'mineur';
 export type RoleUtilisateur =
   | 'direction'
   | 'chef_maintenance'
+  | 'directeur_parc'
   | 'manager_parc'
   | 'technicien'
   | 'staff_operationnel'

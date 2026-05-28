@@ -6,7 +6,7 @@ export function BoutonRetourGmao() {
   const { utilisateur, signOut } = useAuth();
   const role = utilisateur?.role_code;
 
-  const peutRetourGmao = role === 'direction' || role === 'chef_maintenance';
+  const peutRetourGmao = role === 'direction' || role === 'chef_maintenance' || role === 'directeur_parc';
 
   if (peutRetourGmao) {
     return (

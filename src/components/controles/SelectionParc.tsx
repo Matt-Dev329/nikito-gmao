@@ -29,7 +29,7 @@ export function SelectionParc({ titre, onSelect }: SelectionParcProps) {
 
   const parcsVisibles = useMemo(() => {
     if (!allParcs) return [];
-    if (role === 'direction' || role === 'chef_maintenance') {
+    if (role === 'direction' || role === 'chef_maintenance' || role === 'directeur_parc') {
       return allParcs;
     }
     return allParcs.filter((p) => parcIds.includes(p.id));
@@ -42,7 +42,7 @@ export function SelectionParc({ titre, onSelect }: SelectionParcProps) {
     }
   }, [isLoading, parcsVisibles, onSelect]);
 
-  const peutRetourGmao = role === 'direction' || role === 'chef_maintenance';
+  const peutRetourGmao = role === 'direction' || role === 'chef_maintenance' || role === 'directeur_parc';
 
   if (isLoading) {
     return (

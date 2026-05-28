@@ -66,7 +66,7 @@ export function PageReserves() {
 
     if (targetStatut === 'levee_validee') {
       const role = utilisateur?.role_code;
-      if (role !== 'direction' && role !== 'chef_maintenance' && role !== 'admin_it') {
+      if (role !== 'direction' && role !== 'chef_maintenance' && role !== 'directeur_parc' && role !== 'admin_it') {
         setDragItem(null);
         return;
       }

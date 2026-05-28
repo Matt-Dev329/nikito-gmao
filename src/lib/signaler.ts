@@ -6,7 +6,7 @@ export function canSignaler(role: RoleUtilisateur): boolean {
 }
 
 export function hasModeExpert(role: RoleUtilisateur): boolean {
-  return role === 'technicien' || role === 'chef_maintenance';
+  return role === 'technicien' || role === 'chef_maintenance' || role === 'directeur_parc';
 }
 
 export type SignalerButtonVariant = 'full' | 'icon-only' | 'central-tablet' | 'hidden';

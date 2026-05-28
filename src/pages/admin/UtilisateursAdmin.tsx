@@ -27,6 +27,7 @@ type Tab = 'a_valider' | 'actifs' | 'invitations' | 'desactives';
 const roleBadgeColors: Record<RoleUtilisateur, string> = {
   direction: 'bg-nikito-cyan/15 text-nikito-cyan',
   chef_maintenance: 'bg-nikito-pink/15 text-nikito-pink',
+  directeur_parc: 'bg-nikito-pink/15 text-nikito-pink',
   manager_parc: 'bg-amber/15 text-amber',
   technicien: 'bg-green/15 text-green',
   staff_operationnel: 'bg-faint/20 text-dim',
@@ -45,6 +46,7 @@ export function UtilisateursAdmin() {
   const peutInviter =
     effectiveRole === 'direction' ||
     effectiveRole === 'chef_maintenance' ||
+    effectiveRole === 'directeur_parc' ||
     effectiveRole === 'manager_parc';
 
   const nbAValider = aValider?.length ?? 0;
@@ -305,6 +307,7 @@ function EmptyState({ text, sub }: { text: string; sub?: string }) {
 const roleHomePage: Record<RoleUtilisateur, string> = {
   direction: '/gmao',
   chef_maintenance: '/gmao',
+  directeur_parc: '/gmao',
   technicien: '/gmao/operations',
   manager_parc: '/gmao/mon-parc',
   staff_operationnel: '/staff/controle-ouverture',
@@ -331,7 +334,7 @@ function ListeActifs({ recherche }: { recherche: string }) {
   const navigate = useNavigate();
   const isDirection = effectiveRole === 'direction' || effectiveRole === 'admin_it';
   const isManager = effectiveRole === 'manager_parc';
-  const canEdit = isDirection || effectiveRole === 'chef_maintenance';
+  const canEdit = isDirection || effectiveRole === 'chef_maintenance' || effectiveRole === 'directeur_parc';
   const canViewAs = canEdit;
   const [editUser, setEditUser] = useState<UtilisateurRow | null>(null);
 
@@ -397,7 +400,7 @@ function ListeAValider({ recherche }: { recherche: string }) {
   const { utilisateur } = useAuth();
   const effectiveRole = useEffectiveRole(utilisateur?.role_code ?? 'staff_operationnel');
   const { data, isLoading } = useUtilisateursAValider();
-  const canEdit = effectiveRole === 'direction' || effectiveRole === 'chef_maintenance' || effectiveRole === 'admin_it';
+  const canEdit = effectiveRole === 'direction' || effectiveRole === 'chef_maintenance' || effectiveRole === 'directeur_parc' || effectiveRole === 'admin_it';
   const [editUser, setEditUser] = useState<UtilisateurRow | null>(null);
 
   const filtres = useMemo(() => filtrerUtilisateurs(data ?? [], recherche), [data, recherche]);
@@ -441,7 +444,7 @@ function ListeDesactives({ recherche }: { recherche: string }) {
   const { data, isLoading } = useUtilisateursDesactives();
   const reactiverMutation = useReactiverUtilisateur();
   const isDirection = effectiveRole === 'direction' || effectiveRole === 'admin_it';
-  const canEdit = isDirection || effectiveRole === 'chef_maintenance';
+  const canEdit = isDirection || effectiveRole === 'chef_maintenance' || effectiveRole === 'directeur_parc';
   const [editUser, setEditUser] = useState<UtilisateurRow | null>(null);
 
   const filtres = useMemo(() => filtrerUtilisateurs(data ?? [], recherche), [data, recherche]);

@@ -11,7 +11,7 @@ import type { EquipementAvecJoins, StatutEquipement, HorairesParc, ParcMeta } fr
 export function useParcs() {
   const { estFormation } = useFormationFilter();
   const { utilisateur } = useAuth();
-  const isAdmin = utilisateur?.role_code === 'direction' || utilisateur?.role_code === 'chef_maintenance' || utilisateur?.role_code === 'admin_it';
+  const isAdmin = utilisateur?.role_code === 'direction' || utilisateur?.role_code === 'chef_maintenance' || utilisateur?.role_code === 'directeur_parc' || utilisateur?.role_code === 'admin_it';
   return useQuery({
     queryKey: ['parcs', estFormation, isAdmin],
     queryFn: async () => {

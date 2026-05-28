@@ -8,7 +8,7 @@ export interface UtilisateurMetier {
   nom: string;
   prenom: string;
   trigramme: string | null;
-  role_code: 'direction' | 'chef_maintenance' | 'manager_parc' | 'technicien' | 'staff_operationnel' | 'admin_it';
+  role_code: 'direction' | 'chef_maintenance' | 'directeur_parc' | 'manager_parc' | 'technicien' | 'staff_operationnel' | 'admin_it';
   parc_ids: string[];
   consentement_gps: boolean;
   tour_vu: boolean;

@@ -15,7 +15,7 @@ export function OngletConformiteParc({ parcId }: { parcId: string | undefined })
   const { data: acteurs } = useActeursChantier(parcId);
   const [showPhaseModale, setShowPhaseModale] = useState(false);
 
-  const canChangePhase = ['direction', 'admin_it', 'chef_maintenance'].includes(utilisateur?.role_code ?? '');
+  const canChangePhase = ['direction', 'admin_it', 'chef_maintenance', 'directeur_parc'].includes(utilisateur?.role_code ?? '');
   const phaseActuelle = phases?.find((p) => !p.date_fin);
   const reservesActives = prescriptions?.filter((p) => ['a_lever', 'en_cours', 'levee_proposee'].includes(p.statut)) ?? [];
   const docsObligatoires = documents?.filter((d) => d.est_obligatoire_ouverture) ?? [];

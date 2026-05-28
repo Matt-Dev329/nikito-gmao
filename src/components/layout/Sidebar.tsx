@@ -53,42 +53,42 @@ const sections: { titre: string; items: NavItem[] }[] = [
   {
     titre: 'Pilotage',
     items: [
-      { to: '/gmao', label: 'Tableau de bord', featureCode: 'tableau_bord', roles: ['direction', 'chef_maintenance', 'admin_it'], end: true },
+      { to: '/gmao', label: 'Tableau de bord', featureCode: 'tableau_bord', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'admin_it'], end: true },
       { to: '/gmao/mon-parc', label: 'Mon parc', roles: ['manager_parc'] },
-      { to: '/gmao/operations', label: 'Opérations', featureCode: 'interventions', badgeKey: 'operations', badgeTone: 'red', roles: ['direction', 'chef_maintenance', 'technicien', 'manager_parc', 'admin_it'] },
-      { to: '/gmao/equipements', label: 'Équipements', featureCode: 'equipements', roles: ['direction', 'chef_maintenance', 'technicien', 'manager_parc', 'admin_it'] },
-      { to: '/gmao/ia-predictive', label: 'IA Prédictive', featureCode: 'ia_predictive', roles: ['direction', 'chef_maintenance', 'admin_it'] },
-      { to: '/gmao/flotte', label: 'Flotte', featureCode: 'flotte', roles: ['direction', 'chef_maintenance', 'admin_it'] },
-      { to: '/gmao/recurrences', label: 'Récurrences', featureCode: 'recurrences', badgeKey: 'recurrences', badgeTone: 'red', roles: ['direction', 'chef_maintenance', 'admin_it'] },
-      { to: '/gmao/cinq-pourquoi', label: '5 Pourquoi', featureCode: 'cinq_pourquoi', badgeKey: 'cinqPourquoi', badgeTone: 'amber', roles: ['direction', 'chef_maintenance', 'admin_it'] },
-      { to: '/gmao/plaintes', label: 'Plaintes clients', featureCode: 'plaintes', badgeKey: 'plaintesAQualifier', badgeTone: 'amber', roles: ['direction', 'chef_maintenance', 'manager_parc', 'admin_it'] },
-      { to: '/gmao/certifications', label: 'Certifications', featureCode: 'certifications', roles: ['direction', 'chef_maintenance', 'admin_it'] },
-      { to: '/gmao/preventif', label: 'Préventif', featureCode: 'preventif', roles: ['direction', 'chef_maintenance', 'manager_parc', 'admin_it'] },
-      { to: '/gmao/stock', label: 'Stock', featureCode: 'stock', roles: ['direction', 'chef_maintenance', 'technicien', 'admin_it'] },
+      { to: '/gmao/operations', label: 'Opérations', featureCode: 'interventions', badgeKey: 'operations', badgeTone: 'red', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'technicien', 'manager_parc', 'admin_it'] },
+      { to: '/gmao/equipements', label: 'Équipements', featureCode: 'equipements', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'technicien', 'manager_parc', 'admin_it'] },
+      { to: '/gmao/ia-predictive', label: 'IA Prédictive', featureCode: 'ia_predictive', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'admin_it'] },
+      { to: '/gmao/flotte', label: 'Flotte', featureCode: 'flotte', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'admin_it'] },
+      { to: '/gmao/recurrences', label: 'Récurrences', featureCode: 'recurrences', badgeKey: 'recurrences', badgeTone: 'red', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'admin_it'] },
+      { to: '/gmao/cinq-pourquoi', label: '5 Pourquoi', featureCode: 'cinq_pourquoi', badgeKey: 'cinqPourquoi', badgeTone: 'amber', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'admin_it'] },
+      { to: '/gmao/plaintes', label: 'Plaintes clients', featureCode: 'plaintes', badgeKey: 'plaintesAQualifier', badgeTone: 'amber', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'manager_parc', 'admin_it'] },
+      { to: '/gmao/certifications', label: 'Certifications', featureCode: 'certifications', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'admin_it'] },
+      { to: '/gmao/preventif', label: 'Préventif', featureCode: 'preventif', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'manager_parc', 'admin_it'] },
+      { to: '/gmao/stock', label: 'Stock', featureCode: 'stock', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'technicien', 'admin_it'] },
     ],
   },
   {
     titre: 'Réglementaire',
     items: [
-      { to: '/gmao/conformite', label: 'Conformité', featureCode: 'conformite', roles: ['direction', 'admin_it', 'chef_maintenance', 'manager_parc'] },
-      { to: '/gmao/controles-historique', label: 'Contrôles', featureCode: 'controles', roles: ['direction', 'chef_maintenance', 'admin_it'] },
+      { to: '/gmao/conformite', label: 'Conformité', featureCode: 'conformite', roles: ['direction', 'admin_it', 'chef_maintenance', 'directeur_parc', 'manager_parc'] },
+      { to: '/gmao/controles-historique', label: 'Contrôles', featureCode: 'controles', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'admin_it'] },
     ],
   },
   {
     titre: 'Contrôles',
     items: [
-      { to: '/staff/controle-ouverture', label: 'Contrôle d\'ouverture', featureCode: 'controles', badgeKey: 'controlesManquants', badgeTone: 'red', roles: ['direction', 'chef_maintenance', 'staff_operationnel', 'admin_it'] },
-      { to: '/tech/controle-hebdo', label: 'Contrôle hebdo', featureCode: 'controles', roles: ['direction', 'chef_maintenance', 'technicien', 'admin_it'] },
-      { to: '/tech/controle-mensuel', label: 'Contrôle mensuel', featureCode: 'controles', roles: ['direction', 'chef_maintenance', 'technicien', 'admin_it'] },
+      { to: '/staff/controle-ouverture', label: 'Contrôle d\'ouverture', featureCode: 'controles', badgeKey: 'controlesManquants', badgeTone: 'red', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'staff_operationnel', 'admin_it'] },
+      { to: '/tech/controle-hebdo', label: 'Contrôle hebdo', featureCode: 'controles', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'technicien', 'admin_it'] },
+      { to: '/tech/controle-mensuel', label: 'Contrôle mensuel', featureCode: 'controles', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'technicien', 'admin_it'] },
     ],
   },
   {
     titre: 'Configuration',
     items: [
-      { to: '/gmao/parcs', label: 'Parcs', featureCode: 'admin_parcs', roles: ['direction', 'chef_maintenance', 'admin_it'] },
-      { to: '/gmao/utilisateurs', label: 'Utilisateurs', featureCode: 'admin_utilisateurs', badgeKey: 'invitationsPending', badgeTone: 'amber', roles: ['direction', 'chef_maintenance', 'manager_parc', 'admin_it'] },
-      { to: '/gmao/bibliotheque', label: 'Bibliothèque points', featureCode: 'bibliotheque', roles: ['direction', 'chef_maintenance', 'admin_it'] },
-      { to: '/gmao/fournisseurs', label: 'Fournisseurs', roles: ['direction', 'chef_maintenance', 'admin_it'] },
+      { to: '/gmao/parcs', label: 'Parcs', featureCode: 'admin_parcs', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'admin_it'] },
+      { to: '/gmao/utilisateurs', label: 'Utilisateurs', featureCode: 'admin_utilisateurs', badgeKey: 'invitationsPending', badgeTone: 'amber', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'manager_parc', 'admin_it'] },
+      { to: '/gmao/bibliotheque', label: 'Bibliothèque points', featureCode: 'bibliotheque', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'admin_it'] },
+      { to: '/gmao/fournisseurs', label: 'Fournisseurs', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'admin_it'] },
       { to: '/gmao/it-admin', label: 'Administration IT', featureCode: 'admin_it', roles: ['direction', 'admin_it'] },
     ],
   },
@@ -120,13 +120,13 @@ export function Sidebar({ user, roleAffiche, roleCode, realRoleCode, compact = f
   const { hasAccess } = useFeatureFlags();
   const formationActive = useFormation((s) => s.active);
   const startTour = useTour((s) => s.start);
-  const showViewAs = (realRoleCode ?? roleCode) === 'direction' || (realRoleCode ?? roleCode) === 'chef_maintenance' || (realRoleCode ?? roleCode) === 'admin_it';
+  const showViewAs = (realRoleCode ?? roleCode) === 'direction' || (realRoleCode ?? roleCode) === 'chef_maintenance' || (realRoleCode ?? roleCode) === 'directeur_parc' || (realRoleCode ?? roleCode) === 'admin_it';
   const showFormation = showViewAs;
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const { utilisateur } = useAuth();
   const parcCourant = useParcCourant((s) => s.parc);
   const navigate = useNavigate();
-  const isAdminRole = roleCode === 'direction' || roleCode === 'chef_maintenance' || roleCode === 'admin_it';
+  const isAdminRole = roleCode === 'direction' || roleCode === 'chef_maintenance' || roleCode === 'directeur_parc' || roleCode === 'admin_it';
   const isMultiParc = isAdminRole || (utilisateur?.parc_ids?.length ?? 0) > 1;
 
   return (

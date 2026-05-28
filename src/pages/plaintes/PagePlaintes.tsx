@@ -68,7 +68,7 @@ function Stars({ note }: { note: number }) {
 export function PagePlaintes() {
   const { utilisateur } = useAuth();
   const roleCode = useEffectiveRole(utilisateur?.role_code ?? 'direction');
-  const canQualifier = roleCode === 'direction' || roleCode === 'chef_maintenance';
+  const canQualifier = roleCode === 'direction' || roleCode === 'chef_maintenance' || roleCode === 'directeur_parc';
   const canSync = canQualifier;
 
   const { data: plaintes, isLoading } = usePlaintes();

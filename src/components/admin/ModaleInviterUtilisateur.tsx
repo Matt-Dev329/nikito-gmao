@@ -19,6 +19,7 @@ const rolesParAuth: Record<AuthMode, { value: RoleUtilisateur; label: string }[]
   email_password: [
     { value: 'direction', label: 'Direction' },
     { value: 'chef_maintenance', label: "Chef d'équipe" },
+    { value: 'directeur_parc', label: 'Directeur de parc' },
     { value: 'manager_parc', label: 'Manager parc' },
     { value: 'technicien', label: 'Technicien' },
     { value: 'admin_it', label: 'Admin IT' },

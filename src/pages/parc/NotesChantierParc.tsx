@@ -53,7 +53,7 @@ export function NotesChantierParc() {
 
   const peutSupprimer =
     utilisateur?.role_code != null &&
-    ['direction', 'chef_maintenance', 'technicien', 'manager_parc'].includes(utilisateur.role_code);
+    ['direction', 'chef_maintenance', 'directeur_parc', 'technicien', 'manager_parc'].includes(utilisateur.role_code);
 
   const supprimerNote = async (noteId: string) => {
     setSuppEnCours(true);

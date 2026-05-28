@@ -106,7 +106,7 @@ export function ModaleEditerUtilisateur({ open, onClose, utilisateur }: Props) {
               </button>
             ))}
           </div>
-          {(roleCode === 'manager_parc' || roleCode === 'chef_maintenance') && (
+          {(roleCode === 'manager_parc' || roleCode === 'chef_maintenance' || roleCode === 'directeur_parc') && (
             <label className="flex items-center gap-2 mt-3 text-xs cursor-pointer">
               <input
                 type="checkbox"

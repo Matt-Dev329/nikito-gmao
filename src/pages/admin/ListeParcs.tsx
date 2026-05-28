@@ -22,7 +22,7 @@ interface ParcProduction {
   mis_en_prod_par: { prenom: string; nom: string } | null;
 }
 
-const ADMIN_ROLES: string[] = ['direction', 'chef_maintenance', 'admin_it'];
+const ADMIN_ROLES: string[] = ['direction', 'chef_maintenance', 'directeur_parc', 'admin_it'];
 
 function useParcsAvecProducteur() {
   const { estFormation } = useFormationFilter();

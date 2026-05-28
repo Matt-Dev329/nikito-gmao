@@ -16,7 +16,7 @@ import type { Parc } from '@/types/database';
 
 type Onglet = 'apercu' | 'configuration' | 'controles' | 'equipements' | 'equipe' | 'notes' | 'conformite';
 
-const ROLES_EDIT_HORAIRES: string[] = ['direction', 'chef_maintenance'];
+const ROLES_EDIT_HORAIRES: string[] = ['direction', 'chef_maintenance', 'directeur_parc'];
 
 export function FicheParc() {
   const { id } = useParams<{ id: string }>();
@@ -388,10 +388,11 @@ function useEquipeParc(parcId: string | undefined) {
 const ROLE_ORDER: Record<string, number> = {
   direction: 1,
   chef_maintenance: 2,
-  admin_it: 3,
-  manager_parc: 4,
-  technicien: 5,
-  staff_operationnel: 6,
+  directeur_parc: 3,
+  admin_it: 4,
+  manager_parc: 5,
+  technicien: 6,
+  staff_operationnel: 7,
 };
 
 function OngletEquipe({ parcId }: { parcId: string | undefined }) {

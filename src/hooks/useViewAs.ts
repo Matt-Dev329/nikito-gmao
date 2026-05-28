@@ -22,6 +22,6 @@ export const useViewAs = create<ViewAsState>((set) => ({
 
 export function useEffectiveRole(realRole: RoleUtilisateur): RoleUtilisateur {
   const viewAsRole = useViewAs((s) => s.role);
-  const canViewAs = realRole === 'direction' || realRole === 'chef_maintenance' || realRole === 'admin_it';
+  const canViewAs = realRole === 'direction' || realRole === 'chef_maintenance' || realRole === 'directeur_parc' || realRole === 'admin_it';
   return canViewAs && viewAsRole ? viewAsRole : realRole;
 }

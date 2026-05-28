@@ -4,6 +4,7 @@ import { roleLabels } from '@/lib/tokens';
 const roleLabelsUpper: Record<string, string> = {
   direction: 'DIRECTION',
   chef_maintenance: "CHEF D'EQUIPE",
+  directeur_parc: 'DIRECTEUR DE PARC',
   manager_parc: 'MANAGER PARC',
   technicien: 'TECHNICIEN',
   staff_operationnel: 'STAFF OPERATIONNEL',

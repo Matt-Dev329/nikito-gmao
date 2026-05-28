@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils';
 const roleLabels: Record<string, string> = {
   direction: 'Direction',
   chef_maintenance: 'Chef maintenance',
+  directeur_parc: 'Directeur de parc',
   manager_parc: 'Manager parc',
   technicien: 'Technicien',
   staff_operationnel: 'Staff opérationnel',
