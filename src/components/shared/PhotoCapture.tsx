@@ -1,6 +1,8 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { cn } from '@/lib/utils';
+import { useSignedUrl } from '@/hooks/useSignedUrl';
+import type { AlbaBucket } from '@/lib/uploadPhotoControle';
 
 interface PhotoCaptureProps {
   bucketName: string;
@@ -57,12 +59,25 @@ export function PhotoCapture({
   label,
   existingUrl,
 }: PhotoCaptureProps) {
+  const needsSignedUrl = !!existingUrl && !existingUrl.startsWith('http') && !existingUrl.startsWith('blob:');
+  const { data: signedExisting } = useSignedUrl(
+    needsSignedUrl ? existingUrl : null,
+    bucketName as AlbaBucket,
+  );
+  const resolvedExisting = needsSignedUrl ? signedExisting : existingUrl;
+
   const [state, setState] = useState<UploadState>(existingUrl ? 'done' : 'idle');
-  const [photoUrl, setPhotoUrl] = useState<string | null>(existingUrl ?? null);
+  const [photoUrl, setPhotoUrl] = useState<string | null>(resolvedExisting ?? existingUrl ?? null);
   const [errMsg, setErrMsg] = useState('');
   const galleryRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
+
+  useEffect(() => {
+    if (resolvedExisting && state === 'done' && !photoUrl?.startsWith('http')) {
+      setPhotoUrl(resolvedExisting);
+    }
+  }, [resolvedExisting]);
 
   const stopCamera = useCallback(() => {
     if (streamRef.current) {
@@ -87,13 +102,13 @@ export function PhotoCapture({
           .upload(fileName, compressed, { contentType: 'image/jpeg' });
         if (error) throw error;
 
-        const { data: urlData } = supabase.storage
+        const { data: signedData } = await supabase.storage
           .from(bucketName)
-          .getPublicUrl(fileName);
+          .createSignedUrl(fileName, 3600);
 
-        setPhotoUrl(urlData.publicUrl);
+        setPhotoUrl(signedData?.signedUrl ?? fileName);
         setState('done');
-        onPhotoUploaded(urlData.publicUrl);
+        onPhotoUploaded(fileName);
       } catch (err) {
         setState('error');
         setErrMsg(err instanceof Error ? err.message : 'Erreur upload');
