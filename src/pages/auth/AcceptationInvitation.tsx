@@ -110,6 +110,13 @@ export function AcceptationInvitation() {
         return;
       }
       if (result === 'used' || !result) {
+        // If user has an active session, they likely confirmed their email
+        // and the invitation was already accepted -- redirect to home.
+        const { data: sessionData } = await supabase.auth.getSession();
+        if (sessionData?.session?.user) {
+          navigate('/');
+          return;
+        }
         setErreur("Ce lien d'invitation est invalide ou a déjà été utilisé. Vérifiez que vous utilisez bien le dernier lien reçu par email.");
         setLoading(false);
         return;
