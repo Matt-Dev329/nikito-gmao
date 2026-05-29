@@ -20,6 +20,38 @@ Deno.serve(async (req: Request) => {
     const siteUrl = Deno.env.get("SITE_URL") || "https://nikito.tech";
     const supabase = createClient(supabaseUrl, supabaseKey);
 
+    // Handle reset-for-invitation action (update password for pre-provisioned accounts)
+    const contentType = req.headers.get("content-type") || "";
+    if (contentType.includes("application/json")) {
+      const body = await req.json();
+      if (body?.action === "reset-for-invitation" && body?.email && body?.newPassword) {
+        const { data: listData } = await supabase.auth.admin.listUsers();
+        const existingUser = listData?.users?.find(
+          (u) => u.email?.toLowerCase() === body.email.toLowerCase()
+        );
+        if (!existingUser) {
+          return new Response(
+            JSON.stringify({ error: "User not found" }),
+            { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+          );
+        }
+        const { error: updateErr } = await supabase.auth.admin.updateUserById(existingUser.id, {
+          password: body.newPassword,
+          user_metadata: { ...existingUser.user_metadata, password_must_change: false },
+        });
+        if (updateErr) {
+          return new Response(
+            JSON.stringify({ error: updateErr.message }),
+            { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+          );
+        }
+        return new Response(
+          JSON.stringify({ success: true, auth_user_id: existingUser.id }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+    }
+
     // Find all email_password users without auth_user_id
     const { data: orphans, error: queryErr } = await supabase
       .from("utilisateurs")
