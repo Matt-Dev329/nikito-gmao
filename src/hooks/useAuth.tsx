@@ -8,9 +8,10 @@ export interface UtilisateurMetier {
   nom: string;
   prenom: string;
   trigramme: string | null;
-  role_code: 'direction' | 'chef_maintenance' | 'manager_parc' | 'technicien' | 'staff_operationnel' | 'admin_it';
+  role_code: 'direction' | 'chef_maintenance' | 'directeur_parc' | 'manager_parc' | 'technicien' | 'staff_operationnel' | 'admin_it';
   parc_ids: string[];
   consentement_gps: boolean;
+  tour_vu: boolean;
 }
 
 interface AuthContextValue {
@@ -18,6 +19,7 @@ interface AuthContextValue {
   authUser: User | null;
   utilisateur: UtilisateurMetier | null;
   loading: boolean;
+  mustChangePassword: boolean;
   signIn: (email: string, password: string) => ReturnType<typeof supabase.auth.signInWithPassword>;
   signOut: () => ReturnType<typeof supabase.auth.signOut>;
 }
@@ -30,6 +32,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [utilisateur, setUtilisateur] = useState<UtilisateurMetier | null>(null);
   const [loading, setLoading] = useState(true);
   const [sessionChecked, setSessionChecked] = useState(false);
+  const [mustChangePassword, setMustChangePassword] = useState(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -38,7 +41,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSessionChecked(true);
     });
 
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, newSession) => {
+    let recoveryDetected = false;
+
+    const { data: listener } = supabase.auth.onAuthStateChange((event, newSession) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        recoveryDetected = true;
+        setMustChangePassword(true);
+        if (window.location.pathname !== '/reset-password') {
+          window.location.replace('/reset-password');
+          return;
+        }
+      }
+      if (event === 'SIGNED_OUT') {
+        recoveryDetected = false;
+        setMustChangePassword(false);
+      }
+      if (event === 'SIGNED_IN') {
+        if (!recoveryDetected) {
+          if (newSession?.user?.user_metadata?.password_must_change) {
+            setMustChangePassword(true);
+          } else {
+            setMustChangePassword(false);
+          }
+        }
+      }
       setSession((prev) => (prev?.access_token === newSession?.access_token ? prev : newSession));
       setAuthUser((prev) => {
         const next = newSession?.user ?? null;
@@ -65,7 +91,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     supabase
       .from('utilisateurs')
       .select(
-        `id, email, nom, prenom, trigramme, consentement_gps,
+        `id, email, nom, prenom, trigramme, consentement_gps, tour_vu,
          roles!inner(code),
          parcs_utilisateurs(parc_id)`
       )
@@ -86,6 +112,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             prenom: d.prenom as string,
             trigramme: d.trigramme as string | null,
             consentement_gps: d.consentement_gps as boolean,
+            tour_vu: (d.tour_vu as boolean) ?? false,
             role_code: roles.code as UtilisateurMetier['role_code'],
             parc_ids: pu.map((p) => p.parc_id),
           });
@@ -107,7 +134,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ session, authUser, utilisateur, loading, signIn, signOut }}>
+    <AuthContext.Provider value={{ session, authUser, utilisateur, loading, mustChangePassword, signIn, signOut }}>
       {children}
     </AuthContext.Provider>
   );

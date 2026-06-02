@@ -14,6 +14,7 @@ export interface PointControleVue {
   etat: EtatControleItem | null;
   saisiPar?: string;
   photoUrl?: string;
+  commentaire?: string;
 }
 
 export interface ZoneVue {
@@ -36,6 +37,7 @@ interface ControleEcranProps {
   onChangeZone: (code: string) => void;
   onSetEtat: (pointId: string, etat: EtatControleItem) => void;
   onPhotoUploaded?: (pointId: string, url: string) => void;
+  onCommentaire?: (pointId: string, commentaire: string) => void;
   bucketName?: string;
   controleId?: string;
   onChangerAgent?: () => void;
@@ -64,6 +66,7 @@ export function ControleEcran({
   onChangeZone,
   onSetEtat,
   onPhotoUploaded,
+  onCommentaire,
   bucketName = 'alba-controles',
   controleId,
   onChangerAgent,
@@ -155,6 +158,7 @@ export function ControleEcran({
           onSetEtat={handleSetEtat}
           registerRef={registerRef}
           onPhotoUploaded={onPhotoUploaded}
+          onCommentaire={onCommentaire}
           bucketName={bucketName}
           parcCode={parcCode}
           controleId={controleId}
@@ -293,6 +297,7 @@ function ZoneCard({
   onSetEtat,
   registerRef,
   onPhotoUploaded,
+  onCommentaire,
   bucketName,
   parcCode,
   controleId,
@@ -303,6 +308,7 @@ function ZoneCard({
   onSetEtat: (id: string, etat: EtatControleItem) => void;
   registerRef: (id: string, el: HTMLDivElement | null) => void;
   onPhotoUploaded?: (pointId: string, url: string) => void;
+  onCommentaire?: (pointId: string, commentaire: string) => void;
   bucketName: string;
   parcCode: string;
   controleId?: string;
@@ -331,6 +337,7 @@ function ZoneCard({
               onSetEtat={(etat) => onSetEtat(p.id, etat)}
               registerRef={(el) => registerRef(p.id, el)}
               onPhotoUploaded={onPhotoUploaded ? (url) => onPhotoUploaded(p.id, url) : undefined}
+              onCommentaire={onCommentaire ? (c) => onCommentaire(p.id, c) : undefined}
               bucketName={bucketName}
               storagePath={`${parcCode}/${controleId ?? 'draft'}/${p.id}`}
             />
@@ -348,6 +355,7 @@ function PointRow({
   onSetEtat,
   registerRef,
   onPhotoUploaded,
+  onCommentaire,
   bucketName,
   storagePath,
 }: {
@@ -357,6 +365,7 @@ function PointRow({
   onSetEtat: (e: EtatControleItem) => void;
   registerRef: (el: HTMLDivElement | null) => void;
   onPhotoUploaded?: (url: string) => void;
+  onCommentaire?: (commentaire: string) => void;
   bucketName: string;
   storagePath: string;
 }) {
@@ -366,6 +375,7 @@ function PointRow({
   const isKO = isDeg || isHS;
   const aRepondre = point.etat === null;
   const [showPhotoOK, setShowPhotoOK] = useState(false);
+  const [localComment, setLocalComment] = useState(point.commentaire ?? '');
 
   const elRef = useRef<HTMLDivElement>(null);
 
@@ -484,6 +494,21 @@ function PointRow({
             onPhotoUploaded={onPhotoUploaded}
             required
             existingUrl={point.photoUrl}
+          />
+        </div>
+      )}
+
+      {isKO && onCommentaire && (
+        <div className="px-3.5 pb-3">
+          <textarea
+            value={localComment}
+            onChange={(e) => {
+              setLocalComment(e.target.value);
+              onCommentaire(e.target.value);
+            }}
+            placeholder="Commentaire (optionnel) — decrivez le probleme..."
+            rows={2}
+            className="w-full bg-bg-app border border-white/[0.08] rounded-lg px-3 py-2 text-[13px] text-text placeholder:text-faint resize-none focus:outline-none focus:border-nikito-cyan/40 min-h-[44px]"
           />
         </div>
       )}

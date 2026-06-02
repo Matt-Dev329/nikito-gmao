@@ -8,6 +8,19 @@ export interface UseSignedUrlOptions {
   enabled?: boolean
 }
 
+function extractStoragePath(raw: string, bucket: AlbaBucket): string {
+  const publicPrefix = `/storage/v1/object/public/${bucket}/`
+  const idx = raw.indexOf(publicPrefix)
+  if (idx !== -1) return raw.slice(idx + publicPrefix.length)
+  const signedPrefix = `/storage/v1/object/sign/${bucket}/`
+  const sIdx = raw.indexOf(signedPrefix)
+  if (sIdx !== -1) {
+    const withoutPrefix = raw.slice(sIdx + signedPrefix.length)
+    return withoutPrefix.split('?')[0]
+  }
+  return raw
+}
+
 export function useSignedUrl(
   path: string | null | undefined,
   bucket: AlbaBucket,
@@ -21,11 +34,12 @@ export function useSignedUrl(
     queryKey: ['signed-url', bucket, path, download],
     queryFn: async () => {
       if (!path) return null
+      const cleanPath = extractStoragePath(path, bucket)
       const { data, error } = await supabase.storage
         .from(bucket)
-        .createSignedUrl(path, expiresIn, download ? { download: true } : undefined)
+        .createSignedUrl(cleanPath, expiresIn, download ? { download: true } : undefined)
       if (error) {
-        console.warn(`Signed URL impossible pour ${bucket}/${path}:`, error.message)
+        console.warn(`Signed URL impossible pour ${bucket}/${cleanPath}:`, error.message)
         return null
       }
       return data?.signedUrl ?? null
@@ -49,14 +63,16 @@ export function useSignedUrls(
     queryKey: ['signed-urls', bucket, cleanPaths],
     queryFn: async () => {
       if (cleanPaths.length === 0) return {}
-      const { data, error } = await supabase.storage.from(bucket).createSignedUrls(cleanPaths, expiresIn)
+      const storagePaths = cleanPaths.map((p) => extractStoragePath(p, bucket))
+      const { data, error } = await supabase.storage.from(bucket).createSignedUrls(storagePaths, expiresIn)
       if (error) {
         console.warn(`Signed URLs en lot impossible pour ${bucket}:`, error.message)
         return {}
       }
       const map: Record<string, string> = {}
-      for (const item of data ?? []) {
-        if (item.path && item.signedUrl) map[item.path] = item.signedUrl
+      for (let i = 0; i < (data ?? []).length; i++) {
+        const item = data![i]
+        if (item.signedUrl) map[cleanPaths[i]] = item.signedUrl
       }
       return map
     },

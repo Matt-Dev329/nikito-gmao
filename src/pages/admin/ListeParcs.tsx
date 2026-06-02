@@ -16,20 +16,27 @@ interface ParcProduction {
   code_postal: string;
   surface_m2: number | null;
   ouvert_7j7: boolean;
+  actif: boolean;
   en_production: boolean;
   date_mise_en_production: string | null;
   mis_en_prod_par: { prenom: string; nom: string } | null;
 }
 
+const ADMIN_ROLES: string[] = ['direction', 'chef_maintenance', 'directeur_parc', 'admin_it'];
+
 function useParcsAvecProducteur() {
   const { estFormation } = useFormationFilter();
+  const { utilisateur } = useAuth();
+  const isAdmin = ADMIN_ROLES.includes(utilisateur?.role_code ?? '');
   return useQuery({
-    queryKey: ['parcs_production', estFormation],
+    queryKey: ['parcs_production', estFormation, isAdmin],
     queryFn: async () => {
       let q = supabase
         .from('parcs')
-        .select('id, code, nom, ville, code_postal, surface_m2, ouvert_7j7, en_production, date_mise_en_production, utilisateurs!parcs_mis_en_prod_par_id_fkey(prenom, nom)')
-        .eq('actif', true);
+        .select('id, code, nom, ville, code_postal, surface_m2, ouvert_7j7, actif, en_production, date_mise_en_production, utilisateurs!parcs_mis_en_prod_par_id_fkey(prenom, nom)');
+      if (!isAdmin) {
+        q = q.eq('actif', true);
+      }
       if (!estFormation) {
         q = q.neq('code', 'ECO');
       }
@@ -228,6 +235,7 @@ function CarteProductionParc({
   onDesactiver: () => void;
 }) {
   const enProd = parc.en_production;
+  const estInactif = !parc.actif;
   const dateProd = parc.date_mise_en_production
     ? new Date(parc.date_mise_en_production).toLocaleDateString('fr-FR', {
         day: 'numeric',
@@ -242,7 +250,7 @@ function CarteProductionParc({
   return (
     <div className={cn(
       'bg-bg-card rounded-2xl p-4 md:p-5 border-l-[3px]',
-      enProd ? 'border-l-green' : 'border-l-amber'
+      estInactif ? 'border-l-white/20 opacity-60' : enProd ? 'border-l-green' : 'border-l-amber'
     )}>
       <div className="flex justify-between items-start mb-3">
         <div className="min-w-0">
@@ -251,9 +259,9 @@ function CarteProductionParc({
         </div>
         <span className={cn(
           'px-2.5 py-1 rounded-lg text-[10px] font-bold flex-shrink-0 whitespace-nowrap',
-          enProd ? 'bg-green/15 text-green' : 'bg-amber/15 text-amber'
+          estInactif ? 'bg-white/[0.06] text-dim' : enProd ? 'bg-green/15 text-green' : 'bg-amber/15 text-amber'
         )}>
-          {enProd ? 'EN PRODUCTION' : 'PRE-LANCEMENT'}
+          {estInactif ? 'INACTIF' : enProd ? 'EN PRODUCTION' : 'PRE-LANCEMENT'}
         </span>
       </div>
 
@@ -271,7 +279,9 @@ function CarteProductionParc({
 
       {!enProd && (
         <div className="text-[12px] text-dim mb-4">
-          Ce parc est en attente d'activation. Les controles et alertes ne sont pas actifs.
+          {estInactif
+            ? 'Ce parc est en preparation. Activez la production quand il sera pret.'
+            : 'Ce parc est en attente d\'activation. Les controles et alertes ne sont pas actifs.'}
         </div>
       )}
 
@@ -446,11 +456,13 @@ export function ListeParcs() {
   const [toast, setToast] = useState<string | null>(null);
 
   const stats = useMemo(() => {
-    if (!parcs) return { total: 0, enProd: 0, preLancement: 0 };
+    if (!parcs) return { total: 0, actifs: 0, enProd: 0, preLancement: 0 };
+    const actifs = parcs.filter((p) => p.actif);
     return {
       total: parcs.length,
+      actifs: actifs.length,
       enProd: parcs.filter((p) => p.en_production).length,
-      preLancement: parcs.filter((p) => !p.en_production).length,
+      preLancement: actifs.filter((p) => !p.en_production).length,
     };
   }, [parcs]);
 
@@ -477,7 +489,7 @@ export function ListeParcs() {
         <div>
           <h1 className="text-xl md:text-[22px] font-semibold m-0">Parcs Nikito Group</h1>
           <div className="text-[13px] text-dim mt-1">
-            {stats.total} parc(s) actif(s) &middot;{' '}
+            {stats.total} parc(s) ({stats.actifs} actif{stats.actifs > 1 ? 's' : ''}) &middot;{' '}
             <span className="text-green">{stats.enProd} en production</span>
             {stats.preLancement > 0 && (
               <span className="text-amber"> &middot; {stats.preLancement} en pre-lancement</span>

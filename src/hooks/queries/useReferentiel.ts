@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useFormationFilter } from '@/hooks/useFormation';
+import { useAuth } from '@/hooks/useAuth';
 import type { EquipementAvecJoins, StatutEquipement, HorairesParc, ParcMeta } from '@/types/database';
 
 // ============================================================
@@ -9,13 +10,15 @@ import type { EquipementAvecJoins, StatutEquipement, HorairesParc, ParcMeta } fr
 
 export function useParcs() {
   const { estFormation } = useFormationFilter();
+  const { utilisateur } = useAuth();
+  const isAdmin = utilisateur?.role_code === 'direction' || utilisateur?.role_code === 'chef_maintenance' || utilisateur?.role_code === 'directeur_parc' || utilisateur?.role_code === 'admin_it';
   return useQuery({
-    queryKey: ['parcs', estFormation],
+    queryKey: ['parcs', estFormation, isAdmin],
     queryFn: async () => {
-      let q = supabase
-        .from('parcs')
-        .select('*')
-        .eq('actif', true);
+      let q = supabase.from('parcs').select('*');
+      if (!isAdmin) {
+        q = q.eq('actif', true);
+      }
       if (!estFormation) {
         q = q.neq('code', 'ECO');
       }

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
+import { supabase } from '@/lib/supabase';
 import { useParcs } from '@/hooks/queries/useReferentiel';
 import {
   useRoles,
@@ -28,6 +29,8 @@ export function ModaleEditerUtilisateur({ open, onClose, utilisateur }: Props) {
   );
   const [actif, setActif] = useState(utilisateur.actif);
   const [erreur, setErreur] = useState<string | null>(null);
+  const [resetSent, setResetSent] = useState(false);
+  const [resetLoading, setResetLoading] = useState(false);
 
   useEffect(() => {
     setRoleId(utilisateur.role_id);
@@ -35,6 +38,7 @@ export function ModaleEditerUtilisateur({ open, onClose, utilisateur }: Props) {
     setEstManager(utilisateur.parcs.some((p) => p.est_manager));
     setActif(utilisateur.actif);
     setErreur(null);
+    setResetSent(false);
   }, [utilisateur]);
 
   if (!open) return null;
@@ -102,7 +106,7 @@ export function ModaleEditerUtilisateur({ open, onClose, utilisateur }: Props) {
               </button>
             ))}
           </div>
-          {(roleCode === 'manager_parc' || roleCode === 'chef_maintenance') && (
+          {(roleCode === 'manager_parc' || roleCode === 'chef_maintenance' || roleCode === 'directeur_parc') && (
             <label className="flex items-center gap-2 mt-3 text-xs cursor-pointer">
               <input
                 type="checkbox"
@@ -191,6 +195,43 @@ export function ModaleEditerUtilisateur({ open, onClose, utilisateur }: Props) {
             </button>
           </div>
         </div>
+
+        {utilisateur.email && (
+          <div className="mb-5">
+            <label className="block text-[11px] text-dim uppercase tracking-wider mb-2">
+              Mot de passe
+            </label>
+            <button
+              onClick={async () => {
+                setResetLoading(true);
+                setErreur(null);
+                const redirectUrl = `${window.location.origin}/reset-password`;
+                const { error } = await supabase.auth.resetPasswordForEmail(utilisateur.email!, {
+                  redirectTo: redirectUrl,
+                });
+                setResetLoading(false);
+                if (error) {
+                  setErreur(`Echec envoi : ${error.message}`);
+                } else {
+                  setResetSent(true);
+                }
+              }}
+              disabled={resetSent || resetLoading}
+              className={cn(
+                'text-[12px] px-4 py-2.5 rounded-lg border min-h-[44px] transition-colors',
+                resetSent
+                  ? 'border-green/30 text-green bg-green/5 cursor-default'
+                  : 'border-white/[0.08] text-dim hover:text-text hover:border-white/20 bg-bg-deep'
+              )}
+            >
+              {resetLoading
+                ? 'Envoi...'
+                : resetSent
+                  ? 'Lien envoye !'
+                  : 'Envoyer un lien de reinitialisation'}
+            </button>
+          </div>
+        )}
 
         {erreur && (
           <div className="bg-red/10 border border-red/30 text-red text-xs p-3 rounded-lg mb-3">

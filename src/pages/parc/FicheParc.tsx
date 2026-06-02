@@ -1,6 +1,8 @@
 import { useState, useMemo } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { cn } from '@/lib/utils';
+import { supabase } from '@/lib/supabase';
 import { useParc } from '@/hooks/queries/useReferentiel';
 import { useAttractionsParc } from '@/hooks/queries/useAttractionsParc';
 import { usePointsPourParc } from '@/hooks/queries/usePointsCategoriePourParc';
@@ -14,7 +16,7 @@ import type { Parc } from '@/types/database';
 
 type Onglet = 'apercu' | 'configuration' | 'controles' | 'equipements' | 'equipe' | 'notes' | 'conformite';
 
-const ROLES_EDIT_HORAIRES: string[] = ['direction', 'chef_maintenance'];
+const ROLES_EDIT_HORAIRES: string[] = ['direction', 'chef_maintenance', 'directeur_parc'];
 
 export function FicheParc() {
   const { id } = useParams<{ id: string }>();
@@ -85,8 +87,8 @@ export function FicheParc() {
       {onglet === 'apercu' && <OngletApercu parc={parc ?? null} />}
       {onglet === 'configuration' && <OngletConfiguration parc={parc ?? null} />}
       {onglet === 'controles' && <OngletControles parcId={id} />}
-      {onglet === 'equipements' && <OngletEquipements />}
-      {onglet === 'equipe' && <OngletEquipe />}
+      {onglet === 'equipements' && <OngletEquipements parcId={id} />}
+      {onglet === 'equipe' && <OngletEquipe parcId={id} />}
       {onglet === 'notes' && <NotesChantierParc />}
       {onglet === 'conformite' && <OngletConformiteParc parcId={id} />}
     </div>
@@ -257,10 +259,236 @@ function OngletControles({ parcId }: { parcId: string | undefined }) {
   );
 }
 
-function OngletEquipements() {
-  return <div className="p-4 md:p-6 md:px-7 text-dim text-sm">Liste détaillée des équipements de ce parc</div>;
+function OngletEquipements({ parcId }: { parcId: string | undefined }) {
+  const { data: equipements, isLoading } = useQuery({
+    queryKey: ['equipements_parc_fiche', parcId],
+    queryFn: async () => {
+      if (!parcId) return [];
+      const { data, error } = await supabase
+        .from('equipements')
+        .select('id, code, libelle, statut, categories_equipement(nom), zones(nom)')
+        .eq('parc_id', parcId)
+        .eq('est_formation', false)
+        .order('code');
+      if (error) throw error;
+      return data ?? [];
+    },
+    enabled: !!parcId,
+  });
+
+  const grouped = useMemo(() => {
+    if (!equipements) return [];
+    const map = new Map<string, typeof equipements>();
+    for (const eq of equipements) {
+      const cat = (eq.categories_equipement as unknown as { nom: string } | null)?.nom ?? 'Sans categorie';
+      if (!map.has(cat)) map.set(cat, []);
+      map.get(cat)!.push(eq);
+    }
+    return Array.from(map.entries()).sort((a, b) => a[0].localeCompare(b[0]));
+  }, [equipements]);
+
+  if (isLoading) {
+    return (
+      <div className="p-4 md:p-7 flex flex-col gap-3">
+        {[1, 2, 3].map((i) => <div key={i} className="bg-bg-card rounded-xl h-14 animate-pulse" />)}
+      </div>
+    );
+  }
+
+  if (!equipements || equipements.length === 0) {
+    return (
+      <div className="p-4 md:p-7">
+        <div className="bg-bg-card rounded-xl p-8 text-center border border-white/[0.06]">
+          <p className="text-dim text-sm">Aucun equipement configure pour ce parc</p>
+        </div>
+      </div>
+    );
+  }
+
+  const statutColor: Record<string, string> = {
+    actif: 'text-green bg-green/10',
+    en_panne: 'text-red bg-red/10',
+    maintenance: 'text-amber bg-amber/10',
+    hors_service: 'text-red bg-red/10',
+    a_installer: 'text-dim bg-white/[0.06]',
+  };
+
+  return (
+    <div className="p-4 md:p-7 flex flex-col gap-5">
+      <div className="text-[13px] text-dim">{equipements.length} equipement{equipements.length > 1 ? 's' : ''}</div>
+      {grouped.map(([cat, items]) => (
+        <div key={cat}>
+          <div className="text-[11px] text-dim uppercase tracking-wider mb-2">{cat} ({items.length})</div>
+          <div className="flex flex-col gap-1.5">
+            {items.map((eq) => {
+              const zone = (eq.zones as unknown as { nom: string } | null)?.nom;
+              return (
+                <div
+                  key={eq.id}
+                  className="bg-bg-card rounded-xl px-4 py-3 border border-white/[0.06] flex items-center gap-3"
+                >
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[12px] font-mono text-nikito-cyan font-bold">{eq.code}</span>
+                      <span className="text-[13px] font-medium truncate">{eq.libelle}</span>
+                    </div>
+                    {zone && <div className="text-[11px] text-dim mt-0.5">{zone}</div>}
+                  </div>
+                  <span className={`text-[10px] px-2 py-0.5 rounded font-medium flex-shrink-0 ${statutColor[eq.statut] ?? 'text-dim bg-white/[0.06]'}`}>
+                    {eq.statut.replace('_', ' ')}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
 }
 
-function OngletEquipe() {
-  return <div className="p-4 md:p-6 md:px-7 text-dim text-sm">Utilisateurs assignés à ce parc</div>;
+interface MembreEquipe {
+  id: string;
+  nom: string;
+  prenom: string;
+  email: string;
+  actif: boolean;
+  role_code: string;
+  role_nom: string;
+}
+
+function useEquipeParc(parcId: string | undefined) {
+  return useQuery({
+    queryKey: ['equipe_parc', parcId],
+    queryFn: async () => {
+      if (!parcId) return [];
+      const { data, error } = await supabase
+        .from('parcs_utilisateurs')
+        .select('utilisateurs!inner(id, nom, prenom, email, actif, roles!inner(code, nom))')
+        .eq('parc_id', parcId);
+      if (error) throw error;
+      return (data ?? []).map((row: Record<string, unknown>) => {
+        const u = row.utilisateurs as Record<string, unknown>;
+        const r = u.roles as { code: string; nom: string };
+        return {
+          id: u.id as string,
+          nom: u.nom as string,
+          prenom: u.prenom as string,
+          email: u.email as string,
+          actif: u.actif as boolean,
+          role_code: r.code,
+          role_nom: r.nom,
+        } as MembreEquipe;
+      });
+    },
+    enabled: !!parcId,
+  });
+}
+
+const ROLE_ORDER: Record<string, number> = {
+  direction: 1,
+  chef_maintenance: 2,
+  directeur_parc: 3,
+  admin_it: 4,
+  manager_parc: 5,
+  technicien: 6,
+  staff_operationnel: 7,
+};
+
+function OngletEquipe({ parcId }: { parcId: string | undefined }) {
+  const { data: membres, isLoading } = useEquipeParc(parcId);
+  const { utilisateur } = useAuth();
+  const isDirection = utilisateur?.role_code === 'direction' || utilisateur?.role_code === 'admin_it';
+  const [recherche, setRecherche] = useState('');
+
+  const membresFiltres = useMemo(() => {
+    if (!membres) return [];
+    if (!recherche.trim()) return membres;
+    const q = recherche.toLowerCase().trim();
+    return membres.filter((m) =>
+      m.prenom.toLowerCase().includes(q) ||
+      m.nom.toLowerCase().includes(q) ||
+      m.email.toLowerCase().includes(q)
+    );
+  }, [membres, recherche]);
+
+  const grouped = useMemo(() => {
+    const sorted = [...membresFiltres].sort((a, b) => (ROLE_ORDER[a.role_code] ?? 9) - (ROLE_ORDER[b.role_code] ?? 9) || a.nom.localeCompare(b.nom));
+    const groups: { role: string; membres: MembreEquipe[] }[] = [];
+    for (const m of sorted) {
+      const last = groups[groups.length - 1];
+      if (last && last.role === m.role_nom) {
+        last.membres.push(m);
+      } else {
+        groups.push({ role: m.role_nom, membres: [m] });
+      }
+    }
+    return groups;
+  }, [membresFiltres]);
+
+  if (isLoading) {
+    return (
+      <div className="p-4 md:p-7 flex flex-col gap-3">
+        {[1, 2, 3].map((i) => <div key={i} className="bg-bg-card rounded-xl h-14 animate-pulse" />)}
+      </div>
+    );
+  }
+
+  if (!membres || membres.length === 0) {
+    return (
+      <div className="p-4 md:p-7">
+        <div className="bg-bg-card rounded-xl p-8 text-center border border-white/[0.06]">
+          <p className="text-dim text-sm">Aucun utilisateur assigne a ce parc</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-4 md:p-7 flex flex-col gap-5">
+      {isDirection && membres && membres.length > 5 && (
+        <div className="relative">
+          <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-dim" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+          <input
+            type="text"
+            value={recherche}
+            onChange={(e) => setRecherche(e.target.value)}
+            placeholder="Rechercher un membre..."
+            className="w-full bg-bg-card border border-white/[0.08] rounded-xl pl-9 pr-4 py-2.5 text-[13px] text-text outline-none focus:border-nikito-cyan/50 min-h-[44px] placeholder:text-dim"
+          />
+        </div>
+      )}
+      <div className="text-[13px] text-dim">
+        {recherche.trim()
+          ? `${membresFiltres.length} resultat${membresFiltres.length > 1 ? 's' : ''} sur ${membres!.length}`
+          : `${membres!.length} membre${membres!.length > 1 ? 's' : ''} dans l'equipe`}
+      </div>
+      {grouped.map((g) => (
+        <div key={g.role}>
+          <div className="text-[11px] text-dim uppercase tracking-wider mb-2">{g.role} ({g.membres.length})</div>
+          <div className="flex flex-col gap-1.5">
+            {g.membres.map((m) => (
+              <div
+                key={m.id}
+                className="bg-bg-card rounded-xl px-4 py-3 border border-white/[0.06] flex items-center gap-3"
+              >
+                <div className="w-8 h-8 rounded-full bg-nikito-cyan/10 text-nikito-cyan flex items-center justify-center text-[11px] font-bold flex-shrink-0">
+                  {m.prenom[0]}{m.nom[0] || ''}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-[13px] font-medium truncate">{m.prenom} {m.nom}</div>
+                  <div className="text-[11px] text-dim truncate">{m.email}</div>
+                </div>
+                {!m.actif && (
+                  <span className="text-[10px] text-amber bg-amber/10 px-2 py-0.5 rounded flex-shrink-0">Inactif</span>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
 }

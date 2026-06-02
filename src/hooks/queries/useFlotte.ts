@@ -160,7 +160,7 @@ export function useUtilisateursAssignables() {
         .from('utilisateurs')
         .select('id, prenom, nom, roles!inner(code)')
         .eq('actif', true)
-        .in('roles.code', ['technicien', 'chef_maintenance', 'direction'])
+        .in('roles.code', ['technicien', 'chef_maintenance', 'directeur_parc', 'direction'])
         .order('prenom', { ascending: true });
 
       if (error) throw error;

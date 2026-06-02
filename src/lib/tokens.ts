@@ -33,6 +33,7 @@ export const criticite = {
 export const roleLabels = {
   direction: 'Direction',
   chef_maintenance: "Chef d'équipe",
+  directeur_parc: 'Directeur de parc',
   manager_parc: 'Manager parc',
   technicien: 'Technicien',
   staff_operationnel: 'Staff opérationnel',

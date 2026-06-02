@@ -34,23 +34,50 @@ export function ResetPassword() {
 
   useEffect(() => {
     const { data: listener } = supabase.auth.onAuthStateChange((event) => {
-      if (event === 'PASSWORD_RECOVERY') {
+      if (event === 'PASSWORD_RECOVERY' || event === 'SIGNED_IN') {
         setReady(true);
       }
     });
 
-    supabase.auth.getSession().then(({ data }) => {
-      if (data.session) {
-        setReady(true);
+    const hash = window.location.hash;
+    const searchParams = new URLSearchParams(window.location.search);
+    const code = searchParams.get('code');
+
+    if (code) {
+      supabase.auth.exchangeCodeForSession(code).then(({ error }) => {
+        if (error) {
+          setTokenError(true);
+        } else {
+          setReady(true);
+        }
+      });
+    } else if (hash && (hash.includes('type=recovery') || hash.includes('access_token'))) {
+      const params = new URLSearchParams(hash.replace('#', ''));
+      const accessToken = params.get('access_token');
+      const refreshToken = params.get('refresh_token');
+      if (accessToken && refreshToken) {
+        supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken }).then(({ error }) => {
+          if (error) {
+            setTokenError(true);
+          } else {
+            setReady(true);
+          }
+        });
       }
-    });
+    } else {
+      supabase.auth.getSession().then(({ data }) => {
+        if (data.session) {
+          setReady(true);
+        }
+      });
+    }
 
     const timeout = setTimeout(() => {
       setReady((prev) => {
         if (!prev) setTokenError(true);
         return prev;
       });
-    }, 5000);
+    }, 8000);
 
     return () => {
       listener.subscription.unsubscribe();
@@ -69,7 +96,10 @@ export function ResetPassword() {
     setError(null);
     setLoading(true);
 
-    const { error: updateError } = await supabase.auth.updateUser({ password });
+    const { error: updateError } = await supabase.auth.updateUser({
+      password,
+      data: { password_must_change: false },
+    });
 
     if (updateError) {
       setLoading(false);

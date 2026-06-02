@@ -7,6 +7,7 @@ import type { RoleUtilisateur } from '@/types/database';
 
 const simulableRoles: { code: RoleUtilisateur; label: string; needsParc: boolean }[] = [
   { code: 'chef_maintenance', label: "Chef d'equipe", needsParc: false },
+  { code: 'directeur_parc', label: 'Directeur de parc', needsParc: true },
   { code: 'technicien', label: 'Technicien', needsParc: false },
   { code: 'manager_parc', label: 'Manager Parc', needsParc: true },
   { code: 'staff_operationnel', label: 'Staff operationnel', needsParc: true },

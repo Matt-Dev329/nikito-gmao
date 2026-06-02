@@ -7,6 +7,7 @@ import { getDeviceHash } from '@/lib/deviceFingerprint';
 import { Verification2FA } from '@/components/auth/Verification2FA';
 import { cn } from '@/lib/utils';
 import { maskEmail } from '@/lib/deviceFingerprint';
+import { isPlatformAuthenticatorAvailable, authenticateWithPasskey } from '@/lib/webauthn';
 
 type Screen = 'login' | '2fa' | 'forgot' | 'forgot-sent';
 
@@ -39,6 +40,8 @@ export function Login() {
 
   const [resetEmail, setResetEmail] = useState('');
   const [resetCooldown, setResetCooldown] = useState(0);
+  const [biometricAvailable, setBiometricAvailable] = useState(false);
+  const [biometricLoading, setBiometricLoading] = useState(false);
 
   const isProcessing = useRef(false);
 
@@ -49,6 +52,21 @@ export function Login() {
     const t = setInterval(() => setResetCooldown((c) => Math.max(0, c - 1)), 1000);
     return () => clearInterval(t);
   }, [resetCooldown]);
+
+  useEffect(() => {
+    isPlatformAuthenticatorAvailable().then(setBiometricAvailable);
+  }, []);
+
+  const searchParams = new URLSearchParams(window.location.search);
+  const isRecoveryLink =
+    window.location.hash.includes('type=recovery') ||
+    searchParams.get('type') === 'recovery' ||
+    searchParams.has('code');
+
+  if (isRecoveryLink) {
+    window.location.replace(`/reset-password${window.location.search}${window.location.hash}`);
+    return null;
+  }
 
   if (authLoading) {
     return (
@@ -83,6 +101,48 @@ export function Login() {
       />
     );
   }
+
+  const handleBiometric = async () => {
+    if (!email) {
+      setError('Entrez votre email pour utiliser la connexion biometrique');
+      return;
+    }
+    setError(null);
+    setBiometricLoading(true);
+    isProcessing.current = true;
+
+    const result = await authenticateWithPasskey(email);
+
+    if (!result.success) {
+      isProcessing.current = false;
+      setBiometricLoading(false);
+      if (result.error === 'Aucun passkey enregistre') {
+        setError('Aucun passkey enregistre pour ce compte. Connectez-vous par mot de passe puis activez la biometrie dans Profil.');
+      } else {
+        setError(result.error || 'Echec de l\'authentification biometrique');
+      }
+      return;
+    }
+
+    if (result.verificationUrl) {
+      const url = new URL(result.verificationUrl);
+      const hashedToken = url.searchParams.get('hashed_token') || '';
+
+      const { error: verifyError } = await supabase.auth.verifyOtp({
+        token_hash: hashedToken,
+        type: 'magiclink',
+      });
+
+      if (verifyError) {
+        window.location.href = result.verificationUrl;
+        return;
+      }
+    }
+
+    setBiometricLoading(false);
+    isProcessing.current = false;
+    navigate(destination, { replace: true });
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -340,6 +400,23 @@ export function Login() {
           >
             {loading ? 'Connexion...' : 'Se connecter'}
           </button>
+
+          {biometricAvailable && (
+            <button
+              type="button"
+              onClick={handleBiometric}
+              disabled={biometricLoading || loading}
+              className={cn(
+                'flex items-center justify-center gap-2.5 w-full py-3.5 rounded-xl text-sm font-semibold min-h-[44px] border border-white/[0.12] bg-white/[0.04] hover:bg-white/[0.08] transition-colors',
+                (biometricLoading || loading) && 'opacity-50 cursor-wait'
+              )}
+            >
+              <svg className="w-5 h-5 text-nikito-cyan" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M7.864 4.243A7.5 7.5 0 0119.5 10.5c0 2.92-.556 5.709-1.568 8.268M5.742 6.364A7.465 7.465 0 004.5 10.5a48.667 48.667 0 00-1.116 7.126M12 10.5a.75.75 0 11-1.5 0 .75.75 0 011.5 0zm0 0v5.25m0-5.25H9.75m2.25 0H14.25m-7.5 10.5h10.5a2.25 2.25 0 002.25-2.25v-1.5a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v1.5a2.25 2.25 0 002.25 2.25z" />
+              </svg>
+              {biometricLoading ? 'Verification...' : 'Face ID / Empreinte'}
+            </button>
+          )}
 
           <button
             type="button"

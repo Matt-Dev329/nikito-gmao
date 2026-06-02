@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
-import { PhotoLightbox, PhotoThumb } from '@/components/shared/PhotoLightbox';
+import { PhotoLightbox } from '@/components/shared/PhotoLightbox';
+import { PrivateImage } from '@/components/PrivateImage';
+import { useSignedUrl } from '@/hooks/useSignedUrl';
 import { useControleDetail, type ControleHistorique } from '@/hooks/queries/useHistoriqueControles';
 import type { TypeControle } from '@/types/database';
 
@@ -65,7 +67,7 @@ interface ModaleDetailControleProps {
 
 export function ModaleDetailControle({ controle, onClose, onExportPDF, onNavigateCorrection }: ModaleDetailControleProps) {
   const { data, isLoading } = useControleDetail(controle.id);
-  const [lightboxPhotos, setLightboxPhotos] = useState<string[] | null>(null);
+  const [lightboxPath, setLightboxPath] = useState<string | null>(null);
 
   return (
     <div className="fixed inset-0 z-50 bg-black/60 flex items-end md:items-center justify-center md:p-4">
@@ -165,9 +167,12 @@ export function ModaleDetailControle({ controle, onClose, onExportPDF, onNavigat
                         {item.commentaire && <div className="text-[12px] text-amber mt-1">{item.commentaire}</div>}
                       </div>
                       {item.photo_url && (
-                        <PhotoThumb
-                          url={item.photo_url}
-                          onClick={() => setLightboxPhotos([item.photo_url!])}
+                        <PrivateImage
+                          path={item.photo_url}
+                          bucket="alba-controles"
+                          alt="Photo"
+                          className="w-12 h-12 rounded-lg object-cover cursor-pointer border border-white/[0.08] transition-transform hover:scale-105"
+                          onClick={() => setLightboxPath(item.photo_url)}
                         />
                       )}
                     </div>
@@ -215,11 +220,30 @@ export function ModaleDetailControle({ controle, onClose, onExportPDF, onNavigat
           </div>
         </div>
       </div>
-      {lightboxPhotos && (
-        <PhotoLightbox photos={lightboxPhotos} onClose={() => setLightboxPhotos(null)} />
+      {lightboxPath && (
+        <SignedLightbox path={lightboxPath} onClose={() => setLightboxPath(null)} />
       )}
     </div>
   );
+}
+
+function SignedLightbox({ path, onClose }: { path: string; onClose: () => void }) {
+  const { data: url, isLoading } = useSignedUrl(path, 'alba-controles');
+
+  if (isLoading) {
+    return (
+      <div className="fixed inset-0 z-[100] bg-black/90 flex items-center justify-center" onClick={onClose}>
+        <div className="text-white text-sm animate-pulse">Chargement...</div>
+      </div>
+    );
+  }
+
+  if (!url) {
+    onClose();
+    return null;
+  }
+
+  return <PhotoLightbox photos={[url]} onClose={onClose} />;
 }
 
 function InfoCell({ label, value, accent, children }: { label: string; value?: string; accent?: string; children?: React.ReactNode }) {

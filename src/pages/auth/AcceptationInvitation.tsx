@@ -31,7 +31,8 @@ function formatTel(value: string): string {
   return value;
 }
 
-async function fetchInvitation(token: string): Promise<InvitationDetails | null> {
+async function fetchInvitation(token: string): Promise<InvitationDetails | 'used' | 'expired' | null> {
+  // First try: unused invitation (anon policy = utilise_le IS NULL)
   const { data, error } = await supabase
     .from('invitations')
     .select(
@@ -44,6 +45,8 @@ async function fetchInvitation(token: string): Promise<InvitationDetails | null>
     .maybeSingle();
 
   if (error || !data) return null;
+
+  if (new Date(data.expire_le) < new Date()) return 'expired';
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const d = data as any;
@@ -100,12 +103,25 @@ export function AcceptationInvitation() {
     }
 
     (async () => {
-      const inv = await fetchInvitation(token);
-      if (!inv) {
-        setErreur("Cette invitation est invalide, déjà utilisée ou expirée.");
+      const result = await fetchInvitation(token);
+      if (result === 'expired') {
+        setErreur("Cette invitation a expiré. Demandez à votre responsable de vous renvoyer une invitation.");
         setLoading(false);
         return;
       }
+      if (result === 'used' || !result) {
+        // If user has an active session, they likely confirmed their email
+        // and the invitation was already accepted -- redirect to home.
+        const { data: sessionData } = await supabase.auth.getSession();
+        if (sessionData?.session?.user) {
+          navigate('/');
+          return;
+        }
+        setErreur("Ce lien d'invitation est invalide ou a déjà été utilisé. Vérifiez que vous utilisez bien le dernier lien reçu par email.");
+        setLoading(false);
+        return;
+      }
+      const inv = result;
       setInvitation(inv);
       setLoading(false);
 
@@ -230,21 +246,43 @@ export function AcceptationInvitation() {
           });
 
           if (signUpError) {
-            if (signUpError.message?.includes('already registered')) {
-              // User already exists in auth.users -- try to sign in
+            if (signUpError.message?.includes('already registered') || signUpError.message?.includes('already exists')) {
+              // User already exists in auth.users -- try to sign in with the new password
               const { data: signInData, error: signInError } =
                 await supabase.auth.signInWithPassword({
                   email: invitation.email!,
                   password,
                 });
               if (signInError) {
-                throw new Error(
-                  "Ce compte existe deja avec un mot de passe different. " +
-                  "Essayez avec le mot de passe que vous avez utilise precedemment, " +
-                  "ou contactez le support."
+                // Account was pre-provisioned with a random password.
+                // Use the edge function to update the password and sign in.
+                const { data: resetData, error: resetError } = await supabase.functions.invoke(
+                  'provision-auth-accounts',
+                  {
+                    body: { action: 'reset-for-invitation', email: invitation.email, newPassword: password },
+                  }
                 );
+                if (resetError || !resetData?.auth_user_id) {
+                  throw new Error(
+                    "Ce compte existe deja. Utilisez 'Mot de passe oublie' sur la page de connexion " +
+                    "pour reinitialiser votre mot de passe, puis revenez sur ce lien d'invitation."
+                  );
+                }
+                // Now sign in with the updated password
+                const { data: retrySignIn, error: retryError } =
+                  await supabase.auth.signInWithPassword({
+                    email: invitation.email!,
+                    password,
+                  });
+                if (retryError || !retrySignIn.user) {
+                  throw new Error(
+                    "Impossible de vous connecter. Utilisez 'Mot de passe oublie' sur la page de connexion."
+                  );
+                }
+                authUserId = retrySignIn.user.id;
+              } else {
+                authUserId = signInData.user?.id ?? null;
               }
-              authUserId = signInData.user?.id ?? null;
             } else {
               throw signUpError;
             }

@@ -141,7 +141,7 @@ export function ControleMensuel() {
     return allUsers.filter(
       (u) =>
         u.id !== utilisateur?.id &&
-        (u.role_code === 'technicien' || u.role_code === 'chef_maintenance') &&
+        (u.role_code === 'technicien' || u.role_code === 'chef_maintenance' || u.role_code === 'directeur_parc') &&
         u.parcs.some((p) => p.parc_id === parcId)
     );
   }, [allUsers, parcId, utilisateur?.id]);

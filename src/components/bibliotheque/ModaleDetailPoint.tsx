@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/lib/supabase';
 import { useCategoriesEquipement } from '@/hooks/queries/useReferentiel';
 import { useModifierPoint } from '@/hooks/queries/useBibliotheque';
 import type { PointBibliothequeAvecJoins, TypeControle, AssigneA } from '@/types/database';
@@ -91,6 +93,8 @@ function VueDetail({
           <div className="text-[13px] text-text whitespace-pre-wrap">{p.description}</div>
         </div>
       )}
+
+      <SectionParcsApplicables pointId={p.id} />
 
       <div className="flex flex-col-reverse sm:flex-row gap-2.5 sm:justify-end">
         <button
@@ -304,6 +308,129 @@ function Field({ label, children, wide }: { label: string; children: React.React
     <div className={wide ? 'md:col-span-2' : ''}>
       <label className="block text-[11px] text-dim uppercase tracking-wider mb-2">{label}</label>
       {children}
+    </div>
+  );
+}
+
+interface ParcOverride {
+  parc_id: string;
+  parc_code: string;
+  parc_nom: string;
+  actif: boolean;
+}
+
+function SectionParcsApplicables({ pointId }: { pointId: string }) {
+  const qc = useQueryClient();
+  const [saving, setSaving] = useState<string | null>(null);
+
+  const { data: parcs } = useQuery({
+    queryKey: ['parcs_list_simple'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('parcs')
+        .select('id, code, nom')
+        .eq('actif', true)
+        .order('code');
+      if (error) throw error;
+      return data as { id: string; code: string; nom: string }[];
+    },
+    staleTime: 60_000,
+  });
+
+  const { data: overrides } = useQuery({
+    queryKey: ['parc_points_actifs', pointId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('parc_points_actifs')
+        .select('parc_id, actif')
+        .eq('point_id', pointId);
+      if (error) throw error;
+      return data as { parc_id: string; actif: boolean }[];
+    },
+  });
+
+  const parcsList: ParcOverride[] = (parcs ?? []).map((p) => {
+    const override = overrides?.find((o) => o.parc_id === p.id);
+    return {
+      parc_id: p.id,
+      parc_code: p.code,
+      parc_nom: p.nom,
+      actif: override ? override.actif : true,
+    };
+  });
+
+  const toggleParc = async (parcId: string, currentlyActif: boolean) => {
+    setSaving(parcId);
+    if (currentlyActif) {
+      await supabase
+        .from('parc_points_actifs')
+        .upsert({
+          parc_id: parcId,
+          point_id: pointId,
+          actif: false,
+          modifie_le: new Date().toISOString(),
+        }, { onConflict: 'parc_id,point_id' });
+    } else {
+      await supabase
+        .from('parc_points_actifs')
+        .upsert({
+          parc_id: parcId,
+          point_id: pointId,
+          actif: true,
+          modifie_le: new Date().toISOString(),
+        }, { onConflict: 'parc_id,point_id' });
+    }
+    qc.invalidateQueries({ queryKey: ['parc_points_actifs', pointId] });
+    qc.invalidateQueries({ queryKey: ['points_parc'] });
+    setSaving(null);
+  };
+
+  if (!parcs || parcs.length === 0) return null;
+
+  const actifCount = parcsList.filter((p) => p.actif).length;
+
+  return (
+    <div className="bg-bg-deep rounded-[10px] p-3.5 mb-4 border border-white/[0.04]">
+      <div className="flex items-center justify-between mb-3">
+        <div className="text-[10px] text-dim uppercase tracking-wider">Parcs applicables</div>
+        <span className="text-[11px] text-dim">
+          {actifCount}/{parcsList.length} actifs
+        </span>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+        {parcsList.map((p) => (
+          <button
+            key={p.parc_id}
+            onClick={() => toggleParc(p.parc_id, p.actif)}
+            disabled={saving === p.parc_id}
+            className={cn(
+              'flex items-center gap-2.5 rounded-lg px-3 py-2 transition-all text-left',
+              p.actif
+                ? 'bg-green/[0.08] border border-green/20'
+                : 'bg-white/[0.02] border border-white/[0.06] opacity-60'
+            )}
+          >
+            <span className={cn(
+              'w-7 h-4 rounded-full relative flex-shrink-0 transition-colors',
+              p.actif ? 'bg-green' : 'bg-white/[0.12]'
+            )}>
+              <span className={cn(
+                'absolute top-0.5 w-3 h-3 rounded-full bg-white transition-transform shadow-sm',
+                p.actif ? 'translate-x-[13px]' : 'translate-x-[2px]'
+              )} />
+            </span>
+            <div className="flex items-center gap-1.5 min-w-0">
+              <span className={cn(
+                'text-[11px] font-bold font-mono flex-shrink-0',
+                p.actif ? 'text-green' : 'text-faint'
+              )}>
+                {p.parc_code}
+              </span>
+              <span className="text-[12px] text-dim truncate">{p.parc_nom}</span>
+            </div>
+          </button>
+        ))}
+      </div>
     </div>
   );
 }

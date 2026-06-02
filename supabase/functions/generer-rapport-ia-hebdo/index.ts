@@ -2,7 +2,7 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.45.0";
 
 const corsHeaders = {
-  "Access-Control-Allow-Origin": "https://nikito.tech",
+  "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
   "Access-Control-Allow-Headers":
     "Content-Type, Authorization, X-Client-Info, Apikey",
@@ -154,6 +154,25 @@ Deno.serve(async (req: Request) => {
       date_analyse: now.toISOString(),
     };
 
+    // Filter to only relevant equipments to avoid exceeding token limits
+    const relevantEquipements = maintenanceData.equipements.filter(
+      (e: Record<string, unknown>) =>
+        (e.incidents_total as number) > 0 ||
+        (e.recurrences as number) > 0 ||
+        e.a_surveiller === true ||
+        e.statut === "panne" ||
+        e.statut === "maintenance"
+    );
+    relevantEquipements.sort((a: Record<string, unknown>, b: Record<string, unknown>) => {
+      const scoreA = (a.incidents_30j as number) * 3 + (a.incidents_60j as number) * 2 + (a.incidents_90j as number) + (a.a_surveiller ? 5 : 0);
+      const scoreB = (b.incidents_30j as number) * 3 + (b.incidents_60j as number) * 2 + (b.incidents_90j as number) + (b.a_surveiller ? 5 : 0);
+      return scoreB - scoreA;
+    });
+    const trimmedData = {
+      ...maintenanceData,
+      equipements: relevantEquipements.slice(0, 80),
+    };
+
     const SYSTEM_PROMPT = `Tu es un expert en maintenance predictive pour des parcs de loisirs indoor.
 Tu analyses les donnees de maintenance et tu retournes des predictions structurees.
 Retourne UNIQUEMENT un JSON valide avec cette structure :
@@ -180,7 +199,7 @@ Retourne UNIQUEMENT un JSON valide avec cette structure :
         messages: [
           {
             role: "user",
-            content: `Donnees de maintenance des 90 derniers jours :\n${JSON.stringify(maintenanceData)}`,
+            content: `Donnees de maintenance (${trimmedData.equipements.length} equipements pertinents sur ${maintenanceData.equipements.length} total) :\n${JSON.stringify(trimmedData)}`,
           },
         ],
       }),

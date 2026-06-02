@@ -1,6 +1,8 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { cn } from '@/lib/utils';
+import { useSignedUrl } from '@/hooks/useSignedUrl';
+import type { AlbaBucket } from '@/lib/uploadPhotoControle';
 
 interface PhotoCaptureProps {
   bucketName: string;
@@ -11,12 +13,12 @@ interface PhotoCaptureProps {
   existingUrl?: string;
 }
 
-type UploadState = 'idle' | 'uploading' | 'done' | 'error';
+type UploadState = 'idle' | 'camera' | 'uploading' | 'done' | 'error';
 
-async function compressImage(file: File): Promise<Blob> {
+async function compressImage(source: File | Blob): Promise<Blob> {
   return new Promise((resolve, reject) => {
     const img = new Image();
-    const url = URL.createObjectURL(file);
+    const url = URL.createObjectURL(source);
     img.onload = () => {
       URL.revokeObjectURL(url);
       const MAX_W = 1200;
@@ -57,31 +59,56 @@ export function PhotoCapture({
   label,
   existingUrl,
 }: PhotoCaptureProps) {
+  const needsSignedUrl = !!existingUrl && !existingUrl.startsWith('http') && !existingUrl.startsWith('blob:');
+  const { data: signedExisting } = useSignedUrl(
+    needsSignedUrl ? existingUrl : null,
+    bucketName as AlbaBucket,
+  );
+  const resolvedExisting = needsSignedUrl ? signedExisting : existingUrl;
+
   const [state, setState] = useState<UploadState>(existingUrl ? 'done' : 'idle');
-  const [photoUrl, setPhotoUrl] = useState<string | null>(existingUrl ?? null);
+  const [photoUrl, setPhotoUrl] = useState<string | null>(resolvedExisting ?? existingUrl ?? null);
   const [errMsg, setErrMsg] = useState('');
-  const cameraRef = useRef<HTMLInputElement>(null);
   const galleryRef = useRef<HTMLInputElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+
+  useEffect(() => {
+    if (resolvedExisting && state === 'done' && !photoUrl?.startsWith('http')) {
+      setPhotoUrl(resolvedExisting);
+    }
+  }, [resolvedExisting]);
+
+  const stopCamera = useCallback(() => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
+    }
+  }, []);
+
+  useEffect(() => {
+    return () => stopCamera();
+  }, [stopCamera]);
 
   const upload = useCallback(
-    async (file: File) => {
+    async (source: File | Blob) => {
       setState('uploading');
       setErrMsg('');
       try {
-        const compressed = await compressImage(file);
+        const compressed = await compressImage(source);
         const fileName = `${storagePath}_${Date.now()}.jpg`;
         const { error } = await supabase.storage
           .from(bucketName)
           .upload(fileName, compressed, { contentType: 'image/jpeg' });
         if (error) throw error;
 
-        const { data: urlData } = supabase.storage
+        const { data: signedData } = await supabase.storage
           .from(bucketName)
-          .getPublicUrl(fileName);
+          .createSignedUrl(fileName, 3600);
 
-        setPhotoUrl(urlData.publicUrl);
+        setPhotoUrl(signedData?.signedUrl ?? fileName);
         setState('done');
-        onPhotoUploaded(urlData.publicUrl);
+        onPhotoUploaded(fileName);
       } catch (err) {
         setState('error');
         setErrMsg(err instanceof Error ? err.message : 'Erreur upload');
@@ -89,6 +116,48 @@ export function PhotoCapture({
     },
     [bucketName, storagePath, onPhotoUploaded],
   );
+
+  const openCamera = useCallback(async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } },
+        audio: false,
+      });
+      streamRef.current = stream;
+      setState('camera');
+      requestAnimationFrame(() => {
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+        }
+      });
+    } catch {
+      galleryRef.current?.click();
+    }
+  }, []);
+
+  const capturePhoto = useCallback(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.drawImage(video, 0, 0);
+    stopCamera();
+    canvas.toBlob(
+      (blob) => {
+        if (blob) upload(blob);
+      },
+      'image/jpeg',
+      0.9,
+    );
+  }, [stopCamera, upload]);
+
+  const cancelCamera = useCallback(() => {
+    stopCamera();
+    setState('idle');
+  }, [stopCamera]);
 
   const handleFile = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -104,6 +173,8 @@ export function PhotoCapture({
     setState('idle');
   };
 
+  const [zoomed, setZoomed] = useState(false);
+
   if (state === 'done' && photoUrl) {
     return (
       <div className="flex flex-col gap-2">
@@ -113,19 +184,28 @@ export function PhotoCapture({
             {required && <span className="text-red ml-1">*</span>}
           </div>
         )}
-        <div className="flex items-center gap-3">
+        <div className="relative rounded-xl overflow-hidden border border-white/[0.08] bg-black">
           <img
             src={photoUrl}
             alt="Photo"
-            className="w-[120px] h-[120px] rounded-xl object-cover border border-white/[0.08]"
+            className="w-full max-h-[240px] object-contain cursor-zoom-in"
+            onClick={() => setZoomed(true)}
           />
           <button
             onClick={reprendre}
-            className="bg-bg-deep border border-white/[0.08] text-dim px-3 py-2 rounded-lg text-[12px] min-h-[44px]"
+            className="absolute top-2 right-2 bg-black/60 backdrop-blur text-white px-3 py-1.5 rounded-lg text-[11px] font-medium min-h-[34px]"
           >
             Reprendre
           </button>
         </div>
+        {zoomed && (
+          <div
+            className="fixed inset-0 z-[100] bg-black/90 flex items-center justify-center p-4 cursor-zoom-out"
+            onClick={() => setZoomed(false)}
+          >
+            <img src={photoUrl} alt="Photo plein ecran" className="max-w-full max-h-full object-contain" />
+          </div>
+        )}
       </div>
     );
   }
@@ -142,6 +222,42 @@ export function PhotoCapture({
         <div className="min-h-[120px] rounded-xl bg-bg-card border border-dashed border-nikito-cyan/30 flex items-center justify-center gap-2">
           <div className="w-5 h-5 border-2 border-nikito-cyan border-t-transparent rounded-full animate-spin" />
           <span className="text-[13px] text-dim">Upload en cours...</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (state === 'camera') {
+    return (
+      <div className="flex flex-col gap-2">
+        {label && (
+          <div className="text-[11px] text-dim uppercase tracking-wider">
+            {label}
+            {required && <span className="text-red ml-1">*</span>}
+          </div>
+        )}
+        <div className="rounded-xl overflow-hidden bg-black relative">
+          <video
+            ref={videoRef}
+            autoPlay
+            playsInline
+            muted
+            className="w-full h-[240px] object-cover"
+          />
+          <div className="absolute bottom-3 left-0 right-0 flex justify-center gap-3">
+            <button
+              onClick={cancelCamera}
+              className="bg-bg-card/80 backdrop-blur text-dim px-4 py-2.5 rounded-xl text-[13px] min-h-[44px]"
+            >
+              Annuler
+            </button>
+            <button
+              onClick={capturePhoto}
+              className="bg-gradient-cta text-text px-6 py-2.5 rounded-xl text-[13px] font-bold min-h-[44px]"
+            >
+              Capturer
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -166,7 +282,7 @@ export function PhotoCapture({
         )}
         <div className="flex gap-2.5">
           <button
-            onClick={() => cameraRef.current?.click()}
+            onClick={openCamera}
             className="bg-gradient-cta text-text px-4 py-3 rounded-xl text-[13px] font-bold min-h-[54px] flex items-center gap-2"
           >
             <span className="text-lg">&#128247;</span>
@@ -180,14 +296,6 @@ export function PhotoCapture({
             Galerie
           </button>
         </div>
-        <input
-          ref={cameraRef}
-          type="file"
-          accept="image/*"
-          capture="environment"
-          className="hidden"
-          onChange={handleFile}
-        />
         <input
           ref={galleryRef}
           type="file"

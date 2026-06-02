@@ -11,7 +11,7 @@ interface Props {
 }
 
 export function RouteProtegee({ children, rolesAutorises, skipParcCheck }: Props) {
-  const { authUser, utilisateur, loading } = useAuth();
+  const { authUser, utilisateur, loading, mustChangePassword } = useAuth();
   const location = useLocation();
   const { data: allParcs, isLoading: parcsLoading } = useParcs();
 
@@ -25,6 +25,10 @@ export function RouteProtegee({ children, rolesAutorises, skipParcCheck }: Props
 
   if (!authUser) {
     return <Navigate to="/" state={{ from: location.pathname }} replace />;
+  }
+
+  if (mustChangePassword && location.pathname !== '/reset-password') {
+    return <Navigate to="/reset-password" replace />;
   }
 
   if (rolesAutorises && utilisateur && !rolesAutorises.includes(utilisateur.role_code)) {

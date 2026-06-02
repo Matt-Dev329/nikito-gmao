@@ -1,14 +1,16 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useFormation } from '@/hooks/useFormation';
 import { supabase } from '@/lib/supabase';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getDeviceHash } from '@/lib/deviceFingerprint';
 import { cn } from '@/lib/utils';
+import { isPlatformAuthenticatorAvailable, registerPasskey } from '@/lib/webauthn';
 
 const roleLabels: Record<string, string> = {
   direction: 'Direction',
   chef_maintenance: 'Chef maintenance',
+  directeur_parc: 'Directeur de parc',
   manager_parc: 'Manager parc',
   technicien: 'Technicien',
   staff_operationnel: 'Staff opérationnel',
@@ -81,6 +83,7 @@ export function PageProfil() {
       </div>
 
       <SectionGPS utilisateurId={utilisateur.id} initial={utilisateur.consentement_gps} />
+      <SectionPasskeys utilisateurId={utilisateur.id} />
       <SectionAppareils utilisateurId={utilisateur.id} />
       <SectionFormation />
       <SectionMotDePasse />
@@ -154,6 +157,149 @@ function SectionGPS({ utilisateurId, initial }: { utilisateurId: string; initial
       )}
     </div>
   );
+}
+
+function SectionPasskeys({ utilisateurId }: { utilisateurId: string }) {
+  const queryClient = useQueryClient();
+  const [available, setAvailable] = useState(false);
+  const [registering, setRegistering] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
+  const [deviceName, setDeviceName] = useState('');
+
+  useEffect(() => {
+    isPlatformAuthenticatorAvailable().then(setAvailable);
+  }, []);
+
+  const { data: passkeys, isLoading } = useQuery({
+    queryKey: ['webauthn_credentials', utilisateurId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('webauthn_credentials')
+        .select('id, device_name, cree_le, derniere_utilisation, actif')
+        .eq('utilisateur_id', utilisateurId)
+        .eq('actif', true)
+        .order('cree_le', { ascending: false });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from('webauthn_credentials')
+        .delete()
+        .eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['webauthn_credentials'] });
+    },
+  });
+
+  const handleRegister = async () => {
+    setRegistering(true);
+    setError(null);
+    setSuccess(false);
+
+    const name = deviceName.trim() || getDefaultDeviceName();
+    const result = await registerPasskey(name);
+
+    setRegistering(false);
+
+    if (result.success) {
+      setSuccess(true);
+      setDeviceName('');
+      queryClient.invalidateQueries({ queryKey: ['webauthn_credentials'] });
+      setTimeout(() => setSuccess(false), 3000);
+    } else {
+      setError(result.error || 'Erreur inconnue');
+    }
+  };
+
+  if (!available) return null;
+
+  return (
+    <div className="bg-bg-card rounded-2xl p-5 md:p-6 mb-4">
+      <div className="flex items-center gap-2 mb-3">
+        <svg className="w-5 h-5 text-nikito-cyan" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M7.864 4.243A7.5 7.5 0 0119.5 10.5c0 2.92-.556 5.709-1.568 8.268M5.742 6.364A7.465 7.465 0 004.5 10.5a48.667 48.667 0 00-1.116 7.126M12 10.5a.75.75 0 11-1.5 0 .75.75 0 011.5 0zm0 0v5.25m0-5.25H9.75m2.25 0H14.25m-7.5 10.5h10.5a2.25 2.25 0 002.25-2.25v-1.5a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v1.5a2.25 2.25 0 002.25 2.25z" />
+        </svg>
+        <div className="text-[11px] text-dim uppercase tracking-wider">Connexion biometrique</div>
+      </div>
+
+      <p className="text-[12px] text-dim mb-4 leading-relaxed">
+        Utilisez Face ID, Touch ID ou l'empreinte digitale de votre appareil pour vous connecter sans mot de passe.
+      </p>
+
+      {isLoading && <div className="text-dim text-xs mb-3">Chargement...</div>}
+
+      {passkeys && passkeys.length > 0 && (
+        <div className="flex flex-col gap-2 mb-4">
+          {passkeys.map((pk) => (
+            <div key={pk.id} className="flex items-center gap-3 bg-bg-deep rounded-xl p-3 px-3.5">
+              <div className="w-9 h-9 rounded-lg bg-nikito-cyan/10 flex items-center justify-center flex-shrink-0">
+                <svg className="w-5 h-5 text-nikito-cyan" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
+                </svg>
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="text-[13px] font-medium truncate">{pk.device_name}</div>
+                <div className="text-[11px] text-dim">
+                  Ajoute le {new Date(pk.cree_le).toLocaleDateString('fr-FR')}
+                  {pk.derniere_utilisation && ` · Utilise le ${new Date(pk.derniere_utilisation).toLocaleDateString('fr-FR')}`}
+                </div>
+              </div>
+              <button
+                onClick={() => deleteMutation.mutate(pk.id)}
+                disabled={deleteMutation.isPending}
+                className="text-[11px] text-red hover:text-red/80 transition-colors flex-shrink-0"
+              >
+                Supprimer
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className="flex flex-col gap-3">
+        <input
+          type="text"
+          value={deviceName}
+          onChange={(e) => setDeviceName(e.target.value)}
+          placeholder="Nom de l'appareil (ex: iPhone de Matthieu)"
+          className="w-full bg-bg-deep border border-white/[0.08] rounded-[10px] p-3 px-3.5 text-text text-[13px] outline-none focus:border-nikito-cyan"
+        />
+        <button
+          onClick={handleRegister}
+          disabled={registering}
+          className={cn(
+            'bg-gradient-cta text-text px-5 py-2.5 rounded-[10px] text-[13px] font-bold min-h-[44px] self-start flex items-center gap-2',
+            registering && 'opacity-50 cursor-wait'
+          )}
+        >
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+          </svg>
+          {registering ? 'Enregistrement...' : 'Ajouter cet appareil'}
+        </button>
+      </div>
+
+      {error && <div className="text-red text-xs mt-2">{error}</div>}
+      {success && <div className="text-green text-xs mt-2">Appareil enregistre avec succes</div>}
+    </div>
+  );
+}
+
+function getDefaultDeviceName(): string {
+  const ua = navigator.userAgent;
+  if (/iPhone/i.test(ua)) return 'iPhone';
+  if (/iPad/i.test(ua)) return 'iPad';
+  if (/Android/i.test(ua)) return 'Android';
+  if (/Mac/i.test(ua)) return 'Mac';
+  if (/Windows/i.test(ua)) return 'PC Windows';
+  return 'Appareil';
 }
 
 function SectionFormation() {

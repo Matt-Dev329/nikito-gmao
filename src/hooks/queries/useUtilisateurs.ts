@@ -52,7 +52,7 @@ export function useCompteursRoles() {
       for (const row of data ?? []) {
         const code = (row.roles as unknown as { code: string }).code;
         if (code === 'direction') compteurs.direction++;
-        else if (code === 'chef_maintenance' || code === 'manager_parc') compteurs.chefManager++;
+        else if (code === 'chef_maintenance' || code === 'directeur_parc' || code === 'manager_parc') compteurs.chefManager++;
         else if (code === 'technicien') compteurs.techniciens++;
         else if (code === 'staff_operationnel') compteurs.staff++;
       }

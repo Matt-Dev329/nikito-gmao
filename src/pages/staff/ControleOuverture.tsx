@@ -7,7 +7,9 @@ import { SelectionParc } from '@/components/controles/SelectionParc';
 import { BoutonRetourGmao } from '@/components/controles/BoutonRetourGmao';
 import { useAuth } from '@/hooks/useAuth';
 import { useParcs } from '@/hooks/queries/useReferentiel';
-import { usePointsControle, useValiderControle } from '@/hooks/queries/useControles';
+import { usePointsControle } from '@/hooks/queries/useControles';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/lib/supabase';
 import type { EtatControleItem } from '@/types/database';
 
 function formatDuree(sec: number): string {
@@ -17,12 +19,51 @@ function formatDuree(sec: number): string {
   return `${m}min`;
 }
 
+interface StaffSessionData {
+  utilisateur: {
+    utilisateur_id?: string;
+    id?: string;
+    prenom: string;
+    nom: string;
+    trigramme: string | null;
+    role_code: string;
+    pin_must_change: boolean;
+  };
+  parc: { id: string; code: string; nom: string };
+}
+
+function loadStaffSession(): StaffSessionData | null {
+  try {
+    const raw = sessionStorage.getItem('staff_session');
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch { return null; }
+}
+
+function getStaffUserId(u: StaffSessionData['utilisateur']): string {
+  return u.utilisateur_id ?? u.id ?? '';
+}
+
 export function ControleOuverture() {
   const navigate = useNavigate();
-  const { utilisateur } = useAuth();
+  const { utilisateur: authUtilisateur } = useAuth();
   const { data: allParcs } = useParcs();
 
-  const [parcChoisi, setParcChoisi] = useState<{ id: string; code: string; nom: string } | null>(null);
+  const staffSession = loadStaffSession();
+  const utilisateur = authUtilisateur ?? (staffSession ? {
+    id: getStaffUserId(staffSession.utilisateur),
+    email: '',
+    nom: staffSession.utilisateur.nom,
+    prenom: staffSession.utilisateur.prenom,
+    trigramme: staffSession.utilisateur.trigramme,
+    role_code: (staffSession.utilisateur.role_code || 'staff_operationnel') as 'staff_operationnel',
+    parc_ids: [staffSession.parc.id],
+    consentement_gps: false,
+  } : null);
+
+  const [parcChoisi, setParcChoisi] = useState<{ id: string; code: string; nom: string } | null>(
+    staffSession?.parc ?? null
+  );
 
   const handleSelectParc = useCallback((p: { id: string; code: string; nom: string }) => {
     setParcChoisi(p);
@@ -32,7 +73,39 @@ export function ControleOuverture() {
   const parc = parcChoisi ?? allParcs?.find((p) => p.id === parcId);
 
   const { data: pointsBruts, isLoading } = usePointsControle(parcId, 'quotidien');
-  const validerMutation = useValiderControle();
+  const qc = useQueryClient();
+  const validerMutation = useMutation({
+    mutationFn: async (params: {
+      parc_id: string;
+      type: string;
+      date_planifiee: string;
+      realise_par_id: string;
+      realise_par_nom: string;
+      realise_par_role: string;
+      items: { point_id: string; etat: EtatControleItem; photo_url?: string | null; commentaire?: string | null }[];
+    }) => {
+      const { data, error } = await supabase.rpc('valider_controle_staff', {
+        p_parc_id: params.parc_id,
+        p_type: params.type,
+        p_date_planifiee: params.date_planifiee,
+        p_realise_par_id: params.realise_par_id,
+        p_realise_par_nom: params.realise_par_nom,
+        p_realise_par_role: params.realise_par_role,
+        p_items: params.items.map((i) => ({
+          point_id: i.point_id,
+          etat: i.etat,
+          commentaire: i.commentaire ?? null,
+          photo_url: i.photo_url ?? null,
+        })),
+      });
+      if (error) throw error;
+      return { id: data as string };
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['controles'] });
+      qc.invalidateQueries({ queryKey: ['historique_controles'] });
+    },
+  });
 
   const [startTime] = useState(() => Date.now());
   const [elapsed, setElapsed] = useState(0);
@@ -45,11 +118,13 @@ export function ControleOuverture() {
 
   const [etats, setEtats] = useState<Record<string, { etat: EtatControleItem; saisiPar: string }>>({});
   const [photoUrls, setPhotoUrls] = useState<Record<string, string>>({});
+  const [commentaires, setCommentaires] = useState<Record<string, string>>({});
   const [zoneActive, setZoneActive] = useState<string>('');
   const [dirty, setDirty] = useState(false);
   const [showModale, setShowModale] = useState(false);
   const [showSignaler, setShowSignaler] = useState(false);
   const [validated, setValidated] = useState(false);
+  const [erreurValidation, setErreurValidation] = useState<string | null>(null);
 
   const zones: ZoneVue[] = useMemo(() => {
     if (!pointsBruts?.length) return [];
@@ -84,8 +159,9 @@ export function ControleOuverture() {
         etat: etats[p.point_id]?.etat ?? null,
         saisiPar: etats[p.point_id]?.saisiPar,
         photoUrl: photoUrls[p.point_id],
+        commentaire: commentaires[p.point_id],
       }));
-  }, [pointsBruts, activeZone, etats, photoUrls]);
+  }, [pointsBruts, activeZone, etats, photoUrls, commentaires]);
 
   const trigramme = utilisateur?.trigramme ?? utilisateur?.prenom?.slice(0, 2).toUpperCase() ?? '??';
 
@@ -96,6 +172,11 @@ export function ControleOuverture() {
 
   const handlePhotoUploaded = useCallback((pointId: string, url: string) => {
     setPhotoUrls((prev) => ({ ...prev, [pointId]: url }));
+    setDirty(true);
+  }, []);
+
+  const handleCommentaire = useCallback((pointId: string, commentaire: string) => {
+    setCommentaires((prev) => ({ ...prev, [pointId]: commentaire }));
     setDirty(true);
   }, []);
 
@@ -119,7 +200,8 @@ export function ControleOuverture() {
   const restants = totalPoints - totalFaits;
 
   const handleValider = async () => {
-    if (!parcId || !utilisateur || !pointsBruts) return;
+    if (!parcId || !utilisateur || !utilisateur.id || !pointsBruts) return;
+    setErreurValidation(null);
 
     const datePlanifiee = new Date().toISOString().slice(0, 10);
 
@@ -129,19 +211,24 @@ export function ControleOuverture() {
         point_id: p.point_id,
         etat: etats[p.point_id].etat,
         photo_url: photoUrls[p.point_id] ?? null,
+        commentaire: commentaires[p.point_id] || null,
       }));
 
-    await validerMutation.mutateAsync({
-      parc_id: parcId,
-      type: 'quotidien',
-      date_planifiee: datePlanifiee,
-      realise_par_id: utilisateur.id,
-      realise_par_nom: `${utilisateur.prenom} ${utilisateur.nom}`,
-      realise_par_role: utilisateur.role_code,
-      items,
-    });
-
-    setValidated(true);
+    try {
+      await validerMutation.mutateAsync({
+        parc_id: parcId,
+        type: 'quotidien',
+        date_planifiee: datePlanifiee,
+        realise_par_id: utilisateur.id,
+        realise_par_nom: `${utilisateur.prenom} ${utilisateur.nom}`,
+        realise_par_role: utilisateur.role_code,
+        items,
+      });
+      setValidated(true);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Erreur inconnue';
+      setErreurValidation(msg);
+    }
   };
 
   const today = new Date().toLocaleDateString('fr-FR', {
@@ -222,6 +309,7 @@ export function ControleOuverture() {
         onChangeZone={setZoneActive}
         onSetEtat={setEtatPoint}
         onPhotoUploaded={handlePhotoUploaded}
+        onCommentaire={handleCommentaire}
         onRetour={handleRetour}
         onChangerAgent={() => navigate('/staff/login')}
         onValider={handleValider}
@@ -229,9 +317,11 @@ export function ControleOuverture() {
         validationDisabledRaison={
           validerMutation.isPending
             ? 'Enregistrement en cours...'
-            : restants > 0
-              ? `Disponible quand tous les points sont saisis (${restants} restants)`
-              : undefined
+            : erreurValidation
+              ? erreurValidation
+              : restants > 0
+                ? `Disponible quand tous les points sont saisis (${restants} restants)`
+                : undefined
         }
         headerRightSlot={
           <div className="flex items-center gap-1.5">
