@@ -226,19 +226,19 @@ export function TableauDeBord() {
 
           <div className="flex flex-col sm:flex-row sm:items-center gap-3">
             <div className="flex gap-2 rounded-lg bg-bg-deep p-1 border border-white/[0.07]">
-            {(['7j', '30j', '90j'] as Periode[]).map((p) => (
-              <button
-                key={p}
-                onClick={() => setPeriode(p)}
-                className={
-                  periode === p
-                    ? 'bg-white/[0.1] text-text px-3.5 py-2 rounded-md text-xs font-semibold min-h-[40px] md:min-h-0 shadow-sm'
-                    : 'text-dim hover:text-text hover:bg-white/[0.04] px-3.5 py-2 rounded-md text-xs min-h-[40px] md:min-h-0'
-                }
-              >
-                {p === '7j' ? '7 jours' : p === '30j' ? '30 jours' : '90 jours'}
-              </button>
-            ))}
+              {(['7j', '30j', '90j'] as Periode[]).map((p) => (
+                <button
+                  key={p}
+                  onClick={() => setPeriode(p)}
+                  className={
+                    periode === p
+                      ? 'bg-white/[0.1] text-text px-3.5 py-2 rounded-md text-xs font-semibold min-h-[40px] md:min-h-0 shadow-sm'
+                      : 'text-dim hover:text-text hover:bg-white/[0.04] px-3.5 py-2 rounded-md text-xs min-h-[40px] md:min-h-0'
+                  }
+                >
+                  {p === '7j' ? '7 jours' : p === '30j' ? '30 jours' : '90 jours'}
+                </button>
+              ))}
             </div>
 
             <div className="hidden md:block">

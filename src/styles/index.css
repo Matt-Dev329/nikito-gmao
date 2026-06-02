@@ -136,7 +136,7 @@
 }
 
 .leaflet-control-attribution a {
-  color: #5DE5FF !important;
+  color: #45D7F5 !important;
 }
 
 @supports (padding-top: env(safe-area-inset-top)) {

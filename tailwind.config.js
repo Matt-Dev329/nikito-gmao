@@ -33,11 +33,11 @@ export default {
         mono: ['SF Mono', 'Monaco', 'Consolas', 'monospace'],
       },
       backgroundImage: {
-        'gradient-logo': 'linear-gradient(90deg, #E85A9B, #9B7EE8, #5DE5FF)',
-        'gradient-action': 'linear-gradient(90deg, #4DD09E, #5DE5FF)',
-        'gradient-cta': 'linear-gradient(90deg, #E85A9B, #9B7EE8, #5DE5FF)',
-        'gradient-danger': 'linear-gradient(135deg, #FF4D6D, #E85A9B)',
-        'gradient-active': 'linear-gradient(90deg, rgba(232,90,155,.18), rgba(155,126,232,.10))',
+        'gradient-logo': 'linear-gradient(90deg, #F25F9B, #9A82F0, #45D7F5)',
+        'gradient-action': 'linear-gradient(90deg, #54C99B, #45D7F5)',
+        'gradient-cta': 'linear-gradient(90deg, #F25F9B, #9A82F0, #45D7F5)',
+        'gradient-danger': 'linear-gradient(135deg, #F05D6E, #F25F9B)',
+        'gradient-active': 'linear-gradient(90deg, rgba(242,95,155,.18), rgba(154,130,240,.10))',
       },
       borderRadius: {
         pill: '20px',

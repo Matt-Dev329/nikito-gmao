@@ -64,7 +64,7 @@ export function MobileHeader({ initiales, couleurAvatar, topOffset = 0 }: Mobile
       <button
         onClick={() => navigate('/gmao/profil')}
         className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center font-semibold text-[11px] ring-1 ring-white/20"
-        style={{ background: couleurAvatar, color: '#0B0B2E' }}
+        style={{ background: couleurAvatar, color: '#10131A' }}
       >
         {initiales}
       </button>

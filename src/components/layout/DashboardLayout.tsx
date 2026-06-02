@@ -95,7 +95,7 @@ export function DashboardLayout() {
     initiales: 'DI',
     nom: 'Direction',
     role: 'Vue 4 parcs',
-    couleurAvatar: '#5DE5FF',
+    couleurAvatar: '#45D7F5',
     role_code: 'direction' as const,
   };
 
@@ -104,7 +104,7 @@ export function DashboardLayout() {
         initiales: utilisateur.trigramme ?? utilisateur.prenom.slice(0, 2).toUpperCase(),
         nom: `${utilisateur.prenom} ${utilisateur.nom}`,
         role: roleLabels[utilisateur.role_code],
-        couleurAvatar: '#5DE5FF',
+        couleurAvatar: '#45D7F5',
         role_code: utilisateur.role_code,
       }
     : userMock;

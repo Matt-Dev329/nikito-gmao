@@ -240,7 +240,7 @@ export function Sidebar({ user, roleAffiche, roleCode, realRoleCode, compact = f
                     title={compact ? item.label : undefined}
                     {...(tourKey ? { 'data-tour': tourKey } : {})}
                     className={({ isActive }) =>
-                  cn(
+                      cn(
                         'group relative flex items-center rounded-lg transition-colors min-h-[44px]',
                         compact ? 'justify-center px-0' : 'gap-2.5 px-3 py-2.5',
                         isActive
@@ -323,7 +323,7 @@ export function Sidebar({ user, roleAffiche, roleCode, realRoleCode, compact = f
         >
           <div
             className="w-[34px] h-[34px] rounded-full flex items-center justify-center font-semibold text-xs flex-shrink-0"
-            style={{ background: user.couleurAvatar ?? '#5DE5FF', color: '#0B0B2E' }}
+            style={{ background: user.couleurAvatar ?? '#45D7F5', color: '#10131A' }}
           >
             {user.initiales}
           </div>
