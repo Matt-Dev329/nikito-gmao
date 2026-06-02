@@ -194,12 +194,12 @@ export function DashboardLayout() {
   }
 
   return (
-    <div className="min-h-screen bg-bg-app text-text">
+      <div className="min-h-screen bg-bg-app text-text">
       <TourOverlay />
       <FormationBanner />
       <ViewAsBanner topOffset={formationBannerH} />
       <header
-        className="md:hidden fixed left-0 right-0 z-40 bg-bg-sidebar border-b border-white/[0.06] px-4 h-14 flex items-center justify-between"
+        className="md:hidden fixed left-0 right-0 z-40 bg-bg-sidebar/95 backdrop-blur-xl border-b border-white/[0.08] px-4 h-14 flex items-center justify-between"
         style={{ top: bannerH }}
       >
         <button
@@ -224,7 +224,7 @@ export function DashboardLayout() {
 
       <aside
         className={cn(
-          'fixed left-0 bg-bg-sidebar border-r border-white/[0.06]',
+          'fixed left-0 bg-bg-sidebar border-r border-white/[0.08] shadow-[18px_0_46px_rgba(0,0,0,0.22)]',
           'transition-all duration-300 ease-out',
           isDesktop
             ? 'z-auto translate-x-0'
@@ -264,7 +264,7 @@ export function DashboardLayout() {
           className="transition-[margin] duration-300 ease-out"
           style={{ marginLeft: isDesktop ? sidebarWidth : 0, paddingTop: bannerH }}
         >
-          <main className={cn('min-h-screen overflow-x-hidden', !isDesktop && 'pt-14')}>
+          <main className={cn('min-h-screen overflow-x-hidden bg-[linear-gradient(180deg,rgba(69,215,245,0.04),rgba(16,19,26,0)_260px)]', !isDesktop && 'pt-14')}>
             <Outlet />
           </main>
         </div>

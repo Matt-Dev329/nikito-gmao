@@ -47,7 +47,7 @@ export function MobileHeader({ initiales, couleurAvatar, topOffset = 0 }: Mobile
 
   return (
     <header
-      className="fixed left-0 right-0 z-[50] bg-[#0a0e27] border-b border-white/[0.06] h-14 flex items-center px-4"
+      className="fixed left-0 right-0 z-[50] bg-bg-sidebar/95 backdrop-blur-xl border-b border-white/[0.08] h-14 flex items-center px-4"
       style={{
         top: topOffset,
         paddingTop: topOffset === 0 ? 'env(safe-area-inset-top, 0px)' : undefined,
@@ -63,7 +63,7 @@ export function MobileHeader({ initiales, couleurAvatar, topOffset = 0 }: Mobile
 
       <button
         onClick={() => navigate('/gmao/profil')}
-        className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center font-semibold text-[11px]"
+        className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center font-semibold text-[11px] ring-1 ring-white/20"
         style={{ background: couleurAvatar, color: '#0B0B2E' }}
       >
         {initiales}

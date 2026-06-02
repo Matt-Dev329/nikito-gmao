@@ -157,7 +157,7 @@ export function BottomTabBar({ roleCode, onAlertsClick, onMoreClick, alertsOpen,
 
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 z-[100] bg-[#0a0e27]/95 backdrop-blur-xl border-t border-white/[0.06]"
+      className="fixed bottom-0 left-0 right-0 z-[100] bg-bg-sidebar/95 backdrop-blur-xl border-t border-white/[0.08] shadow-[0_-18px_42px_rgba(0,0,0,0.28)]"
       style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
     >
       <div className="flex items-stretch h-[70px]">
@@ -168,8 +168,8 @@ export function BottomTabBar({ roleCode, onAlertsClick, onMoreClick, alertsOpen,
                 <button
                   className="absolute -top-6 w-[88px] h-[88px] rounded-[24px] flex flex-col items-center justify-center gap-1 active:scale-95 transition-transform"
                   style={{
-                    background: 'linear-gradient(135deg, #ec4899 0%, #06b6d4 100%)',
-                    boxShadow: '0 8px 32px rgba(236, 72, 153, 0.3), 0 4px 16px rgba(6, 182, 212, 0.2)',
+                    background: 'linear-gradient(135deg, #F25F9B 0%, #45D7F5 100%)',
+                    boxShadow: '0 14px 34px rgba(69, 215, 245, 0.24)',
                   }}
                   onClick={() => {
                     try { navigator.vibrate?.(10); } catch { /* ignore */ }
@@ -191,8 +191,8 @@ export function BottomTabBar({ roleCode, onAlertsClick, onMoreClick, alertsOpen,
                 <button
                   className="absolute -top-3 w-[56px] h-[56px] rounded-[16px] flex flex-col items-center justify-center gap-0.5 active:scale-95 transition-transform"
                   style={{
-                    background: 'linear-gradient(135deg, #ec4899 0%, #06b6d4 100%)',
-                    boxShadow: '0 4px 20px rgba(236, 72, 153, 0.25), 0 2px 10px rgba(6, 182, 212, 0.15)',
+                    background: 'linear-gradient(135deg, #F25F9B 0%, #45D7F5 100%)',
+                    boxShadow: '0 10px 26px rgba(69, 215, 245, 0.2)',
                   }}
                   onClick={() => {
                     try { navigator.vibrate?.(10); } catch { /* ignore */ }
@@ -223,16 +223,16 @@ export function BottomTabBar({ roleCode, onAlertsClick, onMoreClick, alertsOpen,
               onClick={() => handleTabClick(tab)}
               className={cn(
                 'flex-1 flex flex-col items-center justify-center gap-1 relative transition-colors',
-                active ? 'text-[#5DE5FF]' : 'text-[#8b92b8]'
+                active ? 'text-nikito-cyan' : 'text-dim'
               )}
             >
               {active && (
-                <span className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-[3px] rounded-b-full bg-[#5DE5FF]" />
+                <span className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-[3px] rounded-b-full bg-nikito-cyan" />
               )}
               <TabIcon id={tab.id} active={active} />
               <span className="text-[10px] leading-none font-medium">{tab.label}</span>
               {badgeCount > 0 && (
-                <span className="absolute top-2 left-1/2 ml-2 w-[18px] h-[18px] rounded-full bg-red text-[#0B0B2E] text-[9px] font-bold flex items-center justify-center leading-none">
+                <span className="absolute top-2 left-1/2 ml-2 w-[18px] h-[18px] rounded-full bg-red text-bg-app text-[9px] font-bold flex items-center justify-center leading-none">
                   {badgeCount > 99 ? '99' : badgeCount}
                 </span>
               )}
@@ -245,7 +245,7 @@ export function BottomTabBar({ roleCode, onAlertsClick, onMoreClick, alertsOpen,
 }
 
 function TabIcon({ id, active }: { id: string; active: boolean }) {
-  const color = active ? '#5DE5FF' : '#8b92b8';
+  const color = active ? '#45D7F5' : '#A7B0C2';
   const size = 24;
 
   switch (id) {

@@ -141,7 +141,7 @@ export function Sidebar({ user, roleAffiche, roleCode, realRoleCode, compact = f
             {isMultiParc ? (
               <button
                 onClick={() => { onNavClick?.(); navigate('/gmao/select-parc'); }}
-                className="w-[38px] h-[38px] rounded-lg bg-nikito-cyan/10 text-nikito-cyan flex items-center justify-center text-[11px] font-bold font-mono hover:bg-nikito-cyan/20 transition-colors"
+                className="w-[38px] h-[38px] rounded-lg bg-nikito-cyan/12 text-nikito-cyan flex items-center justify-center text-[11px] font-bold font-mono hover:bg-nikito-cyan/20 transition-colors border border-nikito-cyan/20"
               >
                 {parcCourant.code}
               </button>
@@ -156,7 +156,7 @@ export function Sidebar({ user, roleAffiche, roleCode, realRoleCode, compact = f
             {isMultiParc ? (
               <button
                 onClick={() => { onNavClick?.(); navigate('/gmao/select-parc'); }}
-                className="w-full flex items-center gap-2 rounded-lg bg-nikito-cyan/[0.06] hover:bg-nikito-cyan/[0.12] border border-nikito-cyan/[0.12] px-3 py-2 transition-colors group"
+                className="w-full flex items-center gap-2 rounded-lg bg-nikito-cyan/[0.08] hover:bg-nikito-cyan/[0.14] border border-nikito-cyan/[0.18] px-3 py-2 transition-colors group"
               >
                 <svg className="w-4 h-4 text-nikito-cyan flex-shrink-0" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5">
                   <rect x="2" y="3" width="16" height="14" rx="2" />
@@ -189,12 +189,12 @@ export function Sidebar({ user, roleAffiche, roleCode, realRoleCode, compact = f
             title="Formation"
             className={({ isActive }) =>
               cn(
-                'group relative flex items-center justify-center rounded-[10px] transition-colors w-[40px] min-h-[40px] flex-shrink-0',
+                'group relative flex items-center justify-center rounded-lg transition-colors w-[40px] min-h-[40px] flex-shrink-0',
                 isActive
                   ? 'bg-[#7C3AED]/15 text-[#A78BFA]'
                   : formationActive
                     ? 'text-[#A78BFA] hover:text-text hover:bg-[#7C3AED]/10'
-                    : 'text-dim hover:text-text hover:bg-white/[0.04]'
+                    : 'text-dim hover:text-text hover:bg-white/[0.05]'
               )
             }
           >
@@ -234,12 +234,12 @@ export function Sidebar({ user, roleAffiche, roleCode, realRoleCode, compact = f
                     title={compact ? item.label : undefined}
                     {...(tourKey ? { 'data-tour': tourKey } : {})}
                     className={({ isActive }) =>
-                      cn(
-                        'group relative flex items-center rounded-[10px] transition-colors min-h-[44px]',
+                  cn(
+                        'group relative flex items-center rounded-lg transition-colors min-h-[44px]',
                         compact ? 'justify-center px-0' : 'gap-2.5 px-3 py-2.5',
                         isActive
-                          ? 'bg-gradient-active border-l-2 border-nikito-pink text-text font-medium'
-                          : 'text-dim hover:text-text hover:bg-white/[0.02]'
+                          ? 'bg-white/[0.07] shadow-[inset_3px_0_0_#F25F9B] text-text font-semibold'
+                          : 'text-dim hover:text-text hover:bg-white/[0.045]'
                       )
                     }
                   >
@@ -252,7 +252,7 @@ export function Sidebar({ user, roleAffiche, roleCode, realRoleCode, compact = f
                             {badge && (
                               <span
                                 className={cn(
-                                  'ml-auto text-[10px] font-semibold px-1.5 py-0.5 rounded-lg text-bg-app',
+                                  'ml-auto text-[10px] font-bold px-1.5 py-0.5 rounded-md text-bg-app',
                                   badge.tone === 'red' ? 'bg-red' : 'bg-amber'
                                 )}
                               >
@@ -294,7 +294,7 @@ export function Sidebar({ user, roleAffiche, roleCode, realRoleCode, compact = f
           <button
             onClick={onToggle}
             className={cn(
-              'hidden md:flex items-center gap-2.5 rounded-[10px] text-dim hover:text-text hover:bg-white/[0.04] transition-colors min-h-[40px] w-full',
+              'hidden md:flex items-center gap-2.5 rounded-lg text-dim hover:text-text hover:bg-white/[0.05] transition-colors min-h-[40px] w-full',
               compact ? 'justify-center px-0' : 'px-3'
             )}
             title={compact ? 'Etendre la sidebar' : 'Reduire la sidebar'}
@@ -310,9 +310,9 @@ export function Sidebar({ user, roleAffiche, roleCode, realRoleCode, compact = f
           onClick={() => setUserMenuOpen((o) => !o)}
           title={compact ? `${user.nom} · ${user.role}` : undefined}
           className={cn(
-            'group relative flex items-center rounded-[10px] transition-colors min-h-[44px] w-full',
+            'group relative flex items-center rounded-lg transition-colors min-h-[44px] w-full',
             compact ? 'justify-center px-0' : 'gap-2.5 px-1',
-            userMenuOpen ? 'bg-white/[0.04]' : 'hover:bg-white/[0.02]'
+            userMenuOpen ? 'bg-white/[0.06]' : 'hover:bg-white/[0.04]'
           )}
         >
           <div
@@ -347,7 +347,7 @@ export function Sidebar({ user, roleAffiche, roleCode, realRoleCode, compact = f
         </button>
 
         {userMenuOpen && (
-          <div className="absolute bottom-full left-0 right-0 mb-1 bg-bg-card border border-white/[0.08] rounded-xl shadow-xl z-50 py-2 px-1.5">
+          <div className="absolute bottom-full left-0 right-0 mb-1 bg-bg-card border border-white/[0.1] rounded-lg shadow-2xl z-50 py-2 px-1.5">
             {showViewAs && (
               <div className="px-1.5 mb-1">
                 <ViewAsSelector />
@@ -360,7 +360,7 @@ export function Sidebar({ user, roleAffiche, roleCode, realRoleCode, compact = f
               data-tour="profil"
               className={({ isActive }) =>
                 cn(
-                  'flex items-center rounded-[10px] transition-colors min-h-[38px] w-full gap-2.5 px-3',
+                  'flex items-center rounded-lg transition-colors min-h-[38px] w-full gap-2.5 px-3',
                   isActive
                     ? 'bg-gradient-active border-l-2 border-nikito-pink text-text font-medium'
                     : 'text-dim hover:text-text hover:bg-white/[0.04]'
@@ -380,7 +380,7 @@ export function Sidebar({ user, roleAffiche, roleCode, realRoleCode, compact = f
               data-tour="aide"
               className={({ isActive }) =>
                 cn(
-                  'flex items-center rounded-[10px] transition-colors min-h-[38px] w-full gap-2.5 px-3',
+                  'flex items-center rounded-lg transition-colors min-h-[38px] w-full gap-2.5 px-3',
                   isActive
                     ? 'bg-gradient-active border-l-2 border-nikito-pink text-text font-medium'
                     : 'text-dim hover:text-text hover:bg-white/[0.04]'
@@ -393,7 +393,7 @@ export function Sidebar({ user, roleAffiche, roleCode, realRoleCode, compact = f
 
             <button
               onClick={() => { setUserMenuOpen(false); startTour(); }}
-              className="flex items-center rounded-[10px] text-dim hover:text-nikito-cyan hover:bg-nikito-cyan/5 transition-colors min-h-[38px] w-full gap-2.5 px-3"
+              className="flex items-center rounded-lg text-dim hover:text-nikito-cyan hover:bg-nikito-cyan/8 transition-colors min-h-[38px] w-full gap-2.5 px-3"
             >
               <GraduationCapTourIcon className="w-[18px] h-[18px] flex-shrink-0" />
               <span className="text-[12px]">Visite guidee</span>
@@ -404,7 +404,7 @@ export function Sidebar({ user, roleAffiche, roleCode, realRoleCode, compact = f
                 <div className="h-px bg-white/[0.06] mx-2 my-1" />
                 <button
                   onClick={() => { setUserMenuOpen(false); onSignOut(); }}
-                  className="flex items-center rounded-[10px] text-dim hover:text-red hover:bg-red/10 transition-colors min-h-[38px] w-full gap-2.5 px-3"
+                  className="flex items-center rounded-lg text-dim hover:text-red hover:bg-red/10 transition-colors min-h-[38px] w-full gap-2.5 px-3"
                 >
                   <IconDeconnexion className="w-[18px] h-[18px] flex-shrink-0" />
                   <span className="text-[12px]">Se deconnecter</span>

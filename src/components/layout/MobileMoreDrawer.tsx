@@ -113,7 +113,7 @@ export function MobileMoreDrawer({ open, onClose, roleCode, onSignOut }: MobileM
       <div
         ref={sheetRef}
         className={cn(
-          'fixed left-0 right-0 bottom-0 z-[111] bg-[#0a0e27] rounded-t-2xl max-h-[85vh] flex flex-col transition-transform duration-300 ease-out',
+          'fixed left-0 right-0 bottom-0 z-[111] bg-bg-sidebar rounded-t-lg max-h-[85vh] flex flex-col transition-transform duration-300 ease-out border-t border-white/[0.08] shadow-[0_-20px_48px_rgba(0,0,0,0.32)]',
           open ? 'translate-y-0' : 'translate-y-full'
         )}
         style={{
@@ -174,7 +174,7 @@ export function MobileMoreDrawer({ open, onClose, roleCode, onSignOut }: MobileM
                 onClose();
                 onSignOut();
               }}
-              className="flex items-center gap-3 w-full px-3 min-h-[48px] rounded-xl text-red hover:bg-red/10 transition-colors"
+              className="flex items-center gap-3 w-full px-3 min-h-[48px] rounded-lg text-red hover:bg-red/10 transition-colors"
             >
               <LogoutIcon />
               <span className="text-[14px] font-medium">Se deconnecter</span>
@@ -201,7 +201,7 @@ function DrawerRow({ item, active, onClick }: { item: DrawerItem; active: boolea
     <button
       onClick={onClick}
       className={cn(
-        'flex items-center gap-3 w-full px-3 min-h-[48px] rounded-xl transition-colors',
+        'flex items-center gap-3 w-full px-3 min-h-[48px] rounded-lg transition-colors',
         active
           ? 'bg-gradient-active text-text font-medium'
           : 'text-dim hover:text-text hover:bg-white/[0.04]'

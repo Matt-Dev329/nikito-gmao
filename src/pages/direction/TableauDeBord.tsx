@@ -29,7 +29,7 @@ function SkeletonBlock({ className }: { className?: string }) {
 
 function KpiSkeleton() {
   return (
-    <div className="bg-bg-card rounded-xl p-4 border-t-2 border-white/[0.06]">
+    <div className="bg-bg-card rounded-lg p-4 border border-white/[0.07]">
       <SkeletonBlock className="h-3 w-24 mb-3" />
       <SkeletonBlock className="h-8 w-16 mb-2" />
       <SkeletonBlock className="h-3 w-32" />
@@ -53,7 +53,7 @@ function fmtNum(n: number, decimals = 1): string {
 const CRIT_COLORS: Record<string, string> = {
   bloquant: '#FF4D6D',
   majeur: '#FFB547',
-  mineur: '#5DE5FF',
+  mineur: '#45D7F5',
 };
 
 const CRIT_LABELS: Record<string, string> = {
@@ -212,33 +212,38 @@ export function TableauDeBord() {
 
   return (
     <div className="p-4 md:p-6 md:px-7 overflow-hidden">
-      <div className="text-[11px] text-dim tracking-[1.5px] uppercase mb-2">
-        {formatDateLong(now)} · {formatHeure(now)}
-      </div>
+      <div className="mb-5 rounded-lg border border-white/[0.07] bg-bg-card/70 p-4 md:p-5 shadow-[0_14px_34px_rgba(0,0,0,0.16)]">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <div className="text-[11px] text-dim tracking-[1.5px] uppercase mb-2">
+              {formatDateLong(now)} · {formatHeure(now)}
+            </div>
+            <h1 className="text-xl md:text-2xl font-semibold m-0 leading-tight">Pilotage temps réel</h1>
+            <p className="text-[13px] text-dim mt-2 max-w-2xl">
+              Vue synthétique des parcs, incidents ouverts et indicateurs de maintenance.
+            </p>
+          </div>
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-5">
-        <h1 className="text-xl md:text-2xl font-semibold m-0">Pilotage temps réel</h1>
-
-        <div className="flex items-center gap-3">
-          <div className="flex gap-2">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+            <div className="flex gap-2 rounded-lg bg-bg-deep p-1 border border-white/[0.07]">
             {(['7j', '30j', '90j'] as Periode[]).map((p) => (
               <button
                 key={p}
                 onClick={() => setPeriode(p)}
                 className={
                   periode === p
-                    ? 'bg-gradient-cta text-text px-3.5 py-1.5 rounded-lg text-xs font-medium min-h-[44px] md:min-h-0'
-                    : 'bg-bg-card border border-white/[0.08] text-text px-3.5 py-1.5 rounded-lg text-xs min-h-[44px] md:min-h-0'
+                    ? 'bg-white/[0.1] text-text px-3.5 py-2 rounded-md text-xs font-semibold min-h-[40px] md:min-h-0 shadow-sm'
+                    : 'text-dim hover:text-text hover:bg-white/[0.04] px-3.5 py-2 rounded-md text-xs min-h-[40px] md:min-h-0'
                 }
               >
                 {p === '7j' ? '7 jours' : p === '30j' ? '30 jours' : '90 jours'}
               </button>
             ))}
-          </div>
+            </div>
 
-          <div className="hidden md:block h-8 w-px bg-white/[0.08]" />
-          <div className="hidden md:block">
-            <SignalerInlineButton />
+            <div className="hidden md:block">
+              <SignalerInlineButton />
+            </div>
           </div>
         </div>
       </div>
@@ -259,7 +264,7 @@ export function TableauDeBord() {
       </div>
 
       {showPreLaunchBanner && (
-        <div className="bg-nikito-cyan/10 border border-nikito-cyan/30 rounded-xl p-4 mb-5 flex items-start gap-3">
+        <div className="bg-nikito-cyan/10 border border-nikito-cyan/30 rounded-lg p-4 mb-5 flex items-start gap-3">
           <svg className="w-5 h-5 text-nikito-cyan flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
@@ -293,7 +298,7 @@ export function TableauDeBord() {
           {controlesManquants.map((cm) => (
             <div
               key={cm.parc_id}
-              className="bg-red/10 border border-red/30 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center gap-3"
+              className="bg-red/10 border border-red/30 rounded-lg p-4 flex flex-col sm:flex-row sm:items-center gap-3"
             >
               <div className="flex-1">
                 <div className="text-[13px] font-semibold text-red flex items-center gap-2">
@@ -393,14 +398,14 @@ export function TableauDeBord() {
                   <CartesianGrid stroke="rgba(255,255,255,.06)" vertical={false} />
                   <XAxis dataKey="parc" axisLine={false} tickLine={false} tick={{ fill: '#A8A8C8', fontSize: 11 }} />
                   <YAxis domain={[80, 100]} axisLine={false} tickLine={false} tick={{ fill: '#A8A8C8', fontSize: 11 }} tickFormatter={(v) => `${v}%`} />
-                  <ReferenceLine y={95} stroke="#5DE5FF" strokeDasharray="6 4" />
+                  <ReferenceLine y={95} stroke="#45D7F5" strokeDasharray="6 4" />
                   <Bar dataKey="perf" radius={[6, 6, 0, 0]}>
                     {perfFiltered.map((d) => (
                       <Cell key={d.parc} fill={d.perf >= 95 ? '#D4F542' : '#FFB547'} />
                     ))}
                   </Bar>
                   <Tooltip
-                    contentStyle={{ background: '#0D0D38', border: '1px solid #2A2A5A', borderRadius: 8, color: '#fff', fontSize: 12 }}
+                    contentStyle={{ background: '#111722', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 8, color: '#fff', fontSize: 12 }}
                     cursor={{ fill: 'rgba(255,255,255,0.04)' }}
                     formatter={(value: number) => [`${fmtNum(value)}%`, 'Performance']}
                   />
@@ -426,7 +431,7 @@ export function TableauDeBord() {
                 <div className="flex-1 h-full">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
-                      <Pie data={critData} dataKey="value" innerRadius={48} outerRadius={75} stroke="#151547" strokeWidth={3}>
+                      <Pie data={critData} dataKey="value" innerRadius={48} outerRadius={75} stroke="#171C24" strokeWidth={3}>
                         {critData.map((d) => (
                           <PieCell key={d.name} fill={d.color} />
                         ))}

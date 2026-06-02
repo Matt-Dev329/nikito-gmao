@@ -1,0 +1,504 @@
+0 verbose cli C:\Program Files\nodejs\node.exe C:\Program Files\nodejs\node_modules\npm\bin\npm-cli.js
+1 info using npm@11.11.0
+2 info using node@v24.14.1
+3 silly config load:file:C:\Program Files\nodejs\node_modules\npm\npmrc
+4 silly config load:file:C:\Users\MatthieuMONNOIR\OneDrive - NIKITO\Documents\GitHub\nikito-gmao\.npmrc
+5 silly config load:file:C:\Users\MatthieuMONNOIR\.npmrc
+6 silly config load:file:C:\Users\MatthieuMONNOIR\AppData\Roaming\npm\etc\npmrc
+7 verbose title npm install
+8 verbose argv "install" "--cache" ".\\.npm-cache" "--no-audit" "--no-fund"
+9 verbose logfile logs-max:10 dir:C:\Users\MatthieuMONNOIR\OneDrive - NIKITO\Documents\GitHub\nikito-gmao\.npm-cache\_logs\2026-06-02T22_11_51_937Z-
+10 verbose logfile C:\Users\MatthieuMONNOIR\OneDrive - NIKITO\Documents\GitHub\nikito-gmao\.npm-cache\_logs\2026-06-02T22_11_51_937Z-debug-0.log
+11 silly logfile done cleaning log files
+12 silly packumentCache heap:4496293888 maxSize:1124073472 maxEntrySize:562036736
+13 silly idealTree buildDeps
+14 http fetch GET 200 https://registry.npmjs.org/npm 408ms
+15 silly reify mark retired [
+15 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\ajv'
+15 silly reify ]
+16 silly reify mark retired [
+16 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\autoprefixer'
+16 silly reify ]
+17 silly reify mark retired [
+17 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\async'
+17 silly reify ]
+18 silly reify mark retired [
+18 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\caniuse-lite'
+18 silly reify ]
+19 silly reify mark retired [
+19 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\common-tags'
+19 silly reify ]
+20 silly reify mark retired [
+20 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\core-js'
+20 silly reify ]
+21 silly reify mark retired [
+21 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\d3-format'
+21 silly reify ]
+22 silly reify mark retired [
+22 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\d3-shape'
+22 silly reify ]
+23 silly reify mark retired [
+23 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\dom-helpers'
+23 silly reify ]
+24 silly reify mark retired [
+24 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\es-abstract'
+24 silly reify ]
+25 silly reify mark retired [
+25 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\eslint'
+25 silly reify ]
+26 silly reify mark retired [
+26 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\html2canvas'
+26 silly reify ]
+27 silly reify mark retired [
+27 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\jackspeak'
+27 silly reify ]
+28 silly reify mark retired [
+28 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\leaflet'
+28 silly reify ]
+29 silly reify mark retired [
+29 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\lodash'
+29 silly reify ]
+30 silly reify mark retired [
+30 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\react-dom'
+30 silly reify ]
+31 silly reify mark retired [
+31 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\recharts'
+31 silly reify ]
+32 silly reify mark retired [
+32 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\regenerate-unicode-properties'
+32 silly reify ]
+33 silly reify mark retired [
+33 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\resolve'
+33 silly reify ]
+34 silly reify mark retired [
+34 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\rollup'
+34 silly reify ]
+35 silly reify mark retired [
+35 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\sucrase'
+35 silly reify ]
+36 silly reify mark retired [
+36 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\tailwindcss'
+36 silly reify ]
+37 silly reify mark retired [
+37 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\ts-api-utils'
+37 silly reify ]
+38 silly reify mark retired [
+38 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\typescript'
+38 silly reify ]
+39 silly reify mark retired [
+39 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\uri-js'
+39 silly reify ]
+40 silly reify mark retired [
+40 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\utrie'
+40 silly reify ]
+41 silly reify mark retired [
+41 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\victory-vendor'
+41 silly reify ]
+42 silly reify mark retired [
+42 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\vite'
+42 silly reify ]
+43 silly reify mark retired [
+43 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\whatwg-url'
+43 silly reify ]
+44 silly reify mark retired [
+44 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\workbox-build'
+44 silly reify ]
+45 silly reify mark retired [
+45 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\workbox-background-sync'
+45 silly reify ]
+46 silly reify mark retired [
+46 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\workbox-precaching'
+46 silly reify ]
+47 silly reify mark retired [
+47 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\workbox-strategies'
+47 silly reify ]
+48 silly reify mark retired [
+48 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\ws'
+48 silly reify ]
+49 silly reify mark retired [
+49 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\zod'
+49 silly reify ]
+50 silly reify mark retired [
+50 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\workbox-window'
+50 silly reify ]
+51 silly reify mark retired [
+51 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\@babel\\core'
+51 silly reify ]
+52 silly reify mark retired [
+52 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\@babel\\helpers'
+52 silly reify ]
+53 silly reify mark retired [
+53 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\@babel\\runtime'
+53 silly reify ]
+54 silly reify mark retired [
+54 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\@babel\\types'
+54 silly reify ]
+55 silly reify mark retired [
+55 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\@babel\\traverse'
+55 silly reify ]
+56 silly reify mark retired [
+56 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\@esbuild\\win32-x64'
+56 silly reify ]
+57 silly reify mark retired [
+57 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\@hookform\\resolvers'
+57 silly reify ]
+58 silly reify mark retired [
+58 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\@rollup\\pluginutils'
+58 silly reify ]
+59 silly reify mark retired [
+59 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\@rollup\\plugin-node-resolve'
+59 silly reify ]
+60 silly reify mark retired [
+60 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\@supabase\\auth-js'
+60 silly reify ]
+61 silly reify mark retired [
+61 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\@surma\\rollup-plugin-off-main-thread'
+61 silly reify ]
+62 silly reify mark retired [
+62 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\@tanstack\\react-query'
+62 silly reify ]
+63 silly reify mark retired [
+63 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\@typescript-eslint\\eslint-plugin'
+63 silly reify ]
+64 silly reify mark retired [
+64 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\@tanstack\\query-core'
+64 silly reify ]
+65 silly reify mark retired [
+65 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\@typescript-eslint\\scope-manager'
+65 silly reify ]
+66 silly reify mark retired [
+66 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\acorn',
+66 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\acorn',
+66 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\acorn.cmd',
+66 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\acorn.ps1'
+66 silly reify ]
+67 silly reify mark retired [
+67 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\babel-plugin-polyfill-corejs2\\node_modules\\semver',
+67 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\babel-plugin-polyfill-corejs2\\node_modules\\.bin\\semver',
+67 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\babel-plugin-polyfill-corejs2\\node_modules\\.bin\\semver.cmd',
+67 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\babel-plugin-polyfill-corejs2\\node_modules\\.bin\\semver.ps1'
+67 silly reify ]
+68 silly reify mark retired [
+68 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\baseline-browser-mapping',
+68 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\baseline-browser-mapping',
+68 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\baseline-browser-mapping.cmd',
+68 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\baseline-browser-mapping.ps1'
+68 silly reify ]
+69 silly reify mark retired [
+69 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\browserslist',
+69 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\browserslist',
+69 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\browserslist.cmd',
+69 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\browserslist.ps1'
+69 silly reify ]
+70 silly reify mark retired [
+70 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\cssesc',
+70 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\cssesc',
+70 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\cssesc.cmd',
+70 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\cssesc.ps1'
+70 silly reify ]
+71 silly reify mark retired [
+71 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\ejs',
+71 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\ejs',
+71 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\ejs.cmd',
+71 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\ejs.ps1'
+71 silly reify ]
+72 silly reify mark retired [
+72 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\esbuild',
+72 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\esbuild',
+72 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\esbuild.cmd',
+72 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\esbuild.ps1'
+72 silly reify ]
+73 silly reify mark retired [
+73 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\glob',
+73 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\glob',
+73 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\glob.cmd',
+73 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\glob.ps1'
+73 silly reify ]
+74 silly reify mark retired [
+74 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\jake',
+74 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\jake',
+74 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\jake.cmd',
+74 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\jake.ps1'
+74 silly reify ]
+75 silly reify mark retired [
+75 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\js-yaml',
+75 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\js-yaml',
+75 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\js-yaml.cmd',
+75 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\js-yaml.ps1'
+75 silly reify ]
+76 silly reify mark retired [
+76 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\jiti',
+76 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\jiti',
+76 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\jiti.cmd',
+76 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\jiti.ps1'
+76 silly reify ]
+77 silly reify mark retired [
+77 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\json5',
+77 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\json5',
+77 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\json5.cmd',
+77 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\json5.ps1'
+77 silly reify ]
+78 silly reify mark retired [
+78 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\loose-envify',
+78 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\loose-envify',
+78 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\loose-envify.cmd',
+78 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\loose-envify.ps1'
+78 silly reify ]
+79 silly reify mark retired [
+79 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\jsesc',
+79 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\jsesc',
+79 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\jsesc.cmd',
+79 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\jsesc.ps1'
+79 silly reify ]
+80 silly reify mark retired [
+80 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\nanoid',
+80 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\nanoid',
+80 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\nanoid.cmd',
+80 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\nanoid.ps1'
+80 silly reify ]
+81 silly reify mark retired [
+81 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\regjsparser',
+81 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\regjsparser',
+81 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\regjsparser.cmd',
+81 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\regjsparser.ps1'
+81 silly reify ]
+82 silly reify mark retired [
+82 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\semver',
+82 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\semver',
+82 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\semver.cmd',
+82 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\semver.ps1'
+82 silly reify ]
+83 silly reify mark retired [
+83 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\terser',
+83 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\terser',
+83 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\terser.cmd',
+83 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\terser.ps1'
+83 silly reify ]
+84 silly reify mark retired [
+84 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\update-browserslist-db',
+84 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\update-browserslist-db',
+84 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\update-browserslist-db.cmd',
+84 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\update-browserslist-db.ps1'
+84 silly reify ]
+85 silly reify mark retired [
+85 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\which',
+85 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\node-which',
+85 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\node-which.cmd',
+85 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\node-which.ps1'
+85 silly reify ]
+86 silly reify mark retired [
+86 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\@babel\\helper-create-class-features-plugin\\node_modules\\semver',
+86 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\@babel\\helper-create-class-features-plugin\\node_modules\\.bin\\semver',
+86 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\@babel\\helper-create-class-features-plugin\\node_modules\\.bin\\semver.cmd',
+86 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\@babel\\helper-create-class-features-plugin\\node_modules\\.bin\\semver.ps1'
+86 silly reify ]
+87 silly reify mark retired [
+87 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\@babel\\helper-create-regexp-features-plugin\\node_modules\\semver',
+87 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\@babel\\helper-create-regexp-features-plugin\\node_modules\\.bin\\semver',
+87 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\@babel\\helper-create-regexp-features-plugin\\node_modules\\.bin\\semver.cmd',
+87 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\@babel\\helper-create-regexp-features-plugin\\node_modules\\.bin\\semver.ps1'
+87 silly reify ]
+88 silly reify mark retired [
+88 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\@babel\\helper-compilation-targets\\node_modules\\semver',
+88 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\@babel\\helper-compilation-targets\\node_modules\\.bin\\semver',
+88 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\@babel\\helper-compilation-targets\\node_modules\\.bin\\semver.cmd',
+88 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\@babel\\helper-compilation-targets\\node_modules\\.bin\\semver.ps1'
+88 silly reify ]
+89 silly reify mark retired [
+89 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\@babel\\parser',
+89 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\parser',
+89 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\parser.cmd',
+89 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\parser.ps1'
+89 silly reify ]
+90 silly reify mark retired [
+90 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\@babel\\preset-env\\node_modules\\semver',
+90 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\@babel\\preset-env\\node_modules\\.bin\\semver',
+90 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\@babel\\preset-env\\node_modules\\.bin\\semver.cmd',
+90 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\@babel\\preset-env\\node_modules\\.bin\\semver.ps1'
+90 silly reify ]
+91 silly reify moves {
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\ajv': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.ajv-HIYC5nA7',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\autoprefixer': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.autoprefixer-mzKT0CrS',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\async': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.async-qFljmJKi',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\caniuse-lite': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.caniuse-lite-6nF5HS74',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\common-tags': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.common-tags-QZ69F1aR',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\core-js': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.core-js-UvBkRQPW',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\d3-format': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.d3-format-Gte9rl7m',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\d3-shape': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.d3-shape-1eTb18Pd',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\dom-helpers': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.dom-helpers-PIi6IIBX',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\es-abstract': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.es-abstract-84gtyCZn',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\eslint': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.eslint-4dHtloVR',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\html2canvas': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.html2canvas-qWVuKggF',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\jackspeak': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.jackspeak-YnaRcslC',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\leaflet': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.leaflet-ipme51iM',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\lodash': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.lodash-BtDx0ksz',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\react-dom': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.react-dom-c9orzE4X',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\recharts': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.recharts-rl27fbE3',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\regenerate-unicode-properties': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.regenerate-unicode-properties-FCauQNQl',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\resolve': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.resolve-OpfwQG4U',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\rollup': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.rollup-bGdoREyj',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\sucrase': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.sucrase-zuMaUnhP',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\tailwindcss': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.tailwindcss-rkabMAnI',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\ts-api-utils': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.ts-api-utils-ooLqFHP0',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\typescript': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.typescript-hqvh802M',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\uri-js': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.uri-js-kbmtNTjn',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\utrie': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.utrie-oMIx8teu',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\victory-vendor': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.victory-vendor-l06KbZzd',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\vite': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.vite-ZBLKV8GH',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\whatwg-url': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.whatwg-url-htqOFie9',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\workbox-build': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.workbox-build-NWjfEu0M',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\workbox-background-sync': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.workbox-background-sync-VZE4ITkv',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\workbox-precaching': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.workbox-precaching-MzA05ZFN',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\workbox-strategies': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.workbox-strategies-5hYLJED6',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\ws': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.ws-Cz2vSA70',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\zod': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.zod-dZ3jPdi5',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\workbox-window': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.workbox-window-w4jTHftM',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\@babel\\core': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\@babel\\.core-Zr2JwBrn',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\@babel\\helpers': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\@babel\\.helpers-6ElWuDOw',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\@babel\\runtime': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\@babel\\.runtime-Giq8XcSd',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\@babel\\types': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\@babel\\.types-AaljDumW',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\@babel\\traverse': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\@babel\\.traverse-6EFvV8n9',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\@esbuild\\win32-x64': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\@esbuild\\.win32-x64-DhUzKedL',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\@hookform\\resolvers': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\@hookform\\.resolvers-n5isXaCt',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\@rollup\\pluginutils': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\@rollup\\.pluginutils-dRYXxi9J',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\@rollup\\plugin-node-resolve': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\@rollup\\.plugin-node-resolve-mwMHxnLv',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\@supabase\\auth-js': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\@supabase\\.auth-js-aBS55REc',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\@surma\\rollup-plugin-off-main-thread': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\@surma\\.rollup-plugin-off-main-thread-7V1Gd9pU',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\@tanstack\\react-query': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\@tanstack\\.react-query-jNSJ92vI',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\@typescript-eslint\\eslint-plugin': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\@typescript-eslint\\.eslint-plugin-3btTbcqQ',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\@tanstack\\query-core': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\@tanstack\\.query-core-l1BHNLJX',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\@typescript-eslint\\scope-manager': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\@typescript-eslint\\.scope-manager-1RM6bMQz',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\acorn': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.acorn-SSNhtW7p',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\acorn': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\.acorn-Colh3ieV',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\acorn.cmd': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\.acorn.cmd-eCUQXiUp',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\acorn.ps1': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\.acorn.ps1-awNOxPlQ',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\babel-plugin-polyfill-corejs2\\node_modules\\semver': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\babel-plugin-polyfill-corejs2\\node_modules\\.semver-lYhdX4Lv',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\babel-plugin-polyfill-corejs2\\node_modules\\.bin\\semver': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\babel-plugin-polyfill-corejs2\\node_modules\\.bin\\.semver-yrjWOKDd',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\babel-plugin-polyfill-corejs2\\node_modules\\.bin\\semver.cmd': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\babel-plugin-polyfill-corejs2\\node_modules\\.bin\\.semver.cmd-yHDVOMOa',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\babel-plugin-polyfill-corejs2\\node_modules\\.bin\\semver.ps1': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\babel-plugin-polyfill-corejs2\\node_modules\\.bin\\.semver.ps1-JHKeMJRG',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\baseline-browser-mapping': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.baseline-browser-mapping-7PsxP3a0',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\baseline-browser-mapping': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\.baseline-browser-mapping-HqS7Pe0o',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\baseline-browser-mapping.cmd': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\.baseline-browser-mapping.cmd-Cyz1ske5',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\baseline-browser-mapping.ps1': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\.baseline-browser-mapping.ps1-OU0itysh',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\browserslist': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.browserslist-BG3D80jD',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\browserslist': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\.browserslist-rRxxKdLu',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\browserslist.cmd': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\.browserslist.cmd-UhFNdWhs',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\browserslist.ps1': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\.browserslist.ps1-ajgiDzos',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\cssesc': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.cssesc-tVO2Cjjx',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\cssesc': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\.cssesc-d2ezuhu0',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\cssesc.cmd': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\.cssesc.cmd-zQMnlnfO',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\cssesc.ps1': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\.cssesc.ps1-iGshZf7T',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\ejs': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.ejs-t2tGGQUO',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\ejs': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\.ejs-BM70dYY2',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\ejs.cmd': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\.ejs.cmd-NzJtjcKd',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\ejs.ps1': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\.ejs.ps1-mlvdauEW',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\esbuild': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.esbuild-ybfbaZ4E',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\esbuild': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\.esbuild-aQ1ZbXTr',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\esbuild.cmd': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\.esbuild.cmd-COCPIROh',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\esbuild.ps1': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\.esbuild.ps1-MwVJSP0C',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\glob': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.glob-klsZkttO',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\glob': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\.glob-40QNDQmZ',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\glob.cmd': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\.glob.cmd-Eg5yy1Gd',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\glob.ps1': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\.glob.ps1-jDJP52DT',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\jake': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.jake-GEVDV5XM',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\jake': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\.jake-SwOe5mjI',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\jake.cmd': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\.jake.cmd-MhGEnNZR',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\jake.ps1': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\.jake.ps1-Rd2reI4H',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\js-yaml': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.js-yaml-ecAhaLfN',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\js-yaml': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\.js-yaml-KsvrSKkQ',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\js-yaml.cmd': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\.js-yaml.cmd-IGVzHCCm',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\js-yaml.ps1': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\.js-yaml.ps1-Sgou4zmS',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\jiti': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.jiti-5601RkAi',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\jiti': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\.jiti-kRcZgedU',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\jiti.cmd': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\.jiti.cmd-4PmA6kQC',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\jiti.ps1': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\.jiti.ps1-RBOGvUnf',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\json5': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.json5-wEijPiP5',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\json5': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\.json5-ouMqWvpt',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\json5.cmd': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\.json5.cmd-0P6ZNqCg',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\json5.ps1': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\.json5.ps1-wttk0d6Z',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\loose-envify': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.loose-envify-P7hBv1GH',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\loose-envify': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\.loose-envify-0Gi3N3WP',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\loose-envify.cmd': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\.loose-envify.cmd-XhzBW1eY',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\loose-envify.ps1': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\.loose-envify.ps1-qV7QooZc',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\jsesc': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.jsesc-4ejrO9wN',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\jsesc': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\.jsesc-gx6qAtHz',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\jsesc.cmd': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\.jsesc.cmd-PLgmJOAM',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\jsesc.ps1': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\.jsesc.ps1-kXayuAv2',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\nanoid': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.nanoid-AXPelYiu',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\nanoid': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\.nanoid-ngcgJAEP',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\nanoid.cmd': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\.nanoid.cmd-TAbuX2YQ',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\nanoid.ps1': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\.nanoid.ps1-FrWMWQOl',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\regjsparser': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.regjsparser-TiNyqGyw',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\regjsparser': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\.regjsparser-bfvpAJhn',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\regjsparser.cmd': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\.regjsparser.cmd-aSUD0IgM',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\regjsparser.ps1': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\.regjsparser.ps1-ytjULHfG',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\semver': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.semver-6pd5UqTq',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\semver': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\.semver-AWbytmhF',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\semver.cmd': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\.semver.cmd-uzVQ3sMJ',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\semver.ps1': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\.semver.ps1-wQdm3cv2',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\terser': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.terser-Be3ibkLz',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\terser': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\.terser-7zFel2Xk',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\terser.cmd': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\.terser.cmd-oPVX0Uda',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\terser.ps1': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\.terser.ps1-pLXC8NSq',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\update-browserslist-db': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.update-browserslist-db-FsONQ3tN',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\update-browserslist-db': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\.update-browserslist-db-oQ16nh0x',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\update-browserslist-db.cmd': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\.update-browserslist-db.cmd-enqGEvrC',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\update-browserslist-db.ps1': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\.update-browserslist-db.ps1-c8E7CKUF',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\which': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.which-6o43T1RR',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\node-which': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\.node-which-4b0Htv1t',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\node-which.cmd': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\.node-which.cmd-3PQNTB9M',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\node-which.ps1': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\.node-which.ps1-vmlDVQWO',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\@babel\\helper-create-class-features-plugin\\node_modules\\semver': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\@babel\\helper-create-class-features-plugin\\node_modules\\.semver-sgeiFS5y',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\@babel\\helper-create-class-features-plugin\\node_modules\\.bin\\semver': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\@babel\\helper-create-class-features-plugin\\node_modules\\.bin\\.semver-XaRgzFNt',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\@babel\\helper-create-class-features-plugin\\node_modules\\.bin\\semver.cmd': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\@babel\\helper-create-class-features-plugin\\node_modules\\.bin\\.semver.cmd-YVvXTWye',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\@babel\\helper-create-class-features-plugin\\node_modules\\.bin\\semver.ps1': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\@babel\\helper-create-class-features-plugin\\node_modules\\.bin\\.semver.ps1-PEIXJ9Cz',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\@babel\\helper-create-regexp-features-plugin\\node_modules\\semver': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\@babel\\helper-create-regexp-features-plugin\\node_modules\\.semver-G4CK1b7p',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\@babel\\helper-create-regexp-features-plugin\\node_modules\\.bin\\semver': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\@babel\\helper-create-regexp-features-plugin\\node_modules\\.bin\\.semver-z5zWYecf',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\@babel\\helper-create-regexp-features-plugin\\node_modules\\.bin\\semver.cmd': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\@babel\\helper-create-regexp-features-plugin\\node_modules\\.bin\\.semver.cmd-d0Nioblt',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\@babel\\helper-create-regexp-features-plugin\\node_modules\\.bin\\semver.ps1': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\@babel\\helper-create-regexp-features-plugin\\node_modules\\.bin\\.semver.ps1-Ed8mpRQr',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\@babel\\helper-compilation-targets\\node_modules\\semver': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\@babel\\helper-compilation-targets\\node_modules\\.semver-zJafAQzv',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\@babel\\helper-compilation-targets\\node_modules\\.bin\\semver': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\@babel\\helper-compilation-targets\\node_modules\\.bin\\.semver-r3EiGbjb',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\@babel\\helper-compilation-targets\\node_modules\\.bin\\semver.cmd': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\@babel\\helper-compilation-targets\\node_modules\\.bin\\.semver.cmd-uR8HGkS5',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\@babel\\helper-compilation-targets\\node_modules\\.bin\\semver.ps1': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\@babel\\helper-compilation-targets\\node_modules\\.bin\\.semver.ps1-bOAz9xx0',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\@babel\\parser': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\@babel\\.parser-Khi716ho',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\parser': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\.parser-wI9PFGm9',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\parser.cmd': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\.parser.cmd-aF7Gb4w3',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\parser.ps1': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\.bin\\.parser.ps1-weZpctbJ',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\@babel\\preset-env\\node_modules\\semver': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\@babel\\preset-env\\node_modules\\.semver-vwTDjHuv',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\@babel\\preset-env\\node_modules\\.bin\\semver': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\@babel\\preset-env\\node_modules\\.bin\\.semver-DfvDwti6',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\@babel\\preset-env\\node_modules\\.bin\\semver.cmd': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\@babel\\preset-env\\node_modules\\.bin\\.semver.cmd-vbrCeOvb',
+91 silly reify   'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\@babel\\preset-env\\node_modules\\.bin\\semver.ps1': 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\@babel\\preset-env\\node_modules\\.bin\\.semver.ps1-Aps5Vf5B'
+91 silly reify }
+92 verbose stack Error: EPERM: operation not permitted, unlink 'C:\Users\MatthieuMONNOIR\OneDrive - NIKITO\Documents\GitHub\nikito-gmao\node_modules\ajv\.tonic_example.js'
+93 error code EPERM
+94 error syscall unlink
+95 error path C:\Users\MatthieuMONNOIR\OneDrive - NIKITO\Documents\GitHub\nikito-gmao\node_modules\ajv\.tonic_example.js
+96 error errno -4048
+97 error [Error: EPERM: operation not permitted, unlink 'C:\Users\MatthieuMONNOIR\OneDrive - NIKITO\Documents\GitHub\nikito-gmao\node_modules\ajv\.tonic_example.js'] {
+97 error   errno: -4048,
+97 error   code: 'EPERM',
+97 error   syscall: 'unlink',
+97 error   path: 'C:\\Users\\MatthieuMONNOIR\\OneDrive - NIKITO\\Documents\\GitHub\\nikito-gmao\\node_modules\\ajv\\.tonic_example.js'
+97 error }
+98 error
+98 error The operation was rejected by your operating system.
+98 error It's possible that the file was already in use (by a text editor or antivirus),
+98 error or that you lack permissions to access it.
+98 error
+98 error If you believe this might be a permissions issue, please double-check the
+98 error permissions of the file and its containing directories, or try running
+98 error the command again as root/Administrator.
+99 silly unfinished npm timer reify 1780438312528
+100 silly unfinished npm timer reify:retireShallow 1780438312981
+101 verbose cwd C:\Users\MatthieuMONNOIR\OneDrive - NIKITO\Documents\GitHub\nikito-gmao
+102 verbose os Windows_NT 10.0.26200
+103 verbose node v24.14.1
+104 verbose npm  v11.11.0
+105 notice
+105 notice New minor version of npm available! 11.11.0 -> 11.16.0
+105 notice Changelog: https://github.com/npm/cli/releases/tag/v11.16.0
+105 notice To update run: npm install -g npm@11.16.0
+105 notice  { force: true, Symbol(proc-log.meta): true }
+106 verbose exit -4048
+107 verbose code -4048
+108 error A complete log of this run can be found in: C:\Users\MatthieuMONNOIR\OneDrive - NIKITO\Documents\GitHub\nikito-gmao\.npm-cache\_logs\2026-06-02T22_11_51_937Z-debug-0.log

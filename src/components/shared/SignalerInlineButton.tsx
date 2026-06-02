@@ -12,7 +12,7 @@ export function SignalerInlineButton() {
       <button
         onClick={openSignaler}
         title="Signaler un incident (Ctrl+I)"
-        className="w-11 h-11 rounded-xl border border-white/[0.08] bg-[#131836] text-dim hover:text-white hover:border-white/20 transition-all flex items-center justify-center flex-shrink-0"
+        className="w-11 h-11 rounded-lg border border-white/[0.1] bg-bg-card text-dim hover:text-white hover:border-nikito-cyan/50 hover:bg-white/[0.04] transition-all flex items-center justify-center flex-shrink-0"
       >
         <svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
           <path d="M10 2L2 17h16L10 2z" />
@@ -26,10 +26,10 @@ export function SignalerInlineButton() {
   return (
     <button
       onClick={openSignaler}
-      className="h-11 px-5 rounded-xl text-white text-[13px] font-semibold flex items-center gap-2 active:scale-[0.97] transition-transform flex-shrink-0"
+      className="h-11 px-5 rounded-lg text-white text-[13px] font-semibold flex items-center gap-2 active:scale-[0.98] transition-transform flex-shrink-0"
       style={{
-        background: 'linear-gradient(135deg, #ec4899 0%, #06b6d4 100%)',
-        boxShadow: '0 4px 16px rgba(236, 72, 153, 0.2)',
+        background: 'linear-gradient(135deg, #F25F9B 0%, #45D7F5 100%)',
+        boxShadow: '0 10px 24px rgba(69, 215, 245, 0.16)',
       }}
     >
       <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">

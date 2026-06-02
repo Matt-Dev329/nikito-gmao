@@ -68,7 +68,7 @@ export function MobileAlertPanel({ open, onClose }: MobileAlertPanelProps) {
 
       <div
         className={cn(
-          'fixed left-0 right-0 bottom-0 z-[111] bg-[#0a0e27] rounded-t-2xl max-h-[70vh] flex flex-col transition-transform duration-300 ease-out',
+          'fixed left-0 right-0 bottom-0 z-[111] bg-bg-sidebar rounded-t-lg max-h-[70vh] flex flex-col transition-transform duration-300 ease-out border-t border-white/[0.08] shadow-[0_-20px_48px_rgba(0,0,0,0.32)]',
           open ? 'translate-y-0' : 'translate-y-full'
         )}
         style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
@@ -92,11 +92,11 @@ export function MobileAlertPanel({ open, onClose }: MobileAlertPanelProps) {
                 <button
                   key={item.key}
                   onClick={() => handleNav(item.to)}
-                  className="flex items-center gap-3 w-full px-3 min-h-[48px] rounded-xl text-dim hover:text-text hover:bg-white/[0.04] transition-colors"
+                  className="flex items-center gap-3 w-full px-3 min-h-[48px] rounded-lg text-dim hover:text-text hover:bg-white/[0.05] transition-colors"
                 >
                   <span
                     className={cn(
-                      'flex-shrink-0 text-[11px] font-bold px-2 py-1 rounded-lg text-[#0B0B2E] min-w-[28px] text-center',
+                      'flex-shrink-0 text-[11px] font-bold px-2 py-1 rounded-md text-bg-app min-w-[28px] text-center',
                       item.tone === 'red' ? 'bg-red' : 'bg-amber'
                     )}
                   >

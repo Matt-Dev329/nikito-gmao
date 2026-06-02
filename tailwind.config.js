@@ -5,28 +5,28 @@ export default {
     extend: {
       colors: {
         // Backgrounds
-        'bg-app': '#0B0B2E',
-        'bg-card': '#151547',
-        'bg-sidebar': '#07071F',
-        'bg-deep': '#0D0D38',
+        'bg-app': '#10131A',
+        'bg-card': '#171C24',
+        'bg-sidebar': '#0B0F16',
+        'bg-deep': '#111722',
 
         // Marque Nikito
         nikito: {
-          pink: '#E85A9B',
-          violet: '#9B7EE8',
-          cyan: '#5DE5FF',
+          pink: '#F25F9B',
+          violet: '#9A82F0',
+          cyan: '#45D7F5',
         },
 
         // Sémantique KPI
-        lime: '#D4F542',
-        amber: '#FFB547',
-        red: '#FF4D6D',
-        green: '#4DD09E',
+        lime: '#BFEA4D',
+        amber: '#F6B44B',
+        red: '#F05D6E',
+        green: '#54C99B',
 
         // Texte
-        text: '#FFFFFF',
-        dim: '#A8A8C8',
-        faint: '#6E6E96',
+        text: '#F7F8FB',
+        dim: '#A7B0C2',
+        faint: '#687386',
       },
       fontFamily: {
         sans: ['-apple-system', 'Segoe UI', 'system-ui', 'sans-serif'],
@@ -41,6 +41,8 @@ export default {
       },
       borderRadius: {
         pill: '20px',
+        xl: '8px',
+        '2xl': '10px',
       },
       keyframes: {
         'pulse-subtle': {
