@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { TabletHeader } from '@/components/layout/TabletHeader';
 import { TicketCard, type TicketSummary } from '@/components/tickets/TicketCard';
+import { ModaleReassignerTicket } from '@/components/tickets/ModaleReassignerTicket';
 import { Pill } from '@/components/ui/Pill';
 import { cn, formatDateCourt, formatDuree } from '@/lib/utils';
 import { useIncidents } from '@/hooks/queries/useTickets';
@@ -93,6 +94,7 @@ export function Operations() {
   const [onglet, setOnglet] = useState<Onglet>('a_faire');
   const [zoneFiltre, setZoneFiltre] = useState<string>('toutes');
   const [parcActif, setParcActif] = useState<string | null>(null);
+  const [reassignerCible, setReassignerCible] = useState<{ id: string; numeroBT: string } | null>(null);
 
   const { parcsVisibles, peutVoirTous } = useParcsVisibles();
 
@@ -128,6 +130,14 @@ export function Operations() {
   const tickets = useMemo(() => {
     if (!incidentsQ.data) return [];
     return (incidentsQ.data as Record<string, unknown>[]).map(incidentToTicket);
+  }, [incidentsQ.data]);
+
+  const incidentIdParBT = useMemo(() => {
+    const map = new Map<string, string>();
+    (incidentsQ.data as Record<string, unknown>[] | undefined)?.forEach((inc) => {
+      map.set(inc.numero_bt as string, inc.id as string);
+    });
+    return map;
   }, [incidentsQ.data]);
 
   const zones = useMemo(() => {
@@ -265,7 +275,10 @@ export function Operations() {
                 ticket={premier}
                 variant="expanded"
                 onDemarrer={() => navigate(`/tech/operations/${premier.numeroBT}`)}
-                onReassigner={() => {}}
+                onReassigner={() => {
+                  const id = incidentIdParBT.get(premier.numeroBT);
+                  if (id) setReassignerCible({ id, numeroBT: premier.numeroBT });
+                }}
               />
             )}
             {autres.map((t) => (
@@ -279,6 +292,14 @@ export function Operations() {
           </>
         )}
       </div>
+
+      {reassignerCible && (
+        <ModaleReassignerTicket
+          incidentId={reassignerCible.id}
+          numeroBT={reassignerCible.numeroBT}
+          onClose={() => setReassignerCible(null)}
+        />
+      )}
     </>
   );
 }

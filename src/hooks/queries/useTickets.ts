@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useFormationFilter } from '@/hooks/useFormation';
 import type { StatutIncident } from '@/types/database';
@@ -106,6 +106,88 @@ export function useFiches5Pourquoi(statut?: 'ouvert' | 'valide' | 'audit_en_cour
       const { data, error } = await q;
       if (error) throw error;
       return data;
+    },
+  });
+}
+
+export function useTechniciens() {
+  return useQuery({
+    queryKey: ['techniciens_actifs'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('utilisateurs')
+        .select('id, prenom, nom, trigramme, roles!inner(code)')
+        .eq('actif', true)
+        .in('roles.code', ['technicien', 'chef_maintenance', 'directeur_parc'])
+        .order('prenom');
+      if (error) throw error;
+      return (data ?? []) as Array<{ id: string; prenom: string; nom: string; trigramme: string | null }>;
+    },
+  });
+}
+
+export function useReassignerIncident() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (params: { incidentId: string; nouveauTechnicienId: string }) => {
+      const { data, error } = await supabase.rpc('reassigner_incident', {
+        p_incident_id: params.incidentId,
+        p_nouveau_technicien_id: params.nouveauTechnicienId,
+      });
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['incidents'] });
+    },
+  });
+}
+
+export function useMettreEnPauseIncident() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (params: { incidentId: string; motif: string | null }) => {
+      const { data, error } = await supabase.rpc('mettre_en_pause_incident', {
+        p_incident_id: params.incidentId,
+        p_motif: params.motif,
+      });
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['incidents'] });
+    },
+  });
+}
+
+export function useReprendreIncident() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (incidentId: string) => {
+      const { data, error } = await supabase.rpc('reprendre_incident', {
+        p_incident_id: incidentId,
+      });
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['incidents'] });
+    },
+  });
+}
+
+export function useValiderBrouillonIncident() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (incidentId: string) => {
+      const { data, error } = await supabase.rpc('valider_brouillon_incident', {
+        p_incident_id: incidentId,
+      });
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['incidents'] });
     },
   });
 }
