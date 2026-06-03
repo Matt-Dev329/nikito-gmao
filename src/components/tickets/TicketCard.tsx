@@ -3,6 +3,7 @@ import { cn } from '@/lib/utils';
 import type { Criticite } from '@/types/database';
 
 export interface TicketSummary {
+  id: string;
   numeroBT: string;
   criticite: Criticite;
   titre: string;

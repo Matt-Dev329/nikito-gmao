@@ -55,6 +55,7 @@ function incidentToTicket(inc: Record<string, unknown>): TicketSummary {
   }
 
   return {
+    id: inc.id as string,
     numeroBT: inc.numero_bt as string,
     criticite,
     titre: `${equip?.libelle as string ?? ''} · ${inc.description as string}`,
@@ -130,14 +131,6 @@ export function Operations() {
   const tickets = useMemo(() => {
     if (!incidentsQ.data) return [];
     return (incidentsQ.data as Record<string, unknown>[]).map(incidentToTicket);
-  }, [incidentsQ.data]);
-
-  const incidentIdParBT = useMemo(() => {
-    const map = new Map<string, string>();
-    (incidentsQ.data as Record<string, unknown>[] | undefined)?.forEach((inc) => {
-      map.set(inc.numero_bt as string, inc.id as string);
-    });
-    return map;
   }, [incidentsQ.data]);
 
   const zones = useMemo(() => {
@@ -275,10 +268,7 @@ export function Operations() {
                 ticket={premier}
                 variant="expanded"
                 onDemarrer={() => navigate(`/tech/operations/${premier.numeroBT}`)}
-                onReassigner={() => {
-                  const id = incidentIdParBT.get(premier.numeroBT);
-                  if (id) setReassignerCible({ id, numeroBT: premier.numeroBT });
-                }}
+                onReassigner={() => setReassignerCible({ id: premier.id, numeroBT: premier.numeroBT })}
               />
             )}
             {autres.map((t) => (

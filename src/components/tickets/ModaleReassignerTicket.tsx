@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { cn } from '@/lib/utils';
 import { useTechniciens, useReassignerIncident } from '@/hooks/queries/useTickets';
 
@@ -25,9 +26,15 @@ export function ModaleReassignerTicket({ incidentId, numeroBT, onClose }: Props)
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-50 bg-black/60 flex items-end md:items-center justify-center md:p-4">
-      <div className="w-full md:max-w-[480px] bg-bg-card rounded-t-[18px] md:rounded-[18px] border border-nikito-cyan/20 p-5 md:p-6">
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[100] bg-black/60 flex items-end md:items-center justify-center md:p-4"
+      onClick={onClose}
+    >
+      <div
+        className="w-full md:max-w-[480px] bg-bg-card rounded-t-[18px] md:rounded-[18px] border border-nikito-cyan/20 p-5 md:p-6"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="flex justify-between items-start mb-5">
           <div>
             <div className="text-[11px] text-dim tracking-[1.2px] uppercase">Reassigner</div>
@@ -81,6 +88,7 @@ export function ModaleReassignerTicket({ incidentId, numeroBT, onClose }: Props)
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
