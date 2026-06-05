@@ -111,6 +111,7 @@ export function DashboardLayout() {
 
   const startTour = useTour((s) => s.start);
   const tourActive = useTour((s) => s.active);
+  const formationActive = useFormation((s) => s.active);
 
   useEffect(() => {
     if (!loading && utilisateur && !utilisateur.tour_vu && !tourActive) {
@@ -127,7 +128,6 @@ export function DashboardLayout() {
     );
   }
 
-  const formationActive = useFormation((s) => s.active);
   const sidebarWidth = expanded ? SIDEBAR_W_EXPANDED : SIDEBAR_W_COMPACT;
   const viewAsBannerH = viewAsRole ? 36 : 0;
   const formationBannerH = formationActive ? 40 : 0;
