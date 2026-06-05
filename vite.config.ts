@@ -44,6 +44,22 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        // Découpe les grosses dépendances en chunks séparés (meilleur cache + chargement à la demande)
+        manualChunks(id) {
+          if (!id.includes('node_modules')) return undefined;
+          if (id.includes('leaflet')) return 'vendor-maps';
+          if (id.includes('recharts') || id.includes('/d3-')) return 'vendor-charts';
+          if (id.includes('jspdf') || id.includes('html2canvas')) return 'vendor-pdf';
+          if (id.includes('@supabase')) return 'vendor-supabase';
+          if (id.includes('/react') || id.includes('scheduler')) return 'vendor-react';
+          return 'vendor';
+        },
+      },
+    },
+  },
   server: {
     port: 5173,
     host: true,
