@@ -10,7 +10,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useParcs } from '@/hooks/queries/useReferentiel';
 import type { Criticite } from '@/types/database';
 
-type Onglet = 'a_faire' | 'en_cours' | 'controles' | 'preventif';
+type Onglet = 'a_faire' | 'en_cours' | 'resolus' | 'controles' | 'preventif';
 
 interface ParcOption {
   id: string;
@@ -117,6 +117,8 @@ export function Operations() {
 
   const statutsFiltres = onglet === 'en_cours'
     ? ['en_cours' as const]
+    : onglet === 'resolus'
+    ? ['resolu' as const, 'ferme' as const]
     : ['ouvert' as const, 'assigne' as const];
 
   const incidentsQ = useIncidents({
@@ -147,11 +149,12 @@ export function Operations() {
   });
 
   const compteurs = useMemo(() => {
-    if (!allIncidentsQ.data) return { aFaire: 0, enCours: 0 };
+    if (!allIncidentsQ.data) return { aFaire: 0, enCours: 0, resolus: 0 };
     const all = allIncidentsQ.data as Record<string, unknown>[];
     return {
       aFaire: all.filter((i) => i.statut === 'ouvert' || i.statut === 'assigne').length,
       enCours: all.filter((i) => i.statut === 'en_cours').length,
+      resolus: all.filter((i) => i.statut === 'resolu' || i.statut === 'ferme').length,
     };
   }, [allIncidentsQ.data]);
 
@@ -196,6 +199,7 @@ export function Operations() {
         {[
           { code: 'a_faire' as Onglet, label: 'À faire', badge: compteurs.aFaire, badgeTone: 'white' },
           { code: 'en_cours' as Onglet, label: 'En cours', badge: compteurs.enCours, badgeTone: 'amber' },
+          { code: 'resolus' as Onglet, label: 'Résolus', badge: compteurs.resolus, badgeTone: 'white' },
           { code: 'controles' as Onglet, label: 'Contrôles' },
           { code: 'preventif' as Onglet, label: 'Préventif' },
         ].map((o) => (
@@ -259,8 +263,19 @@ export function Operations() {
           </div>
         ) : ticketsFiltres.length === 0 ? (
           <div className="text-center py-12 text-dim text-sm">
-            Aucun ticket {onglet === 'en_cours' ? 'en cours' : 'à traiter'}
+            Aucun ticket {onglet === 'en_cours' ? 'en cours' : onglet === 'resolus' ? 'résolu' : 'à traiter'}
           </div>
+        ) : onglet === 'resolus' ? (
+          <>
+            {ticketsFiltres.map((t) => (
+              <TicketCard
+                key={t.numeroBT}
+                ticket={t}
+                variant="compact"
+                onClick={() => navigate(`/tech/operations/${t.numeroBT}`)}
+              />
+            ))}
+          </>
         ) : (
           <>
             {premier && (
