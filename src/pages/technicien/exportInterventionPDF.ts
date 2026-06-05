@@ -1,10 +1,15 @@
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { supabase } from '@/lib/supabase';
 
 /**
  * Donnees necessaires a la generation du PDF de bon de travail (BT).
  * Le texte du PDF reste sans accents : la police helvetica par defaut de
  * jsPDF ne gere pas correctement les caracteres accentues (cf exportPDF.ts).
+ *
+ * photoAvantPath / photoApresPath sont les CHEMINS de stockage Supabase
+ * (bucket prive) renvoyes par PhotoCapture, pas des URLs. On genere une URL
+ * signee a la volee pour telecharger l'image et l'integrer au PDF.
  */
 export interface InterventionPDFData {
   numeroBT: string;
@@ -21,8 +26,9 @@ export interface InterventionPDFData {
   fin: string | null;
   technicienNom: string;
   pieces: { nom: string; reference: string; quantite: number }[];
-  photoAvantUrl: string | null;
-  photoApresUrl: string | null;
+  photoBucket: string;
+  photoAvantPath: string | null;
+  photoApresPath: string | null;
 }
 
 const criticiteLabel: Record<string, string> = {
@@ -48,9 +54,29 @@ function formatDuree(debut: string | null, fin: string | null): string {
   return `${h}h${m > 0 ? ` ${m}min` : ''}`;
 }
 
-export function exportInterventionPDF(data: InterventionPDFData) {
+/** Telecharge une image du storage prive et la convertit en dataURL JPEG. */
+async function chargerImage(bucket: string, path: string): Promise<string | null> {
+  try {
+    const { data } = await supabase.storage.from(bucket).createSignedUrl(path, 3600);
+    if (!data?.signedUrl) return null;
+    const resp = await fetch(data.signedUrl);
+    if (!resp.ok) return null;
+    const blob = await resp.blob();
+    return await new Promise<string | null>((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.onerror = () => resolve(null);
+      reader.readAsDataURL(blob);
+    });
+  } catch {
+    return null;
+  }
+}
+
+export async function exportInterventionPDF(data: InterventionPDFData) {
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
   const pageW = doc.internal.pageSize.getWidth();
+  const pageH = doc.internal.pageSize.getHeight();
   const margin = 15;
   const maxW = pageW - margin * 2;
   let y = margin;
@@ -127,28 +153,69 @@ export function exportInterventionPDF(data: InterventionPDFData) {
     y = ((doc as unknown as Record<string, Record<string, number>>).lastAutoTable?.finalY ?? y) + 8;
   }
 
+  // Photos integrees (telechargees depuis le storage prive)
   const photos: [string, string | null][] = [
-    ['Photo avant', data.photoAvantUrl],
-    ['Photo apres', data.photoApresUrl],
+    ['Photo avant intervention', data.photoAvantPath],
+    ['Photo apres reparation', data.photoApresPath],
   ];
-  const presentes = photos.filter(([, url]) => !!url);
-  if (presentes.length > 0) {
+  const photosPresentes = photos.filter(([, p]) => !!p);
+
+  if (photosPresentes.length > 0) {
+    if (y > pageH - 30) {
+      doc.addPage();
+      y = margin;
+    }
     doc.setFontSize(11);
     doc.setFont('helvetica', 'bold');
     doc.text('Photos', margin, y);
-    y += 5;
-    doc.setFontSize(8);
-    doc.setFont('helvetica', 'normal');
-    for (const [label, url] of presentes) {
-      doc.setTextColor(0, 102, 204);
-      doc.textWithLink(`${label} (ouvrir)`, margin, y, { url: url as string });
-      doc.setTextColor(30, 30, 30);
-      y += 5;
+    y += 6;
+
+    const imgW = 90; // largeur max d'une photo en mm
+    for (const [label, path] of photosPresentes) {
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'bold');
+      if (y > pageH - 20) {
+        doc.addPage();
+        y = margin;
+      }
+      doc.text(label, margin, y);
+      y += 4;
+
+      const dataUrl = await chargerImage(data.photoBucket, path as string);
+      if (!dataUrl) {
+        doc.setFont('helvetica', 'italic');
+        doc.setTextColor(120);
+        doc.text('(photo indisponible)', margin, y);
+        doc.setTextColor(30, 30, 30);
+        y += 8;
+        continue;
+      }
+
+      let h = imgW;
+      try {
+        const props = doc.getImageProperties(dataUrl);
+        h = (imgW * props.height) / props.width;
+      } catch {
+        h = imgW * 0.75;
+      }
+      if (y + h > pageH - margin) {
+        doc.addPage();
+        y = margin;
+      }
+      try {
+        doc.addImage(dataUrl, 'JPEG', margin, y, imgW, h);
+      } catch {
+        doc.setFont('helvetica', 'italic');
+        doc.setTextColor(120);
+        doc.text('(photo illisible)', margin, y);
+        doc.setTextColor(30, 30, 30);
+        h = 4;
+      }
+      y += h + 8;
     }
-    y += 2;
   }
 
-  const footerY = Math.max(y + 6, doc.internal.pageSize.getHeight() - 20);
+  const footerY = Math.max(y + 6, pageH - 12);
   doc.setFontSize(7);
   doc.setFont('helvetica', 'italic');
   doc.setTextColor(120);

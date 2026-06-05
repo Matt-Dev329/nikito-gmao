@@ -155,7 +155,7 @@ export function Intervention() {
         photoApresUrl: photoApres,
       });
 
-      exportInterventionPDF({
+      await exportInterventionPDF({
         numeroBT: btNumero ?? '',
         titre,
         equipementLibelle: equipLibelle,
@@ -170,8 +170,9 @@ export function Intervention() {
         fin: new Date().toISOString(),
         technicienNom: utilisateur ? `${utilisateur.prenom} ${utilisateur.nom}` : '',
         pieces: piecesExistantes.map((p) => ({ nom: p.nom, reference: p.reference, quantite: p.quantite })),
-        photoAvantUrl: photoAvant,
-        photoApresUrl: photoApres,
+        photoBucket: 'alba-interventions',
+        photoAvantPath: photoAvant,
+        photoApresPath: photoApres,
       });
 
       setDirty(false);
