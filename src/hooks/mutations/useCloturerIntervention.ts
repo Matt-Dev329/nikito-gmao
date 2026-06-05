@@ -47,7 +47,7 @@ export function useCloturerIntervention() {
             photos_apres: photosApres,
           })
           .eq('id', interventionId);
-        if (error) throw error;
+        if (error) throw new Error(error.message);
       } else {
         const { data, error } = await supabase
           .from('interventions')
@@ -64,15 +64,15 @@ export function useCloturerIntervention() {
           })
           .select('id')
           .single();
-        if (error) throw error;
+        if (error) throw new Error(error.message);
         interventionId = data.id as string;
       }
 
       const { error: incErr } = await supabase
         .from('incidents')
-        .update({ statut: 'resolu', resolu_le: nowISO })
+        .update({ statut: 'resolu', resolu_le: nowISO, resolu_par_id: utilisateur.id })
         .eq('id', params.incidentId);
-      if (incErr) throw incErr;
+      if (incErr) throw new Error(incErr.message);
 
       return { interventionId };
     },
