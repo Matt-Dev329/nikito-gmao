@@ -1,0 +1,17 @@
+# Configuration de déploiement Netlify pour Nikito GMAO (Vite + React SPA)
+# Dès que le dépôt GitHub est connecté à Netlify, chaque push sur `main`
+# déclenche automatiquement un build + déploiement.
+
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "20"
+
+# SPA : toutes les routes (ex. /tech/operations/BT-2026-0019) sont servies
+# par index.html, sinon un rafraîchissement sur une route profonde renvoie 404.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
