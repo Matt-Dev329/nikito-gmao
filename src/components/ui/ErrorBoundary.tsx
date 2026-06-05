@@ -1,4 +1,5 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react';
+import * as Sentry from '@sentry/react';
 
 interface Props {
   children: ReactNode;
@@ -22,13 +23,9 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, info: ErrorInfo) {
-    // Remonte vers Sentry si présent, sinon console.
-    const sentry = (window as unknown as { Sentry?: { captureException: (e: unknown, c?: unknown) => void } }).Sentry;
-    if (sentry) {
-      sentry.captureException(error, { extra: { componentStack: info.componentStack } });
-    } else {
-      console.error('Erreur non gérée :', error, info.componentStack);
-    }
+    // Remonte vers Sentry (no-op si non configuré) + console pour le debug local.
+    Sentry.captureException(error, { extra: { componentStack: info.componentStack } });
+    console.error('Erreur non gérée :', error, info.componentStack);
   }
 
   render() {
