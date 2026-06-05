@@ -4,8 +4,12 @@ import { TabletHeader } from '@/components/layout/TabletHeader';
 import { CritTag } from '@/components/ui/CritTag';
 import { PhotoCapture } from '@/components/shared/PhotoCapture';
 import { ModaleQuitterSansValider } from '@/components/ui/ModaleQuitterSansValider';
+import { ModalePauseTicket } from '@/components/tickets/ModalePauseTicket';
 import { useChrono } from '@/hooks/useChrono';
 import { useIncident } from '@/hooks/queries/useTickets';
+import { useCloturerIntervention } from '@/hooks/mutations';
+import { useAuth } from '@/hooks/useAuth';
+import { exportInterventionPDF } from './exportInterventionPDF';
 import { formatChrono, cn } from '@/lib/utils';
 import type { Criticite } from '@/types/database';
 
@@ -28,6 +32,8 @@ interface PieceUtilisee {
 export function Intervention() {
   const { btNumero } = useParams();
   const navigate = useNavigate();
+  const { utilisateur } = useAuth();
+  const cloturer = useCloturerIntervention();
 
   const { data: incident, isLoading } = useIncident(btNumero);
 
@@ -91,6 +97,8 @@ export function Intervention() {
   const [photoApres, setPhotoApres] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
   const [showModale, setShowModale] = useState(false);
+  const [showPause, setShowPause] = useState(false);
+  const [erreur, setErreur] = useState<string | null>(null);
   const [initialized, setInitialized] = useState(false);
 
   if (incident && !initialized) {
@@ -98,6 +106,10 @@ export function Intervention() {
     setActions(existingActions);
     setPremierCoup(existingPremierCoup);
     setEtapeActive(currentEtape);
+    const photosAvant = (latestIntervention?.photos_avant ?? []) as string[];
+    const photosApres = (latestIntervention?.photos_apres ?? []) as string[];
+    if (photosAvant[0]) setPhotoAvant(photosAvant[0]);
+    if (photosApres[0]) setPhotoApres(photosApres[0]);
     setInitialized(true);
   }
 
@@ -121,6 +133,53 @@ export function Intervention() {
   const parcNom = (parc?.nom as string) ?? '';
   const zoneName = (zone?.nom as string) ?? '';
   const titre = incident?.titre as string ?? equipLibelle;
+
+  const handleCloturer = async () => {
+    setErreur(null);
+
+    if (!diagnostic.trim()) return setErreur('Le diagnostic est obligatoire.');
+    if (!photoAvant) return setErreur('La photo AVANT intervention est obligatoire.');
+    if (!actions.trim()) return setErreur('Les actions réalisées sont obligatoires.');
+    if (!photoApres) return setErreur('La photo APRES réparation est obligatoire.');
+    if (premierCoup === null) return setErreur('Indique si le problème a été résolu du 1er coup.');
+    if (!incident?.id) return setErreur('Incident introuvable.');
+
+    try {
+      await cloturer.mutateAsync({
+        incidentId: incident.id as string,
+        interventionId: (latestIntervention?.id as string) ?? null,
+        diagnostic,
+        actions,
+        resoluPremierCoup: premierCoup,
+        photoAvantUrl: photoAvant,
+        photoApresUrl: photoApres,
+      });
+
+      exportInterventionPDF({
+        numeroBT: btNumero ?? '',
+        titre,
+        equipementLibelle: equipLibelle,
+        equipementCode: equipCode,
+        parcNom,
+        zoneNom: zoneName,
+        criticite,
+        diagnostic,
+        actions,
+        resoluPremierCoup: premierCoup,
+        debut: debutISO,
+        fin: new Date().toISOString(),
+        technicienNom: utilisateur ? `${utilisateur.prenom} ${utilisateur.nom}` : '',
+        pieces: piecesExistantes.map((p) => ({ nom: p.nom, reference: p.reference, quantite: p.quantite })),
+        photoAvantUrl: photoAvant,
+        photoApresUrl: photoApres,
+      });
+
+      setDirty(false);
+      navigate(-1);
+    } catch (e) {
+      setErreur(e instanceof Error ? e.message : 'Erreur lors de la clôture.');
+    }
+  };
 
   if (isLoading) {
     return (
@@ -324,11 +383,24 @@ export function Intervention() {
           </div>
         </div>
 
-        <button className="bg-gradient-cta text-text py-4 rounded-2xl text-base font-bold mt-1">
-          Clôturer · générer PDF
+        {erreur && (
+          <div className="bg-red/10 border border-red/30 text-red text-[13px] rounded-xl p-3 text-center">
+            {erreur}
+          </div>
+        )}
+
+        <button
+          onClick={handleCloturer}
+          disabled={cloturer.isPending}
+          className="bg-gradient-cta text-text py-4 rounded-2xl text-base font-bold mt-1 disabled:opacity-60"
+        >
+          {cloturer.isPending ? 'Clôture en cours…' : 'Clôturer · générer PDF'}
         </button>
 
-        <button className="bg-transparent border border-white/10 text-dim py-3 rounded-[10px] text-xs">
+        <button
+          onClick={() => setShowPause(true)}
+          className="bg-transparent border border-white/10 text-dim py-3 rounded-[10px] text-xs"
+        >
           Mettre en pause · sauvegarder brouillon
         </button>
       </main>
@@ -338,6 +410,17 @@ export function Intervention() {
         onConfirmer={confirmerQuitter}
         onAnnuler={() => setShowModale(false)}
       />
+
+      {showPause && incident?.id && (
+        <ModalePauseTicket
+          incidentId={incident.id as string}
+          numeroBT={btNumero ?? ''}
+          onClose={() => {
+            setShowPause(false);
+            navigate(-1);
+          }}
+        />
+      )}
     </>
   );
 }
