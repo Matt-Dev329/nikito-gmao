@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import * as Sentry from '@sentry/react';
 import { AuthProvider } from './hooks/useAuth';
 import { ErrorBoundary } from './components/ui/ErrorBoundary';
+import { OfflineBanner } from './components/ui/OfflineBanner';
 import { App } from './App';
 import './styles/index.css';
 
@@ -35,6 +36,7 @@ createRoot(document.getElementById('root')!).render(
       <QueryClientProvider client={queryClient}>
         <BrowserRouter>
           <AuthProvider>
+            <OfflineBanner />
             <App />
           </AuthProvider>
         </BrowserRouter>

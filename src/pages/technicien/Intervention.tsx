@@ -9,6 +9,8 @@ import { useChrono } from '@/hooks/useChrono';
 import { useIncident } from '@/hooks/queries/useTickets';
 import { useCloturerIntervention } from '@/hooks/mutations';
 import { useAuth } from '@/hooks/useAuth';
+import { useOnlineStatus } from '@/hooks/useOnlineStatus';
+import { useDraftPersistence, useAutoSaveDraft } from '@/hooks/useDraftPersistence';
 import { exportInterventionPDF } from './exportInterventionPDF';
 import { formatChrono, cn } from '@/lib/utils';
 import type { Criticite } from '@/types/database';
@@ -101,17 +103,37 @@ export function Intervention() {
   const [erreur, setErreur] = useState<string | null>(null);
   const [initialized, setInitialized] = useState(false);
 
+  const online = useOnlineStatus();
+  const draftKey = btNumero ? `cloture:${btNumero}` : null;
+  const draft = useDraftPersistence<{
+    diagnostic: string;
+    actions: string;
+    premierCoup: boolean | null;
+    photoAvant: string | null;
+    photoApres: string | null;
+  }>(draftKey);
+
   if (incident && !initialized) {
-    setDiagnostic(existingDiagnostic);
-    setActions(existingActions);
-    setPremierCoup(existingPremierCoup);
-    setEtapeActive(currentEtape);
+    // Un brouillon local (saisie non encore envoyée) prime sur les données serveur.
+    const d = draft.restore();
     const photosAvant = (latestIntervention?.photos_avant ?? []) as string[];
     const photosApres = (latestIntervention?.photos_apres ?? []) as string[];
-    if (photosAvant[0]) setPhotoAvant(photosAvant[0]);
-    if (photosApres[0]) setPhotoApres(photosApres[0]);
+    setDiagnostic(d?.diagnostic ?? existingDiagnostic);
+    setActions(d?.actions ?? existingActions);
+    setPremierCoup(d?.premierCoup ?? existingPremierCoup);
+    setEtapeActive(currentEtape);
+    setPhotoAvant(d?.photoAvant ?? photosAvant[0] ?? null);
+    setPhotoApres(d?.photoApres ?? photosApres[0] ?? null);
+    if (d) setDirty(true);
     setInitialized(true);
   }
+
+  // Sauvegarde automatique de la saisie en cours (anti-perte réseau/veille).
+  useAutoSaveDraft(
+    draft.save,
+    { diagnostic, actions, premierCoup, photoAvant, photoApres },
+    initialized && dirty
+  );
 
   const handleBack = useCallback(() => {
     if (dirty) {
@@ -137,6 +159,9 @@ export function Intervention() {
   const handleCloturer = async () => {
     setErreur(null);
 
+    if (!online) {
+      return setErreur('Hors connexion : ta saisie est conservée sur l\'appareil. Réessaie dès le retour du réseau.');
+    }
     if (!diagnostic.trim()) return setErreur('Le diagnostic est obligatoire.');
     if (!photoAvant) return setErreur('La photo AVANT intervention est obligatoire.');
     if (!actions.trim()) return setErreur('Les actions réalisées sont obligatoires.');
@@ -175,6 +200,7 @@ export function Intervention() {
         photoApresPath: photoApres,
       });
 
+      draft.clear();
       setDirty(false);
       navigate(-1);
     } catch (e) {
@@ -392,10 +418,14 @@ export function Intervention() {
 
         <button
           onClick={handleCloturer}
-          disabled={cloturer.isPending}
+          disabled={cloturer.isPending || !online}
           className="bg-gradient-cta text-text py-4 rounded-2xl text-base font-bold mt-1 disabled:opacity-60"
         >
-          {cloturer.isPending ? 'Clôture en cours…' : 'Clôturer · générer PDF'}
+          {!online
+            ? 'Hors connexion — saisie conservée'
+            : cloturer.isPending
+            ? 'Clôture en cours…'
+            : 'Clôturer · générer PDF'}
         </button>
 
         <button
