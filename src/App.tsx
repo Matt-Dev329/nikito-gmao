@@ -41,7 +41,6 @@ const PageCertifications = page(() => import('@/pages/certifications/PageCertifi
 const VueManagerParc = page(() => import('@/pages/parc/VueManagerParc'), 'VueManagerParc');
 const PageProfil = page(() => import('@/pages/profil/PageProfil'), 'PageProfil');
 const MesSignalements = page(() => import('@/pages/_stubs'), 'MesSignalements');
-const PageTechStock = page(() => import('@/pages/_stubs'), 'PageTechStock');
 const PageAide = page(() => import('@/pages/aide/PageAide'), 'PageAide');
 const PageFormation = page(() => import('@/pages/formation/PageFormation'), 'PageFormation');
 const PageIAPredictive = page(() => import('@/pages/ia-predictive/PageIAPredictive'), 'PageIAPredictive');
@@ -141,7 +140,7 @@ export function App() {
           <Route path="operations/:btNumero" element={<Intervention />} />
           <Route path="controle-hebdo" element={<ControleHebdo />} />
           <Route path="controle-mensuel" element={<ControleMensuel />} />
-          <Route path="stock" element={<PageTechStock />} />
+          <Route path="stock" element={<PageStock />} />
         </Route>
 
         <Route path="/staff/controle-ouverture" element={<ControleOuverture />} />

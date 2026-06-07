@@ -13,15 +13,6 @@ export { VueManagerParc } from '@/pages/parc/VueManagerParc';
 
 export { ControleMensuel } from '@/pages/technicien/ControleMensuel';
 
-export function PageTechStock() {
-  return (
-    <div className="p-4 md:p-6 md:px-7">
-      <h1 className="text-[22px] font-semibold m-0">Stock</h1>
-      <div className="text-[13px] text-dim mt-1">Vue stock terrain - bientot disponible</div>
-    </div>
-  );
-}
-
 export function MesSignalements() {
   const navigate = useNavigate();
   return (
