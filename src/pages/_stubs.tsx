@@ -1,5 +1,3 @@
-import { useNavigate } from 'react-router-dom';
-
 export { PageEquipements } from '@/pages/equipements/PageEquipements';
 export { PageStock } from '@/pages/stock/PageStock';
 export { PageBibliotheque } from '@/pages/bibliotheque/PageBibliotheque';
@@ -12,15 +10,3 @@ export { PageProfil } from '@/pages/profil/PageProfil';
 export { VueManagerParc } from '@/pages/parc/VueManagerParc';
 
 export { ControleMensuel } from '@/pages/technicien/ControleMensuel';
-
-export function MesSignalements() {
-  const navigate = useNavigate();
-  return (
-    <div className="p-4 md:p-6 md:px-7">
-      <button onClick={() => navigate(-1)} className="text-nikito-cyan text-sm mb-3">
-        &lsaquo; Retour
-      </button>
-      <h1 className="text-[22px] font-semibold m-0">Mes signalements du jour</h1>
-    </div>
-  );
-}
