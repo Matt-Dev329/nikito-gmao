@@ -6,6 +6,8 @@ import { ModaleSignalerV2 } from '@/components/forms/ModaleSignalerV2';
 import { SelectionParc } from '@/components/controles/SelectionParc';
 import { BoutonRetourGmao } from '@/components/controles/BoutonRetourGmao';
 import { useAuth } from '@/hooks/useAuth';
+import { useOnlineStatus } from '@/hooks/useOnlineStatus';
+import { useDraftPersistence, useAutoSaveDraft } from '@/hooks/useDraftPersistence';
 import { useParcs } from '@/hooks/queries/useReferentiel';
 import { usePointsControle } from '@/hooks/queries/useControles';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -126,6 +128,31 @@ export function ControleOuverture() {
   const [validated, setValidated] = useState(false);
   const [erreurValidation, setErreurValidation] = useState<string | null>(null);
 
+  const online = useOnlineStatus();
+  const draftKey = parcId
+    ? `controle-ouverture:${parcId}:${new Date().toISOString().slice(0, 10)}`
+    : null;
+  const draft = useDraftPersistence<{
+    etats: Record<string, { etat: EtatControleItem; saisiPar: string }>;
+    photoUrls: Record<string, string>;
+    commentaires: Record<string, string>;
+  }>(draftKey);
+  const [draftLoaded, setDraftLoaded] = useState(false);
+
+  if (parcId && !draftLoaded) {
+    const d = draft.restore();
+    if (d) {
+      setEtats(d.etats ?? {});
+      setPhotoUrls(d.photoUrls ?? {});
+      setCommentaires(d.commentaires ?? {});
+      setDirty(true);
+    }
+    setDraftLoaded(true);
+  }
+
+  // Sauvegarde automatique des points saisis (anti-perte réseau/veille terrain).
+  useAutoSaveDraft(draft.save, { etats, photoUrls, commentaires }, dirty);
+
   const zones: ZoneVue[] = useMemo(() => {
     if (!pointsBruts?.length) return [];
     const map = new Map<string, { code: string; label: string; count: number }>();
@@ -203,6 +230,11 @@ export function ControleOuverture() {
     if (!parcId || !utilisateur || !utilisateur.id || !pointsBruts) return;
     setErreurValidation(null);
 
+    if (!online) {
+      setErreurValidation('Hors connexion : ta saisie est conservée sur l\'appareil. Valide dès le retour du réseau.');
+      return;
+    }
+
     const datePlanifiee = new Date().toISOString().slice(0, 10);
 
     const items = pointsBruts
@@ -224,6 +256,7 @@ export function ControleOuverture() {
         realise_par_role: utilisateur.role_code,
         items,
       });
+      draft.clear();
       setValidated(true);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Erreur inconnue';
