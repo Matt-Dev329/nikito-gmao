@@ -11,6 +11,7 @@ import { useCloturerIntervention } from '@/hooks/mutations';
 import { useAuth } from '@/hooks/useAuth';
 import { useOnlineStatus } from '@/hooks/useOnlineStatus';
 import { useDraftPersistence, useAutoSaveDraft } from '@/hooks/useDraftPersistence';
+import { useToast } from '@/components/ui/ToastProvider';
 import { exportInterventionPDF } from './exportInterventionPDF';
 import { formatChrono, cn } from '@/lib/utils';
 import type { Criticite } from '@/types/database';
@@ -104,6 +105,7 @@ export function Intervention() {
   const [initialized, setInitialized] = useState(false);
 
   const online = useOnlineStatus();
+  const toast = useToast();
   const draftKey = btNumero ? `cloture:${btNumero}` : null;
   const draft = useDraftPersistence<{
     diagnostic: string;
@@ -202,6 +204,7 @@ export function Intervention() {
 
       draft.clear();
       setDirty(false);
+      toast.success(`Intervention ${btNumero ?? ''} clôturée — PDF généré.`);
       navigate(-1);
     } catch (e) {
       setErreur(e instanceof Error ? e.message : 'Erreur lors de la clôture.');

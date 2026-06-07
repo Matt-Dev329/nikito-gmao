@@ -6,6 +6,7 @@ import * as Sentry from '@sentry/react';
 import { AuthProvider } from './hooks/useAuth';
 import { ErrorBoundary } from './components/ui/ErrorBoundary';
 import { OfflineBanner } from './components/ui/OfflineBanner';
+import { ToastProvider } from './components/ui/ToastProvider';
 import { App } from './App';
 import './styles/index.css';
 
@@ -37,7 +38,9 @@ createRoot(document.getElementById('root')!).render(
         <BrowserRouter>
           <AuthProvider>
             <OfflineBanner />
-            <App />
+            <ToastProvider>
+              <App />
+            </ToastProvider>
           </AuthProvider>
         </BrowserRouter>
       </QueryClientProvider>
