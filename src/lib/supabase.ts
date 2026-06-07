@@ -1,7 +1,8 @@
 import { createClient } from '@supabase/supabase-js';
 // Types générés disponibles dans '@/types/database.generated' (Database).
-// Adoption incrémentale : brancher createClient<Database> une fois les
-// incompatibilités nullable/enum résolues fichier par fichier.
+// Adoption incrémentale (cf. axe « types ») : brancher createClient<Database>
+// déclenche ~37 corrections sur 14 fichiers (nullable/enum, null vs undefined
+// dans les RPC, payloads insert/update) à traiter par lots testés.
 
 export const supabaseUrl = (import.meta as unknown as { env: Record<string, string> }).env.VITE_SUPABASE_URL;
 export const supabaseAnonKey = (import.meta as unknown as { env: Record<string, string> }).env.VITE_SUPABASE_ANON_KEY;
