@@ -88,9 +88,6 @@ export function useAnalyseIA() {
     const apiUrl = `${supabaseUrl}/functions/v1/analyse-ia-predictive`;
 
     try {
-      console.log('[IA] Appel edge function:', apiUrl);
-      console.log('[IA] Equipements:', data.equipements.length, '| Parcs:', data.parcs.length);
-      console.log('[IA] Taille payload:', JSON.stringify(data).length, 'chars');
 
       const response = await fetch(apiUrl, {
         method: 'POST',
@@ -101,10 +98,8 @@ export function useAnalyseIA() {
         body: JSON.stringify({ maintenance_data: data }),
       });
 
-      console.log('[IA] Response status:', response.status, response.statusText);
 
       const rawText = await response.text();
-      console.log('[IA] Response raw (500 chars):', rawText.substring(0, 500));
 
       let responseData: Record<string, unknown>;
       try {
@@ -113,7 +108,6 @@ export function useAnalyseIA() {
         throw new Error(`Reponse non-JSON (${response.status}): ${rawText.substring(0, 200)}`);
       }
 
-      console.log('[IA] Response body:', JSON.stringify(responseData).substring(0, 500));
 
       if (!response.ok) {
         throw new Error(`Edge function error ${response.status}: ${JSON.stringify(responseData)}`);

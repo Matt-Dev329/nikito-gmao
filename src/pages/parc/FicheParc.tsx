@@ -159,12 +159,9 @@ function OngletConfiguration({ parc }: { parc: Parc | null }) {
 }
 
 function OngletControles({ parcId }: { parcId: string | undefined }) {
-  const { data: attractions, isLoading: loadingAttr, error } = useAttractionsParc(parcId);
+  const { data: attractions, isLoading: loadingAttr } = useAttractionsParc(parcId);
   const { data: points, isLoading: loadingPts } = usePointsPourParc(parcId);
 
-  console.log('[Debug] attractions data:', attractions);
-  console.log('[Debug] attractions error:', error);
-  console.log('[Debug] attractions isLoading:', loadingAttr);
 
   const statsParType = useMemo(() => {
     if (!points) return { quotidien: 0, hebdo: 0, mensuel: 0 };
