@@ -8,6 +8,7 @@ import { RecommandationsIA } from '@/components/ia-predictive/RecommandationsIA'
 import { KpiPredictionsCards } from '@/components/ia-predictive/KpiPredictionsCards';
 import { ModaleEnvoyerRapportIA } from '@/components/ia-predictive/ModaleEnvoyerRapportIA';
 import { exportIAPredictivePDF } from '@/pages/ia-predictive/exportIAPDF';
+import { useToast } from '@/components/ui/ToastProvider';
 import { supabase } from '@/lib/supabase';
 import { useFormationFilter } from '@/hooks/useFormation';
 import { SignalerInlineButton } from '@/components/shared/SignalerInlineButton';
@@ -66,6 +67,7 @@ export function PageIAPredictive() {
   const { data: maintenanceData, isLoading: dataLoading } = useMaintenanceData();
   const { analyse, loading: iaLoading, error, lastAnalyse, lancer } = useAnalyseIA();
   const { estFormation } = useFormationFilter();
+  const toast = useToast();
   const [modaleEmail, setModaleEmail] = useState(false);
 
   useEffect(() => {
@@ -89,14 +91,16 @@ export function PageIAPredictive() {
       prochaine_echeance: eq.date_panne_estimee || new Date(Date.now() + 14 * 86400000).toISOString().slice(0, 10),
       est_formation: estFormation,
     });
-    if (!err) {
-      alert('Maintenance preventive creee avec succes.');
+    if (err) {
+      toast.error('Échec de la création de la maintenance préventive.');
+    } else {
+      toast.success('Maintenance préventive créée avec succès.');
     }
-  }, [estFormation]);
+  }, [estFormation, toast]);
 
   const handleAppliquerReco = useCallback(async (rec: RecommandationIA) => {
-    alert(`Recommandation notee : ${rec.titre}\n\nCreez manuellement la tache dans Preventif.`);
-  }, []);
+    toast.info(`Recommandation notée : ${rec.titre}. Crée la tâche dans Préventif.`);
+  }, [toast]);
 
   const isLoading = dataLoading || iaLoading;
   const noData = maintenanceData && maintenanceData.equipements.length === 0;

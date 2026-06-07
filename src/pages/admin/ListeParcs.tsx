@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { useConfig, updateConfig, useInvalidateConfig } from '@/hooks/useConfig';
 import { useActiverProductionParc, useDesactiverProductionParc } from '@/hooks/queries/useReferentiel';
 import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/components/ui/ToastProvider';
 import { useFormationFilter } from '@/hooks/useFormation';
 import { cn } from '@/lib/utils';
 
@@ -427,20 +428,6 @@ function ConfigLancement() {
   );
 }
 
-// -- Toast notification --
-function Toast({ message, onClose }: { message: string; onClose: () => void }) {
-  return (
-    <div className="fixed bottom-6 right-6 z-50 bg-green/90 text-white rounded-xl px-5 py-3.5 text-[13px] font-medium shadow-2xl flex items-center gap-3 animate-[slideUp_0.3s_ease-out]">
-      {message}
-      <button onClick={onClose} className="text-white/60 hover:text-white ml-2">
-        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-          <path d="M1 1l12 12M13 1L1 13" />
-        </svg>
-      </button>
-    </div>
-  );
-}
-
 // -- Main page --
 export function ListeParcs() {
   const navigate = useNavigate();
@@ -453,7 +440,7 @@ export function ListeParcs() {
 
   const [modaleActiver, setModaleActiver] = useState<ParcProduction | null>(null);
   const [modaleDesactiver, setModaleDesactiver] = useState<ParcProduction | null>(null);
-  const [toast, setToast] = useState<string | null>(null);
+  const toast = useToast();
 
   const stats = useMemo(() => {
     if (!parcs) return { total: 0, actifs: 0, enProd: 0, preLancement: 0 };
@@ -469,18 +456,16 @@ export function ListeParcs() {
   const handleActiver = async () => {
     if (!modaleActiver || !utilisateur) return;
     await activerMut.mutateAsync({ parcId: modaleActiver.id, utilisateurId: utilisateur.id });
-    setToast(`${modaleActiver.nom} est officiellement en production !`);
+    toast.success(`${modaleActiver.nom} est officiellement en production !`);
     setModaleActiver(null);
-    setTimeout(() => setToast(null), 5000);
   };
 
   const handleDesactiver = async (motif: string) => {
     if (!modaleDesactiver) return;
     console.log(`[AUDIT] Desactivation production ${modaleDesactiver.code} - Motif: ${motif} - Par: ${utilisateur?.id}`);
     await desactiverMut.mutateAsync({ parcId: modaleDesactiver.id });
-    setToast(`${modaleDesactiver.nom} est repasse en pre-lancement.`);
+    toast.success(`${modaleDesactiver.nom} est repasse en pre-lancement.`);
     setModaleDesactiver(null);
-    setTimeout(() => setToast(null), 5000);
   };
 
   return (
@@ -585,7 +570,6 @@ export function ListeParcs() {
         />
       )}
 
-      {toast && <Toast message={toast} onClose={() => setToast(null)} />}
     </div>
   );
 }
