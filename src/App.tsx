@@ -40,7 +40,7 @@ const PagePreventif = page(() => import('@/pages/preventif/PagePreventif'), 'Pag
 const PageCertifications = page(() => import('@/pages/certifications/PageCertifications'), 'PageCertifications');
 const VueManagerParc = page(() => import('@/pages/parc/VueManagerParc'), 'VueManagerParc');
 const PageProfil = page(() => import('@/pages/profil/PageProfil'), 'PageProfil');
-const MesSignalements = page(() => import('@/pages/_stubs'), 'MesSignalements');
+const MesSignalements = page(() => import('@/pages/staff/MesSignalements'), 'MesSignalements');
 const PageAide = page(() => import('@/pages/aide/PageAide'), 'PageAide');
 const PageFormation = page(() => import('@/pages/formation/PageFormation'), 'PageFormation');
 const PageIAPredictive = page(() => import('@/pages/ia-predictive/PageIAPredictive'), 'PageIAPredictive');
