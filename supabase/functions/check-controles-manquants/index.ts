@@ -86,7 +86,7 @@ function buildHtml(parcsManquants: ParcManquant[], date: string): string {
 
               <tr>
                 <td style="padding-top:24px;text-align:center;">
-                  <a href="https://alba.nikito.tech/gmao" style="display:inline-block;background-color:#5DE5FF;color:#0B0B2E;font-size:13px;font-weight:700;text-decoration:none;padding:12px 28px;border-radius:10px;">Ouvrir ALBA</a>
+                  <a href="https://nikito.tech/gmao" style="display:inline-block;background-color:#5DE5FF;color:#0B0B2E;font-size:13px;font-weight:700;text-decoration:none;padding:12px 28px;border-radius:10px;">Ouvrir ALBA</a>
                 </td>
               </tr>
 
