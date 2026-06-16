@@ -79,6 +79,7 @@ const sections: { titre: string; items: NavItem[] }[] = [
     items: [
       { to: '/staff/controle-ouverture', label: 'Contrôle d\'ouverture', featureCode: 'controles', badgeKey: 'controlesManquants', badgeTone: 'red', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'staff_operationnel', 'admin_it'] },
       { to: '/tech/controle-hebdo', label: 'Contrôle hebdo', featureCode: 'controles', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'technicien', 'admin_it'] },
+      { to: '/staff/controle-hebdo', label: 'Contrôle hebdo', featureCode: 'controles', roles: ['staff_operationnel', 'manager_parc'] },
       { to: '/tech/controle-mensuel', label: 'Contrôle mensuel', featureCode: 'controles', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'technicien', 'admin_it'] },
     ],
   },
