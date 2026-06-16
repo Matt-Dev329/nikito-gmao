@@ -9,7 +9,6 @@ import { useChrono } from '@/hooks/useChrono';
 import { useIncident } from '@/hooks/queries/useTickets';
 import { useCloturerIntervention } from '@/hooks/mutations';
 import { useAuth } from '@/hooks/useAuth';
-import { useOnlineStatus } from '@/hooks/useOnlineStatus';
 import { useDraftPersistence, useAutoSaveDraft } from '@/hooks/useDraftPersistence';
 import { useToast } from '@/components/ui/ToastProvider';
 import { exportInterventionPDF } from './exportInterventionPDF';
@@ -104,7 +103,6 @@ export function Intervention() {
   const [erreur, setErreur] = useState<string | null>(null);
   const [initialized, setInitialized] = useState(false);
 
-  const online = useOnlineStatus();
   const toast = useToast();
   const draftKey = btNumero ? `cloture:${btNumero}` : null;
   const draft = useDraftPersistence<{
@@ -161,9 +159,6 @@ export function Intervention() {
   const handleCloturer = async () => {
     setErreur(null);
 
-    if (!online) {
-      return setErreur('Hors connexion : ta saisie est conservée sur l\'appareil. Réessaie dès le retour du réseau.');
-    }
     if (!diagnostic.trim()) return setErreur('Le diagnostic est obligatoire.');
     if (!photoAvant) return setErreur('La photo AVANT intervention est obligatoire.');
     if (!actions.trim()) return setErreur('Les actions réalisées sont obligatoires.');
@@ -207,7 +202,13 @@ export function Intervention() {
       toast.success(`Intervention ${btNumero ?? ''} clôturée — PDF généré.`);
       navigate(-1);
     } catch (e) {
-      setErreur(e instanceof Error ? e.message : 'Erreur lors de la clôture.');
+      const msg = e instanceof Error ? e.message : '';
+      const reseau = !navigator.onLine || /fetch|network|réseau|reseau/i.test(msg);
+      setErreur(
+        reseau
+          ? 'Connexion instable — ta saisie est conservée, réessaie dans un instant.'
+          : msg || 'Erreur lors de la clôture.'
+      );
     }
   };
 
@@ -421,14 +422,10 @@ export function Intervention() {
 
         <button
           onClick={handleCloturer}
-          disabled={cloturer.isPending || !online}
+          disabled={cloturer.isPending}
           className="bg-gradient-cta text-text py-4 rounded-2xl text-base font-bold mt-1 disabled:opacity-60"
         >
-          {!online
-            ? 'Hors connexion — saisie conservée'
-            : cloturer.isPending
-            ? 'Clôture en cours…'
-            : 'Clôturer · générer PDF'}
+          {cloturer.isPending ? 'Clôture en cours…' : 'Clôturer · générer PDF'}
         </button>
 
         <button
