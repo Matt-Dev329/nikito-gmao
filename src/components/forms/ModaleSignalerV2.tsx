@@ -2,7 +2,6 @@ import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { cn } from '@/lib/utils';
 import { supabase, supabaseUrl, supabaseAnonKey } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
-import { useOnlineStatus } from '@/hooks/useOnlineStatus';
 import { uploadPhotoControle } from '@/lib/uploadPhotoControle';
 import type { RoleUtilisateur } from '@/types/database';
 
@@ -146,7 +145,6 @@ export function ModaleSignalerV2({ open, onClose, via, parcId: propParcId, modeE
   const [resultPriorite, setResultPriorite] = useState<string | null>(null);
   const [resultValidation, setResultValidation] = useState<string | null>(null);
   const [recherche, setRecherche] = useState('');
-  const online = useOnlineStatus();
 
   useEffect(() => {
     if (!open) return;
@@ -214,10 +212,6 @@ export function ModaleSignalerV2({ open, onClose, via, parcId: propParcId, modeE
 
   const handleSubmit = useCallback(async () => {
     if (!parcId || !state.categorie || !state.photoUrl || !userCtx) return;
-    if (!online) {
-      setSubmitError('Hors connexion — réessaie dès le retour du réseau. Ta saisie est conservée.');
-      return;
-    }
     setSubmitting(true);
     setSubmitError(null);
 
@@ -262,7 +256,7 @@ export function ModaleSignalerV2({ open, onClose, via, parcId: propParcId, modeE
       setSubmitError('Erreur reseau -- verifiez votre connexion');
     }
     setSubmitting(false);
-  }, [parcId, state, userCtx, via, modeExpert, online]);
+  }, [parcId, state, userCtx, via, modeExpert]);
 
   if (!open) return null;
 

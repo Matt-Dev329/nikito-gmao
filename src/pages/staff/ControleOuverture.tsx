@@ -6,7 +6,6 @@ import { ModaleSignalerV2 } from '@/components/forms/ModaleSignalerV2';
 import { SelectionParc } from '@/components/controles/SelectionParc';
 import { BoutonRetourGmao } from '@/components/controles/BoutonRetourGmao';
 import { useAuth } from '@/hooks/useAuth';
-import { useOnlineStatus } from '@/hooks/useOnlineStatus';
 import { useDraftPersistence, useAutoSaveDraft } from '@/hooks/useDraftPersistence';
 import { useParcs } from '@/hooks/queries/useReferentiel';
 import { usePointsControle } from '@/hooks/queries/useControles';
@@ -141,7 +140,6 @@ export function ControleOuverture({ typeControle = 'quotidien' }: { typeControle
   const [validated, setValidated] = useState(false);
   const [erreurValidation, setErreurValidation] = useState<string | null>(null);
 
-  const online = useOnlineStatus();
   const draftKey = parcId
     ? `controle-${typeControle}:${parcId}:${new Date().toISOString().slice(0, 10)}`
     : null;
@@ -242,11 +240,6 @@ export function ControleOuverture({ typeControle = 'quotidien' }: { typeControle
   const handleValider = async () => {
     if (!parcId || !utilisateur || !utilisateur.id || !pointsBruts) return;
     setErreurValidation(null);
-
-    if (!online) {
-      setErreurValidation('Hors connexion : ta saisie est conservée sur l\'appareil. Valide dès le retour du réseau.');
-      return;
-    }
 
     const datePlanifiee = new Date().toISOString().slice(0, 10);
 
