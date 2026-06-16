@@ -12,7 +12,7 @@ import { useParcs } from '@/hooks/queries/useReferentiel';
 import { usePointsControle } from '@/hooks/queries/useControles';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
-import type { EtatControleItem } from '@/types/database';
+import type { EtatControleItem, TypeControle } from '@/types/database';
 
 function formatDuree(sec: number): string {
   const h = Math.floor(sec / 3600);
@@ -46,7 +46,20 @@ function getStaffUserId(u: StaffSessionData['utilisateur']): string {
   return u.utilisateur_id ?? u.id ?? '';
 }
 
-export function ControleOuverture() {
+const TYPE_LABELS: Record<TypeControle, {
+  titre: string;
+  court: string;
+  valide: string;
+  autreRoute: string;
+  autreLabel: string;
+}> = {
+  quotidien: { titre: "Controle d'ouverture", court: 'ouverture', valide: 'Controle ouverture valide', autreRoute: '/staff/controle-hebdo', autreLabel: 'Passer en hebdo' },
+  hebdo: { titre: 'Controle hebdomadaire', court: 'hebdo', valide: 'Controle hebdo valide', autreRoute: '/staff/controle-ouverture', autreLabel: "Passer en ouverture" },
+  mensuel: { titre: 'Controle mensuel', court: 'mensuel', valide: 'Controle mensuel valide', autreRoute: '/staff/controle-ouverture', autreLabel: 'Passer en ouverture' },
+};
+
+export function ControleOuverture({ typeControle = 'quotidien' }: { typeControle?: TypeControle } = {}) {
+  const L = TYPE_LABELS[typeControle];
   const navigate = useNavigate();
   const { utilisateur: authUtilisateur } = useAuth();
   const { data: allParcs } = useParcs();
@@ -74,7 +87,7 @@ export function ControleOuverture() {
   const parcId = parcChoisi?.id;
   const parc = parcChoisi ?? allParcs?.find((p) => p.id === parcId);
 
-  const { data: pointsBruts, isLoading } = usePointsControle(parcId, 'quotidien');
+  const { data: pointsBruts, isLoading } = usePointsControle(parcId, typeControle);
   const qc = useQueryClient();
   const validerMutation = useMutation({
     mutationFn: async (params: {
@@ -130,7 +143,7 @@ export function ControleOuverture() {
 
   const online = useOnlineStatus();
   const draftKey = parcId
-    ? `controle-ouverture:${parcId}:${new Date().toISOString().slice(0, 10)}`
+    ? `controle-${typeControle}:${parcId}:${new Date().toISOString().slice(0, 10)}`
     : null;
   const draft = useDraftPersistence<{
     etats: Record<string, { etat: EtatControleItem; saisiPar: string }>;
@@ -249,7 +262,7 @@ export function ControleOuverture() {
     try {
       await validerMutation.mutateAsync({
         parc_id: parcId,
-        type: 'quotidien',
+        type: typeControle,
         date_planifiee: datePlanifiee,
         realise_par_id: utilisateur.id,
         realise_par_nom: `${utilisateur.prenom} ${utilisateur.nom}`,
@@ -273,7 +286,7 @@ export function ControleOuverture() {
   if (!parcChoisi) {
     return (
       <SelectionParc
-        titre="Controle d'ouverture"
+        titre={L.titre}
         onSelect={handleSelectParc}
       />
     );
@@ -299,7 +312,7 @@ export function ControleOuverture() {
     return (
       <div className="p-6">
         <div className="text-dim text-sm">
-          Aucun point de controle quotidien configure pour ce parc.
+          Aucun point de controle {L.court} configure pour ce parc.
         </div>
         <button
           onClick={() => navigate(retourDestination)}
@@ -315,7 +328,7 @@ export function ControleOuverture() {
     return (
       <div className="p-6 text-center">
         <div className="text-4xl mb-3">OK</div>
-        <div className="text-lg font-semibold mb-1">Controle ouverture valide</div>
+        <div className="text-lg font-semibold mb-1">{L.valide}</div>
         <div className="text-dim text-sm mb-4">{totalFaits} points controles - {today}</div>
         <button
           onClick={() => navigate(retourDestination)}
@@ -330,10 +343,10 @@ export function ControleOuverture() {
   return (
     <>
       <ControleEcran
-        type="quotidien"
+        type={typeControle}
         parcCode={parc?.code ?? ''}
         parcNom={parc?.nom ?? ''}
-        contexte={`${today} - ouverture`}
+        contexte={`${today} - ${L.court}`}
         chrono={formatDuree(elapsed)}
         zones={zones}
         pointsZoneActive={pointsZoneActive}
@@ -358,6 +371,12 @@ export function ControleOuverture() {
         }
         headerRightSlot={
           <div className="flex items-center gap-1.5">
+            <button
+              onClick={() => { setParcChoisi(null); navigate(L.autreRoute); }}
+              className="text-[11px] text-nikito-cyan hover:underline whitespace-nowrap"
+            >
+              {L.autreLabel}
+            </button>
             {signalBouton}
             <BoutonRetourGmao />
           </div>

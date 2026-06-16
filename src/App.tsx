@@ -21,6 +21,11 @@ const ControleHebdo = page(() => import('@/pages/technicien/ControleHebdo'), 'Co
 const ControleMensuel = page(() => import('@/pages/technicien/ControleMensuel'), 'ControleMensuel');
 const LoginStaff = page(() => import('@/pages/staff/LoginStaff'), 'LoginStaff');
 const ControleOuverture = page(() => import('@/pages/staff/ControleOuverture'), 'ControleOuverture');
+const ControleHebdoStaff = lazy(() =>
+  import('@/pages/staff/ControleOuverture').then((m) => ({
+    default: () => <m.ControleOuverture typeControle="hebdo" />,
+  })),
+);
 const ListeParcs = page(() => import('@/pages/admin/ListeParcs'), 'ListeParcs');
 const CreationParcWizard = page(() => import('@/pages/admin/CreationParcWizard'), 'CreationParcWizard');
 const UtilisateursAdmin = page(() => import('@/pages/admin/UtilisateursAdmin'), 'UtilisateursAdmin');
@@ -144,6 +149,7 @@ export function App() {
         </Route>
 
         <Route path="/staff/controle-ouverture" element={<ControleOuverture />} />
+        <Route path="/staff/controle-hebdo" element={<ControleHebdoStaff />} />
         <Route path="/staff/mes-signalements" element={<MesSignalements />} />
 
         <Route path="*" element={<Navigate to="/" replace />} />
