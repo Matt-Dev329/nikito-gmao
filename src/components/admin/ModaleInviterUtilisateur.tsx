@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { useParcs } from '@/hooks/queries/useReferentiel';
 import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/components/ui/ToastProvider';
 import { supabase } from '@/lib/supabase';
 import { roleLabels } from '@/lib/tokens';
 import type { RoleUtilisateur } from '@/types/database';
@@ -35,6 +36,7 @@ export function ModaleInviterUtilisateur({
 }: ModaleInviterProps) {
   const { utilisateur } = useAuth();
   const { data: parcs } = useParcs();
+  const toast = useToast();
   const [authMode, setAuthMode] = useState<AuthMode>('email_password');
   const [email, setEmail] = useState('');
   const [prenom, setPrenom] = useState('');
@@ -70,13 +72,14 @@ export function ModaleInviterUtilisateur({
     if (!peutEnvoyer || !roleChoisi || !utilisateur) return;
     setSubmitting(true);
 
-    const { data: role } = await supabase
+    const { data: role, error: roleErr } = await supabase
       .from('roles')
       .select('id')
       .eq('code', roleChoisi)
       .single();
 
-    if (!role) {
+    if (roleErr || !role) {
+      toast.error("Rôle introuvable. Réessaie ou contacte l'IT.");
       setSubmitting(false);
       return;
     }
@@ -103,15 +106,27 @@ export function ModaleInviterUtilisateur({
         .single();
 
       if (userErr || !newUser) {
+        const isDuplicate =
+          userErr?.code === '23505' || /duplicate|unique/i.test(userErr?.message ?? '');
+        toast.error(
+          isDuplicate
+            ? 'Cet email est déjà utilisé par un autre compte. Laisse-le vide ou utilise-en un autre.'
+            : `Impossible de créer le compte : ${userErr?.message ?? 'erreur inconnue'}`
+        );
         setSubmitting(false);
         return;
       }
 
       for (const parcId of parcsChoisis) {
-        await supabase.from('parcs_utilisateurs').upsert(
+        const { error: lienErr } = await supabase.from('parcs_utilisateurs').upsert(
           { utilisateur_id: newUser.id, parc_id: parcId },
           { onConflict: 'utilisateur_id,parc_id' }
         );
+        if (lienErr) {
+          toast.error(`Compte créé mais l'affectation au parc a échoué : ${lienErr.message}`);
+          setSubmitting(false);
+          return;
+        }
       }
 
       const { data: pinData, error: pinErr } = await supabase.functions.invoke('hash-pin', {
@@ -119,6 +134,9 @@ export function ModaleInviterUtilisateur({
       });
 
       if (pinErr || !pinData?.success) {
+        toast.error(
+          `Compte créé mais la génération du PIN a échoué : ${pinErr?.message ?? pinData?.error ?? 'erreur inconnue'}`
+        );
         setSubmitting(false);
         return;
       }
@@ -156,6 +174,12 @@ export function ModaleInviterUtilisateur({
     });
 
     if (error) {
+      const isDuplicate = error.code === '23505' || /duplicate|unique/i.test(error.message ?? '');
+      toast.error(
+        isDuplicate
+          ? 'Une invitation existe déjà pour cet email.'
+          : `Impossible de créer l'invitation : ${error.message}`
+      );
       setSubmitting(false);
       return;
     }
