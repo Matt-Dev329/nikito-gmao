@@ -129,13 +129,13 @@ export function ModaleInviterUtilisateur({
         }
       }
 
-      const { data: pinData, error: pinErr } = await supabase.functions.invoke('hash-pin', {
-        body: { action: 'generate', utilisateur_id: newUser.id },
+      const { data: pinClair, error: pinErr } = await supabase.rpc('generer_pin_staff', {
+        p_utilisateur_id: newUser.id,
       });
 
-      if (pinErr || !pinData?.success) {
+      if (pinErr || !pinClair) {
         toast.error(
-          `Compte créé mais la génération du PIN a échoué : ${pinErr?.message ?? pinData?.error ?? 'erreur inconnue'}`
+          `Compte créé mais la génération du PIN a échoué : ${pinErr?.message ?? 'erreur inconnue'}`
         );
         setSubmitting(false);
         return;
@@ -156,7 +156,7 @@ export function ModaleInviterUtilisateur({
         notes: `Staff PIN créé par ${utilisateur.prenom} ${utilisateur.nom}`,
       });
 
-      setPinGenere(pinData.pin_clair);
+      setPinGenere(pinClair);
       setSubmitting(false);
       return;
     }
