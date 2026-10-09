@@ -5,6 +5,7 @@ import { CritTag } from '@/components/ui/CritTag';
 import { PhotoCapture } from '@/components/shared/PhotoCapture';
 import { ModaleQuitterSansValider } from '@/components/ui/ModaleQuitterSansValider';
 import { ModalePauseTicket } from '@/components/tickets/ModalePauseTicket';
+import { ModaleAjouterPiece } from '@/components/shared/ModaleAjouterPiece';
 import { useChrono } from '@/hooks/useChrono';
 import { useIncident } from '@/hooks/queries/useTickets';
 import { useCloturerIntervention } from '@/hooks/mutations';
@@ -28,6 +29,15 @@ interface PieceUtilisee {
   nom: string;
   reference: string;
   stockApres: number;
+  quantite: number;
+}
+
+/** Pièce ajoutée pendant la saisie, sortie du stock à la clôture */
+interface PieceAjoutee {
+  pieceId: string;
+  nom: string;
+  reference: string;
+  stock: number;
   quantite: number;
 }
 
@@ -102,6 +112,8 @@ export function Intervention() {
   const [showPause, setShowPause] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
   const [initialized, setInitialized] = useState(false);
+  const [piecesAjoutees, setPiecesAjoutees] = useState<PieceAjoutee[]>([]);
+  const [showAjoutPiece, setShowAjoutPiece] = useState(false);
 
   const toast = useToast();
   const draftKey = btNumero ? `cloture:${btNumero}` : null;
@@ -111,6 +123,7 @@ export function Intervention() {
     premierCoup: boolean | null;
     photoAvant: string | null;
     photoApres: string | null;
+    piecesAjoutees?: PieceAjoutee[];
   }>(draftKey);
 
   if (incident && !initialized) {
@@ -124,6 +137,7 @@ export function Intervention() {
     setEtapeActive(currentEtape);
     setPhotoAvant(d?.photoAvant ?? photosAvant[0] ?? null);
     setPhotoApres(d?.photoApres ?? photosApres[0] ?? null);
+    setPiecesAjoutees(d?.piecesAjoutees ?? []);
     if (d) setDirty(true);
     setInitialized(true);
   }
@@ -131,7 +145,7 @@ export function Intervention() {
   // Sauvegarde automatique de la saisie en cours (anti-perte réseau/veille).
   useAutoSaveDraft(
     draft.save,
-    { diagnostic, actions, premierCoup, photoAvant, photoApres },
+    { diagnostic, actions, premierCoup, photoAvant, photoApres, piecesAjoutees },
     initialized && dirty
   );
 
@@ -175,6 +189,7 @@ export function Intervention() {
         resoluPremierCoup: premierCoup,
         photoAvantUrl: photoAvant,
         photoApresUrl: photoApres,
+        pieces: piecesAjoutees.map((p) => ({ pieceId: p.pieceId, quantite: p.quantite })),
       });
 
       await exportInterventionPDF({
@@ -191,7 +206,10 @@ export function Intervention() {
         debut: debutISO,
         fin: new Date().toISOString(),
         technicienNom: utilisateur ? `${utilisateur.prenom} ${utilisateur.nom}` : '',
-        pieces: piecesExistantes.map((p) => ({ nom: p.nom, reference: p.reference, quantite: p.quantite })),
+        pieces: [
+          ...piecesExistantes.map((p) => ({ nom: p.nom, reference: p.reference, quantite: p.quantite })),
+          ...piecesAjoutees.map((p) => ({ nom: p.nom, reference: p.reference, quantite: p.quantite })),
+        ],
         photoBucket: 'alba-interventions',
         photoAvantPath: photoAvant,
         photoApresPath: photoApres,
@@ -332,15 +350,41 @@ export function Intervention() {
         {/* Pièces */}
         <div className="bg-bg-card rounded-xl p-3.5 px-4">
           <div className="flex justify-between items-center mb-3">
-            <div className={cn('text-[13px] font-semibold', piecesExistantes.length > 0 ? 'text-green' : 'text-dim')}>
-              {piecesExistantes.length > 0 ? '✓' : '○'} Pièces utilisées
+            <div className={cn('text-[13px] font-semibold', piecesExistantes.length + piecesAjoutees.length > 0 ? 'text-green' : 'text-dim')}>
+              {piecesExistantes.length + piecesAjoutees.length > 0 ? '✓' : '○'} Pièces utilisées
             </div>
-            <button className="bg-transparent border border-nikito-cyan text-nikito-cyan px-2.5 py-1 rounded-md text-[11px]">
+            <button
+              onClick={() => setShowAjoutPiece(true)}
+              className="bg-transparent border border-nikito-cyan text-nikito-cyan px-2.5 py-1 rounded-md text-[11px] min-h-[32px]"
+            >
               + Ajouter
             </button>
           </div>
-          {piecesExistantes.length > 0 ? (
+          {piecesExistantes.length + piecesAjoutees.length > 0 ? (
             <div className="flex flex-col gap-2">
+              {piecesAjoutees.map((p) => (
+                <div key={p.pieceId} className="bg-bg-deep p-2.5 px-3.5 rounded-lg flex items-center gap-3">
+                  <div className="flex-1">
+                    <div className="text-[13px] font-medium">{p.nom}</div>
+                    <div className="text-[11px] text-dim font-mono">
+                      {p.reference} · stock après clôture : {p.stock - p.quantite}
+                    </div>
+                  </div>
+                  <div className="bg-nikito-cyan/20 text-nikito-cyan px-2.5 py-1 rounded-md text-xs font-semibold">
+                    x{p.quantite}
+                  </div>
+                  <button
+                    onClick={() => {
+                      setPiecesAjoutees((l) => l.filter((x) => x.pieceId !== p.pieceId));
+                      setDirty(true);
+                    }}
+                    className="text-red text-[11px] px-1 min-h-[32px]"
+                    aria-label="Retirer la pièce"
+                  >
+                    Retirer
+                  </button>
+                </div>
+              ))}
               {piecesExistantes.map((p) => (
                 <div key={p.id} className="bg-bg-deep p-2.5 px-3.5 rounded-lg flex items-center gap-3">
                   <div className="flex-1">
@@ -441,6 +485,25 @@ export function Intervention() {
         onConfirmer={confirmerQuitter}
         onAnnuler={() => setShowModale(false)}
       />
+
+      {showAjoutPiece && (
+        <ModaleAjouterPiece
+          onClose={() => setShowAjoutPiece(false)}
+          onAjouter={(piece, quantite) => {
+            if (piecesExistantes.some((x) => x.reference === piece.reference)) {
+              toast.info('Cette pièce est déjà enregistrée sur cette intervention.');
+              return;
+            }
+            setPiecesAjoutees((l) => {
+              const existe = l.find((x) => x.pieceId === piece.id);
+              if (existe) return l.map((x) => (x.pieceId === piece.id ? { ...x, quantite: x.quantite + quantite } : x));
+              return [...l, { pieceId: piece.id, nom: piece.nom, reference: piece.reference, stock: piece.stock_actuel, quantite }];
+            });
+            setDirty(true);
+            setShowAjoutPiece(false);
+          }}
+        />
+      )}
 
       {showPause && incident?.id && (
         <ModalePauseTicket

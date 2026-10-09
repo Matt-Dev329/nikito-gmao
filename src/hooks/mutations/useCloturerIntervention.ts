@@ -11,12 +11,15 @@ export interface CloturerInterventionParams {
   resoluPremierCoup: boolean | null;
   photoAvantUrl?: string | null;
   photoApresUrl?: string | null;
+  /** Pièces du stock consommées pendant la réparation (sortie de stock automatique) */
+  pieces?: Array<{ pieceId: string; quantite: number }>;
 }
 
 /**
  * Cloture une intervention :
  *  1. enregistre l'intervention (diagnostic, actions, photos, resolu 1er coup, fin)
- *  2. passe l'incident en statut 'resolu'
+ *  2. enregistre les pièces utilisées → le trigger decrement_stock les sort du stock
+ *  3. passe l'incident en statut 'resolu'
  *
  * Aucune RPC dediee n'existe cote Supabase : on ecrit directement dans les tables
  * (les policies RLS autorisent le role technicien en ecriture sur les deux tables).
@@ -68,6 +71,24 @@ export function useCloturerIntervention() {
         interventionId = data.id as string;
       }
 
+      if (params.pieces && params.pieces.length > 0) {
+        // Idempotent en cas de nouvel essai : on n'insère pas une pièce déjà
+        // enregistrée sur cette intervention (sinon double sortie de stock).
+        const { data: deja, error: dejaErr } = await supabase
+          .from('pieces_utilisees')
+          .select('piece_id')
+          .eq('intervention_id', interventionId);
+        if (dejaErr) throw new Error(dejaErr.message);
+        const dejaIds = new Set((deja ?? []).map((d) => d.piece_id as string));
+        const aInserer = params.pieces
+          .filter((p) => p.quantite > 0 && !dejaIds.has(p.pieceId))
+          .map((p) => ({ intervention_id: interventionId, piece_id: p.pieceId, quantite: p.quantite }));
+        if (aInserer.length > 0) {
+          const { error: pErr } = await supabase.from('pieces_utilisees').insert(aInserer);
+          if (pErr) throw new Error(`Pièces utilisées : ${pErr.message}`);
+        }
+      }
+
       const { error: incErr } = await supabase
         .from('incidents')
         .update({ statut: 'resolu', resolu_le: nowISO, resolu_par_id: utilisateur.id })
@@ -78,6 +99,7 @@ export function useCloturerIntervention() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['incidents'] });
+      queryClient.invalidateQueries({ queryKey: ['pieces_detachees'] });
     },
   });
 }

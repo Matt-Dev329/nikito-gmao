@@ -24,6 +24,13 @@
 
   3. Notification
     - Email : la RPC appelle l'edge function `notifier-commande` via pg_net.
+
+  4. Lien avec le stock
+    - `commande_produits.piece_id` : pièce du stock (pieces_detachees) liée.
+    - Quand une commande passe en `livree`, chaque ligne entre en stock
+      (trigger `fn_commande_livree_entree_stock`). Produit sans pièce liée →
+      on reprend la pièce de même référence, sinon on la crée et on la lie.
+      Garde-fou : `commandes.stock_entre_le` empêche une double entrée.
 */
 
 -- ---------------------------------------------------------------------------
@@ -99,6 +106,7 @@ CREATE TABLE IF NOT EXISTS public.commande_produits (
   unite text NOT NULL DEFAULT 'unité',
   prix_unitaire numeric(10,2) CHECK (prix_unitaire IS NULL OR prix_unitaire >= 0),
   photo_url text,
+  piece_id uuid REFERENCES public.pieces_detachees(id) ON DELETE SET NULL,
   ordre integer NOT NULL DEFAULT 0,
   actif boolean NOT NULL DEFAULT true,
   cree_le timestamptz NOT NULL DEFAULT now(),
@@ -106,6 +114,7 @@ CREATE TABLE IF NOT EXISTS public.commande_produits (
 );
 ALTER TABLE public.commande_produits ENABLE ROW LEVEL SECURITY;
 CREATE INDEX IF NOT EXISTS idx_commande_produits_activite ON public.commande_produits(activite_id);
+CREATE INDEX IF NOT EXISTS idx_commande_produits_piece ON public.commande_produits(piece_id);
 
 CREATE POLICY "Lecture activités si accès commandes"
   ON public.commande_activites FOR SELECT TO authenticated
@@ -154,6 +163,7 @@ CREATE TABLE IF NOT EXISTS public.commandes (
   traitee_par_id uuid REFERENCES public.utilisateurs(id),
   traitee_le timestamptz,
   email_envoye_le timestamptz,
+  stock_entre_le timestamptz,
   cree_le timestamptz NOT NULL DEFAULT now()
 );
 ALTER TABLE public.commandes ENABLE ROW LEVEL SECURITY;
@@ -166,6 +176,7 @@ CREATE TABLE IF NOT EXISTS public.commande_lignes (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   commande_id uuid NOT NULL REFERENCES public.commandes(id) ON DELETE CASCADE,
   produit_id uuid REFERENCES public.commande_produits(id) ON DELETE SET NULL,
+  piece_id uuid REFERENCES public.pieces_detachees(id) ON DELETE SET NULL,
   activite_nom text,
   produit_nom text NOT NULL,
   reference text,
@@ -176,6 +187,7 @@ CREATE TABLE IF NOT EXISTS public.commande_lignes (
 ALTER TABLE public.commande_lignes ENABLE ROW LEVEL SECURITY;
 CREATE INDEX IF NOT EXISTS idx_commande_lignes_commande ON public.commande_lignes(commande_id);
 CREATE INDEX IF NOT EXISTS idx_commande_lignes_produit ON public.commande_lignes(produit_id);
+CREATE INDEX IF NOT EXISTS idx_commande_lignes_piece ON public.commande_lignes(piece_id);
 
 CREATE POLICY "Demandeur ou gestionnaire lit les commandes"
   ON public.commandes FOR SELECT TO authenticated
@@ -241,8 +253,8 @@ BEGIN
   VALUES (v_utilisateur_id, p_parc_id, NULLIF(trim(p_commentaire), ''))
   RETURNING id, numero INTO v_commande_id, v_numero;
 
-  INSERT INTO commande_lignes (commande_id, produit_id, activite_nom, produit_nom, reference, unite, quantite, prix_unitaire)
-  SELECT v_commande_id, p.id, a.nom, p.nom, p.reference, p.unite, l.quantite, p.prix_unitaire
+  INSERT INTO commande_lignes (commande_id, produit_id, piece_id, activite_nom, produit_nom, reference, unite, quantite, prix_unitaire)
+  SELECT v_commande_id, p.id, p.piece_id, a.nom, p.nom, p.reference, p.unite, l.quantite, p.prix_unitaire
   FROM (
     SELECT (e->>'produit_id')::uuid AS produit_id, sum((e->>'quantite')::integer)::integer AS quantite
     FROM jsonb_array_elements(p_lignes) e
@@ -307,7 +319,66 @@ REVOKE EXECUTE ON FUNCTION public.annuler_commande(uuid) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.annuler_commande(uuid) TO authenticated;
 
 -- ---------------------------------------------------------------------------
--- 5. Feature flag (onglet masqué à tous sauf gestionnaires au départ)
+-- 5. Livraison → entrée en stock automatique
+-- ---------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.fn_commande_livree_entree_stock()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = 'public', 'pg_temp'
+AS $$
+DECLARE
+  l record;
+  v_piece_id uuid;
+  v_reference text;
+BEGIN
+  IF NEW.statut <> 'livree' OR OLD.statut = 'livree' OR NEW.stock_entre_le IS NOT NULL THEN
+    RETURN NEW;
+  END IF;
+
+  FOR l IN
+    SELECT cl.*, cp.piece_id AS piece_produit
+    FROM commande_lignes cl
+    LEFT JOIN commande_produits cp ON cp.id = cl.produit_id
+    WHERE cl.commande_id = NEW.id
+  LOOP
+    v_piece_id := COALESCE(l.piece_id, l.piece_produit);
+
+    IF v_piece_id IS NULL THEN
+      -- Pas de pièce liée : on reprend celle de même référence, sinon on la crée
+      v_reference := COALESCE(NULLIF(trim(l.reference), ''),
+                              'CMD-' || left(COALESCE(l.produit_id, l.id)::text, 8));
+      SELECT id INTO v_piece_id FROM pieces_detachees WHERE reference = v_reference;
+      IF v_piece_id IS NULL THEN
+        INSERT INTO pieces_detachees (reference, nom, stock_actuel, stock_min, prix_unitaire_ht)
+        VALUES (v_reference, l.produit_nom, 0, 0, l.prix_unitaire)
+        RETURNING id INTO v_piece_id;
+      END IF;
+      IF l.produit_id IS NOT NULL THEN
+        UPDATE commande_produits SET piece_id = v_piece_id
+        WHERE id = l.produit_id AND piece_id IS NULL;
+      END IF;
+      UPDATE commande_lignes SET piece_id = v_piece_id WHERE id = l.id;
+    END IF;
+
+    UPDATE pieces_detachees
+    SET stock_actuel = stock_actuel + l.quantite, modifie_le = now()
+    WHERE id = v_piece_id;
+  END LOOP;
+
+  NEW.stock_entre_le := now();
+  RETURN NEW;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.fn_commande_livree_entree_stock() FROM PUBLIC, anon, authenticated;
+
+CREATE TRIGGER trg_commande_livree_entree_stock
+  BEFORE UPDATE OF statut ON public.commandes
+  FOR EACH ROW EXECUTE FUNCTION public.fn_commande_livree_entree_stock();
+
+-- ---------------------------------------------------------------------------
+-- 6. Feature flag (onglet masqué à tous sauf gestionnaires au départ)
 -- ---------------------------------------------------------------------------
 INSERT INTO public.feature_flags (feature_code, feature_label, description, ordre, actif_global, roles_autorises)
 VALUES ('commandes', 'Commander', 'Catalogue produits par activité, panier et demandes de commande',

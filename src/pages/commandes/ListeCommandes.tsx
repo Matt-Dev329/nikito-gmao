@@ -30,7 +30,7 @@ const SUITES: Partial<Record<StatutCommande, StatutCommande[]>> = {
 const LIBELLES_ACTION: Partial<Record<StatutCommande, string>> = {
   validee: 'Valider',
   commandee: 'Marquer commandée',
-  livree: 'Marquer livrée',
+  livree: 'Marquer livrée · entrer en stock',
   refusee: 'Refuser',
 };
 
@@ -107,7 +107,11 @@ function CarteCommande({ commande: c, gestion }: { commande: Commande; gestion: 
     try {
       await changer.mutateAsync({ id: c.id, statut: s, motifRefus });
       setRefus(null);
-      toast.success(`Commande ${c.numero} : ${STATUTS_COMMANDE[s].label.toLowerCase()}`);
+      toast.success(
+        s === 'livree'
+          ? `Commande ${c.numero} livrée — produits entrés en stock`
+          : `Commande ${c.numero} : ${STATUTS_COMMANDE[s].label.toLowerCase()}`
+      );
     } catch (e) {
       toast.error((e as Error).message);
     }

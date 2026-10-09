@@ -33,6 +33,8 @@ export interface ProduitCommande {
   unite: string;
   prix_unitaire: number | null;
   photo_url: string | null;
+  /** Pièce du stock alimentée à la livraison (créée automatiquement si vide) */
+  piece_id: string | null;
   ordre: number;
   actif: boolean;
 }
@@ -206,7 +208,11 @@ export function useChangerStatutCommande() {
         .eq('id', params.id);
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['commandes'] }),
+    onSuccess: (_d, params) => {
+      qc.invalidateQueries({ queryKey: ['commandes'] });
+      // La livraison fait entrer les produits en stock (trigger en base)
+      if (params.statut === 'livree') qc.invalidateQueries({ queryKey: ['pieces_detachees'] });
+    },
   });
 }
 

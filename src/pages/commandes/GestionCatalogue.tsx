@@ -9,6 +9,7 @@ import {
   type ActiviteCommande,
   type ProduitCommande,
 } from '@/hooks/queries/useCommandes';
+import { usePiecesStockOptions } from '@/hooks/queries/useStockOptions';
 import { formatPrix } from './format';
 
 const champ =
@@ -238,6 +239,8 @@ function ModaleProduit({
   const [unite, setUnite] = useState(initial.unite ?? 'unité');
   const [prix, setPrix] = useState(initial.prix_unitaire != null ? String(initial.prix_unitaire) : '');
   const [photoUrl, setPhotoUrl] = useState(initial.photo_url ?? '');
+  const [pieceId, setPieceId] = useState(initial.piece_id ?? '');
+  const { data: pieces } = usePiecesStockOptions();
   const [actif, setActif] = useState(initial.actif ?? true);
 
   const prixNum = prix.trim() ? Number(prix.replace(',', '.')) : null;
@@ -254,6 +257,7 @@ function ModaleProduit({
         unite: unite.trim() || 'unité',
         prix_unitaire: prixNum,
         photo_url: photoUrl.trim() || null,
+        piece_id: pieceId || null,
         ordre: initial.ordre ?? 0,
         actif,
       });
@@ -306,6 +310,16 @@ function ModaleProduit({
         </Field>
         <Field label="Lien de la photo">
           <input value={photoUrl} onChange={(e) => setPhotoUrl(e.target.value)} placeholder="https://…" className={champ} />
+        </Field>
+        <Field label="Pièce du stock alimentée à la livraison">
+          <select value={pieceId} onChange={(e) => setPieceId(e.target.value)} className={champ}>
+            <option value="">Créer / retrouver automatiquement (même référence)</option>
+            {(pieces ?? []).map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.reference} · {p.nom} (stock : {p.stock_actuel})
+              </option>
+            ))}
+          </select>
         </Field>
         <label className="flex items-center gap-2 text-[13px] text-dim">
           <input type="checkbox" checked={actif} onChange={(e) => setActif(e.target.checked)} />
