@@ -55,7 +55,7 @@ const sections: { titre: string; items: NavItem[] }[] = [
     items: [
       { to: '/gmao', label: 'Tableau de bord', featureCode: 'tableau_bord', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'admin_it'], end: true },
       { to: '/gmao/mon-parc', label: 'Mon parc', roles: ['manager_parc'] },
-      { to: '/gmao/operations', label: 'Opérations', featureCode: 'interventions', badgeKey: 'operations', badgeTone: 'red', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'technicien', 'manager_parc', 'admin_it'] },
+      { to: '/gmao/operations', label: 'Opérations', featureCode: 'interventions', badgeKey: 'interventionsEnCours', badgeTone: 'amber', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'technicien', 'manager_parc', 'admin_it'] },
       { to: '/gmao/equipements', label: 'Équipements', featureCode: 'equipements', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'technicien', 'manager_parc', 'admin_it'] },
       { to: '/gmao/ia-predictive', label: 'IA Prédictive', featureCode: 'ia_predictive', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'admin_it'] },
       { to: '/gmao/flotte', label: 'Flotte', featureCode: 'flotte', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'admin_it'] },

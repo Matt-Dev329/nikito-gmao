@@ -1,7 +1,7 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { MutationCache, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import * as Sentry from '@sentry/react';
 import { AuthProvider } from './hooks/useAuth';
 import { ErrorBoundary } from './components/ui/ErrorBoundary';
@@ -22,6 +22,13 @@ if (env.VITE_SENTRY_DSN) {
 }
 
 const queryClient = new QueryClient({
+  // Toute action réussie (clôture, reprise, signalement…) peut changer les
+  // compteurs du menu : on les rafraîchit aussitôt au lieu d'attendre le polling.
+  mutationCache: new MutationCache({
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['sidebar-badges'] });
+    },
+  }),
   defaultOptions: {
     queries: {
       staleTime: 30_000,

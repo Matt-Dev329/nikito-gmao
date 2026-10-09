@@ -49,9 +49,11 @@ export function useSidebarBadges() {
           .select('id', { count: 'exact', head: true })
           .eq('statut', 'en_attente')
           .eq('est_formation', estFormation),
+        // Même périmètre que l'onglet « En cours » de la page Opérations
+        // (incidents rattachés à un équipement), pour que les chiffres concordent.
         supabase
           .from('incidents')
-          .select('id', { count: 'exact', head: true })
+          .select('id, equipements!inner(id)', { count: 'exact', head: true })
           .eq('statut', 'en_cours')
           .eq('est_formation', estFormation),
         supabase
@@ -84,7 +86,8 @@ export function useSidebarBadges() {
         plaintesAQualifier: plaintesRes.count ?? 0,
       };
     },
-    refetchInterval: 60_000,
-    staleTime: 30_000,
+    refetchInterval: 30_000,
+    refetchOnWindowFocus: true,
+    staleTime: 15_000,
   });
 }
