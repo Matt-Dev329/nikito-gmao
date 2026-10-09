@@ -37,9 +37,11 @@ export function useSidebarBadges() {
           .select('id', { count: 'exact', head: true })
           .eq('statut', 'ouvert')
           .eq('est_formation', estFormation),
+        // Même périmètre que l'onglet « À faire » de la page Opérations :
+        // seuls les incidents rattachés à un équipement y sont affichés.
         supabase
           .from('incidents')
-          .select('id', { count: 'exact', head: true })
+          .select('id, equipements!inner(id)', { count: 'exact', head: true })
           .in('statut', ['ouvert', 'assigne'])
           .eq('est_formation', estFormation),
         supabase
@@ -52,8 +54,7 @@ export function useSidebarBadges() {
           .select('id', { count: 'exact', head: true })
           .eq('statut', 'en_attente')
           .eq('est_formation', estFormation),
-        // Même périmètre que l'onglet « En cours » de la page Opérations
-        // (incidents rattachés à un équipement), pour que les chiffres concordent.
+        // Même périmètre que l'onglet « En cours » de la page Opérations.
         supabase
           .from('incidents')
           .select('id, equipements!inner(id)', { count: 'exact', head: true })

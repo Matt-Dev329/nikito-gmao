@@ -1,10 +1,6 @@
 /*
   # Module Commandes (catalogue activités → produits, panier, commandes)
 
-  ⚠️ Fichier EN ATTENTE : à appliquer via le MCP Supabase (apply_migration,
-  nom « commandes_module »), puis à déplacer dans supabase/migrations/ sous le
-  nom <version>_commandes_module.sql (version = celle enregistrée en base).
-
   1. Tables
     - `commandes_gestionnaires` : qui gère le catalogue et reçoit les commandes
       (notification cloche + email). Seed : ryad.neki@nikito.com.

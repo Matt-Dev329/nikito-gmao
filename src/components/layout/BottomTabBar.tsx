@@ -142,7 +142,7 @@ export function BottomTabBar({ roleCode, onAlertsClick, onMoreClick, alertsOpen,
       badges.commandesATraiter
     : 0;
 
-  const operationsBadge = badges?.interventionsEnCours ?? 0;
+  const operationsBadge = badges?.operations ?? 0;
 
   const handleTabClick = (tab: TabDef) => {
     if (tab.action === 'alerts') {
