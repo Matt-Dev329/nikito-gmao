@@ -2,7 +2,7 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.45.0";
 
 // Appelée par la RPC passer_commande (pg_net) : envoie un email récapitulatif
-// de la commande à chaque gestionnaire des commandes. Idempotente : un email
+// de la commande à chaque chef d'équipe actif. Idempotente : un email
 // par commande (colonne commandes.email_envoye_le).
 
 const corsHeaders = {
@@ -126,11 +126,12 @@ Deno.serve(async (req: Request) => {
         .eq("commande_id", commande.id),
       supabase.from("utilisateurs").select("prenom, nom, email").eq("id", commande.demandeur_id).maybeSingle(),
       supabase.from("parcs").select("nom").eq("id", commande.parc_id).maybeSingle(),
-      supabase.from("commandes_gestionnaires").select("utilisateurs(email)").eq("notifier_email", true),
+      // Destinataires : les chefs d'équipe actifs (rôle chef_maintenance)
+      supabase.from("utilisateurs").select("email, roles!inner(code)").eq("actif", true).eq("roles.code", "chef_maintenance"),
     ]);
 
     const destinataires = (gestionnaires ?? [])
-      .map((g) => (g.utilisateurs as unknown as { email: string | null } | null)?.email)
+      .map((g) => g.email as string | null)
       .filter((e): e is string => !!e);
     if (destinataires.length === 0) return json({ success: true, skipped: "aucun_destinataire" });
 

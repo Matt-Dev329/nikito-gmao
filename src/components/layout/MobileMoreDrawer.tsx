@@ -52,7 +52,7 @@ const accountItems: DrawerItem[] = [
 export function MobileMoreDrawer({ open, onClose, roleCode, onSignOut }: MobileMoreDrawerProps) {
   const navigate = useNavigate();
   const { pathname } = useLocation();
-  const { peutCommander, estGestionnaire } = useAccesCommandes();
+  const { peutCommander, estGestionnaire, peutGererCatalogue } = useAccesCommandes();
   const sheetRef = useRef<HTMLDivElement>(null);
   const [dragY, setDragY] = useState(0);
   const [dragging, setDragging] = useState(false);
@@ -103,7 +103,7 @@ export function MobileMoreDrawer({ open, onClose, roleCode, onSignOut }: MobileM
   const filterByRole = (items: DrawerItem[]) =>
     items.filter((it) =>
       it.accesCommandes
-        ? peutCommander
+        ? peutCommander || peutGererCatalogue
         : it.roles.includes(roleCode) || (!!it.gestionnaireCommandes && estGestionnaire)
     );
 

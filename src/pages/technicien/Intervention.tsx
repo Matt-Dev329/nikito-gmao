@@ -46,7 +46,7 @@ export function Intervention() {
   const { btNumero } = useParams();
   const navigate = useNavigate();
   const { utilisateur } = useAuth();
-  // Phase de test : la saisie des pièces utilisées n'est ouverte qu'au gestionnaire des commandes
+  // Phase de test : la saisie des pièces utilisées n'est ouverte qu'aux chefs d'équipe
   const { estGestionnaire: saisiePiecesActive } = useAccesCommandes();
   const cloturer = useCloturerIntervention();
 

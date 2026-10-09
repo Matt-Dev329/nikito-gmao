@@ -127,7 +127,7 @@ function resolveBadge(
 export function Sidebar({ user, roleAffiche, roleCode, realRoleCode, compact = false, onNavClick, onToggle, onSignOut }: SidebarProps) {
   const { data: badges } = useSidebarBadges();
   const { hasAccess } = useFeatureFlags();
-  const { peutCommander, estGestionnaire } = useAccesCommandes();
+  const { peutCommander, estGestionnaire, peutGererCatalogue } = useAccesCommandes();
   const formationActive = useFormation((s) => s.active);
   const startTour = useTour((s) => s.start);
   const showViewAs = (realRoleCode ?? roleCode) === 'direction' || (realRoleCode ?? roleCode) === 'chef_maintenance' || (realRoleCode ?? roleCode) === 'directeur_parc' || (realRoleCode ?? roleCode) === 'admin_it';
@@ -226,7 +226,7 @@ export function Sidebar({ user, roleAffiche, roleCode, realRoleCode, compact = f
         {sections.map((section) => {
           const itemsVisibles = section.items.filter((it) =>
             (it.accesCommandes
-              ? peutCommander
+              ? peutCommander || peutGererCatalogue
               : it.roles.includes(roleCode) || (!!it.gestionnaireCommandes && estGestionnaire)) &&
             (!it.featureCode || hasAccess(it.featureCode) || (!!it.gestionnaireCommandes && estGestionnaire))
           );

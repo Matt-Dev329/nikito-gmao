@@ -114,6 +114,8 @@ export function useAccesCommandes() {
   return {
     peutCommander: estGestionnaire || parRole,
     estGestionnaire,
+    /** « Gérer le catalogue » : réservé au rôle Chef d'équipe (chef_maintenance), aligné sur la RLS */
+    peutGererCatalogue: utilisateur?.role_code === 'chef_maintenance',
     isLoading: gestionnaire.isLoading || flag.isLoading,
   };
 }

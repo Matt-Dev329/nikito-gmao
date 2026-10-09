@@ -13,7 +13,7 @@ type Onglet = 'catalogue' | 'panier' | 'mes_commandes' | 'a_traiter' | 'gestion'
 
 export function PageCommander() {
   const { utilisateur } = useAuth();
-  const { peutCommander, estGestionnaire, isLoading } = useAccesCommandes();
+  const { peutCommander, estGestionnaire, peutGererCatalogue, isLoading } = useAccesCommandes();
   const lignes = usePanier((s) => s.lignes);
   const rattacher = usePanier((s) => s.rattacher);
   const [onglet, setOnglet] = useState<Onglet>('catalogue');
@@ -32,20 +32,22 @@ export function PageCommander() {
       </div>
     );
   }
-  if (!peutCommander) return <Navigate to="/gmao" replace />;
+  if (!peutCommander && !peutGererCatalogue) return <Navigate to="/gmao" replace />;
 
   const nbPanier = nombreArticles(lignes);
   const nbATraiter = estGestionnaire
     ? (toutes.data ?? []).filter((c) => c.statut === 'demandee').length
     : 0;
 
-  const onglets: { code: Onglet; label: string; badge?: number; gestion?: boolean }[] = [
-    { code: 'catalogue', label: 'Catalogue' },
-    { code: 'panier', label: 'Panier', badge: nbPanier },
-    { code: 'mes_commandes', label: 'Mes commandes' },
-    { code: 'a_traiter', label: 'Commandes reçues', badge: nbATraiter, gestion: true },
-    { code: 'gestion', label: 'Gérer le catalogue', gestion: true },
+  const onglets: { code: Onglet; label: string; badge?: number; visible: boolean }[] = [
+    { code: 'catalogue', label: 'Catalogue', visible: peutCommander },
+    { code: 'panier', label: 'Panier', badge: nbPanier, visible: peutCommander },
+    { code: 'mes_commandes', label: 'Mes commandes', visible: peutCommander },
+    { code: 'a_traiter', label: 'Commandes reçues', badge: nbATraiter, visible: estGestionnaire },
+    { code: 'gestion', label: 'Gérer le catalogue', visible: peutGererCatalogue },
   ];
+  const ongletsVisibles = onglets.filter((o) => o.visible);
+  const ongletActif = ongletsVisibles.some((o) => o.code === onglet) ? onglet : ongletsVisibles[0]?.code;
 
   return (
     <div className="p-4 md:p-6 md:px-7">
@@ -58,14 +60,14 @@ export function PageCommander() {
 
       <div className="flex gap-2 overflow-x-auto pb-1 mb-5">
         {onglets
-          .filter((o) => !o.gestion || estGestionnaire)
+          .filter((o) => o.visible)
           .map((o) => (
             <button
               key={o.code}
               onClick={() => setOnglet(o.code)}
               className={cn(
                 'px-4 py-2.5 rounded-pill text-[13px] whitespace-nowrap min-h-[44px]',
-                onglet === o.code
+                ongletActif === o.code
                   ? 'bg-gradient-cta text-text font-semibold'
                   : 'bg-bg-card border border-white/[0.08] text-dim'
               )}
@@ -75,7 +77,7 @@ export function PageCommander() {
                 <span
                   className={cn(
                     'ml-1.5 px-2 py-0.5 rounded-lg text-[11px]',
-                    onglet === o.code ? 'bg-white/25' : 'bg-amber text-bg-app font-semibold'
+                    ongletActif === o.code ? 'bg-white/25' : 'bg-amber text-bg-app font-semibold'
                   )}
                 >
                   {o.badge}
@@ -85,16 +87,16 @@ export function PageCommander() {
           ))}
       </div>
 
-      {onglet === 'catalogue' && <OngletCatalogue onVoirPanier={() => setOnglet('panier')} />}
-      {onglet === 'panier' && (
+      {ongletActif === 'catalogue' && <OngletCatalogue onVoirPanier={() => setOnglet('panier')} />}
+      {ongletActif === 'panier' && (
         <OngletPanier
           onRetourCatalogue={() => setOnglet('catalogue')}
           onEnvoyee={() => setOnglet('mes_commandes')}
         />
       )}
-      {onglet === 'mes_commandes' && <ListeCommandes portee="miennes" />}
-      {onglet === 'a_traiter' && estGestionnaire && <ListeCommandes portee="toutes" />}
-      {onglet === 'gestion' && estGestionnaire && <GestionCatalogue />}
+      {ongletActif === 'mes_commandes' && <ListeCommandes portee="miennes" />}
+      {ongletActif === 'a_traiter' && <ListeCommandes portee="toutes" />}
+      {ongletActif === 'gestion' && <GestionCatalogue />}
     </div>
   );
 }
