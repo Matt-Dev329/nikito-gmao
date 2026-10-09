@@ -6,6 +6,7 @@ import { PhotoCapture } from '@/components/shared/PhotoCapture';
 import { ModaleQuitterSansValider } from '@/components/ui/ModaleQuitterSansValider';
 import { ModalePauseTicket } from '@/components/tickets/ModalePauseTicket';
 import { ModaleAjouterPiece } from '@/components/shared/ModaleAjouterPiece';
+import { useAccesCommandes } from '@/hooks/queries/useCommandes';
 import { useChrono } from '@/hooks/useChrono';
 import { useIncident } from '@/hooks/queries/useTickets';
 import { useCloturerIntervention } from '@/hooks/mutations';
@@ -45,6 +46,8 @@ export function Intervention() {
   const { btNumero } = useParams();
   const navigate = useNavigate();
   const { utilisateur } = useAuth();
+  // Phase de test : la saisie des pièces utilisées n'est ouverte qu'au gestionnaire des commandes
+  const { estGestionnaire: saisiePiecesActive } = useAccesCommandes();
   const cloturer = useCloturerIntervention();
 
   const { data: incident, isLoading } = useIncident(btNumero);
@@ -353,12 +356,14 @@ export function Intervention() {
             <div className={cn('text-[13px] font-semibold', piecesExistantes.length + piecesAjoutees.length > 0 ? 'text-green' : 'text-dim')}>
               {piecesExistantes.length + piecesAjoutees.length > 0 ? '✓' : '○'} Pièces utilisées
             </div>
-            <button
-              onClick={() => setShowAjoutPiece(true)}
-              className="bg-transparent border border-nikito-cyan text-nikito-cyan px-2.5 py-1 rounded-md text-[11px] min-h-[32px]"
-            >
-              + Ajouter
-            </button>
+            {saisiePiecesActive && (
+              <button
+                onClick={() => setShowAjoutPiece(true)}
+                className="bg-transparent border border-nikito-cyan text-nikito-cyan px-2.5 py-1 rounded-md text-[11px] min-h-[32px]"
+              >
+                + Ajouter
+              </button>
+            )}
           </div>
           {piecesExistantes.length + piecesAjoutees.length > 0 ? (
             <div className="flex flex-col gap-2">
