@@ -16,6 +16,7 @@ const pageTitles: Record<string, string> = {
   '/gmao/recurrences': 'Recurrences',
   '/gmao/cinq-pourquoi': '5 Pourquoi',
   '/gmao/stock': 'Stock',
+  '/gmao/commander': 'Commander',
   '/gmao/preventif': 'Preventif',
   '/gmao/certifications': 'Certifications',
   '/gmao/plaintes': 'Plaintes',

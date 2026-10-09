@@ -37,6 +37,7 @@ const AttractionsParc = page(() => import('@/pages/parc/AttractionsParc'), 'Attr
 const PersonnaliserPointsParc = page(() => import('@/pages/parc/PersonnaliserPointsParc'), 'PersonnaliserPointsParc');
 const PageEquipements = page(() => import('@/pages/equipements/PageEquipements'), 'PageEquipements');
 const PageStock = page(() => import('@/pages/stock/PageStock'), 'PageStock');
+const PageCommander = page(() => import('@/pages/commandes/PageCommander'), 'PageCommander');
 const PageBibliotheque = page(() => import('@/pages/bibliotheque/PageBibliotheque'), 'PageBibliotheque');
 const FicheCinqPourquoi = page(() => import('@/pages/cinq-pourquoi/FicheCinqPourquoi'), 'FicheCinqPourquoi');
 const ListeCinqPourquoi = page(() => import('@/pages/cinq-pourquoi/ListeCinqPourquoi'), 'ListeCinqPourquoi');
@@ -102,6 +103,7 @@ export function App() {
           <Route path="cinq-pourquoi" element={<ListeCinqPourquoi />} />
           <Route path="cinq-pourquoi/:id" element={<FicheCinqPourquoi />} />
           <Route path="stock" element={<PageStock />} />
+          <Route path="commander" element={<PageCommander />} />
           <Route path="preventif" element={<PagePreventif />} />
           <Route path="certifications" element={<PageCertifications />} />
           <Route path="plaintes" element={<PagePlaintes />} />

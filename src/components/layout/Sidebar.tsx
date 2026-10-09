@@ -11,6 +11,8 @@ import { useTour } from '@/components/tour/useTour';
 import { useAuth } from '@/hooks/useAuth';
 import { useParcCourant } from '@/hooks/useParcCourant';
 import { useFeatureFlags } from '@/hooks/useFeatureFlags';
+import { useAccesCommandes } from '@/hooks/queries/useCommandes';
+import { ROLES_STOCK } from '@/lib/acces';
 import type { RoleUtilisateur } from '@/types/database';
 
 const TOUR_KEYS: Record<string, string> = {
@@ -21,6 +23,7 @@ const TOUR_KEYS: Record<string, string> = {
   'Récurrences': 'recurrences',
   '5 Pourquoi': 'cinq-pourquoi',
   'Stock': 'stock',
+  'Commander': 'commander',
   'Préventif': 'preventif',
   'Certifications': 'certifications',
   'Plaintes clients': 'plaintes',
@@ -43,9 +46,13 @@ interface NavItem {
   to: string;
   label: string;
   featureCode?: string;
-  badgeKey?: 'recurrences' | 'cinqPourquoi' | 'operations' | 'invitationsPending' | 'controlesManquants' | 'notificationsIA' | 'interventionsEnCours' | 'plaintesAQualifier';
+  badgeKey?: 'recurrences' | 'cinqPourquoi' | 'operations' | 'invitationsPending' | 'controlesManquants' | 'notificationsIA' | 'interventionsEnCours' | 'plaintesAQualifier' | 'commandesATraiter';
   badgeTone?: 'red' | 'amber';
   roles: RoleUtilisateur[];
+  /** Visible aussi pour le gestionnaire des commandes, quel que soit son rôle. */
+  gestionnaireCommandes?: boolean;
+  /** Visibilité pilotée par le module Commandes (gestionnaire ou flag `commandes`). */
+  accesCommandes?: boolean;
   end?: boolean;
 }
 
@@ -64,7 +71,8 @@ const sections: { titre: string; items: NavItem[] }[] = [
       { to: '/gmao/plaintes', label: 'Plaintes clients', featureCode: 'plaintes', badgeKey: 'plaintesAQualifier', badgeTone: 'amber', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'manager_parc', 'admin_it'] },
       { to: '/gmao/certifications', label: 'Certifications', featureCode: 'certifications', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'admin_it'] },
       { to: '/gmao/preventif', label: 'Préventif', featureCode: 'preventif', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'manager_parc', 'admin_it'] },
-      { to: '/gmao/stock', label: 'Stock', featureCode: 'stock', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'technicien', 'admin_it'] },
+      { to: '/gmao/stock', label: 'Stock', featureCode: 'stock', roles: ROLES_STOCK, gestionnaireCommandes: true },
+      { to: '/gmao/commander', label: 'Commander', badgeKey: 'commandesATraiter', badgeTone: 'amber', roles: [], accesCommandes: true },
     ],
   },
   {
@@ -108,7 +116,7 @@ interface SidebarProps {
 
 function resolveBadge(
   item: NavItem,
-  badges: { recurrences: number; cinqPourquoi: number; operations: number; invitationsPending: number; controlesManquants: number; notificationsIA: number; interventionsEnCours: number; plaintesAQualifier: number } | undefined
+  badges: Record<NonNullable<NavItem['badgeKey']>, number> | undefined
 ): Badge | undefined {
   if (!item.badgeKey || !badges) return undefined;
   const count = badges[item.badgeKey] ?? 0;
@@ -119,6 +127,7 @@ function resolveBadge(
 export function Sidebar({ user, roleAffiche, roleCode, realRoleCode, compact = false, onNavClick, onToggle, onSignOut }: SidebarProps) {
   const { data: badges } = useSidebarBadges();
   const { hasAccess } = useFeatureFlags();
+  const { peutCommander, estGestionnaire } = useAccesCommandes();
   const formationActive = useFormation((s) => s.active);
   const startTour = useTour((s) => s.start);
   const showViewAs = (realRoleCode ?? roleCode) === 'direction' || (realRoleCode ?? roleCode) === 'chef_maintenance' || (realRoleCode ?? roleCode) === 'directeur_parc' || (realRoleCode ?? roleCode) === 'admin_it';
@@ -216,7 +225,10 @@ export function Sidebar({ user, roleAffiche, roleCode, realRoleCode, compact = f
       <div className="flex-1 overflow-y-auto min-h-0">
         {sections.map((section) => {
           const itemsVisibles = section.items.filter((it) =>
-            it.roles.includes(roleCode) && (!it.featureCode || hasAccess(it.featureCode))
+            (it.accesCommandes
+              ? peutCommander
+              : it.roles.includes(roleCode) || (!!it.gestionnaireCommandes && estGestionnaire)) &&
+            (!it.featureCode || hasAccess(it.featureCode) || (!!it.gestionnaireCommandes && estGestionnaire))
           );
           if (itemsVisibles.length === 0) return null;
           return (

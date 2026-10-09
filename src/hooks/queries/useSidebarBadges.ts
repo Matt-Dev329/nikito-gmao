@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useFormationFilter } from '@/hooks/useFormation';
 import { useConfig } from '@/hooks/useConfig';
+import { useEstGestionnaireCommandes } from '@/hooks/queries/useCommandes';
 
 interface SidebarBadges {
   recurrences: number;
@@ -12,17 +13,19 @@ interface SidebarBadges {
   notificationsIA: number;
   interventionsEnCours: number;
   plaintesAQualifier: number;
+  commandesATraiter: number;
 }
 
 export function useSidebarBadges() {
   const { estFormation } = useFormationFilter();
   const { enProduction } = useConfig();
+  const { data: gestionnaireCommandes = false } = useEstGestionnaireCommandes();
   const now = new Date();
   const heure = now.getHours();
   const today = now.toISOString().slice(0, 10);
 
   return useQuery({
-    queryKey: ['sidebar-badges', estFormation, enProduction, today],
+    queryKey: ['sidebar-badges', estFormation, enProduction, today, gestionnaireCommandes],
     queryFn: async (): Promise<SidebarBadges> => {
       const [recRes, fpRes, incRes, invRes, notifRes, enCoursRes, plaintesRes] = await Promise.all([
         supabase
@@ -63,6 +66,16 @@ export function useSidebarBadges() {
           .eq('est_formation', estFormation),
       ]);
 
+      // Demandes de commande en attente : seulement pour les gestionnaires
+      let commandesATraiter = 0;
+      if (gestionnaireCommandes) {
+        const cmdRes = await supabase
+          .from('commandes')
+          .select('id', { count: 'exact', head: true })
+          .eq('statut', 'demandee');
+        commandesATraiter = cmdRes.count ?? 0;
+      }
+
       let controlesManquants = 0;
       if (enProduction && heure >= 10) {
         const [parcsRes, ctrlRes] = await Promise.all([
@@ -84,6 +97,7 @@ export function useSidebarBadges() {
         notificationsIA: notifRes.count ?? 0,
         interventionsEnCours: enCoursRes.count ?? 0,
         plaintesAQualifier: plaintesRes.count ?? 0,
+        commandesATraiter,
       };
     },
     refetchInterval: 30_000,

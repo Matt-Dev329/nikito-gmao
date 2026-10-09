@@ -41,6 +41,7 @@ function buildItems(badges: {
   notificationsIA: number;
   invitationsPending: number;
   interventionsEnCours: number;
+  commandesATraiter: number;
 }): NotifItem[] {
   const items: NotifItem[] = [];
   if (badges.controlesManquants > 0)
@@ -49,6 +50,8 @@ function buildItems(badges: {
     items.push({ key: 'operations', label: 'Incidents ouverts', count: badges.operations, tone: 'red', to: '/gmao/operations' });
   if (badges.interventionsEnCours > 0)
     items.push({ key: 'interventionsEnCours', label: 'Interventions en cours', count: badges.interventionsEnCours, tone: 'red', to: '/gmao/operations' });
+  if (badges.commandesATraiter > 0)
+    items.push({ key: 'commandesATraiter', label: 'Commandes à traiter', count: badges.commandesATraiter, tone: 'amber', to: '/gmao/commander' });
   if (badges.recurrences > 0)
     items.push({ key: 'recurrences', label: 'Recurrences detectees', count: badges.recurrences, tone: 'red', to: '/gmao/recurrences' });
   if (badges.cinqPourquoi > 0)

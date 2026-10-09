@@ -1,4 +1,8 @@
 import { useState, useMemo } from 'react';
+import { Navigate } from 'react-router-dom';
+import { useAuth } from '@/hooks/useAuth';
+import { useAccesCommandes } from '@/hooks/queries/useCommandes';
+import { peutVoirStock } from '@/lib/acces';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useFournisseurs } from '@/hooks/queries/useReferentiel';
@@ -78,6 +82,14 @@ function useCreerPiece() {
 }
 
 export function PageStock() {
+  const { utilisateur } = useAuth();
+  const { estGestionnaire, isLoading } = useAccesCommandes();
+  if (isLoading) return null;
+  if (!peutVoirStock(utilisateur?.role_code, estGestionnaire)) return <Navigate to="/" replace />;
+  return <ContenuStock />;
+}
+
+function ContenuStock() {
   const { data: pieces, isLoading } = usePiecesDetachees();
   const { data: fournisseurs } = useFournisseurs();
   const modStock = useModifierStock();

@@ -65,6 +65,16 @@ export function IconStock({ className = s }: { className?: string }) {
   );
 }
 
+export function IconCommander({ className = s }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M2 3h2.2l2 10h9.3l1.7-7H5.3" />
+      <circle cx="7.5" cy="16.5" r="1.2" />
+      <circle cx="14.5" cy="16.5" r="1.2" />
+    </svg>
+  );
+}
+
 export function IconPreventif({ className = s }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
@@ -241,6 +251,7 @@ const iconMap: Record<string, (props: { className?: string }) => JSX.Element> = 
   'Récurrences': IconRecurrences,
   '5 Pourquoi': IconCinqPourquoi,
   'Stock': IconStock,
+  'Commander': IconCommander,
   'Préventif': IconPreventif,
   'Certifications': IconCertifications,
   'Plaintes clients': IconPlaintes,

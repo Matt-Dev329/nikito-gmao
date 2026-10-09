@@ -3,6 +3,8 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { getNavIcon } from './NavIcons';
 import type { RoleUtilisateur } from '@/types/database';
+import { useAccesCommandes } from '@/hooks/queries/useCommandes';
+import { ROLES_STOCK } from '@/lib/acces';
 
 interface MobileMoreDrawerProps {
   open: boolean;
@@ -16,6 +18,8 @@ interface DrawerItem {
   label: string;
   iconLabel: string;
   roles: RoleUtilisateur[];
+  gestionnaireCommandes?: boolean;
+  accesCommandes?: boolean;
 }
 
 const pilotageItems: DrawerItem[] = [
@@ -24,7 +28,8 @@ const pilotageItems: DrawerItem[] = [
   { to: '/gmao/flotte', label: 'Flotte', iconLabel: 'Flotte', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'admin_it'] },
   { to: '/gmao/recurrences', label: 'Recurrences', iconLabel: 'Récurrences', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'admin_it'] },
   { to: '/gmao/cinq-pourquoi', label: '5 Pourquoi', iconLabel: '5 Pourquoi', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'admin_it'] },
-  { to: '/gmao/stock', label: 'Stock', iconLabel: 'Stock', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'technicien', 'admin_it'] },
+  { to: '/gmao/stock', label: 'Stock', iconLabel: 'Stock', roles: ROLES_STOCK, gestionnaireCommandes: true },
+  { to: '/gmao/commander', label: 'Commander', iconLabel: 'Commander', roles: [], accesCommandes: true },
   { to: '/gmao/preventif', label: 'Preventif', iconLabel: 'Préventif', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'manager_parc', 'admin_it'] },
   { to: '/gmao/certifications', label: 'Certifications', iconLabel: 'Certifications', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'admin_it'] },
   { to: '/gmao/plaintes', label: 'Plaintes clients', iconLabel: 'Plaintes clients', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'manager_parc', 'admin_it'] },
@@ -47,6 +52,7 @@ const accountItems: DrawerItem[] = [
 export function MobileMoreDrawer({ open, onClose, roleCode, onSignOut }: MobileMoreDrawerProps) {
   const navigate = useNavigate();
   const { pathname } = useLocation();
+  const { peutCommander, estGestionnaire } = useAccesCommandes();
   const sheetRef = useRef<HTMLDivElement>(null);
   const [dragY, setDragY] = useState(0);
   const [dragging, setDragging] = useState(false);
@@ -94,7 +100,12 @@ export function MobileMoreDrawer({ open, onClose, roleCode, onSignOut }: MobileM
     };
   }, [open]);
 
-  const filterByRole = (items: DrawerItem[]) => items.filter((it) => it.roles.includes(roleCode));
+  const filterByRole = (items: DrawerItem[]) =>
+    items.filter((it) =>
+      it.accesCommandes
+        ? peutCommander
+        : it.roles.includes(roleCode) || (!!it.gestionnaireCommandes && estGestionnaire)
+    );
 
   const visiblePilotage = filterByRole(pilotageItems);
   const visibleConfig = filterByRole(configItems);

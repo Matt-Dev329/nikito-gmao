@@ -138,7 +138,8 @@ export function BottomTabBar({ roleCode, onAlertsClick, onMoreClick, alertsOpen,
       badges.notificationsIA +
       badges.invitationsPending +
       badges.interventionsEnCours +
-      badges.plaintesAQualifier
+      badges.plaintesAQualifier +
+      badges.commandesATraiter
     : 0;
 
   const operationsBadge = badges?.interventionsEnCours ?? 0;

@@ -5,6 +5,8 @@ import { MenuDrawer } from '@/components/layout/MenuDrawer';
 import { ModaleSignalerV2 } from '@/components/forms/ModaleSignalerV2';
 import { useAuth } from '@/hooks/useAuth';
 import { hasModeExpert } from '@/lib/signaler';
+import { peutVoirStock } from '@/lib/acces';
+import { useAccesCommandes } from '@/hooks/queries/useCommandes';
 
 const navTabs = [
   { to: '/tech/operations', label: 'Operations', icon: '\u2699' },
@@ -16,6 +18,8 @@ export function TabletLayout() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [signalerOpen, setSignalerOpen] = useState(false);
   const { utilisateur } = useAuth();
+  const { estGestionnaire } = useAccesCommandes();
+  const tabs = navTabs.filter((t) => t.to !== '/tech/stock' || peutVoirStock(utilisateur?.role_code, estGestionnaire));
   const expert = hasModeExpert(utilisateur?.role_code ?? 'technicien');
   const parcId = utilisateur?.parc_ids?.length === 1 ? utilisateur.parc_ids[0] : undefined;
 
@@ -26,7 +30,7 @@ export function TabletLayout() {
       </main>
 
       <nav className="fixed bottom-0 left-0 right-0 max-w-[820px] mx-auto bg-bg-sidebar p-2.5 px-3.5 grid grid-cols-5 gap-2 border-t border-white/[0.06]">
-        {navTabs.map((tab) => (
+        {tabs.map((tab) => (
           <NavLink
             key={tab.to}
             to={tab.to}
