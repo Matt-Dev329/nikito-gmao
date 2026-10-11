@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
+import { actualiserApplication } from '@/lib/miseAJour';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { getNavIcon } from './NavIcons';
@@ -182,6 +183,16 @@ export function MobileMoreDrawer({ open, onClose, roleCode, onSignOut }: MobileM
                 onClick={() => handleNav(item.to)}
               />
             ))}
+            <button
+              onClick={() => {
+                onClose();
+                actualiserApplication();
+              }}
+              className="flex items-center gap-3 w-full px-3 min-h-[48px] rounded-lg text-nikito-cyan hover:bg-nikito-cyan/10 transition-colors"
+            >
+              <span className="w-5 text-center text-[18px] leading-none">⟳</span>
+              <span className="text-[14px] font-medium">Actualiser l'application</span>
+            </button>
             <button
               onClick={() => {
                 onClose();

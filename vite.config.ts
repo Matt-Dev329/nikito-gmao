@@ -8,6 +8,8 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
+      // Enregistrement fait par l'appli (src/lib/miseAJour.ts) pour vérifier les mises à jour
+      injectRegister: false,
       includeAssets: ['favicon.svg'],
       manifest: {
         name: 'ALBA by Nikito',

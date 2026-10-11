@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom';
+import { actualiserApplication } from '@/lib/miseAJour';
 import { cn } from '@/lib/utils';
 import { Logo } from '@/components/ui/Logo';
 import { useAuth } from '@/hooks/useAuth';
@@ -83,6 +84,16 @@ export function MenuDrawer({ open, onClose }: MenuDrawerProps) {
         </nav>
 
         <div className="p-3 border-t border-white/[0.06]">
+          <button
+            onClick={() => {
+              onClose();
+              actualiserApplication();
+            }}
+            className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl text-left text-sm font-medium text-nikito-cyan hover:bg-nikito-cyan/10 transition-colors"
+          >
+            <span className="text-base">⟳</span>
+            Actualiser l'application
+          </button>
           <button
             onClick={handleSignOut}
             className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl text-left text-sm font-medium text-red hover:bg-red/10 transition-colors"

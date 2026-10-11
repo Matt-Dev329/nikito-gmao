@@ -6,6 +6,8 @@ import * as Sentry from '@sentry/react';
 import { AuthProvider } from './hooks/useAuth';
 import { ErrorBoundary } from './components/ui/ErrorBoundary';
 import { OfflineBanner } from './components/ui/OfflineBanner';
+import { TirerPourRafraichir } from './components/ui/TirerPourRafraichir';
+import { initialiserMisesAJour } from './lib/miseAJour';
 import { ToastProvider } from './components/ui/ToastProvider';
 import { App } from './App';
 import './styles/index.css';
@@ -38,6 +40,8 @@ const queryClient = new QueryClient({
   },
 });
 
+initialiserMisesAJour();
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ErrorBoundary>
@@ -45,6 +49,7 @@ createRoot(document.getElementById('root')!).render(
         <BrowserRouter>
           <AuthProvider>
             <OfflineBanner />
+            <TirerPourRafraichir />
             <ToastProvider>
               <App />
             </ToastProvider>
