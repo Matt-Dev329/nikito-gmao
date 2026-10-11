@@ -248,6 +248,8 @@ const iconMap: Record<string, (props: { className?: string }) => JSX.Element> = 
   'Mon parc': IconParc,
   'Opérations': IconOperations,
   'Rapports de réparation': IconRapports,
+  'Plans': IconPlans,
+  'Manuels': IconManuels,
   'Équipements': IconEquipements,
   'Récurrences': IconRecurrences,
   '5 Pourquoi': IconCinqPourquoi,
@@ -278,6 +280,24 @@ function IconRapports({ className = s }: { className?: string }) {
       <path d="M5 2h7l3 3v13H5z" />
       <path d="M12 2v3h3" />
       <path d="M8 9h4M8 12h4M8 15h2" />
+    </svg>
+  );
+}
+
+function IconPlans({ className = s }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M2 5l5-2 6 2 5-2v12l-5 2-6-2-5 2z" />
+      <path d="M7 3v12M13 5v12" />
+    </svg>
+  );
+}
+
+function IconManuels({ className = s }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 4.5C3 3.7 3.7 3 4.5 3H10v14H4.5C3.7 17 3 16.3 3 15.5z" />
+      <path d="M17 4.5c0-.8-.7-1.5-1.5-1.5H10v14h5.5c.8 0 1.5-.7 1.5-1.5z" />
     </svg>
   );
 }

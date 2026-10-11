@@ -12,6 +12,8 @@ interface MenuDrawerProps {
 const menuItems = [
   { to: '/gmao', label: 'Tableau de bord', icon: '📊' },
   { to: '/tech/rapports', label: 'Rapports de réparation', icon: '📋' },
+  { to: '/tech/plans', label: 'Plans', icon: '🗺️' },
+  { to: '/tech/manuels', label: 'Manuels', icon: '📘' },
   { to: '/gmao/commander', label: 'Commander', icon: '🛒' },
   { to: '/gmao/profil', label: 'Mon profil', icon: '👤' },
 ];

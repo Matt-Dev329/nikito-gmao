@@ -19,6 +19,8 @@ const SelectParcPage = page(() => import('@/pages/auth/SelectParcPage'), 'Select
 const TableauDeBord = page(() => import('@/pages/direction/TableauDeBord'), 'TableauDeBord');
 const Recurrences = page(() => import('@/pages/ryad/Recurrences'), 'Recurrences');
 const Operations = page(() => import('@/pages/technicien/Operations'), 'Operations');
+const PagePlans = page(() => import('@/pages/documentation/PageDocumentsTechniques'), 'PagePlans');
+const PageManuels = page(() => import('@/pages/documentation/PageDocumentsTechniques'), 'PageManuels');
 const PageRapportsReparation = page(() => import('@/pages/interventions/PageRapportsReparation'), 'PageRapportsReparation');
 const Intervention = page(() => import('@/pages/technicien/Intervention'), 'Intervention');
 const ControleHebdo = page(() => import('@/pages/technicien/ControleHebdo'), 'ControleHebdo');
@@ -123,6 +125,8 @@ export function App() {
           <Route path="operations" element={<Operations />} />
           <Route path="operations/:btNumero" element={<Intervention />} />
           <Route path="rapports" element={<PageRapportsReparation />} />
+          <Route path="plans" element={<PagePlans />} />
+          <Route path="manuels" element={<PageManuels />} />
           <Route path="equipements" element={<PageEquipements />} />
           <Route path="recurrences" element={<Recurrences />} />
           <Route path="cinq-pourquoi" element={<ListeCinqPourquoi />} />
@@ -171,6 +175,8 @@ export function App() {
           <Route path="operations" element={<Operations />} />
           <Route path="operations/:btNumero" element={<Intervention />} />
           <Route path="rapports" element={<PageRapportsReparation />} />
+          <Route path="plans" element={<PagePlans />} />
+          <Route path="manuels" element={<PageManuels />} />
           <Route path="controle-hebdo" element={<ControleHebdo />} />
           <Route path="controle-mensuel" element={<ControleMensuel />} />
           <Route path="stock" element={<PageStock />} />

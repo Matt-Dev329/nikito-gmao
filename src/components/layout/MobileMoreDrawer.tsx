@@ -26,6 +26,8 @@ interface DrawerItem {
 const pilotageItems: DrawerItem[] = [
   { to: '/gmao/mon-parc', label: 'Mon parc', iconLabel: 'Mon parc', roles: ['manager_parc'] },
   { to: '/gmao/rapports', label: 'Rapports de réparation', iconLabel: 'Rapports de réparation', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'technicien', 'manager_parc', 'admin_it'] },
+  { to: '/gmao/plans', label: 'Plans', iconLabel: 'Plans', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'technicien', 'manager_parc', 'admin_it'] },
+  { to: '/gmao/manuels', label: 'Manuels', iconLabel: 'Manuels', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'technicien', 'manager_parc', 'admin_it'] },
   { to: '/gmao/equipements', label: 'Equipements', iconLabel: 'Équipements', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'technicien', 'manager_parc', 'admin_it'] },
   { to: '/gmao/ia-predictive', label: 'IA Predictive', iconLabel: 'IA Prédictive', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'admin_it'] },
   { to: '/gmao/flotte', label: 'Flotte', iconLabel: 'Flotte', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'admin_it'] },
