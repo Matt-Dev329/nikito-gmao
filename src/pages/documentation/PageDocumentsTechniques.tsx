@@ -10,7 +10,7 @@ import { useSignedUrls } from '@/hooks/useSignedUrl';
 import { useToast } from '@/components/ui/ToastProvider';
 import { Pill } from '@/components/ui/Pill';
 import type { AlbaBucket } from '@/lib/uploadPhotoControle';
-import { envoyerFichier } from '@/lib/envoiGrosFichier';
+import { envoyerDocument, recollerDocument } from '@/lib/envoiGrosFichier';
 
 export type TypeDocument = 'plan' | 'manuel';
 
@@ -31,6 +31,8 @@ interface DocumentTechnique {
   chemin: string;
   mime: string | null;
   taille: number | null;
+  /** Nombre de parties si le fichier a été découpé (gros fichiers) */
+  parties: number | null;
   cree_le: string;
   parc: { code: string; nom: string } | null;
 }
@@ -59,7 +61,7 @@ function useDocuments(type: TypeDocument) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('documents_techniques')
-        .select('id, type, parc_id, activite, titre, description, chemin, mime, taille, cree_le, parc:parcs(code, nom)')
+        .select('id, type, parc_id, activite, titre, description, chemin, mime, taille, parties, cree_le, parc:parcs(code, nom)')
         .eq('type', type)
         .eq('actif', true)
         .order('titre');
@@ -177,7 +179,7 @@ function ContenuDocuments({ type }: { type: TypeDocument }) {
 
 function GrilleDocuments({ documents, peutEditer, type }: { documents: DocumentTechnique[]; peutEditer: boolean; type: TypeDocument }) {
   const { data: urls } = useSignedUrls(
-    documents.map((d) => d.chemin),
+    documents.filter((d) => !d.parties).map((d) => d.chemin),
     BUCKET
   );
   return (
@@ -193,7 +195,37 @@ function CarteDocument({ doc, url, peutEditer, type }: { doc: DocumentTechnique;
   const qc = useQueryClient();
   const toast = useToast();
   const [confirmer, setConfirmer] = useState(false);
+  const [chargement, setChargement] = useState<number | null>(null);
   const estImage = (doc.mime ?? '').startsWith('image/');
+
+  // Gros fichier découpé en parties : on les télécharge et on les recolle
+  const ouvrirDecoupe = async (e: React.MouseEvent) => {
+    if (!doc.parties) return;
+    e.preventDefault();
+    if (chargement !== null) return;
+    // Fenêtre ouverte tout de suite (sinon bloquée après l'attente)
+    const fenetre = window.open('', '_blank');
+    setChargement(0);
+    try {
+      const blob = await recollerDocument(BUCKET, doc.chemin, doc.parties, doc.mime, setChargement);
+      const lien = URL.createObjectURL(blob);
+      if (fenetre) {
+        fenetre.location.href = lien;
+      } else {
+        const a = document.createElement('a');
+        a.href = lien;
+        a.download = doc.titre;
+        a.click();
+      }
+      setTimeout(() => URL.revokeObjectURL(lien), 10 * 60 * 1000);
+    } catch (err) {
+      fenetre?.close();
+      toast.error((err as Error).message);
+    } finally {
+      setChargement(null);
+    }
+  };
+  const lienOuvrir = doc.parties ? '#' : url;
 
   const retirer = async () => {
     const { error } = await supabase.from('documents_techniques').update({ actif: false }).eq('id', doc.id);
@@ -207,8 +239,8 @@ function CarteDocument({ doc, url, peutEditer, type }: { doc: DocumentTechnique;
 
   return (
     <div className="bg-bg-card rounded-xl border border-white/[0.06] overflow-hidden flex flex-col">
-      <a href={url} target="_blank" rel="noreferrer" className={cn('block', !url && 'pointer-events-none')}>
-        {estImage && url ? (
+      <a href={lienOuvrir} onClick={ouvrirDecoupe} target="_blank" rel="noreferrer" className={cn('block', !lienOuvrir && 'pointer-events-none')}>
+        {estImage && url && !doc.parties ? (
           <img src={url} alt="" loading="lazy" className="w-full h-36 object-cover bg-bg-deep" />
         ) : (
           <div className="w-full h-36 bg-bg-deep flex flex-col items-center justify-center gap-1 text-dim">
@@ -227,15 +259,16 @@ function CarteDocument({ doc, url, peutEditer, type }: { doc: DocumentTechnique;
         {doc.description && <div className="text-[12px] text-faint mt-1 line-clamp-2">{doc.description}</div>}
         <div className="mt-auto pt-3 flex items-center justify-between gap-2">
           <a
-            href={url}
+            href={lienOuvrir}
+            onClick={ouvrirDecoupe}
             target="_blank"
             rel="noreferrer"
             className={cn(
               'bg-nikito-cyan/12 border border-nikito-cyan/45 text-nikito-cyan px-3 py-1.5 rounded-lg text-[12px] font-semibold min-h-[36px] flex items-center',
-              !url && 'opacity-40 pointer-events-none'
+              (!lienOuvrir || chargement !== null) && 'opacity-40 pointer-events-none'
             )}
           >
-            Ouvrir
+            {chargement !== null ? `Chargement ${chargement} %` : 'Ouvrir'}
           </a>
           {peutEditer &&
             (confirmer ? (
@@ -281,7 +314,7 @@ function FormulaireAjout({ type, onFini }: { type: TypeDocument; onFini: () => v
       const nomPropre = fichier.name.normalize('NFD').replace(/[^\w.-]+/g, '_').slice(-80);
       const chemin = `${type}/${parc?.code ?? 'commun'}/${Date.now()}_${nomPropre}`;
       setProgression(0);
-      await envoyerFichier(BUCKET, chemin, fichier, setProgression);
+      const parties = await envoyerDocument(BUCKET, chemin, fichier, setProgression);
       const { error } = await supabase.from('documents_techniques').insert({
         type,
         parc_id: parcId || null,
@@ -291,6 +324,7 @@ function FormulaireAjout({ type, onFini }: { type: TypeDocument; onFini: () => v
         chemin,
         mime: fichier.type || null,
         taille: fichier.size,
+        parties,
         cree_par_id: utilisateur?.id ?? null,
       });
       if (error) throw error;
