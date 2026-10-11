@@ -11,7 +11,7 @@ import { useParcs } from '@/hooks/queries/useReferentiel';
 import { useToast } from '@/components/ui/ToastProvider';
 import type { Criticite } from '@/types/database';
 
-type Onglet = 'a_faire' | 'en_cours' | 'resolus' | 'controles' | 'preventif';
+type Onglet = 'a_faire' | 'en_cours' | 'exterieur' | 'resolus' | 'controles' | 'preventif';
 
 interface ParcOption {
   id: string;
@@ -52,6 +52,13 @@ function incidentToTicket(inc: Record<string, unknown>): TicketSummary {
   const badges: TicketSummary['badges'] = [];
   if (cat?.nom) badges.push({ label: cat.nom as string });
   if (inc.statut === 'en_pause') badges.push({ label: 'En pause', tone: 'amber' });
+  if (inc.externe === true) {
+    const f = inc.externe_fournisseur as { nom: string } | null;
+    const prevu = inc.externe_date_prevue
+      ? ` · prévu le ${new Date(`${inc.externe_date_prevue as string}T12:00:00`).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' })}`
+      : '';
+    badges.push({ label: `Extérieur · ${f?.nom ?? (inc.externe_nom as string) ?? 'intervenant'}${prevu}`, tone: 'amber' });
+  }
   if (heuresDepuis > slaH) {
     badges.push({ label: `SLA depassé · ${formatDuree(declareLe)}`, tone: 'amber' });
   }
@@ -124,6 +131,8 @@ export function Operations() {
     ? ['en_cours' as const]
     : onglet === 'resolus'
     ? ['resolu' as const, 'ferme' as const]
+    : onglet === 'exterieur'
+    ? ['ouvert' as const, 'assigne' as const, 'en_pause' as const, 'en_cours' as const]
     : ['ouvert' as const, 'assigne' as const, 'en_pause' as const];
 
   const incidentsQ = useIncidents({
@@ -137,8 +146,11 @@ export function Operations() {
 
   const tickets = useMemo(() => {
     if (!incidentsQ.data) return [];
-    return (incidentsQ.data as Record<string, unknown>[]).map(incidentToTicket);
-  }, [incidentsQ.data]);
+    // Tickets confiés à un intervenant extérieur : seulement dans l'onglet « Extérieur »
+    return (incidentsQ.data as Record<string, unknown>[])
+      .filter((i) => onglet === 'resolus' || (onglet === 'exterieur' ? i.externe === true : i.externe !== true))
+      .map(incidentToTicket);
+  }, [incidentsQ.data, onglet]);
 
   const zones = useMemo(() => {
     const zoneSet = new Set<string>();
@@ -154,11 +166,14 @@ export function Operations() {
   });
 
   const compteurs = useMemo(() => {
-    if (!allIncidentsQ.data) return { aFaire: 0, enCours: 0, resolus: 0 };
+    if (!allIncidentsQ.data) return { aFaire: 0, enCours: 0, exterieur: 0, resolus: 0 };
     const all = allIncidentsQ.data as Record<string, unknown>[];
+    const ouverts = (i: Record<string, unknown>) =>
+      i.statut === 'ouvert' || i.statut === 'assigne' || i.statut === 'en_pause' || i.statut === 'en_cours';
     return {
-      aFaire: all.filter((i) => i.statut === 'ouvert' || i.statut === 'assigne' || i.statut === 'en_pause').length,
-      enCours: all.filter((i) => i.statut === 'en_cours').length,
+      aFaire: all.filter((i) => i.externe !== true && (i.statut === 'ouvert' || i.statut === 'assigne' || i.statut === 'en_pause')).length,
+      enCours: all.filter((i) => i.externe !== true && i.statut === 'en_cours').length,
+      exterieur: all.filter((i) => i.externe === true && ouverts(i)).length,
       resolus: all.filter((i) => i.statut === 'resolu' || i.statut === 'ferme').length,
     };
   }, [allIncidentsQ.data]);
@@ -222,6 +237,7 @@ export function Operations() {
         {[
           { code: 'a_faire' as Onglet, label: 'À faire', badge: compteurs.aFaire, badgeTone: 'white' },
           { code: 'en_cours' as Onglet, label: 'En cours', badge: compteurs.enCours, badgeTone: 'amber' },
+          { code: 'exterieur' as Onglet, label: 'Extérieur', badge: compteurs.exterieur, badgeTone: 'amber' },
           { code: 'resolus' as Onglet, label: 'Résolus', badge: compteurs.resolus, badgeTone: 'white' },
           { code: 'controles' as Onglet, label: 'Contrôles' },
           { code: 'preventif' as Onglet, label: 'Préventif' },
@@ -286,9 +302,9 @@ export function Operations() {
           </div>
         ) : ticketsFiltres.length === 0 ? (
           <div className="text-center py-12 text-dim text-sm">
-            Aucun ticket {onglet === 'en_cours' ? 'en cours' : onglet === 'resolus' ? 'résolu' : 'à traiter'}
+            Aucun ticket {onglet === 'en_cours' ? 'en cours' : onglet === 'resolus' ? 'résolu' : onglet === 'exterieur' ? 'confié à un intervenant extérieur' : 'à traiter'}
           </div>
-        ) : onglet === 'resolus' ? (
+        ) : onglet === 'resolus' || onglet === 'exterieur' ? (
           <>
             {ticketsFiltres.map((t) => (
               <TicketCard

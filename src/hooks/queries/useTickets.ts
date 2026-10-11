@@ -17,7 +17,8 @@ export function useIncidents(filtres?: {
         .select(
           `*,
           equipements!inner(code, libelle, parc_id, parcs(code, nom), zones(nom), categories_equipement(nom)),
-          niveaux_priorite(code, nom, sla_h, couleur_hex)`
+          niveaux_priorite(code, nom, sla_h, couleur_hex),
+          externe_fournisseur:fournisseurs!incidents_externe_fournisseur_id_fkey(nom, contact_tel, contact_nom)`
         )
         .eq('est_formation', estFormation)
         .order('declare_le', { ascending: false });
@@ -48,7 +49,8 @@ export function useIncident(numeroBT: string | undefined) {
           `*,
           equipements(*, parcs(code, nom), zones(nom), categories_equipement(nom)),
           niveaux_priorite(*),
-          interventions(*, pieces_utilisees(*, pieces_detachees(*)))`
+          interventions(*, pieces_utilisees(*, pieces_detachees(*))),
+          externe_fournisseur:fournisseurs!incidents_externe_fournisseur_id_fkey(nom, contact_tel, contact_nom)`
         )
         .eq('numero_bt', numeroBT)
         .eq('est_formation', estFormation)
@@ -208,5 +210,55 @@ export function useDemarrerIntervention() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['incidents'] });
     },
+  });
+}
+
+// --- Intervenant extérieur ---------------------------------------------------
+
+export function useConfierIntervenantExterieur() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (p: {
+      incidentId: string;
+      fournisseurId: string | null;
+      nom: string;
+      datePrevue: string;
+      commentaire: string;
+    }) => {
+      const { error } = await supabase.rpc('confier_intervenant_exterieur', {
+        p_incident_id: p.incidentId,
+        p_fournisseur_id: p.fournisseurId,
+        p_nom: p.nom || null,
+        p_date_prevue: p.datePrevue || null,
+        p_commentaire: p.commentaire || null,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['incidents'] }),
+  });
+}
+
+export function useReprendreTicketEnInterne() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (incidentId: string) => {
+      const { error } = await supabase.rpc('reprendre_ticket_en_interne', { p_incident_id: incidentId });
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['incidents'] }),
+  });
+}
+
+export function useCloturerTicketExterieur() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (p: { incidentId: string; compteRendu: string }) => {
+      const { error } = await supabase.rpc('cloturer_ticket_exterieur', {
+        p_incident_id: p.incidentId,
+        p_compte_rendu: p.compteRendu,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['incidents'] }),
   });
 }

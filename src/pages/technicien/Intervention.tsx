@@ -13,6 +13,7 @@ import { useCloturerIntervention } from '@/hooks/mutations';
 import { useAuth } from '@/hooks/useAuth';
 import { useDraftPersistence, useAutoSaveDraft } from '@/hooks/useDraftPersistence';
 import { useToast } from '@/components/ui/ToastProvider';
+import { PanneauIntervenantExterieur } from '@/components/tickets/PanneauIntervenantExterieur';
 import { estErreurReseau, mettreActionEnFile } from '@/lib/horsLigne/file';
 import { exportInterventionPDF } from './exportInterventionPDF';
 import { formatChrono, cn } from '@/lib/utils';
@@ -317,7 +318,9 @@ export function Intervention() {
       </div>
 
       <main className="p-4 px-[18px] bg-bg-app flex flex-col gap-3.5">
-        {!estResolu && (!latestIntervention || statutIncident === 'en_pause') && (
+        <PanneauIntervenantExterieur incident={incident as Record<string, unknown>} onCloture={() => navigate(-1)} />
+
+        {!estResolu && incident.externe !== true && (!latestIntervention || statutIncident === 'en_pause') && (
           <div className="bg-bg-card rounded-xl p-4 border border-nikito-cyan/30 flex flex-col sm:flex-row sm:items-center gap-3">
             <div className="flex-1">
               <div className="text-[14px] font-semibold">

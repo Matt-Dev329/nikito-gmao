@@ -46,6 +46,7 @@ export function useSidebarBadges() {
           .from('incidents')
           .select('id, equipements!inner(id)', { count: 'exact', head: true })
           .in('statut', ['ouvert', 'assigne'])
+          .eq('externe', false)
           .eq('est_formation', estFormation),
         supabase
           .from('invitations')
@@ -62,6 +63,7 @@ export function useSidebarBadges() {
           .from('incidents')
           .select('id, equipements!inner(id)', { count: 'exact', head: true })
           .eq('statut', 'en_cours')
+          .eq('externe', false)
           .eq('est_formation', estFormation),
         supabase
           .from('plaintes_clients')
