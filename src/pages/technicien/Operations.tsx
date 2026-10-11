@@ -4,7 +4,7 @@ import { TabletHeader } from '@/components/layout/TabletHeader';
 import { TicketCard, type TicketSummary } from '@/components/tickets/TicketCard';
 import { ModaleReassignerTicket } from '@/components/tickets/ModaleReassignerTicket';
 import { Pill } from '@/components/ui/Pill';
-import { cn, formatDateCourt, formatDuree } from '@/lib/utils';
+import { cn, estCheminVideo, formatDateCourt, formatDuree } from '@/lib/utils';
 import { useIncidents, useReprendreIncident } from '@/hooks/queries/useTickets';
 import { useAuth } from '@/hooks/useAuth';
 import { useParcs } from '@/hooks/queries/useReferentiel';
@@ -86,6 +86,7 @@ function incidentToTicket(inc: Record<string, unknown>): TicketSummary {
     enAttente: inc.statut === 'assigne',
     enPause: inc.statut === 'en_pause',
     photoPath: ((inc.photos_urls as string[] | null) ?? [])[0] ?? undefined,
+    photoVideo: estCheminVideo(((inc.photos_urls as string[] | null) ?? [])[0]),
   };
 }
 

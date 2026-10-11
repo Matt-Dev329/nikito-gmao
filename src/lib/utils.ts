@@ -51,3 +51,8 @@ export function formatChrono(secondes: number): string {
   const pad = (n: number) => String(n).padStart(2, '0');
   return h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${pad(m)}:${pad(s)}`;
 }
+
+/** Le chemin / l'URL désigne une vidéo (signalement filmé) plutôt qu'une photo. */
+export function estCheminVideo(chemin: string | null | undefined): boolean {
+  return !!chemin && /\.(mp4|mov|webm|3gp|m4v)(\?|$)/i.test(chemin);
+}

@@ -4,6 +4,7 @@ import { supabase } from '@/lib/supabase';
 import { useSignedUrls } from '@/hooks/useSignedUrl';
 import { useToast } from '@/components/ui/ToastProvider';
 import { PhotoCapture } from '@/components/shared/PhotoCapture';
+import { estCheminVideo } from '@/lib/utils';
 
 /**
  * Photos du problème (prises au signalement, stockées dans alba-incidents)
@@ -43,7 +44,7 @@ export function PhotosTicket({
     <div className="bg-bg-card rounded-xl p-3.5 px-4">
       <div className="flex items-center justify-between mb-2.5">
         <div className="text-[13px] font-semibold">
-          Photo{chemins.length > 1 ? 's' : ''} du problème
+          Photo{chemins.length > 1 ? 's' : ''} / vidéo du problème
           {chemins.length > 0 && <span className="text-dim font-normal"> · {chemins.length}</span>}
         </div>
         {modifiable && !ajout && (
@@ -59,7 +60,9 @@ export function PhotosTicket({
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
           {chemins.map((c) => {
             const url = urls?.[c];
-            return url ? (
+            return url && estCheminVideo(c) ? (
+              <video key={c} src={url} controls playsInline preload="metadata" className="w-full rounded-lg bg-black aspect-[4/3]" />
+            ) : url ? (
               <button key={c} onClick={() => setZoom(url)} className="block rounded-lg overflow-hidden bg-bg-deep aspect-[4/3]">
                 <img src={url} alt="Photo du problème" loading="lazy" className="w-full h-full object-cover" />
               </button>

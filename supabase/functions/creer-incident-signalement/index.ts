@@ -27,13 +27,17 @@ interface Payload {
   categorie_id: string;
   symptome_id: string | null;
   symptome_libre: string | null;
-  photo_url: string;
+  /** Photo ou vidéo du problème (facultative) */
+  photo_url?: string | null;
+  /** Plusieurs médias (photos / vidéos), facultatif */
+  medias?: string[] | null;
   priorite_escaladee: boolean;
   equipement_manquant_label: string | null;
   declare_par_id: string;
   via?: string;
   role_signaleur?: string;
   mode_expert?: ModeExpert | null;
+  est_brouillon?: boolean;
 }
 
 Deno.serve(async (req: Request) => {
@@ -48,9 +52,13 @@ Deno.serve(async (req: Request) => {
 
     const body: Payload = await req.json();
 
-    if (!body.parc_id || !body.categorie_id || !body.photo_url || !body.declare_par_id) {
-      return jsonResponse({ success: false, error: "Champs requis manquants (parc_id, categorie_id, photo_url, declare_par_id)" }, 400);
+    if (!body.parc_id || !body.categorie_id || !body.declare_par_id) {
+      return jsonResponse({ success: false, error: "Champs requis manquants (parc_id, categorie_id, declare_par_id)" }, 400);
     }
+    // Photo / vidéo facultatives
+    const medias = [...(body.medias ?? []), ...(body.photo_url ? [body.photo_url] : [])].filter(
+      (m, i, arr) => typeof m === "string" && m.trim() !== "" && arr.indexOf(m) === i,
+    );
 
     // 1. Verify user has access to this parc
     const { data: access } = await supabase
@@ -130,7 +138,8 @@ Deno.serve(async (req: Request) => {
         symptome: symptomeLabel,
         source: "staff_caisse",
         declare_par_id: body.declare_par_id,
-        photos_urls: [body.photo_url],
+        photos_urls: medias,
+        est_brouillon: body.est_brouillon === true,
         validation_manager: needsManagerApproval ? "en_attente" : "auto",
         meta: {
           via: body.via ?? "tablette_signalement",

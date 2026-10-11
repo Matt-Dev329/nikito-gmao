@@ -19,6 +19,8 @@ export interface TicketSummary {
   /** Photo du problème (chemin dans alba-incidents) et son URL signée */
   photoPath?: string;
   photoUrl?: string;
+  /** Le média du signalement est une vidéo */
+  photoVideo?: boolean;
 }
 
 interface TicketCardProps {
@@ -55,14 +57,16 @@ export function TicketCard({ ticket, variant, onDemarrer, onReassigner, onRepren
         )}
       >
         <CritTag niveau={ticket.criticite} minWidth />
-        {ticket.photoUrl && (
+        {ticket.photoVideo ? (
+          <span className="w-11 h-11 rounded-lg bg-bg-deep flex-shrink-0 flex items-center justify-center text-lg">🎥</span>
+        ) : ticket.photoUrl ? (
           <img
             src={ticket.photoUrl}
             alt=""
             loading="lazy"
             className="w-11 h-11 rounded-lg object-cover bg-bg-deep flex-shrink-0"
           />
-        )}
+        ) : null}
         <div className="flex-1 min-w-0">
           <div className="text-[13px] font-medium flex items-center gap-1.5">
             {ticket.titre}
@@ -102,14 +106,23 @@ export function TicketCard({ ticket, variant, onDemarrer, onReassigner, onRepren
         <div className="text-[17px] font-semibold mb-1">{ticket.titre}</div>
         {ticket.description && <div className="text-[13px] text-dim leading-relaxed">{ticket.description}</div>}
       </div>
-      {ticket.photoUrl && (
+      {ticket.photoUrl && ticket.photoVideo ? (
+        <video
+          src={ticket.photoUrl}
+          controls
+          playsInline
+          preload="metadata"
+          onClick={(e) => e.stopPropagation()}
+          className="w-full max-h-[220px] rounded-xl bg-black"
+        />
+      ) : ticket.photoUrl ? (
         <img
           src={ticket.photoUrl}
           alt="Photo du problème"
           loading="lazy"
           className="w-full max-h-[200px] rounded-xl object-cover bg-bg-deep"
         />
-      )}
+      ) : null}
       {ticket.badges && ticket.badges.length > 0 && (
         <div className="flex gap-2 flex-wrap text-[11px]">
           {ticket.badges.map((b) => (

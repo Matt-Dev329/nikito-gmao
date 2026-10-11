@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { cn } from '@/lib/utils';
 import { supabase, supabaseUrl, supabaseAnonKey } from '@/lib/supabase';
-import { estErreurReseau, mettreActionEnFile } from '@/lib/horsLigne/file';
+import { envoyerPhotoOuMettreEnFile, estErreurReseau, mettreActionEnFile } from '@/lib/horsLigne/file';
+import { dateParis } from '@/lib/dates';
 import { useAuth } from '@/hooks/useAuth';
 import { chargerToutesLesPages } from '@/lib/paginer';
 import { uploadPhotoControle } from '@/lib/uploadPhotoControle';
@@ -44,6 +45,8 @@ interface SignalementState {
   symptomeLibre: string | null;
   photoUrl: string | null;
   photoPreview: string | null;
+  /** Le média joint est une vidéo (sinon une photo) */
+  mediaVideo: boolean;
   prioriteEscaladee: boolean;
   prioriteOverride: string | null;
   technicienAssigneId: string | null;
@@ -58,6 +61,7 @@ const INITIAL_STATE: SignalementState = {
   symptomeLibre: null,
   photoUrl: null,
   photoPreview: null,
+  mediaVideo: false,
   prioriteEscaladee: false,
   prioriteOverride: null,
   technicienAssigneId: null,
@@ -213,7 +217,8 @@ export function ModaleSignalerV2({ open, onClose, via, parcId: propParcId, modeE
   const totalSteps = STEPS.length;
 
   const handleSubmit = useCallback(async () => {
-    if (!parcId || !state.categorie || !state.photoUrl || !userCtx) return;
+    // Photo / vidéo facultatives
+    if (!parcId || !state.categorie || !userCtx) return;
     setSubmitting(true);
     setSubmitError(null);
 
@@ -373,7 +378,7 @@ export function ModaleSignalerV2({ open, onClose, via, parcId: propParcId, modeE
             <EtapePhoto
               parcCode={parcCode}
               userName={`${userCtx.prenom} ${userCtx.nom}`}
-              onDone={(url, preview) => { update({ photoUrl: url, photoPreview: preview }); setEtape('recap'); }}
+              onDone={(url, preview, video) => { update({ photoUrl: url, photoPreview: preview, mediaVideo: video }); setEtape('recap'); }}
             />
           )}
           {etape === 'recap' && (
@@ -849,79 +854,130 @@ function EtapePhoto({
 }: {
   parcCode: string;
   userName: string;
-  onDone: (url: string, preview: string) => void;
+  onDone: (url: string | null, preview: string, video: boolean) => void;
 }) {
-  const fileRef = useRef<HTMLInputElement>(null);
+  const photoRef = useRef<HTMLInputElement>(null);
+  const videoRef = useRef<HTMLInputElement>(null);
   const [preview, setPreview] = useState<string | null>(null);
+  const [estVideo, setEstVideo] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
 
-  const handleCapture = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const VIDEO_MAX_MO = 50;
+
+  const handlePhoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => setPreview(reader.result as string);
-    reader.readAsDataURL(file);
+    const apercu = URL.createObjectURL(file);
+    setPreview(apercu);
+    setEstVideo(false);
     setError(null);
     setUploading(true);
     setProgress(10);
-
+    const fakeProgress = setInterval(() => setProgress((p) => Math.min(p + 15, 85)), 300);
     try {
-      const fakeProgress = setInterval(() => {
-        setProgress((p) => Math.min(p + 15, 85));
-      }, 300);
-
       const result = await uploadPhotoControle(file, {
         bucket: 'alba-incidents',
         parcCode: parcCode || 'UNKN',
-        contexte: new Date().toISOString().slice(0, 10),
+        contexte: dateParis(),
         utilisateurNom: userName,
         maxDimension: 1920,
         maxSizeMB: 1,
       });
-
-      clearInterval(fakeProgress);
       setProgress(100);
-      onDone(result.path, preview ?? '');
-    } catch (err: any) {
-      setError(err.message ?? 'Erreur lors de l\'upload');
+      onDone(result.path, apercu, false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Erreur lors de l'envoi");
       setUploading(false);
       setProgress(0);
+    } finally {
+      clearInterval(fakeProgress);
+    }
+  };
+
+  const handleVideo = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > VIDEO_MAX_MO * 1024 * 1024) {
+      setError(`Vidéo trop lourde (${Math.round(file.size / 1024 / 1024)} Mo, max ${VIDEO_MAX_MO} Mo) : filme environ 30 secondes.`);
+      if (videoRef.current) videoRef.current.value = '';
+      return;
+    }
+    const apercu = URL.createObjectURL(file);
+    setPreview(apercu);
+    setEstVideo(true);
+    setError(null);
+    setUploading(true);
+    setProgress(10);
+    const fakeProgress = setInterval(() => setProgress((p) => Math.min(p + 5, 90)), 500);
+    try {
+      const ext = (file.name.split('.').pop() || 'mp4').toLowerCase().replace(/[^a-z0-9]/g, '') || 'mp4';
+      const horodatage = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+      const chemin = `${parcCode || 'UNKN'}/${dateParis()}/${horodatage}_${Math.random().toString(36).slice(2, 10)}.${ext}`;
+      // Sans réseau, la vidéo est gardée sur l'appareil et partira toute seule
+      await envoyerPhotoOuMettreEnFile('alba-incidents', chemin, file, file.type || 'video/mp4');
+      setProgress(100);
+      onDone(chemin, apercu, true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Erreur lors de l'envoi de la vidéo");
+      setUploading(false);
+      setProgress(0);
+    } finally {
+      clearInterval(fakeProgress);
     }
   };
 
   const handleRetake = () => {
     setPreview(null);
+    setEstVideo(false);
     setUploading(false);
     setProgress(0);
     setError(null);
-    if (fileRef.current) fileRef.current.value = '';
+    if (photoRef.current) photoRef.current.value = '';
+    if (videoRef.current) videoRef.current.value = '';
   };
 
   return (
     <div className="p-4 pb-24 flex flex-col items-center">
-      <input ref={fileRef} type="file" accept="image/*" capture="environment" onChange={handleCapture} className="hidden" />
+      <input ref={photoRef} type="file" accept="image/*" capture="environment" onChange={handlePhoto} className="hidden" />
+      <input ref={videoRef} type="file" accept="video/*" capture="environment" onChange={handleVideo} className="hidden" />
 
       {!preview ? (
-        <div className="flex-1 flex flex-col items-center justify-center py-12">
-          <div className="w-32 h-32 bg-[#131836] rounded-3xl flex items-center justify-center mb-6 border-2 border-dashed border-white/10">
-            <span className="text-5xl">{'\u{1F4F7}'}</span>
+        <div className="flex-1 flex flex-col items-center justify-center py-8 w-full">
+          <div className="text-sm text-dim text-center mb-6 max-w-[300px]">
+            Ajoute une photo ou une courte vidéo du problème (facultatif, mais ça aide le technicien)
           </div>
-          <div className="text-sm text-dim text-center mb-6 max-w-[280px]">
-            Prenez une photo de la zone concernee pour documenter l'incident
+          <div className="flex flex-col gap-3 w-full max-w-[320px]">
+            <button
+              onClick={() => photoRef.current?.click()}
+              className="bg-gradient-to-r from-[#E85A9B] to-[#5DE5FF] text-white px-6 py-4 rounded-2xl text-base font-bold active:scale-95 transition-transform min-h-[64px]"
+            >
+              {'\u{1F4F7}'} Prendre une photo
+            </button>
+            <button
+              onClick={() => videoRef.current?.click()}
+              className="bg-[#131836] border border-[#5DE5FF]/40 text-[#5DE5FF] px-6 py-4 rounded-2xl text-base font-bold active:scale-95 transition-transform min-h-[64px]"
+            >
+              {'\u{1F3A5}'} Filmer une vidéo
+            </button>
+            <button
+              onClick={() => onDone(null, '', false)}
+              className="text-dim text-sm underline min-h-[48px]"
+            >
+              Continuer sans photo ni vidéo
+            </button>
           </div>
-          <button
-            onClick={() => fileRef.current?.click()}
-            className="bg-gradient-to-r from-[#E85A9B] to-[#5DE5FF] text-white px-8 py-4 rounded-2xl text-base font-bold active:scale-95 transition-transform min-h-[72px] min-w-[220px]"
-          >
-            Prendre la photo
-          </button>
+          {error && <div className="text-[#FF4D6D] text-xs mt-4 text-center max-w-[300px]">{error}</div>}
         </div>
       ) : (
         <div className="w-full">
           <div className="relative rounded-2xl overflow-hidden mb-4 bg-black">
-            <img src={preview} alt="Preview" className="w-full max-h-[50vh] object-contain" />
+            {estVideo ? (
+              <video src={preview} controls playsInline className="w-full max-h-[50vh]" />
+            ) : (
+              <img src={preview} alt="Aperçu" className="w-full max-h-[50vh] object-contain" />
+            )}
           </div>
 
           {uploading && (
@@ -929,7 +985,7 @@ function EtapePhoto({
               <div className="h-2 bg-white/10 rounded-full overflow-hidden">
                 <div className="h-full bg-gradient-to-r from-[#E85A9B] to-[#5DE5FF] rounded-full transition-all duration-300" style={{ width: `${progress}%` }} />
               </div>
-              <div className="text-[11px] text-dim text-center mt-1.5">{progress < 100 ? `Upload en cours... ${progress}%` : 'Upload termine'}</div>
+              <div className="text-[11px] text-dim text-center mt-1.5">{progress < 100 ? `Envoi en cours... ${progress}%` : 'Envoi terminé'}</div>
             </div>
           )}
 
@@ -937,13 +993,13 @@ function EtapePhoto({
             <div className="bg-[#FF4D6D]/10 border border-[#FF4D6D]/25 rounded-xl p-3 mb-4 text-center">
               <div className="text-[#FF4D6D] text-xs font-semibold mb-1">Erreur</div>
               <div className="text-dim text-[11px]">{error}</div>
-              <button onClick={() => fileRef.current?.click()} className="mt-2 text-[#5DE5FF] text-xs underline">Reessayer</button>
+              <button onClick={handleRetake} className="mt-2 text-[#5DE5FF] text-xs underline">Réessayer</button>
             </div>
           )}
 
           {!uploading && !error && (
             <button onClick={handleRetake} className="w-full bg-[#131836] border border-white/[0.08] rounded-xl py-3 text-dim text-sm min-h-[48px]">
-              Refaire la photo
+              Refaire
             </button>
           )}
         </div>
@@ -1011,8 +1067,15 @@ function EtapeRecap({
     <div className="p-4 pb-32">
       {state.photoPreview && (
         <div className="rounded-2xl overflow-hidden mb-4 bg-black">
-          <img src={state.photoPreview} alt="" className="w-full max-h-[200px] object-cover" />
+          {state.mediaVideo ? (
+            <video src={state.photoPreview} controls playsInline className="w-full max-h-[240px]" />
+          ) : (
+            <img src={state.photoPreview} alt="" className="w-full max-h-[200px] object-cover" />
+          )}
         </div>
+      )}
+      {!state.photoUrl && (
+        <div className="text-[12px] text-dim mb-3 text-center">Aucune photo ni vidéo jointe</div>
       )}
 
       <div className="bg-[#131836] rounded-xl p-4 mb-3 border border-white/[0.06]">
