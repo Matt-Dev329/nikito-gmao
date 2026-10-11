@@ -13,12 +13,14 @@ import { useCloturerIntervention } from '@/hooks/mutations';
 import { useAuth } from '@/hooks/useAuth';
 import { useDraftPersistence, useAutoSaveDraft } from '@/hooks/useDraftPersistence';
 import { useToast } from '@/components/ui/ToastProvider';
+import { useSignedUrl } from '@/hooks/useSignedUrl';
+import { supabase } from '@/lib/supabase';
 import { PanneauIntervenantExterieur } from '@/components/tickets/PanneauIntervenantExterieur';
 import { PanneauAttentePiece } from '@/components/tickets/PanneauAttentePiece';
 import { PhotosTicket } from '@/components/tickets/PhotosTicket';
 import { estErreurReseau, mettreActionEnFile } from '@/lib/horsLigne/file';
 import { exportInterventionPDF } from './exportInterventionPDF';
-import { formatChrono, cn } from '@/lib/utils';
+import { formatChrono, cn, estCheminVideo } from '@/lib/utils';
 import type { Criticite } from '@/types/database';
 
 type Etape = 'diagnostic' | 'pieces' | 'actions' | 'cloture';
@@ -77,13 +79,47 @@ export function Intervention() {
   }, [interventions, estResolu]);
 
   const demarrer = useDemarrerIntervention();
-  const demarrerIntervention = () => {
+  // Photo prise à la création du ticket : sert de photo AVANT (sinon elle est obligatoire)
+  const photoSignalement =
+    ((incident?.photos_urls as string[] | null) ?? []).find((c) => c && !estCheminVideo(c)) ?? null;
+  const { data: urlPhotoSignalement } = useSignedUrl(photoSignalement, 'alba-incidents');
+  const [autrePhoto, setAutrePhoto] = useState(false);
+  const [copiePhoto, setCopiePhoto] = useState(false);
+
+  /** Recopie la photo du signalement dans le dossier de l'intervention (photo AVANT). */
+  const copierPhotoSignalement = async (chemin: string): Promise<string> => {
+    const { data, error } = await supabase.storage.from('alba-incidents').download(chemin);
+    if (error || !data) throw new Error('Photo du signalement inaccessible : prends une nouvelle photo');
+    const cible = `intervention/${btNumero ?? 'draft'}/avant_signalement_${Date.now()}.jpg`;
+    const { error: upErr } = await supabase.storage
+      .from('alba-interventions')
+      .upload(cible, data, { contentType: data.type || 'image/jpeg' });
+    if (upErr) throw upErr;
+    return cible;
+  };
+
+  const demarrerIntervention = async () => {
     if (!incident?.id) return;
-    if (!photoAvant) {
+    let photo = photoAvant;
+    if (!photo && photoSignalement && !autrePhoto) {
+      setCopiePhoto(true);
+      try {
+        photo = await copierPhotoSignalement(photoSignalement);
+        setPhotoAvant(photo);
+        setDirty(true);
+      } catch (e) {
+        toast.error((e as Error).message);
+        setAutrePhoto(true);
+        return;
+      } finally {
+        setCopiePhoto(false);
+      }
+    }
+    if (!photo) {
       toast.error('Prends d’abord la photo AVANT du problème');
       return;
     }
-    demarrer.mutate({ incidentId: incident.id as string, photoAvant }, {
+    demarrer.mutate({ incidentId: incident.id as string, photoAvant: photo }, {
       onSuccess: () => toast.success('Intervention démarrée — chrono lancé'),
       onError: (e) => toast.error(`Démarrage impossible : ${(e as Error).message}`),
     });
@@ -136,6 +172,8 @@ export function Intervention() {
   const [photoAvant, setPhotoAvant] = useState<string | null>(null);
   // Rien ne peut être saisi tant que la photo AVANT n'est pas prise
   const verrouPhoto = !photoAvant && !estResolu;
+  // Démarrage possible : photo AVANT prise, ou photo du signalement réutilisée
+  const photoDisponible = !!photoAvant || (!!photoSignalement && !autrePhoto);
   // Intervention pas encore démarrée (ou en pause) : seul le bloc « Démarrer » est proposé
   const aDemarrer = !estResolu && incident?.externe !== true && (!latestIntervention || statutIncident === 'en_pause');
   const formulaireVisible = estResolu || (!aDemarrer && incident?.externe !== true);
@@ -340,10 +378,27 @@ export function Intervention() {
               <div className="text-[14px] text-dim mt-1">
                 {statutIncident === 'en_pause'
                   ? `Motif : ${(incident.pause_motif as string | null) || 'non précisé'}. Reprends pour relancer le ticket.`
-                  : 'Étape 1 : photo AVANT du problème. Étape 2 : démarrer (chrono, ticket « en cours »).'}
+                  : photoSignalement && !autrePhoto
+                    ? 'La photo prise à la création du ticket sert de photo AVANT. Démarre quand tu es prêt.'
+                    : 'Étape 1 : photo AVANT du problème. Étape 2 : démarrer (chrono, ticket « en cours »).'}
               </div>
               {photoAvant && <div className="text-green text-[14px] font-semibold mt-3">✓ Photo AVANT prise</div>}
-              {!photoAvant && (
+              {!photoAvant && photoSignalement && !autrePhoto && (
+                <div className="mt-3 flex items-center gap-3">
+                  {urlPhotoSignalement ? (
+                    <img src={urlPhotoSignalement} alt="Photo du signalement" className="w-20 h-20 rounded-lg object-cover bg-bg-deep" />
+                  ) : (
+                    <div className="w-20 h-20 rounded-lg bg-bg-deep animate-pulse" />
+                  )}
+                  <div>
+                    <div className="text-green text-[14px] font-semibold">✓ Photo AVANT : celle du signalement</div>
+                    <button onClick={() => setAutrePhoto(true)} className="text-nikito-cyan text-[13px] underline min-h-[36px]">
+                      Prendre une autre photo
+                    </button>
+                  </div>
+                </div>
+              )}
+              {!photoAvant && (!photoSignalement || autrePhoto) && (
                 <div className="mt-3">
                   <PhotoCapture
                     bucketName="alba-interventions"
@@ -357,15 +412,15 @@ export function Intervention() {
             </div>
             <button
               onClick={demarrerIntervention}
-              disabled={demarrer.isPending || !photoAvant}
+              disabled={demarrer.isPending || copiePhoto || !photoDisponible}
               className={cn(
                 'bg-gradient-cta text-text px-6 py-5 rounded-2xl text-[18px] font-bold min-h-[64px] w-full shadow-lg',
-                (demarrer.isPending || !photoAvant) && 'opacity-40'
+                (demarrer.isPending || copiePhoto || !photoDisponible) && 'opacity-40'
               )}
             >
-              {demarrer.isPending
+              {demarrer.isPending || copiePhoto
                 ? '…'
-                : !photoAvant
+                : !photoDisponible
                   ? '📷 Photo AVANT d’abord'
                   : statutIncident === 'en_pause'
                     ? '▶ Reprendre'
