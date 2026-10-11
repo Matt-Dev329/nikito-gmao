@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/components/ui/ToastProvider';
 import {
@@ -240,6 +240,20 @@ function ModaleProduit({
   const [prix, setPrix] = useState(initial.prix_unitaire != null ? String(initial.prix_unitaire) : '');
   const [photoUrl, setPhotoUrl] = useState(initial.photo_url ?? '');
   const [pieceId, setPieceId] = useState(initial.piece_id ?? '');
+  const [categorie, setCategorie] = useState(initial.categorie ?? '');
+  const [sousCategorie, setSousCategorie] = useState(initial.sous_categorie ?? '');
+  // Suggestions : catégories déjà utilisées dans l'activité choisie
+  const { data: catalogue } = useCatalogueCommandes(true);
+  const suggestions = useMemo(() => {
+    const cats = new Set<string>();
+    const sous = new Set<string>();
+    for (const p of catalogue?.produits ?? []) {
+      if (p.activite_id !== activiteId || !p.categorie) continue;
+      cats.add(p.categorie);
+      if (p.sous_categorie && p.categorie === categorie.trim()) sous.add(p.sous_categorie);
+    }
+    return { cats: [...cats].sort(), sous: [...sous].sort() };
+  }, [catalogue, activiteId, categorie]);
   const { data: pieces } = usePiecesStockOptions();
   const [actif, setActif] = useState(initial.actif ?? true);
 
@@ -258,6 +272,8 @@ function ModaleProduit({
         prix_unitaire: prixNum,
         photo_url: photoUrl.trim() || null,
         piece_id: pieceId || null,
+        categorie: categorie.trim() || null,
+        sous_categorie: (categorie.trim() && sousCategorie.trim()) || null,
         ordre: initial.ordre ?? 0,
         actif,
       });
@@ -283,6 +299,33 @@ function ModaleProduit({
         <Field label="Nom *">
           <input value={nom} onChange={(e) => setNom(e.target.value)} placeholder="Ex : Pneu avant kart" className={champ} />
         </Field>
+        <div className="grid grid-cols-2 gap-2.5">
+          <Field label="Catégorie">
+            <input
+              value={categorie}
+              onChange={(e) => setCategorie(e.target.value)}
+              placeholder="Ex : Requilleuse"
+              list="suggestions-categories"
+              className={champ}
+            />
+            <datalist id="suggestions-categories">
+              {suggestions.cats.map((c) => <option key={c} value={c} />)}
+            </datalist>
+          </Field>
+          <Field label="Sous-catégorie">
+            <input
+              value={sousCategorie}
+              onChange={(e) => setSousCategorie(e.target.value)}
+              placeholder="Ex : Électrique"
+              list="suggestions-sous-categories"
+              disabled={!categorie.trim()}
+              className={cn(champ, !categorie.trim() && 'opacity-40')}
+            />
+            <datalist id="suggestions-sous-categories">
+              {suggestions.sous.map((c) => <option key={c} value={c} />)}
+            </datalist>
+          </Field>
+        </div>
         <div className="grid grid-cols-2 gap-2.5">
           <Field label="Référence">
             <input value={reference} onChange={(e) => setReference(e.target.value)} className={champ} />

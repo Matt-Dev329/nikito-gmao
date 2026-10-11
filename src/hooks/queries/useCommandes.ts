@@ -35,6 +35,9 @@ export interface ProduitCommande {
   photo_url: string | null;
   /** Pièce du stock alimentée à la livraison (créée automatiquement si vide) */
   piece_id: string | null;
+  /** Classement facultatif à l'intérieur de l'activité (ex. Requilleuse EDGE String) */
+  categorie: string | null;
+  sous_categorie: string | null;
   ordre: number;
   actif: boolean;
 }
@@ -125,17 +128,31 @@ export function useCatalogueCommandes(inclureInactifs = false) {
     queryKey: ['commandes', 'catalogue', inclureInactifs],
     queryFn: async () => {
       let qa = supabase.from('commande_activites').select('*').order('ordre').order('nom');
-      let qp = supabase.from('commande_produits').select('*').order('ordre').order('nom');
-      if (!inclureInactifs) {
-        qa = qa.eq('actif', true);
-        qp = qp.eq('actif', true);
+      if (!inclureInactifs) qa = qa.eq('actif', true);
+
+      // L'API renvoie au plus 1 000 lignes par requête : on charge les produits par pages.
+      const PAGE = 1000;
+      const produits: ProduitCommande[] = [];
+      for (let debut = 0; ; debut += PAGE) {
+        let qp = supabase
+          .from('commande_produits')
+          .select('*')
+          .order('ordre')
+          .order('nom')
+          .order('id')
+          .range(debut, debut + PAGE - 1);
+        if (!inclureInactifs) qp = qp.eq('actif', true);
+        const { data, error } = await qp;
+        if (error) throw error;
+        produits.push(...((data ?? []) as ProduitCommande[]));
+        if (!data || data.length < PAGE) break;
       }
-      const [a, p] = await Promise.all([qa, qp]);
+
+      const a = await qa;
       if (a.error) throw a.error;
-      if (p.error) throw p.error;
       return {
         activites: (a.data ?? []) as ActiviteCommande[],
-        produits: (p.data ?? []) as ProduitCommande[],
+        produits,
       };
     },
   });

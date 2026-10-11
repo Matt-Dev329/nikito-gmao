@@ -5,21 +5,72 @@ import { usePanier, nombreArticles } from '@/hooks/usePanier';
 import { useCatalogueCommandes, type ProduitCommande } from '@/hooks/queries/useCommandes';
 import { formatPrix } from './format';
 
+const PAR_PAGE = 60;
+
 export function OngletCatalogue({ onVoirPanier }: { onVoirPanier: () => void }) {
   const { data, isLoading, isError, error } = useCatalogueCommandes();
   const lignes = usePanier((s) => s.lignes);
-  const [activiteId, setActiviteId] = useState<string | null>(null);
-  const [recherche, setRecherche] = useState('');
+  const [activiteId, setActiviteIdBrut] = useState<string | null>(null);
+  const [categorie, setCategorieBrut] = useState<string | null>(null);
+  const [sousCategorie, setSousCategorieBrut] = useState<string | null>(null);
+  const [recherche, setRechercheBrut] = useState('');
+  const [nbAffiches, setNbAffiches] = useState(PAR_PAGE);
+
+  // Changer un filtre réinitialise les filtres plus fins et la pagination
+  const setActiviteId = (id: string | null) => {
+    setActiviteIdBrut(id);
+    setCategorieBrut(null);
+    setSousCategorieBrut(null);
+    setNbAffiches(PAR_PAGE);
+  };
+  const setCategorie = (c: string | null) => {
+    setCategorieBrut(c);
+    setSousCategorieBrut(null);
+    setNbAffiches(PAR_PAGE);
+  };
+  const setSousCategorie = (s: string | null) => {
+    setSousCategorieBrut(s);
+    setNbAffiches(PAR_PAGE);
+  };
+  const setRecherche = (r: string) => {
+    setRechercheBrut(r);
+    setNbAffiches(PAR_PAGE);
+  };
+
+  const produitsActivite = useMemo(
+    () => (data?.produits ?? []).filter((p) => !activiteId || p.activite_id === activiteId),
+    [data, activiteId]
+  );
+
+  // Catégories (et sous-catégories) présentes dans l'activité choisie, avec leur nombre de produits
+  const categories = useMemo(() => {
+    if (!activiteId) return [];
+    const m = new Map<string, number>();
+    produitsActivite.forEach((p) => p.categorie && m.set(p.categorie, (m.get(p.categorie) ?? 0) + 1));
+    return [...m.entries()].sort((a, b) => a[0].localeCompare(b[0], 'fr'));
+  }, [activiteId, produitsActivite]);
+
+  const sousCategories = useMemo(() => {
+    if (!categorie) return [];
+    const m = new Map<string, number>();
+    produitsActivite.forEach(
+      (p) => p.categorie === categorie && p.sous_categorie && m.set(p.sous_categorie, (m.get(p.sous_categorie) ?? 0) + 1)
+    );
+    return [...m.entries()].sort((a, b) => a[0].localeCompare(b[0], 'fr'));
+  }, [categorie, produitsActivite]);
 
   const produits = useMemo(() => {
-    let res = data?.produits ?? [];
-    if (activiteId) res = res.filter((p) => p.activite_id === activiteId);
+    let res = produitsActivite;
+    if (categorie) res = res.filter((p) => p.categorie === categorie);
+    if (sousCategorie) res = res.filter((p) => p.sous_categorie === sousCategorie);
     const q = recherche.trim().toLowerCase();
     if (q) {
-      res = res.filter((p) => [p.nom, p.reference, p.description].filter(Boolean).join(' ').toLowerCase().includes(q));
+      res = res.filter((p) =>
+        [p.nom, p.reference, p.description, p.categorie, p.sous_categorie].filter(Boolean).join(' ').toLowerCase().includes(q)
+      );
     }
     return res;
-  }, [data, activiteId, recherche]);
+  }, [produitsActivite, categorie, sousCategorie, recherche]);
 
   const nomActivite = useMemo(() => {
     const m = new Map<string, string>();
@@ -70,6 +121,30 @@ export function OngletCatalogue({ onVoirPanier }: { onVoirPanier: () => void }) 
             </Pill>
           ))}
         </div>
+        {categories.length > 0 && (
+          <div className="flex gap-1.5 overflow-x-auto pb-1">
+            <Pill variant="cyan" active={categorie === null} onClick={() => setCategorie(null)}>
+              Toutes les catégories
+            </Pill>
+            {categories.map(([c, n]) => (
+              <Pill key={c} variant="cyan" active={categorie === c} onClick={() => setCategorie(c)}>
+                {c} <span className="opacity-60">· {n}</span>
+              </Pill>
+            ))}
+          </div>
+        )}
+        {sousCategories.length > 0 && (
+          <div className="flex gap-1.5 overflow-x-auto pb-1">
+            <Pill active={sousCategorie === null} onClick={() => setSousCategorie(null)} className="min-h-[32px] py-1.5">
+              Tout
+            </Pill>
+            {sousCategories.map(([s, n]) => (
+              <Pill key={s} active={sousCategorie === s} onClick={() => setSousCategorie(s)} className="min-h-[32px] py-1.5">
+                {s} <span className="opacity-60">· {n}</span>
+              </Pill>
+            ))}
+          </div>
+        )}
       </div>
 
       {produits.length === 0 ? (
@@ -77,11 +152,26 @@ export function OngletCatalogue({ onVoirPanier }: { onVoirPanier: () => void }) 
           <p className="text-dim text-sm">Aucun produit trouvé.</p>
         </div>
       ) : (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {produits.map((p) => (
-            <CarteProduit key={p.id} produit={p} activite={nomActivite.get(p.activite_id)} quantite={lignes[p.id] ?? 0} />
-          ))}
-        </div>
+        <>
+          <p className="text-[12px] text-faint mb-2">
+            {produits.length} produit{produits.length > 1 ? 's' : ''}
+          </p>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {produits.slice(0, nbAffiches).map((p) => (
+              <CarteProduit key={p.id} produit={p} activite={nomActivite.get(p.activite_id)} quantite={lignes[p.id] ?? 0} />
+            ))}
+          </div>
+          {produits.length > nbAffiches && (
+            <div className="flex justify-center mt-4">
+              <button
+                onClick={() => setNbAffiches((n) => n + PAR_PAGE)}
+                className="bg-bg-card border border-white/[0.08] text-dim hover:text-text px-5 py-2.5 rounded-[10px] text-[13px] min-h-[44px]"
+              >
+                Afficher plus ({produits.length - nbAffiches} restants)
+              </button>
+            </div>
+          )}
+        </>
       )}
 
       {nbPanier > 0 && (
@@ -124,7 +214,7 @@ function CarteProduit({ produit, activite, quantite }: { produit: ProduitCommand
       <div className="flex-1 min-w-0 flex flex-col">
         <div className="text-[14px] font-semibold leading-tight">{produit.nom}</div>
         <div className="text-[11px] text-dim mt-0.5 truncate">
-          {[activite, produit.reference].filter(Boolean).join(' · ')}
+          {[activite, produit.sous_categorie ?? produit.categorie, produit.reference].filter(Boolean).join(' · ')}
         </div>
         {produit.description && <div className="text-[12px] text-faint mt-1 line-clamp-2">{produit.description}</div>}
         <div className="mt-auto pt-2 flex items-center justify-between gap-2">
