@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { Logo } from '@/components/ui/Logo';
+import { BoutonActualiser } from '@/components/ui/BoutonActualiser';
 
 interface TabletHeaderProps {
   parc: string;
@@ -70,6 +71,7 @@ export function TabletHeader({
       )}
 
       {rightSlot}
+      <BoutonActualiser />
     </header>
   );
 }

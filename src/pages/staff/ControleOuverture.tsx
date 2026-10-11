@@ -2,6 +2,7 @@ import { useState, useCallback, useMemo, useEffect } from 'react';
 import { aujourdhuiParis } from '@/lib/dates';
 import { estErreurReseau, mettreActionEnFile } from '@/lib/horsLigne/file';
 import { useNavigate } from 'react-router-dom';
+import { BoutonActualiser } from '@/components/ui/BoutonActualiser';
 import { ControleEcran, photoManquante, type PointControleVue, type ZoneVue } from '@/components/controles/ControleEcran';
 import { ModaleQuitterSansValider } from '@/components/ui/ModaleQuitterSansValider';
 import { ModaleSignalerV2 } from '@/components/forms/ModaleSignalerV2';
@@ -419,6 +420,7 @@ export function ControleOuverture({ typeControle = 'quotidien' }: { typeControle
         }
         headerRightSlot={
           <div className="flex items-center gap-1.5">
+            <BoutonActualiser className="w-8 h-8 text-[16px]" />
             <button
               onClick={() => { setParcChoisi(null); navigate(L.autreRoute); }}
               className="text-[11px] text-nikito-cyan hover:underline whitespace-nowrap"

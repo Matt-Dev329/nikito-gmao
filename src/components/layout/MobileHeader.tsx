@@ -1,5 +1,6 @@
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Logo } from '@/components/ui/Logo';
+import { BoutonActualiser } from '@/components/ui/BoutonActualiser';
 
 interface MobileHeaderProps {
   initiales: string;
@@ -62,6 +63,7 @@ export function MobileHeader({ initiales, couleurAvatar, topOffset = 0 }: Mobile
         <span className="text-[14px] font-semibold text-text tracking-wide">{title}</span>
       </div>
 
+      <BoutonActualiser className="mr-2 w-8 h-8 text-[16px]" />
       <button
         onClick={() => navigate('/gmao/profil')}
         className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center font-semibold text-[11px] ring-1 ring-white/20"
