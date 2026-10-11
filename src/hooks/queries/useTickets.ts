@@ -191,3 +191,22 @@ export function useValiderBrouillonIncident() {
     },
   });
 }
+
+/**
+ * Démarre (ou reprend) l'intervention d'un ticket : crée l'intervention si
+ * aucune n'est ouverte, passe le ticket « en cours » et lance le chrono.
+ * Idempotent côté base (RPC demarrer_intervention).
+ */
+export function useDemarrerIntervention() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (incidentId: string) => {
+      const { data, error } = await supabase.rpc('demarrer_intervention', { p_incident_id: incidentId });
+      if (error) throw error;
+      return data as { intervention_id: string; debut: string };
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['incidents'] });
+    },
+  });
+}

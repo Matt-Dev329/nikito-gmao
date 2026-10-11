@@ -8,7 +8,7 @@ import { ModalePauseTicket } from '@/components/tickets/ModalePauseTicket';
 import { ModaleAjouterPiece } from '@/components/shared/ModaleAjouterPiece';
 import { useAccesCommandes } from '@/hooks/queries/useCommandes';
 import { useChrono } from '@/hooks/useChrono';
-import { useIncident } from '@/hooks/queries/useTickets';
+import { useIncident, useDemarrerIntervention } from '@/hooks/queries/useTickets';
 import { useCloturerIntervention } from '@/hooks/mutations';
 import { useAuth } from '@/hooks/useAuth';
 import { useDraftPersistence, useAutoSaveDraft } from '@/hooks/useDraftPersistence';
@@ -58,14 +58,28 @@ export function Intervention() {
   const parc = equip?.parcs as Record<string, unknown> | null;
   const interventions = (incident?.interventions ?? []) as Record<string, unknown>[];
 
+  const statutIncident = (incident?.statut as string | undefined) ?? '';
+  const estResolu = statutIncident === 'resolu' || statutIncident === 'ferme';
+  // Intervention en cours (fin vide) ; pour un ticket résolu, la dernière intervention.
+  // Une intervention déjà clôturée d'un ticket rouvert ne doit pas être reprise ni écrasée.
   const latestIntervention = useMemo(() => {
     if (!interventions.length) return null;
-    return interventions.sort((a, b) => {
+    const triees = [...interventions].sort((a, b) => {
       const da = new Date(a.cree_le as string).getTime();
       const db = new Date(b.cree_le as string).getTime();
       return db - da;
-    })[0];
-  }, [interventions]);
+    });
+    return triees.find((i) => !i.fin) ?? (estResolu ? triees[0] : null);
+  }, [interventions, estResolu]);
+
+  const demarrer = useDemarrerIntervention();
+  const demarrerIntervention = () => {
+    if (!incident?.id) return;
+    demarrer.mutate(incident.id as string, {
+      onSuccess: () => toast.success('Intervention démarrée — chrono lancé'),
+      onError: (e) => toast.error(`Démarrage impossible : ${(e as Error).message}`),
+    });
+  };
 
   const debutISO = latestIntervention?.debut as string | null ?? null;
   const secondes = useChrono(debutISO);
@@ -285,6 +299,31 @@ export function Intervention() {
       </div>
 
       <main className="p-4 px-[18px] bg-bg-app flex flex-col gap-3.5">
+        {!estResolu && (!latestIntervention || statutIncident === 'en_pause') && (
+          <div className="bg-bg-card rounded-xl p-4 border border-nikito-cyan/30 flex flex-col sm:flex-row sm:items-center gap-3">
+            <div className="flex-1">
+              <div className="text-[14px] font-semibold">
+                {statutIncident === 'en_pause' ? 'Intervention en pause' : 'Intervention non démarrée'}
+              </div>
+              <div className="text-[12px] text-dim mt-0.5">
+                {statutIncident === 'en_pause'
+                  ? `Motif : ${(incident.pause_motif as string | null) || 'non précisé'}. Reprends pour relancer le ticket.`
+                  : 'Démarre pour lancer le chrono et passer le ticket « en cours ».'}
+              </div>
+            </div>
+            <button
+              onClick={demarrerIntervention}
+              disabled={demarrer.isPending}
+              className={cn(
+                'bg-gradient-cta text-text px-5 py-3 rounded-[10px] text-[14px] font-bold min-h-[48px]',
+                demarrer.isPending && 'opacity-40'
+              )}
+            >
+              {demarrer.isPending ? '…' : statutIncident === 'en_pause' ? '▶ Reprendre' : '▶ Démarrer l\'intervention'}
+            </button>
+          </div>
+        )}
+
         {/* Stepper */}
         <div>
           <div className="flex justify-between mb-2.5">

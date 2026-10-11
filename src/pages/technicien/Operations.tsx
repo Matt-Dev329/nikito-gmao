@@ -5,7 +5,7 @@ import { TicketCard, type TicketSummary } from '@/components/tickets/TicketCard'
 import { ModaleReassignerTicket } from '@/components/tickets/ModaleReassignerTicket';
 import { Pill } from '@/components/ui/Pill';
 import { cn, formatDateCourt, formatDuree } from '@/lib/utils';
-import { useIncidents, useReprendreIncident } from '@/hooks/queries/useTickets';
+import { useIncidents, useReprendreIncident, useDemarrerIntervention } from '@/hooks/queries/useTickets';
 import { useAuth } from '@/hooks/useAuth';
 import { useParcs } from '@/hooks/queries/useReferentiel';
 import { useToast } from '@/components/ui/ToastProvider';
@@ -163,6 +163,17 @@ export function Operations() {
     };
   }, [allIncidentsQ.data]);
 
+  const demarrer = useDemarrerIntervention();
+  const demarrerTicket = (id: string, numeroBT: string) => {
+    demarrer.mutate(id, {
+      onSuccess: () => {
+        toast.success('Intervention démarrée — chrono lancé');
+        navigate(`/tech/operations/${numeroBT}`);
+      },
+      onError: (e) => toast.error(`Démarrage impossible : ${(e as Error).message}`),
+    });
+  };
+
   const reprendreTicket = (id: string) => {
     reprendre.mutate(id, {
       onSuccess: () => toast.success('Intervention reprise'),
@@ -294,7 +305,7 @@ export function Operations() {
               <TicketCard
                 ticket={premier}
                 variant="expanded"
-                onDemarrer={() => navigate(`/tech/operations/${premier.numeroBT}`)}
+                onDemarrer={() => demarrerTicket(premier.id, premier.numeroBT)}
                 onReassigner={() => setReassignerCible({ id: premier.id, numeroBT: premier.numeroBT })}
                 onReprendre={() => reprendreTicket(premier.id)}
                 reprenant={reprendre.isPending}
