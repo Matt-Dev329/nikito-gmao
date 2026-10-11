@@ -72,6 +72,12 @@ export function OngletCatalogue({ onVoirPanier }: { onVoirPanier: () => void }) 
     return res;
   }, [produitsActivite, categorie, sousCategorie, recherche]);
 
+  // Les activités sans produit restent proposées en commande spécifique mais pas ici
+  const activitesAvecProduits = useMemo(() => {
+    const ids = new Set((data?.produits ?? []).map((p) => p.activite_id));
+    return (data?.activites ?? []).filter((a) => ids.has(a.id));
+  }, [data]);
+
   const nomActivite = useMemo(() => {
     const m = new Map<string, string>();
     data?.activites.forEach((a) => m.set(a.id, a.nom));
@@ -90,7 +96,7 @@ export function OngletCatalogue({ onVoirPanier }: { onVoirPanier: () => void }) 
   if (isError) {
     return <div className="text-red text-[13px] bg-red/10 rounded-lg p-3">Erreur : {(error as Error).message}</div>;
   }
-  if (!data || data.activites.length === 0) {
+  if (!data || activitesAvecProduits.length === 0) {
     return (
       <div className="text-center py-16">
         <p className="text-dim text-sm">Le catalogue est vide pour l'instant.</p>
@@ -115,7 +121,7 @@ export function OngletCatalogue({ onVoirPanier }: { onVoirPanier: () => void }) 
           <Pill active={activiteId === null} onClick={() => setActiviteId(null)}>
             Toutes les activités
           </Pill>
-          {data.activites.map((a) => (
+          {activitesAvecProduits.map((a) => (
             <Pill key={a.id} active={activiteId === a.id} onClick={() => setActiviteId(a.id)}>
               {a.nom}
             </Pill>
