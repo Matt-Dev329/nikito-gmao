@@ -10,6 +10,7 @@ import { useSignedUrls } from '@/hooks/useSignedUrl';
 import { useToast } from '@/components/ui/ToastProvider';
 import { Pill } from '@/components/ui/Pill';
 import type { AlbaBucket } from '@/lib/uploadPhotoControle';
+import { envoyerFichier } from '@/lib/envoiGrosFichier';
 
 export type TypeDocument = 'plan' | 'manuel';
 
@@ -18,6 +19,7 @@ const ROLES_EDITION = ['direction', 'chef_maintenance', 'directeur_parc', 'admin
 
 const BUCKET: AlbaBucket = 'alba-techniques';
 const PLAN_GENERAL = 'Plan général du parc';
+const TAILLE_MAX = 500 * 1024 * 1024;
 
 interface DocumentTechnique {
   id: string;
@@ -262,6 +264,7 @@ function FormulaireAjout({ type, onFini }: { type: TypeDocument; onFini: () => v
   const [activite, setActivite] = useState(type === 'plan' ? PLAN_GENERAL : '');
   const [description, setDescription] = useState('');
   const [fichier, setFichier] = useState<File | null>(null);
+  const [progression, setProgression] = useState<number | null>(null);
 
   const suggestions = useMemo(() => {
     const noms = (catalogue?.activites ?? []).map((a) => a.nom);
@@ -273,14 +276,12 @@ function FormulaireAjout({ type, onFini }: { type: TypeDocument; onFini: () => v
       if (!fichier) throw new Error('Choisis un fichier (PDF ou image)');
       if (!titre.trim()) throw new Error('Donne un titre au document');
       if (type === 'manuel' && !activite.trim()) throw new Error('Indique l’activité du manuel');
-      if (fichier.size > 50 * 1024 * 1024) throw new Error('Fichier trop lourd (50 Mo maximum)');
+      if (fichier.size > TAILLE_MAX) throw new Error('Fichier trop lourd (500 Mo maximum)');
       const parc = (parcs as Array<{ id: string; code: string }> | undefined)?.find((p) => p.id === parcId);
       const nomPropre = fichier.name.normalize('NFD').replace(/[^\w.-]+/g, '_').slice(-80);
       const chemin = `${type}/${parc?.code ?? 'commun'}/${Date.now()}_${nomPropre}`;
-      const { error: upErr } = await supabase.storage
-        .from(BUCKET)
-        .upload(chemin, fichier, { contentType: fichier.type || 'application/pdf' });
-      if (upErr) throw upErr;
+      setProgression(0);
+      await envoyerFichier(BUCKET, chemin, fichier, setProgression);
       const { error } = await supabase.from('documents_techniques').insert({
         type,
         parc_id: parcId || null,
@@ -300,6 +301,7 @@ function FormulaireAjout({ type, onFini }: { type: TypeDocument; onFini: () => v
       onFini();
     },
     onError: (e) => toast.error((e as Error).message),
+    onSettled: () => setProgression(null),
   });
 
   return (
@@ -341,6 +343,17 @@ function FormulaireAjout({ type, onFini }: { type: TypeDocument; onFini: () => v
         onChange={(e) => setFichier(e.target.files?.[0] ?? null)}
         className="text-[13px] text-dim file:mr-3 file:rounded-lg file:border-0 file:bg-nikito-cyan/15 file:text-nikito-cyan file:px-3 file:py-2"
       />
+      <div className="text-[11px] text-faint">
+        PDF ou image, jusqu’à 500 Mo{fichier ? ` · ${(fichier.size / 1024 / 1024).toFixed(1)} Mo sélectionnés` : ''}
+      </div>
+      {progression !== null && (
+        <div>
+          <div className="h-2 rounded-full bg-bg-deep overflow-hidden">
+            <div className="h-full bg-nikito-cyan transition-all" style={{ width: `${progression}%` }} />
+          </div>
+          <div className="text-[11px] text-dim mt-1">Envoi en cours… {progression} % — garde la page ouverte</div>
+        </div>
+      )}
       <div className="flex gap-2 justify-end">
         <button onClick={onFini} className="text-dim text-[13px] px-3 min-h-[44px]">
           Annuler
@@ -350,7 +363,7 @@ function FormulaireAjout({ type, onFini }: { type: TypeDocument; onFini: () => v
           disabled={envoyer.isPending}
           className={cn('bg-gradient-cta text-text px-5 rounded-[10px] text-[13px] font-bold min-h-[44px]', envoyer.isPending && 'opacity-40')}
         >
-          {envoyer.isPending ? 'Envoi…' : 'Enregistrer'}
+          {envoyer.isPending ? (progression !== null ? `Envoi ${progression} %` : 'Envoi…') : 'Enregistrer'}
         </button>
       </div>
     </div>
