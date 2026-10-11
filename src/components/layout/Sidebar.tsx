@@ -5,6 +5,7 @@ import { Logo } from '@/components/ui/Logo';
 import { getNavIcon, IconToggleSidebar, IconDeconnexion, IconAide } from './NavIcons';
 import { ViewAsSelector } from './ViewAsSelector';
 import { NotificationBell } from './NotificationBell';
+import { BoutonActualiser } from '@/components/ui/BoutonActualiser';
 import { useFormation } from '@/hooks/useFormation';
 import { useSidebarBadges } from '@/hooks/queries/useSidebarBadges';
 import { useTour } from '@/components/tour/useTour';
@@ -196,6 +197,7 @@ export function Sidebar({ user, roleAffiche, roleCode, realRoleCode, compact = f
 
       <div className={cn('flex items-center gap-1 flex-shrink-0', compact ? 'justify-center' : 'px-1')}>
         <NotificationBell compact={compact} onNavClick={onNavClick} />
+        <BoutonActualiser className="w-8 h-8 text-[16px]" />
         {showFormation && (
           <NavLink
             to="/gmao/formation"
