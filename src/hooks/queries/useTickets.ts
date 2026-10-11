@@ -16,7 +16,7 @@ export function useIncidents(filtres?: {
         .from('incidents')
         .select(
           `*,
-          equipements!inner(code, libelle, parc_id, parcs(code, nom), zones(nom), categories_equipement(nom)),
+          equipements!inner(code, libelle, parc_id, parcs(code, nom), zones(nom), categories_equipement(nom, activite)),
           niveaux_priorite(code, nom, sla_h, couleur_hex),
           externe_fournisseur:fournisseurs!incidents_externe_fournisseur_id_fkey(nom, contact_tel, contact_nom),
           attente_commande:commandes!incidents_attente_piece_commande_id_fkey(numero, statut)`
@@ -48,7 +48,7 @@ export function useIncident(numeroBT: string | undefined) {
         .from('incidents')
         .select(
           `*,
-          equipements(*, parcs(code, nom), zones(nom), categories_equipement(nom)),
+          equipements(*, parcs(code, nom), zones(nom), categories_equipement(nom, activite)),
           niveaux_priorite(*),
           interventions(*, pieces_utilisees(*, pieces_detachees(*))),
           externe_fournisseur:fournisseurs!incidents_externe_fournisseur_id_fkey(nom, contact_tel, contact_nom),

@@ -8,6 +8,8 @@ export interface TicketSummary {
   criticite: Criticite;
   titre: string;
   zone?: string;
+  /** Activité (Trampoline, Bowling, Casiers…) déduite de la catégorie d'équipement */
+  activite?: string;
   description?: string;
   badges?: Array<{ label: string; tone?: 'default' | 'pink' | 'amber' }>;
   meta?: string;

@@ -72,6 +72,7 @@ function incidentToTicket(inc: Record<string, unknown>): TicketSummary {
     criticite,
     titre: `${equip?.libelle as string ?? ''} · ${inc.description as string}`,
     zone: (zone?.nom as string) ?? undefined,
+    activite: (cat?.activite as string) ?? 'Autres',
     description: inc.statut === 'ouvert' && criticite === 'bloquant'
       ? `${equip?.code as string ?? ''} · signalé ${formatDuree(declareLe)}`
       : undefined,
@@ -109,6 +110,7 @@ export function Operations() {
   const reprendre = useReprendreIncident();
   const [onglet, setOnglet] = useState<Onglet>('a_faire');
   const [zoneFiltre, setZoneFiltre] = useState<string>('toutes');
+  const [activiteFiltre, setActiviteFiltre] = useState<string>('toutes');
   const [parcActif, setParcActif] = useState<string | null>(null);
   const [reassignerCible, setReassignerCible] = useState<{ id: string; numeroBT: string } | null>(null);
 
@@ -163,15 +165,27 @@ export function Operations() {
       .map(incidentToTicket);
   }, [incidentsQ.data, onglet]);
 
+  // Activités présentes dans l'onglet, avec leur nombre de tickets (« Autres » en dernier)
+  const activites = useMemo(() => {
+    const m = new Map<string, number>();
+    tickets.forEach((t) => m.set(t.activite ?? 'Autres', (m.get(t.activite ?? 'Autres') ?? 0) + 1));
+    return [...m.entries()].sort((a, b) =>
+      a[0] === 'Autres' ? 1 : b[0] === 'Autres' ? -1 : a[0].localeCompare(b[0], 'fr')
+    );
+  }, [tickets]);
+  const activiteActive = activites.some(([a]) => a === activiteFiltre) ? activiteFiltre : 'toutes';
+
+  const ticketsActivite = tickets.filter((t) => activiteActive === 'toutes' || t.activite === activiteActive);
+
   const zones = useMemo(() => {
     const zoneSet = new Set<string>();
-    tickets.forEach((t) => {
+    ticketsActivite.forEach((t) => {
       if (t.zone) zoneSet.add(t.zone);
     });
     return ['toutes', ...Array.from(zoneSet).sort()];
-  }, [tickets]);
+  }, [ticketsActivite]);
 
-  const ticketsFiltres = tickets.filter((t) => {
+  const ticketsFiltres = ticketsActivite.filter((t) => {
     if (zoneFiltre === 'toutes') return true;
     return t.zone === zoneFiltre;
   });
@@ -285,6 +299,30 @@ export function Operations() {
           </button>
         ))}
       </div>
+
+      {activites.length > 0 && (
+        <div className="px-3 md:px-[18px] pt-3 bg-bg-deep flex gap-2 items-center overflow-x-auto">
+          <span className="text-[11px] text-faint uppercase tracking-wider mr-1 flex-shrink-0">Activité</span>
+          {[['toutes', tickets.length] as [string, number], ...activites].map(([a, n]) => (
+            <button
+              key={a}
+              onClick={() => {
+                setActiviteFiltre(a);
+                setZoneFiltre('toutes');
+              }}
+              className={cn(
+                'px-3 py-1.5 rounded-[14px] text-[12px] min-h-[40px] whitespace-nowrap flex-shrink-0',
+                activiteActive === a
+                  ? 'bg-gradient-cta text-text font-semibold'
+                  : 'bg-bg-card border border-white/[0.08] text-dim'
+              )}
+            >
+              {a === 'toutes' ? 'Toutes' : a}
+              <span className="ml-1.5 opacity-70">{n}</span>
+            </button>
+          ))}
+        </div>
+      )}
 
       <div className="px-3 md:px-[18px] py-3 bg-bg-deep flex gap-2 items-center flex-wrap border-b border-white/[0.04]">
         <span className="text-[11px] text-faint uppercase tracking-wider mr-1">Zone</span>
