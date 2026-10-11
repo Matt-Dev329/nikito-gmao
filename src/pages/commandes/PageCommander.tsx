@@ -8,8 +8,9 @@ import { OngletCatalogue } from './OngletCatalogue';
 import { OngletPanier } from './OngletPanier';
 import { ListeCommandes } from './ListeCommandes';
 import { GestionCatalogue } from './GestionCatalogue';
+import { OngletCommandeSpecifique } from './OngletCommandeSpecifique';
 
-type Onglet = 'catalogue' | 'panier' | 'mes_commandes' | 'a_traiter' | 'gestion';
+type Onglet = 'catalogue' | 'panier' | 'specifique' | 'mes_commandes' | 'a_traiter' | 'gestion';
 
 export function PageCommander() {
   const { utilisateur } = useAuth();
@@ -42,6 +43,7 @@ export function PageCommander() {
   const onglets: { code: Onglet; label: string; badge?: number; visible: boolean }[] = [
     { code: 'catalogue', label: 'Catalogue', visible: peutCommander },
     { code: 'panier', label: 'Panier', badge: nbPanier, visible: peutCommander },
+    { code: 'specifique', label: 'Commande spécifique', visible: peutCommander },
     { code: 'mes_commandes', label: 'Mes commandes', visible: peutCommander },
     { code: 'a_traiter', label: 'Commandes reçues', badge: nbATraiter, visible: estGestionnaire },
     { code: 'gestion', label: 'Gérer le catalogue', visible: peutGererCatalogue },
@@ -94,6 +96,7 @@ export function PageCommander() {
           onEnvoyee={() => setOnglet('mes_commandes')}
         />
       )}
+      {ongletActif === 'specifique' && <OngletCommandeSpecifique onEnvoyee={() => setOnglet('mes_commandes')} />}
       {ongletActif === 'mes_commandes' && <ListeCommandes portee="miennes" />}
       {ongletActif === 'a_traiter' && <ListeCommandes portee="toutes" />}
       {ongletActif === 'gestion' && <GestionCatalogue />}

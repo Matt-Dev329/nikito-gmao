@@ -51,6 +51,9 @@ export interface LigneCommande {
   unite: string;
   quantite: number;
   prix_unitaire: number | null;
+  /** Article hors catalogue (commande spécifique) */
+  specifique: boolean;
+  lien: string | null;
 }
 
 export interface Commande {
@@ -161,7 +164,7 @@ export function useCatalogueCommandes(inclureInactifs = false) {
 const SELECT_COMMANDE = `id, numero, statut, commentaire, motif_refus, total_estime, cree_le, traitee_le, demandeur_id,
   demandeur:utilisateurs!commandes_demandeur_id_fkey(prenom, nom),
   parc:parcs(code, nom),
-  commande_lignes(id, produit_id, activite_nom, produit_nom, reference, unite, quantite, prix_unitaire)`;
+  commande_lignes(id, produit_id, activite_nom, produit_nom, reference, unite, quantite, prix_unitaire, specifique, lien)`;
 
 /** Mes commandes (demandeur) ou toutes les commandes (gestionnaire). */
 export function useCommandes(portee: 'miennes' | 'toutes') {
@@ -191,6 +194,37 @@ export function usePasserCommande() {
       const { data, error } = await supabase.rpc('passer_commande', {
         p_parc_id: params.parcId,
         p_lignes: params.lignes,
+        p_commentaire: params.commentaire || null,
+      });
+      if (error) throw error;
+      return data as { id: string; numero: string };
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['commandes'] }),
+  });
+}
+
+/** Commande d'un article qui n'est pas au catalogue (ajouté au catalogue à la validation). */
+export function usePasserCommandeSpecifique() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (params: {
+      parcId: string;
+      activiteId: string;
+      designation: string;
+      quantite: number;
+      unite: string;
+      reference: string;
+      lien: string;
+      commentaire: string;
+    }) => {
+      const { data, error } = await supabase.rpc('passer_commande_specifique', {
+        p_parc_id: params.parcId,
+        p_activite_id: params.activiteId,
+        p_designation: params.designation,
+        p_quantite: params.quantite,
+        p_unite: params.unite || null,
+        p_reference: params.reference || null,
+        p_lien: params.lien || null,
         p_commentaire: params.commentaire || null,
       });
       if (error) throw error;

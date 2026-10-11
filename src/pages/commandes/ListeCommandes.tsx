@@ -110,6 +110,8 @@ function CarteCommande({ commande: c, gestion }: { commande: Commande; gestion: 
       toast.success(
         s === 'livree'
           ? `Commande ${c.numero} livrée — produits entrés en stock`
+          : s === 'validee' && c.commande_lignes.some((l) => l.specifique)
+          ? `Commande ${c.numero} validée — article ajouté au catalogue`
           : `Commande ${c.numero} : ${STATUTS_COMMANDE[s].label.toLowerCase()}`
       );
     } catch (e) {
@@ -160,7 +162,22 @@ function CarteCommande({ commande: c, gestion }: { commande: Commande; gestion: 
                 <tr key={l.id} className="border-b border-white/[0.04] last:border-0">
                   <td className="py-2">
                     {l.produit_nom}
+                    {l.specifique && (
+                      <span className="ml-1.5 text-[10px] px-1.5 py-0.5 rounded bg-nikito-violet/20 text-nikito-violet align-middle">
+                        Spécifique
+                      </span>
+                    )}
                     <div className="text-[11px] text-faint">{[l.activite_nom, l.reference].filter(Boolean).join(' · ')}</div>
+                    {l.lien && (
+                      <a
+                        href={l.lien}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[11px] text-nikito-cyan hover:underline break-all"
+                      >
+                        Voir l'article
+                      </a>
+                    )}
                   </td>
                   <td className="py-2 text-right whitespace-nowrap">
                     {l.quantite} {l.unite}
