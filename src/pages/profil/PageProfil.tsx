@@ -7,6 +7,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getDeviceHash } from '@/lib/deviceFingerprint';
 import { cn } from '@/lib/utils';
 import { isPlatformAuthenticatorAvailable, registerPasskey } from '@/lib/webauthn';
+import { activerPush, desactiverPush, etatPush, type EtatPush } from '@/lib/push';
 
 const roleLabels: Record<string, string> = {
   direction: 'Direction',
@@ -83,6 +84,7 @@ export function PageProfil() {
         </div>
       </div>
 
+      <SectionNotifications />
       <SectionGPS utilisateurId={utilisateur.id} initial={utilisateur.consentement_gps} />
       <SectionPasskeys utilisateurId={utilisateur.id} />
       <SectionAppareils utilisateurId={utilisateur.id} />
@@ -97,6 +99,78 @@ function InfoRow({ label, value }: { label: string; value: string }) {
     <div>
       <div className="text-[11px] text-dim uppercase tracking-wider mb-1">{label}</div>
       <div className="text-sm font-medium">{value}</div>
+    </div>
+  );
+}
+
+function SectionNotifications() {
+  const toast = useToast();
+  const [etat, setEtat] = useState<EtatPush | null>(null);
+  const [enCours, setEnCours] = useState(false);
+
+  useEffect(() => {
+    etatPush().then(setEtat).catch(() => setEtat('non_supporte'));
+  }, []);
+
+  const basculer = async () => {
+    setEnCours(true);
+    try {
+      if (etat === 'actif') {
+        await desactiverPush();
+        toast.info('Notifications désactivées sur cet appareil');
+      } else {
+        await activerPush();
+        toast.success('Notifications activées sur cet appareil');
+      }
+      setEtat(await etatPush());
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Impossible d'activer les notifications");
+      setEtat(await etatPush().catch(() => 'non_supporte' as const));
+    } finally {
+      setEnCours(false);
+    }
+  };
+
+  const actif = etat === 'actif';
+  const message: Partial<Record<EtatPush, string>> = {
+    non_supporte: 'Ce navigateur ne permet pas les notifications.',
+    installer_appli:
+      "Sur iPhone / iPad : ajoute d'abord ALBA à l'écran d'accueil (Partager → « Sur l'écran d'accueil »), ouvre-la depuis l'icône, puis reviens ici.",
+    refuse:
+      'Les notifications sont bloquées pour ALBA dans les réglages du navigateur. Autorise-les dans les réglages du site, puis reviens ici.',
+  };
+
+  return (
+    <div className="bg-bg-card rounded-2xl p-5 md:p-6 mb-4">
+      <div className="text-[11px] text-dim uppercase tracking-wider mb-3">Notifications</div>
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <div className="text-sm font-medium">Notifications sur cet appareil</div>
+          <div className="text-[12px] text-dim mt-0.5">
+            Ticket qui t'est assigné, nouvelle commande à traiter, commande validée / livrée / refusée
+          </div>
+        </div>
+        {(etat === 'actif' || etat === 'inactif') && (
+          <button
+            onClick={basculer}
+            disabled={enCours}
+            aria-label={actif ? 'Désactiver les notifications' : 'Activer les notifications'}
+            className={cn(
+              'w-12 h-7 rounded-full relative transition-colors flex-shrink-0',
+              actif ? 'bg-nikito-cyan' : 'bg-white/15',
+              enCours && 'opacity-50'
+            )}
+          >
+            <span
+              className={cn(
+                'absolute top-0.5 w-6 h-6 rounded-full bg-white shadow transition-transform',
+                actif ? 'translate-x-[22px]' : 'translate-x-0.5'
+              )}
+            />
+          </button>
+        )}
+      </div>
+      {etat && message[etat] && <div className="text-amber text-[12px] mt-3">{message[etat]}</div>}
     </div>
   );
 }

@@ -24,6 +24,8 @@ export default defineConfig({
         ],
       },
       workbox: {
+        // Réception des notifications push (public/push-sw.js)
+        importScripts: ['push-sw.js'],
         maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
         globPatterns: ['**/*.{js,css,html,svg,png,ico}'],
         runtimeCaching: [

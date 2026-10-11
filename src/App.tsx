@@ -1,10 +1,11 @@
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useEffect } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { TabletLayout } from '@/components/layout/TabletLayout';
 import { RouteProtegee } from '@/components/auth/RouteProtegee';
 import { Login } from '@/pages/auth/Login';
 import { useAuth } from '@/hooks/useAuth';
+import { rattacherAbonnementPush } from '@/lib/push';
 import { useEffectiveRole } from '@/hooks/useViewAs';
 
 // Helper : lazy-load d'un export nommé
@@ -80,9 +81,19 @@ function ChargementPage() {
   );
 }
 
+// Un appareil déjà abonné aux notifications est rattaché au compte connecté
+function RattachementPush() {
+  const { utilisateur } = useAuth();
+  useEffect(() => {
+    if (utilisateur?.id) rattacherAbonnementPush().catch(() => undefined);
+  }, [utilisateur?.id]);
+  return null;
+}
+
 export function App() {
   return (
     <Suspense fallback={<ChargementPage />}>
+      <RattachementPush />
       <Routes>
         <Route path="/" element={<Login />} />
         <Route path="/login" element={<Navigate to="/" replace />} />
