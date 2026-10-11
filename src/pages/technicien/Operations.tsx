@@ -5,10 +5,11 @@ import { TicketCard, type TicketSummary } from '@/components/tickets/TicketCard'
 import { ModaleReassignerTicket } from '@/components/tickets/ModaleReassignerTicket';
 import { Pill } from '@/components/ui/Pill';
 import { cn, formatDateCourt, formatDuree } from '@/lib/utils';
-import { useIncidents, useReprendreIncident, useDemarrerIntervention } from '@/hooks/queries/useTickets';
+import { useIncidents, useReprendreIncident } from '@/hooks/queries/useTickets';
 import { useAuth } from '@/hooks/useAuth';
 import { useParcs } from '@/hooks/queries/useReferentiel';
 import { useToast } from '@/components/ui/ToastProvider';
+import { useSignedUrls } from '@/hooks/useSignedUrl';
 import type { Criticite } from '@/types/database';
 
 type Onglet = 'a_faire' | 'en_cours' | 'attente_piece' | 'exterieur' | 'resolus' | 'controles' | 'preventif';
@@ -70,7 +71,10 @@ function incidentToTicket(inc: Record<string, unknown>): TicketSummary {
     id: inc.id as string,
     numeroBT: inc.numero_bt as string,
     criticite,
-    titre: `${equip?.libelle as string ?? ''} · ${inc.description as string}`,
+    // Titre : activité · pièce en panne
+    titre: [cat?.activite as string | undefined, (equip?.libelle as string | undefined) ?? (inc.titre as string | undefined)]
+      .filter(Boolean)
+      .join(' · '),
     zone: (zone?.nom as string) ?? undefined,
     activite: (cat?.activite as string) ?? 'Autres',
     description: inc.statut === 'ouvert' && criticite === 'bloquant'
@@ -81,6 +85,7 @@ function incidentToTicket(inc: Record<string, unknown>): TicketSummary {
     meta: `${parc?.code as string ?? ''} · ${inc.numero_bt as string} · ${formatDuree(declareLe)}`,
     enAttente: inc.statut === 'assigne',
     enPause: inc.statut === 'en_pause',
+    photoPath: ((inc.photos_urls as string[] | null) ?? [])[0] ?? undefined,
   };
 }
 
@@ -185,10 +190,17 @@ export function Operations() {
     return ['toutes', ...Array.from(zoneSet).sort()];
   }, [ticketsActivite]);
 
-  const ticketsFiltres = ticketsActivite.filter((t) => {
+  const ticketsZone = ticketsActivite.filter((t) => {
     if (zoneFiltre === 'toutes') return true;
     return t.zone === zoneFiltre;
   });
+
+  // Vignette de la photo du problème (URLs signées en un seul appel)
+  const { data: urlsPhotos } = useSignedUrls(
+    ticketsZone.map((t) => t.photoPath),
+    'alba-incidents'
+  );
+  const ticketsFiltres = ticketsZone.map((t) => (t.photoPath && urlsPhotos?.[t.photoPath] ? { ...t, photoUrl: urlsPhotos[t.photoPath] } : t));
 
   const compteurs = useMemo(() => {
     if (!allIncidentsQ.data) return { aFaire: 0, enCours: 0, attentePiece: 0, exterieur: 0, resolus: 0 };
@@ -205,17 +217,6 @@ export function Operations() {
       resolus: all.filter((i) => i.statut === 'resolu' || i.statut === 'ferme').length,
     };
   }, [allIncidentsQ.data]);
-
-  const demarrer = useDemarrerIntervention();
-  const demarrerTicket = (id: string, numeroBT: string) => {
-    demarrer.mutate(id, {
-      onSuccess: () => {
-        toast.success('Intervention démarrée — chrono lancé');
-        navigate(`/tech/operations/${numeroBT}`);
-      },
-      onError: (e) => toast.error(`Démarrage impossible : ${(e as Error).message}`),
-    });
-  };
 
   const reprendreTicket = (id: string) => {
     reprendre.mutate(id, {
@@ -374,7 +375,7 @@ export function Operations() {
               <TicketCard
                 ticket={premier}
                 variant="expanded"
-                onDemarrer={() => demarrerTicket(premier.id, premier.numeroBT)}
+                onDemarrer={() => navigate(`/tech/operations/${premier.numeroBT}`)}
                 onReassigner={() => setReassignerCible({ id: premier.id, numeroBT: premier.numeroBT })}
                 onReprendre={() => reprendreTicket(premier.id)}
                 reprenant={reprendre.isPending}

@@ -204,8 +204,12 @@ export function useValiderBrouillonIncident() {
 export function useDemarrerIntervention() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (incidentId: string) => {
-      const { data, error } = await supabase.rpc('demarrer_intervention', { p_incident_id: incidentId });
+    // Photo AVANT obligatoire (sauf reprise d'une intervention qui l'a déjà)
+    mutationFn: async ({ incidentId, photoAvant }: { incidentId: string; photoAvant: string | null }) => {
+      const { data, error } = await supabase.rpc('demarrer_intervention_photo', {
+        p_incident_id: incidentId,
+        p_photo_avant: photoAvant,
+      });
       if (error) throw error;
       return data as { intervention_id: string; debut: string };
     },

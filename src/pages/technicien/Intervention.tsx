@@ -15,6 +15,7 @@ import { useDraftPersistence, useAutoSaveDraft } from '@/hooks/useDraftPersisten
 import { useToast } from '@/components/ui/ToastProvider';
 import { PanneauIntervenantExterieur } from '@/components/tickets/PanneauIntervenantExterieur';
 import { PanneauAttentePiece } from '@/components/tickets/PanneauAttentePiece';
+import { PhotosTicket } from '@/components/tickets/PhotosTicket';
 import { estErreurReseau, mettreActionEnFile } from '@/lib/horsLigne/file';
 import { exportInterventionPDF } from './exportInterventionPDF';
 import { formatChrono, cn } from '@/lib/utils';
@@ -78,7 +79,11 @@ export function Intervention() {
   const demarrer = useDemarrerIntervention();
   const demarrerIntervention = () => {
     if (!incident?.id) return;
-    demarrer.mutate(incident.id as string, {
+    if (!photoAvant) {
+      toast.error('Prends d’abord la photo AVANT du problème');
+      return;
+    }
+    demarrer.mutate({ incidentId: incident.id as string, photoAvant }, {
       onSuccess: () => toast.success('Intervention démarrée — chrono lancé'),
       onError: (e) => toast.error(`Démarrage impossible : ${(e as Error).message}`),
     });
@@ -191,7 +196,9 @@ export function Intervention() {
   const equipCode = (equip?.code as string) ?? '';
   const parcNom = (parc?.nom as string) ?? '';
   const zoneName = (zone?.nom as string) ?? '';
-  const titre = incident?.titre as string ?? equipLibelle;
+  // Titre : activité · pièce en panne (ex. « Trampoline · Trampoline T12 »)
+  const activite = ((equip?.categories_equipement as Record<string, unknown> | null)?.activite as string | undefined) ?? null;
+  const titre = [activite, equipLibelle || (incident?.titre as string)].filter(Boolean).join(' · ');
 
   const handleCloturer = async () => {
     setErreur(null);
@@ -319,6 +326,13 @@ export function Intervention() {
       </div>
 
       <main className="p-4 px-[18px] bg-bg-app flex flex-col gap-3.5">
+        <PhotosTicket
+          incidentId={incident.id as string}
+          chemins={((incident.photos_urls as string[] | null) ?? []).filter(Boolean)}
+          dossier={`${(parc?.code as string) ?? 'PARC'}/${btNumero ?? 'ticket'}`}
+          modifiable={!estResolu}
+        />
+
         {/* Rangements du ticket (sans le fermer) : pièce en attente, intervenant extérieur */}
         {incident.externe !== true && <PanneauAttentePiece incident={incident as Record<string, unknown>} />}
         {incident.attente_piece !== true && (
@@ -334,18 +348,35 @@ export function Intervention() {
               <div className="text-[12px] text-dim mt-0.5">
                 {statutIncident === 'en_pause'
                   ? `Motif : ${(incident.pause_motif as string | null) || 'non précisé'}. Reprends pour relancer le ticket.`
-                  : 'Démarre pour lancer le chrono et passer le ticket « en cours ».'}
+                  : 'Étape 1 : photo AVANT du problème. Étape 2 : démarrer (chrono, ticket « en cours »).'}
               </div>
+              {!photoAvant && (
+                <div className="mt-3">
+                  <PhotoCapture
+                    bucketName="alba-interventions"
+                    storagePath={`intervention/${btNumero ?? 'draft'}/avant`}
+                    onPhotoUploaded={(url) => { setPhotoAvant(url); setDirty(true); }}
+                    required
+                    label="📷 Photo AVANT réparation (obligatoire pour démarrer)"
+                  />
+                </div>
+              )}
             </div>
             <button
               onClick={demarrerIntervention}
-              disabled={demarrer.isPending}
+              disabled={demarrer.isPending || !photoAvant}
               className={cn(
-                'bg-gradient-cta text-text px-5 py-3 rounded-[10px] text-[14px] font-bold min-h-[48px]',
-                demarrer.isPending && 'opacity-40'
+                'bg-gradient-cta text-text px-5 py-3 rounded-[10px] text-[14px] font-bold min-h-[48px] sm:self-end',
+                (demarrer.isPending || !photoAvant) && 'opacity-40'
               )}
             >
-              {demarrer.isPending ? '…' : statutIncident === 'en_pause' ? '▶ Reprendre' : '▶ Démarrer l\'intervention'}
+              {demarrer.isPending
+                ? '…'
+                : !photoAvant
+                  ? '📷 Photo AVANT d’abord'
+                  : statutIncident === 'en_pause'
+                    ? '▶ Reprendre'
+                    : '▶ Démarrer l\'intervention'}
             </button>
           </div>
         )}
@@ -402,26 +433,28 @@ export function Intervention() {
               </button>
             )}
           </div>
-          {existingDiagnostic && !editionDiagnostic ? (
-            <div className="text-[13px] text-text leading-relaxed bg-bg-deep p-3 rounded-lg">{diagnostic}</div>
-          ) : (
-            <textarea
-              value={diagnostic}
-              onChange={(e) => { setDiagnostic(e.target.value); setDirty(true); }}
-              placeholder="Décrire le diagnostic..."
-              className="w-full bg-bg-deep border border-white/[0.08] rounded-lg text-text p-3 text-[13px] resize-y min-h-[90px] outline-none focus:border-nikito-cyan"
-            />
-          )}
-          <div className="mt-3">
+          {/* Photo AVANT en premier : rien ne peut être saisi sans elle */}
+          <div className="mb-3">
             <PhotoCapture
               bucketName="alba-interventions"
               storagePath={`intervention/${btNumero ?? 'draft'}/avant`}
               onPhotoUploaded={(url) => { setPhotoAvant(url); setDirty(true); }}
               required
-              label="Photo AVANT intervention"
+              label="Photo AVANT intervention (avant de toucher à quoi que ce soit)"
               existingUrl={photoAvant ?? undefined}
             />
           </div>
+          {existingDiagnostic && !editionDiagnostic ? (
+            <div className="text-[13px] text-text leading-relaxed bg-bg-deep p-3 rounded-lg">{diagnostic}</div>
+          ) : (
+            <textarea
+              value={diagnostic}
+              disabled={!photoAvant && !estResolu}
+              onChange={(e) => { setDiagnostic(e.target.value); setDirty(true); }}
+              placeholder={photoAvant || estResolu ? 'Décrire le diagnostic...' : '📷 Prends d’abord la photo AVANT ci-dessus'}
+              className="w-full bg-bg-deep border border-white/[0.08] rounded-lg text-text p-3 text-[13px] resize-y min-h-[90px] outline-none focus:border-nikito-cyan"
+            />
+          )}
         </div>
 
         {/* Pièces */}
@@ -490,8 +523,12 @@ export function Intervention() {
               ▸ Actions réalisées <span className="text-red text-[11px] ml-1">obligatoire</span>
             </div>
           </div>
+          {!photoAvant && !estResolu && (
+            <div className="text-amber text-[12px] mb-2">📷 Prends d’abord la photo AVANT du problème (dans « Diagnostic »).</div>
+          )}
           <textarea
             value={actions}
+            disabled={!photoAvant && !estResolu}
             onChange={(e) => { setActions(e.target.value); setDirty(true); }}
             placeholder="Décrire les actions réalisées..."
             className="w-full bg-bg-deep border border-white/[0.08] rounded-lg text-text p-3 text-[13px] resize-y min-h-[90px] outline-none focus:border-nikito-cyan"
