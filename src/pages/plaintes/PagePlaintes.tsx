@@ -8,6 +8,7 @@ import { useEffectiveRole } from '@/hooks/useViewAs';
 import { Card } from '@/components/ui/Card';
 import { Pill } from '@/components/ui/Pill';
 import { cn } from '@/lib/utils';
+import { useToast } from '@/components/ui/ToastProvider';
 import { usePlaintes, useQualifierPlainte, useReclasserPlainte, useSyncRoller, type PlainteRow } from './usePlaintesQueries';
 import { ModaleCreerPlainte } from './ModaleCreerPlainte';
 import { ModaleQualifierMaintenance, ModaleQualifierHorsMaintenance } from './ModaleQualifierPlainte';
@@ -78,6 +79,7 @@ export function PagePlaintes() {
   const marquerTraite = useQualifierPlainte();
   const reclasser = useReclasserPlainte();
   const navigate = useNavigate();
+  const toast = useToast();
 
   const [statutFilter, setStatutFilter] = useState<StatutFilter>('');
   const [sourceFilter, setSourceFilter] = useState<SourceFilter>('');
@@ -91,7 +93,8 @@ export function PagePlaintes() {
 
   const filtrees = useMemo(() => {
     let result = plaintes ?? [];
-    if (statutFilter) result = result.filter((p) => p.statut === statutFilter);
+    if (statutFilter === 'a_qualifier') result = result.filter((p) => p.statut === 'a_qualifier' || p.statut === 'nouveau');
+    else if (statutFilter) result = result.filter((p) => p.statut === statutFilter);
     if (sourceFilter) result = result.filter((p) => p.source === sourceFilter);
     if (parcFilter) result = result.filter((p) => p.parc_id === parcFilter);
     if (prioriteFilter) result = result.filter((p) => p.priorite === prioriteFilter);
@@ -108,7 +111,7 @@ export function PagePlaintes() {
     const now = new Date();
     const debut30j = new Date(now.getTime() - 30 * 86400000);
     return {
-      aQualifier: all.filter((p) => p.statut === 'a_qualifier').length,
+      aQualifier: all.filter((p) => p.statut === 'a_qualifier' || p.statut === 'nouveau').length,
       maintenanceConfirmee: all.filter((p) => p.statut === 'maintenance_confirmee').length,
       horsMaintenance: all.filter((p) => p.statut === 'hors_maintenance').length,
       traiteCeMois: all.filter((p) => p.statut === 'traite' && new Date(p.qualifie_le ?? p.declare_le) >= debut30j).length,
@@ -127,19 +130,27 @@ export function PagePlaintes() {
 
   const handleMarquerTraite = async (plainte: PlainteRow) => {
     if (!utilisateur) return;
-    await marquerTraite.mutateAsync({
-      plainteId: plainte.id,
-      statut: 'traite',
-      qualifieParId: utilisateur.id,
-    });
+    try {
+      await marquerTraite.mutateAsync({
+        plainteId: plainte.id,
+        statut: 'traite',
+        qualifieParId: utilisateur.id,
+      });
+    } catch (err: any) {
+      toast.error(`Impossible de marquer la plainte comme traitée : ${err?.message ?? 'erreur inconnue'}`);
+    }
   };
 
   const handleReclasser = async (plainte: PlainteRow) => {
     if (!utilisateur) return;
-    await reclasser.mutateAsync({
-      plainteId: plainte.id,
-      qualifieParId: utilisateur.id,
-    });
+    try {
+      await reclasser.mutateAsync({
+        plainteId: plainte.id,
+        qualifieParId: utilisateur.id,
+      });
+    } catch (err: any) {
+      toast.error(`Impossible de reclasser la plainte : ${err?.message ?? 'erreur inconnue'}`);
+    }
   };
 
   return (
@@ -264,6 +275,7 @@ export function PagePlaintes() {
               key={p.id}
               plainte={p}
               canQualifier={canQualifier}
+              enCours={marquerTraite.isPending || reclasser.isPending}
               onConfirmMaintenance={() => setModaleMaintenance(p)}
               onConfirmHors={() => setModaleHorsMaint(p)}
               onMarquerTraite={() => handleMarquerTraite(p)}
@@ -300,6 +312,7 @@ export function PagePlaintes() {
 function PlainteCard({
   plainte: p,
   canQualifier,
+  enCours,
   onConfirmMaintenance,
   onConfirmHors,
   onMarquerTraite,
@@ -309,6 +322,7 @@ function PlainteCard({
 }: {
   plainte: PlainteRow;
   canQualifier: boolean;
+  enCours: boolean;
   onConfirmMaintenance: () => void;
   onConfirmHors: () => void;
   onMarquerTraite: () => void;
@@ -372,7 +386,7 @@ function PlainteCard({
       )}
 
       <div className="flex items-center gap-2 flex-wrap mt-3">
-        {p.statut === 'a_qualifier' && canQualifier && (
+        {(p.statut === 'a_qualifier' || p.statut === 'nouveau') && canQualifier && (
           <>
             <button
               onClick={onConfirmMaintenance}
@@ -409,7 +423,8 @@ function PlainteCard({
             {canQualifier && (
               <button
                 onClick={onMarquerTraite}
-                className="bg-green/15 text-green px-3 py-1.5 rounded-lg text-[12px] font-semibold min-h-[36px] hover:bg-green/25 transition-colors"
+                disabled={enCours}
+                className="disabled:opacity-50 bg-green/15 text-green px-3 py-1.5 rounded-lg text-[12px] font-semibold min-h-[36px] hover:bg-green/25 transition-colors"
               >
                 Marquer traite
               </button>
@@ -420,7 +435,8 @@ function PlainteCard({
         {p.statut === 'hors_maintenance' && canQualifier && (
           <button
             onClick={onReclasser}
-            className="bg-white/8 text-dim px-3 py-1.5 rounded-lg text-[12px] font-semibold min-h-[36px] hover:bg-white/15 transition-colors"
+            disabled={enCours}
+            className="disabled:opacity-50 bg-white/8 text-dim px-3 py-1.5 rounded-lg text-[12px] font-semibold min-h-[36px] hover:bg-white/15 transition-colors"
           >
             Reclasser en maintenance
           </button>

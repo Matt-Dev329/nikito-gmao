@@ -6,6 +6,7 @@ import { useFormationFilter } from '@/hooks/useFormation';
 import { Card } from '@/components/ui/Card';
 import { Pill } from '@/components/ui/Pill';
 import { cn } from '@/lib/utils';
+import { aujourdhuiParis, dateParis } from '@/lib/dates';
 import { SignalerInlineButton } from '@/components/shared/SignalerInlineButton';
 import type { MaintenancePreventiveAvecJoins } from '@/types/database';
 
@@ -73,9 +74,9 @@ function useMarquerFait() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, frequence_jours }: { id: string; frequence_jours: number | null }) => {
-      const today = new Date().toISOString().slice(0, 10);
+      const today = aujourdhuiParis();
       const nextDate = frequence_jours
-        ? new Date(Date.now() + frequence_jours * 86400000).toISOString().slice(0, 10)
+        ? dateParis(Date.now() + frequence_jours * 86400000)
         : today;
       const { error } = await supabase
         .from('maintenances_preventives')
@@ -90,7 +91,7 @@ function useMarquerFait() {
 }
 
 function getStatut(m: MaintenancePreventiveAvecJoins): 'planifie' | 'en_retard' | 'fait' {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = aujourdhuiParis();
   if (m.derniere_execution === today) return 'fait';
   if (m.prochaine_echeance < today) return 'en_retard';
   return 'planifie';
@@ -280,7 +281,7 @@ function ModaleCreerMaintenance({ onClose }: { onClose: () => void }) {
   const [equipementId, setEquipementId] = useState('');
   const [libelle, setLibelle] = useState('');
   const [frequence, setFrequence] = useState(30);
-  const [prochaine, setProchaine] = useState(new Date().toISOString().slice(0, 10));
+  const [prochaine, setProchaine] = useState(aujourdhuiParis());
   const [fournisseurId, setFournisseurId] = useState('');
   const [duree, setDuree] = useState('');
 

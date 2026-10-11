@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { cn } from '@/lib/utils';
 import { supabase, supabaseUrl, supabaseAnonKey } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
+import { chargerToutesLesPages } from '@/lib/paginer';
 import { uploadPhotoControle } from '@/lib/uploadPhotoControle';
 import type { RoleUtilisateur } from '@/types/database';
 
@@ -468,14 +469,16 @@ function EtapeCategorie({
   useEffect(() => {
     if (!parcId) return;
     setLoading(true);
-    supabase
-      .from('equipements')
-      .select('categorie_id, categories_equipement!inner(id, nom, criticite_defaut)')
-      .eq('parc_id', parcId)
-      .eq('statut', 'actif')
-      .range(0, 4999)
-      .then(({ data }) => {
-        if (!data) { setLoading(false); return; }
+    chargerToutesLesPages<any>((debut, fin) =>
+      supabase
+        .from('equipements')
+        .select('categorie_id, categories_equipement!inner(id, nom, criticite_defaut)')
+        .eq('parc_id', parcId)
+        .eq('statut', 'actif')
+        .order('id')
+        .range(debut, fin)
+    )
+      .then((data) => {
         const map = new Map<string, Categorie>();
         for (const row of data) {
           const cat = row.categories_equipement as any;
@@ -486,7 +489,8 @@ function EtapeCategorie({
         }
         setCategories(Array.from(map.values()).sort((a, b) => a.nom.localeCompare(b.nom)));
         setLoading(false);
-      });
+      })
+      .catch(() => setLoading(false));
   }, [parcId]);
 
   const filtered = recherche
@@ -553,15 +557,18 @@ function EtapeEquipement({
   useEffect(() => {
     if (!parcId) return;
     setLoading(true);
-    supabase
-      .from('equipements')
-      .select('id, code, libelle, photo_url, zones!left(nom, ordre)')
-      .eq('parc_id', parcId)
-      .eq('categorie_id', categorie.id)
-      .eq('statut', 'actif')
-      .order('code')
-      .range(0, 4999)
-      .then(({ data }) => {
+    chargerToutesLesPages<any>((debut, fin) =>
+      supabase
+        .from('equipements')
+        .select('id, code, libelle, photo_url, zones!left(nom, ordre)')
+        .eq('parc_id', parcId)
+        .eq('categorie_id', categorie.id)
+        .eq('statut', 'actif')
+        .order('code')
+        .order('id')
+        .range(debut, fin)
+    )
+      .then((data) => {
         if (data) {
           setEquipements(data.map((e: any) => ({
             id: e.id, code: e.code, libelle: e.libelle, photo_url: e.photo_url,
@@ -569,7 +576,8 @@ function EtapeEquipement({
           })));
         }
         setLoading(false);
-      });
+      })
+      .catch(() => setLoading(false));
   }, [parcId, categorie.id]);
 
   const filtered = recherche

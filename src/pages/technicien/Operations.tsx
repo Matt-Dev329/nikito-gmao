@@ -5,9 +5,10 @@ import { TicketCard, type TicketSummary } from '@/components/tickets/TicketCard'
 import { ModaleReassignerTicket } from '@/components/tickets/ModaleReassignerTicket';
 import { Pill } from '@/components/ui/Pill';
 import { cn, formatDateCourt, formatDuree } from '@/lib/utils';
-import { useIncidents } from '@/hooks/queries/useTickets';
+import { useIncidents, useReprendreIncident } from '@/hooks/queries/useTickets';
 import { useAuth } from '@/hooks/useAuth';
 import { useParcs } from '@/hooks/queries/useReferentiel';
+import { useToast } from '@/components/ui/ToastProvider';
 import type { Criticite } from '@/types/database';
 
 type Onglet = 'a_faire' | 'en_cours' | 'resolus' | 'controles' | 'preventif';
@@ -50,6 +51,7 @@ function incidentToTicket(inc: Record<string, unknown>): TicketSummary {
 
   const badges: TicketSummary['badges'] = [];
   if (cat?.nom) badges.push({ label: cat.nom as string });
+  if (inc.statut === 'en_pause') badges.push({ label: 'En pause', tone: 'amber' });
   if (heuresDepuis > slaH) {
     badges.push({ label: `SLA depassé · ${formatDuree(declareLe)}`, tone: 'amber' });
   }
@@ -67,6 +69,7 @@ function incidentToTicket(inc: Record<string, unknown>): TicketSummary {
     slaAlert: heuresDepuis > slaH ? `SLA dépassé · ${formatDuree(declareLe)}` : undefined,
     meta: `${parc?.code as string ?? ''} · ${inc.numero_bt as string} · ${formatDuree(declareLe)}`,
     enAttente: inc.statut === 'assigne',
+    enPause: inc.statut === 'en_pause',
   };
 }
 
@@ -92,6 +95,8 @@ function useParcsVisibles() {
 export function Operations() {
   const navigate = useNavigate();
   const { utilisateur } = useAuth();
+  const toast = useToast();
+  const reprendre = useReprendreIncident();
   const [onglet, setOnglet] = useState<Onglet>('a_faire');
   const [zoneFiltre, setZoneFiltre] = useState<string>('toutes');
   const [parcActif, setParcActif] = useState<string | null>(null);
@@ -119,7 +124,7 @@ export function Operations() {
     ? ['en_cours' as const]
     : onglet === 'resolus'
     ? ['resolu' as const, 'ferme' as const]
-    : ['ouvert' as const, 'assigne' as const];
+    : ['ouvert' as const, 'assigne' as const, 'en_pause' as const];
 
   const incidentsQ = useIncidents({
     parcId: parcIdEffectif,
@@ -152,11 +157,18 @@ export function Operations() {
     if (!allIncidentsQ.data) return { aFaire: 0, enCours: 0, resolus: 0 };
     const all = allIncidentsQ.data as Record<string, unknown>[];
     return {
-      aFaire: all.filter((i) => i.statut === 'ouvert' || i.statut === 'assigne').length,
+      aFaire: all.filter((i) => i.statut === 'ouvert' || i.statut === 'assigne' || i.statut === 'en_pause').length,
       enCours: all.filter((i) => i.statut === 'en_cours').length,
       resolus: all.filter((i) => i.statut === 'resolu' || i.statut === 'ferme').length,
     };
   }, [allIncidentsQ.data]);
+
+  const reprendreTicket = (id: string) => {
+    reprendre.mutate(id, {
+      onSuccess: () => toast.success('Intervention reprise'),
+      onError: () => toast.error('Impossible de reprendre le ticket'),
+    });
+  };
 
   const [premier, ...autres] = ticketsFiltres;
 
@@ -284,6 +296,8 @@ export function Operations() {
                 variant="expanded"
                 onDemarrer={() => navigate(`/tech/operations/${premier.numeroBT}`)}
                 onReassigner={() => setReassignerCible({ id: premier.id, numeroBT: premier.numeroBT })}
+                onReprendre={() => reprendreTicket(premier.id)}
+                reprenant={reprendre.isPending}
               />
             )}
             {autres.map((t) => (

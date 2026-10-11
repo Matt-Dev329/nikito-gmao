@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { cn } from '@/lib/utils';
+import { aujourdhuiParis, dateParis } from '@/lib/dates';
 import type { InterventionSuivi } from '@/hooks/queries/useInterventionsSuivi';
 
 interface Props {
@@ -26,14 +27,14 @@ export function TimelineDuJour({ interventions }: Props) {
   const hourEnd = getHourEnd();
   const totalMinutes = (hourEnd - HOUR_START) * 60;
 
-  const todayStr = new Date().toISOString().slice(0, 10);
+  const todayStr = aujourdhuiParis();
 
   const bars = useMemo(() => {
     return interventions
       .filter((i) => {
         const start = i.intervention_debut ?? i.declare_le;
-        return start?.slice(0, 10) === todayStr &&
-          ['en_cours', 'resolu', 'ferme', 'ouvert', 'assigne'].includes(i.statut);
+        return !!start && dateParis(start) === todayStr &&
+          ['en_cours', 'resolu', 'ferme', 'ouvert', 'assigne', 'en_pause'].includes(i.statut);
       })
       .map((i) => {
         const start = new Date(i.intervention_debut ?? i.declare_le);

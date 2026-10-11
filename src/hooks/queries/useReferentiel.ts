@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useFormationFilter } from '@/hooks/useFormation';
 import { useAuth } from '@/hooks/useAuth';
+import { chargerToutesLesPages } from '@/lib/paginer';
 import type { EquipementAvecJoins, StatutEquipement, HorairesParc, ParcMeta } from '@/types/database';
 
 // ============================================================
@@ -102,9 +103,9 @@ export function useEquipements(parcId?: string) {
         .select('*, parcs(code, nom), categories_equipement(nom, criticite_defaut), zones(nom)')
         .eq('est_formation', estFormation);
       if (parcId) q = q.eq('parc_id', parcId);
-      const { data, error } = await q.order('code').range(0, 4999);
-      if (error) throw error;
-      return (data ?? []) as EquipementAvecJoins[];
+      return chargerToutesLesPages<EquipementAvecJoins>((debut, fin) =>
+        q.order('code').order('id').range(debut, fin)
+      );
     },
   });
 }
@@ -163,6 +164,7 @@ export function useCreerEquipement() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['equipements'] });
+      qc.invalidateQueries({ queryKey: ['equipements-count'] });
     },
   });
 }
@@ -197,6 +199,7 @@ export function useModifierEquipement() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['equipements'] });
+      qc.invalidateQueries({ queryKey: ['equipements-count'] });
     },
   });
 }
@@ -227,6 +230,7 @@ export function useImporterEquipements() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['equipements'] });
+      qc.invalidateQueries({ queryKey: ['equipements-count'] });
     },
   });
 }
@@ -235,14 +239,17 @@ export function useModifierHorairesParc() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, horaires }: { id: string; horaires: HorairesParc }) => {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('parcs')
         .update({ horaires })
-        .eq('id', id);
+        .eq('id', id)
+        .select('id');
       if (error) throw error;
+      if (!data || data.length === 0) throw new Error('Modification refusée (droits insuffisants)');
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['parcs'] });
+      qc.invalidateQueries({ queryKey: ['parcs_production'] });
     },
   });
 }
@@ -251,14 +258,17 @@ export function useModifierMetaParc() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, meta }: { id: string; meta: ParcMeta }) => {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('parcs')
         .update({ meta })
-        .eq('id', id);
+        .eq('id', id)
+        .select('id');
       if (error) throw error;
+      if (!data || data.length === 0) throw new Error('Modification refusée (droits insuffisants)');
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['parcs'] });
+      qc.invalidateQueries({ queryKey: ['parcs_production'] });
     },
   });
 }
@@ -267,18 +277,21 @@ export function useActiverProductionParc() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ parcId, utilisateurId }: { parcId: string; utilisateurId: string }) => {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('parcs')
         .update({
           en_production: true,
           date_mise_en_production: new Date().toISOString(),
           mis_en_prod_par_id: utilisateurId,
         })
-        .eq('id', parcId);
+        .eq('id', parcId)
+        .select('id');
       if (error) throw error;
+      if (!data || data.length === 0) throw new Error('Modification refusée (droits insuffisants)');
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['parcs'] });
+      qc.invalidateQueries({ queryKey: ['parcs_production'] });
     },
   });
 }
@@ -287,18 +300,21 @@ export function useDesactiverProductionParc() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ parcId }: { parcId: string }) => {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('parcs')
         .update({
           en_production: false,
           date_mise_en_production: null,
           mis_en_prod_par_id: null,
         })
-        .eq('id', parcId);
+        .eq('id', parcId)
+        .select('id');
       if (error) throw error;
+      if (!data || data.length === 0) throw new Error('Modification refusée (droits insuffisants)');
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['parcs'] });
+      qc.invalidateQueries({ queryKey: ['parcs_production'] });
     },
   });
 }

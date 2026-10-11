@@ -10,6 +10,7 @@ const statutConfig: Record<string, { label: string; bg: string; text: string }> 
   en_cours: { label: 'EN COURS', bg: 'bg-red/15', text: 'text-red' },
   ouvert: { label: 'EN ATTENTE', bg: 'bg-amber/15', text: 'text-amber' },
   assigne: { label: 'EN ATTENTE', bg: 'bg-amber/15', text: 'text-amber' },
+  en_pause: { label: 'EN PAUSE', bg: 'bg-amber/15', text: 'text-amber' },
   resolu: { label: 'TERMINE', bg: 'bg-green/15', text: 'text-green' },
   ferme: { label: 'TERMINE', bg: 'bg-green/15', text: 'text-green' },
   annule: { label: 'ANNULE', bg: 'bg-dim/15', text: 'text-dim' },

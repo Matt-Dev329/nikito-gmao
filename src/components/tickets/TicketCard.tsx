@@ -13,6 +13,7 @@ export interface TicketSummary {
   meta?: string;
   slaAlert?: string;
   enAttente?: boolean;
+  enPause?: boolean;
 }
 
 interface TicketCardProps {
@@ -20,6 +21,8 @@ interface TicketCardProps {
   variant: 'expanded' | 'compact';
   onDemarrer?: () => void;
   onReassigner?: () => void;
+  onReprendre?: () => void;
+  reprenant?: boolean;
   onClick?: () => void;
 }
 
@@ -35,7 +38,7 @@ const badgeToneClass = {
   amber: 'text-amber',
 };
 
-export function TicketCard({ ticket, variant, onDemarrer, onReassigner, onClick }: TicketCardProps) {
+export function TicketCard({ ticket, variant, onDemarrer, onReassigner, onReprendre, reprenant, onClick }: TicketCardProps) {
   if (variant === 'compact') {
     return (
       <button
@@ -86,19 +89,29 @@ export function TicketCard({ ticket, variant, onDemarrer, onReassigner, onClick 
       {ticket.badges && ticket.badges.length > 0 && (
         <div className="flex gap-2 flex-wrap text-[11px]">
           {ticket.badges.map((b) => (
-            <span key={b.label} className="bg-bg-deep px-2.5 py-1 rounded text-dim">
+            <span key={b.label} className={cn('bg-bg-deep px-2.5 py-1 rounded', badgeToneClass[b.tone ?? 'default'])}>
               {b.label}
             </span>
           ))}
         </div>
       )}
       <div className="flex gap-2.5">
-        <button
-          onClick={onDemarrer}
-          className="flex-1 bg-gradient-action text-bg-app py-3.5 rounded-[10px] text-sm font-bold"
-        >
-          ▶ Démarrer intervention
-        </button>
+        {ticket.enPause && onReprendre ? (
+          <button
+            onClick={onReprendre}
+            disabled={reprenant}
+            className="flex-1 bg-gradient-action text-bg-app py-3.5 rounded-[10px] text-sm font-bold disabled:opacity-50"
+          >
+            ▶ Reprendre
+          </button>
+        ) : (
+          <button
+            onClick={onDemarrer}
+            className="flex-1 bg-gradient-action text-bg-app py-3.5 rounded-[10px] text-sm font-bold"
+          >
+            ▶ Démarrer intervention
+          </button>
+        )}
         {onReassigner && (
           <button
             onClick={onReassigner}

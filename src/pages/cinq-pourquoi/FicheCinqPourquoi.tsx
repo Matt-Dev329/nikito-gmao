@@ -4,6 +4,7 @@ import { useFiche5P, useModifierFiche5P } from '@/hooks/queries/useFiches5P';
 import { useAuth } from '@/hooks/useAuth';
 import { Card } from '@/components/ui/Card';
 import { cn } from '@/lib/utils';
+import { dateParis } from '@/lib/dates';
 import type { Statut5Pourquoi } from '@/types/database';
 
 const POURQUOI_KEYS = ['q1', 'q2', 'q3', 'q4', 'q5'] as const;
@@ -109,7 +110,7 @@ export function FicheCinqPourquoi() {
     if (statut === 'audit_en_cours') {
       const d = new Date();
       d.setDate(d.getDate() + 90);
-      extra.audit_90j_le = d.toISOString().slice(0, 10);
+      extra.audit_90j_le = dateParis(d);
     }
     await modifier.mutateAsync(extra as Parameters<typeof modifier.mutateAsync>[0]);
   };

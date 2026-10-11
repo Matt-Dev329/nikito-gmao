@@ -1,4 +1,5 @@
 import { cn } from '@/lib/utils';
+import { aujourdhuiParis, dateParis } from '@/lib/dates';
 import type { InterventionSuivi } from '@/hooks/queries/useInterventionsSuivi';
 
 export type FiltreStatut = 'tous' | 'en_cours' | 'en_attente' | 'termines';
@@ -110,15 +111,15 @@ export function applyFilters(
   if (statut === 'en_cours') {
     filtered = filtered.filter((i) => i.statut === 'en_cours');
   } else if (statut === 'en_attente') {
-    filtered = filtered.filter((i) => i.statut === 'ouvert' || i.statut === 'assigne');
+    filtered = filtered.filter((i) => i.statut === 'ouvert' || i.statut === 'assigne' || i.statut === 'en_pause');
   } else if (statut === 'termines') {
     filtered = filtered.filter((i) => i.statut === 'resolu' || i.statut === 'ferme');
   }
 
   const now = new Date();
   if (periode === 'aujourdhui') {
-    const todayStr = now.toISOString().slice(0, 10);
-    filtered = filtered.filter((i) => i.declare_le?.slice(0, 10) === todayStr);
+    const todayStr = aujourdhuiParis();
+    filtered = filtered.filter((i) => !!i.declare_le && dateParis(i.declare_le) === todayStr);
   } else if (periode === '7j') {
     const cutoff = new Date(now.getTime() - 7 * 86_400_000).toISOString();
     filtered = filtered.filter((i) => i.declare_le >= cutoff);
@@ -147,6 +148,7 @@ export function applyFilters(
     en_cours: 1,
     ouvert: 2,
     assigne: 2,
+    en_pause: 2,
     resolu: 3,
     ferme: 4,
     annule: 5,

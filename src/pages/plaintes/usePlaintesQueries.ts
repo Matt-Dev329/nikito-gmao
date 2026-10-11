@@ -94,6 +94,7 @@ export function useCreerPlainte() {
 
 export function useQualifierPlainte() {
   const qc = useQueryClient();
+  const { estFormation } = useFormationFilter();
   return useMutation({
     mutationFn: async (payload: {
       plainteId: string;
@@ -127,6 +128,7 @@ export function useQualifierPlainte() {
             source: 'plainte_client',
             statut: 'ouvert',
             declare_par_id: payload.qualifieParId,
+            est_formation: estFormation,
           })
           .select('id')
           .single();

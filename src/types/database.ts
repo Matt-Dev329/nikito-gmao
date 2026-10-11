@@ -6,7 +6,7 @@
 // ============================================================
 
 export type EtatControleItem = 'ok' | 'degrade' | 'hs';
-export type StatutIncident = 'ouvert' | 'assigne' | 'en_cours' | 'resolu' | 'ferme' | 'annule';
+export type StatutIncident = 'ouvert' | 'assigne' | 'en_cours' | 'en_pause' | 'resolu' | 'ferme' | 'annule';
 export type StatutControle = 'a_faire' | 'en_cours' | 'valide' | 'echec' | 'remplace';
 export type TypeControle = 'quotidien' | 'hebdo' | 'mensuel';
 export type Statut5Pourquoi = 'ouvert' | 'valide' | 'audit_en_cours' | 'clos';

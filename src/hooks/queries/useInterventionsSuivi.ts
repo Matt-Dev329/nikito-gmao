@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useFormationFilter } from '@/hooks/useFormation';
+import { aujourdhuiParis, dateParis } from '@/lib/dates';
 
 export interface InterventionSuivi {
   id: string;
@@ -71,7 +72,7 @@ export function useInterventionsSuivi(parcId: string | null) {
         `)
         .eq('equipements.parc_id', parcId)
         .eq('est_formation', estFormation)
-        .in('statut', ['ouvert', 'assigne', 'en_cours', 'resolu', 'ferme'])
+        .in('statut', ['ouvert', 'assigne', 'en_cours', 'en_pause', 'resolu', 'ferme'])
         .order('declare_le', { ascending: false })
         .limit(200);
 
@@ -82,7 +83,7 @@ export function useInterventionsSuivi(parcId: string | null) {
       let interventionsMap: Record<string, any> = {};
 
       if (incidentIds.length > 0) {
-        const { data: intData } = await supabase
+        const { data: intData, error: intError } = await supabase
           .from('interventions')
           .select(`
             incident_id, debut, fin, photos_avant, photos_apres,
@@ -91,6 +92,8 @@ export function useInterventionsSuivi(parcId: string | null) {
           `)
           .in('incident_id', incidentIds)
           .order('debut', { ascending: false });
+
+        if (intError) throw intError;
 
         if (intData) {
           for (const row of intData as any[]) {
@@ -143,7 +146,7 @@ export function useInterventionsSuivi(parcId: string | null) {
 export function useInterventionKpis(interventions: InterventionSuivi[] | undefined): InterventionKpis {
   if (!interventions) return { enCours: 0, termineesAujourdhui: 0, mttrMinutes: 0, enAttente: 0 };
 
-  const todayStr = new Date().toISOString().slice(0, 10);
+  const todayStr = aujourdhuiParis();
   let enCours = 0;
   let terminees = 0;
   let totalDureeMin = 0;
@@ -151,8 +154,8 @@ export function useInterventionKpis(interventions: InterventionSuivi[] | undefin
 
   for (const i of interventions) {
     if (i.statut === 'en_cours') enCours++;
-    if (i.statut === 'ouvert' || i.statut === 'assigne') enAttente++;
-    if ((i.statut === 'resolu' || i.statut === 'ferme') && i.resolu_le?.slice(0, 10) === todayStr) {
+    if (i.statut === 'ouvert' || i.statut === 'assigne' || i.statut === 'en_pause') enAttente++;
+    if ((i.statut === 'resolu' || i.statut === 'ferme') && i.resolu_le && dateParis(i.resolu_le) === todayStr) {
       terminees++;
       if (i.declare_le && i.resolu_le) {
         const duree = (new Date(i.resolu_le).getTime() - new Date(i.declare_le).getTime()) / 60_000;
