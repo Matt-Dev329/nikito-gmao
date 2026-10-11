@@ -6,6 +6,7 @@ import {
   STATUTS_COMMANDE,
   useAnnulerCommande,
   useChangerStatutCommande,
+  useMarquerCommandeLivree,
   useCommandes,
   type Commande,
   type StatutCommande,
@@ -100,6 +101,7 @@ function CarteCommande({ commande: c, gestion }: { commande: Commande; gestion: 
   const [refus, setRefus] = useState<string | null>(null);
   const changer = useChangerStatutCommande();
   const annuler = useAnnulerCommande();
+  const livrer = useMarquerCommandeLivree();
   const statut = STATUTS_COMMANDE[c.statut];
   const nbArticles = c.commande_lignes.reduce((s, l) => s + l.quantite, 0);
 
@@ -114,6 +116,15 @@ function CarteCommande({ commande: c, gestion }: { commande: Commande; gestion: 
           ? `Commande ${c.numero} validée — article ajouté au catalogue`
           : `Commande ${c.numero} : ${STATUTS_COMMANDE[s].label.toLowerCase()}`
       );
+    } catch (e) {
+      toast.error((e as Error).message);
+    }
+  };
+
+  const confirmerLivraison = async () => {
+    try {
+      await livrer.mutateAsync(c.id);
+      toast.success(`Commande ${c.numero} livrée — produits entrés en stock`);
     } catch (e) {
       toast.error((e as Error).message);
     }
@@ -200,6 +211,15 @@ function CarteCommande({ commande: c, gestion }: { commande: Commande; gestion: 
           )}
 
           <div className="flex flex-wrap gap-2 mt-4 justify-end">
+            {!gestion && (c.statut === 'validee' || c.statut === 'commandee') && (
+              <button
+                onClick={confirmerLivraison}
+                disabled={livrer.isPending}
+                className="bg-green/15 text-green border border-green/40 px-4 py-2 rounded-[10px] text-[13px] font-semibold min-h-[44px]"
+              >
+                {livrer.isPending ? '…' : '✓ Marquer comme livrée (reçue)'}
+              </button>
+            )}
             {!gestion && c.statut === 'demandee' && (
               <button
                 onClick={annulerCommande}

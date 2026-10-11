@@ -248,6 +248,22 @@ export function useAnnulerCommande() {
   });
 }
 
+/** Le demandeur confirme la réception de sa commande (entrée en stock automatique). */
+export function useMarquerCommandeLivree() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (commandeId: string) => {
+      const { error } = await supabase.rpc('marquer_commande_livree', { p_commande_id: commandeId });
+      if (error) throw error;
+    },
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: ['commandes'] });
+      qc.invalidateQueries({ queryKey: ['pieces_detachees'] });
+      qc.invalidateQueries({ queryKey: ['incidents'] });
+    },
+  });
+}
+
 export function useChangerStatutCommande() {
   const qc = useQueryClient();
   const { utilisateur } = useAuth();
