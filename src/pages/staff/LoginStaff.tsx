@@ -74,7 +74,7 @@ export function LoginStaff() {
 
     if (data[0].is_locked) {
       const min = Math.max(1, Math.ceil((data[0].lock_remaining_seconds ?? 0) / 60));
-      setErreur(`Trop d'essais, réessaie dans ${min} min.`);
+      setErreur(`Trop de codes faux sur ce parc : connexion suspendue, réessaie dans ${min} min.`);
       reset();
       return;
     }
