@@ -37,7 +37,14 @@ export async function envoyerFichier(
       removeFingerprintOnSuccess: true,
       chunkSize: SEUIL_MORCEAUX,
       metadata: { bucketName: bucket, objectName: chemin, contentType, cacheControl: '3600' },
-      onError: (e) => reject(new Error(`Envoi interrompu : ${e.message}`)),
+      onError: (e) =>
+        reject(
+          new Error(
+            /\b413\b|Maximum size exceeded/i.test(e.message)
+              ? `Fichier trop lourd pour le serveur (${(fichier.size / 1024 / 1024).toFixed(0)} Mo) : la limite d'envoi du projet doit être relevée (Supabase → Storage → Settings).`
+              : `Envoi interrompu : ${e.message}`,
+          ),
+        ),
       onProgress: (envoye, total) => onProgression?.(Math.round((envoye / total) * 100)),
       onSuccess: () => resolve(),
     });
