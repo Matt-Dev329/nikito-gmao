@@ -376,6 +376,7 @@ export function Operations() {
                 ticket={premier}
                 variant="expanded"
                 onDemarrer={() => navigate(`/tech/operations/${premier.numeroBT}`)}
+                onClick={() => navigate(`/tech/operations/${premier.numeroBT}`)}
                 onReassigner={() => setReassignerCible({ id: premier.id, numeroBT: premier.numeroBT })}
                 onReprendre={() => reprendreTicket(premier.id)}
                 reprenant={reprendre.isPending}

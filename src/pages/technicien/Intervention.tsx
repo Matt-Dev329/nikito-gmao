@@ -134,6 +134,8 @@ export function Intervention() {
   const [actions, setActions] = useState('');
   const [premierCoup, setPremierCoup] = useState<boolean | null>(null);
   const [photoAvant, setPhotoAvant] = useState<string | null>(null);
+  // Rien ne peut être saisi tant que la photo AVANT n'est pas prise
+  const verrouPhoto = !photoAvant && !estResolu;
   const [photoApres, setPhotoApres] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
   const [showModale, setShowModale] = useState(false);
@@ -449,7 +451,7 @@ export function Intervention() {
           ) : (
             <textarea
               value={diagnostic}
-              disabled={!photoAvant && !estResolu}
+              disabled={verrouPhoto}
               onChange={(e) => { setDiagnostic(e.target.value); setDirty(true); }}
               placeholder={photoAvant || estResolu ? 'Décrire le diagnostic...' : '📷 Prends d’abord la photo AVANT ci-dessus'}
               className="w-full bg-bg-deep border border-white/[0.08] rounded-lg text-text p-3 text-[13px] resize-y min-h-[90px] outline-none focus:border-nikito-cyan"
@@ -457,6 +459,17 @@ export function Intervention() {
           )}
         </div>
 
+        {/* Tout le reste est verrouillé tant que la photo AVANT n'est pas prise */}
+        {verrouPhoto && (
+          <div className="bg-amber/10 border border-amber/40 text-amber text-[13px] rounded-xl p-3 text-center font-semibold">
+            📷 Prends la photo AVANT (bloc Diagnostic) pour débloquer la saisie
+          </div>
+        )}
+        <fieldset
+          disabled={verrouPhoto}
+          aria-disabled={verrouPhoto}
+          className={cn('contents', verrouPhoto && '[&>*]:opacity-40 [&>*]:pointer-events-none')}
+        >
         {/* Pièces */}
         <div className="bg-bg-card rounded-xl p-3.5 px-4">
           <div className="flex justify-between items-center mb-3">
@@ -528,7 +541,7 @@ export function Intervention() {
           )}
           <textarea
             value={actions}
-            disabled={!photoAvant && !estResolu}
+            disabled={verrouPhoto}
             onChange={(e) => { setActions(e.target.value); setDirty(true); }}
             placeholder="Décrire les actions réalisées..."
             className="w-full bg-bg-deep border border-white/[0.08] rounded-lg text-text p-3 text-[13px] resize-y min-h-[90px] outline-none focus:border-nikito-cyan"
@@ -587,6 +600,7 @@ export function Intervention() {
         >
           {cloturer.isPending ? 'Clôture en cours…' : 'Clôturer · générer PDF'}
         </button>
+        </fieldset>
 
         <button
           onClick={() => setShowPause(true)}

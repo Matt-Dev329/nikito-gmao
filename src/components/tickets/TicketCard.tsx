@@ -86,7 +86,10 @@ export function TicketCard({ ticket, variant, onDemarrer, onReassigner, onRepren
   }
 
   return (
-    <div className={cn('bg-bg-card rounded-2xl p-4 flex flex-col gap-3', borderByCrit[ticket.criticite])}>
+    <div
+      onClick={onClick}
+      className={cn('bg-bg-card rounded-2xl p-4 flex flex-col gap-3', onClick && 'cursor-pointer', borderByCrit[ticket.criticite])}
+    >
       <div className="flex items-center gap-2.5 flex-wrap">
         <CritTag niveau={ticket.criticite} />
         <span className="bt-num">{ticket.numeroBT}</span>
@@ -119,7 +122,10 @@ export function TicketCard({ ticket, variant, onDemarrer, onReassigner, onRepren
       <div className="flex gap-2.5">
         {ticket.enPause && onReprendre ? (
           <button
-            onClick={onReprendre}
+            onClick={(e) => {
+              e.stopPropagation();
+              onReprendre();
+            }}
             disabled={reprenant}
             className="flex-1 bg-gradient-action text-bg-app py-3.5 rounded-[10px] text-sm font-bold disabled:opacity-50"
           >
@@ -127,7 +133,10 @@ export function TicketCard({ ticket, variant, onDemarrer, onReassigner, onRepren
           </button>
         ) : (
           <button
-            onClick={onDemarrer}
+            onClick={(e) => {
+              e.stopPropagation();
+              onDemarrer?.();
+            }}
             className="flex-1 bg-gradient-action text-bg-app py-3.5 rounded-[10px] text-sm font-bold"
           >
             📷 Photo AVANT puis démarrer
@@ -135,7 +144,10 @@ export function TicketCard({ ticket, variant, onDemarrer, onReassigner, onRepren
         )}
         {onReassigner && (
           <button
-            onClick={onReassigner}
+            onClick={(e) => {
+              e.stopPropagation();
+              onReassigner();
+            }}
             className="bg-bg-deep border border-white/10 text-text py-3.5 px-4 rounded-[10px] text-[13px] min-w-[90px]"
           >
             Réassigner
