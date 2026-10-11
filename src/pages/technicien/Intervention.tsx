@@ -13,6 +13,7 @@ import { useCloturerIntervention } from '@/hooks/mutations';
 import { useAuth } from '@/hooks/useAuth';
 import { useDraftPersistence, useAutoSaveDraft } from '@/hooks/useDraftPersistence';
 import { useToast } from '@/components/ui/ToastProvider';
+import { estErreurReseau, mettreActionEnFile } from '@/lib/horsLigne/file';
 import { exportInterventionPDF } from './exportInterventionPDF';
 import { formatChrono, cn } from '@/lib/utils';
 import type { Criticite } from '@/types/database';
@@ -200,17 +201,19 @@ export function Intervention() {
     if (premierCoup === null) return setErreur('Indique si le problème a été résolu du 1er coup.');
     if (!incident?.id) return setErreur('Incident introuvable.');
 
+    const paramsCloture = {
+      incidentId: incident.id as string,
+      interventionId: (latestIntervention?.id as string) ?? null,
+      diagnostic,
+      actions,
+      resoluPremierCoup: premierCoup,
+      photoAvantUrl: photoAvant,
+      photoApresUrl: photoApres,
+      pieces: piecesAjoutees.map((p) => ({ pieceId: p.pieceId, quantite: p.quantite })),
+    };
+
     try {
-      await cloturer.mutateAsync({
-        incidentId: incident.id as string,
-        interventionId: (latestIntervention?.id as string) ?? null,
-        diagnostic,
-        actions,
-        resoluPremierCoup: premierCoup,
-        photoAvantUrl: photoAvant,
-        photoApresUrl: photoApres,
-        pieces: piecesAjoutees.map((p) => ({ pieceId: p.pieceId, quantite: p.quantite })),
-      });
+      await cloturer.mutateAsync(paramsCloture);
 
       await exportInterventionPDF({
         numeroBT: btNumero ?? '',
@@ -241,9 +244,24 @@ export function Intervention() {
       navigate(-1);
     } catch (e) {
       const msg = e instanceof Error ? e.message : '';
-      const reseau = !navigator.onLine || /fetch|network|réseau|reseau/i.test(msg);
+      // Sans réseau : la clôture est gardée sur l'appareil et envoyée automatiquement
+      if (estErreurReseau(e) && utilisateur?.id) {
+        try {
+          await mettreActionEnFile('cloture_intervention', `${btNumero ?? ''} · ${titre}`, {
+            params: paramsCloture,
+            utilisateurId: utilisateur.id,
+          });
+          draft.clear();
+          setDirty(false);
+          toast.info(`Hors connexion : clôture de ${btNumero ?? ''} enregistrée, envoi automatique au retour du réseau.`);
+          navigate(-1);
+          return;
+        } catch {
+          // stockage local indisponible : on garde le brouillon et on prévient
+        }
+      }
       setErreur(
-        reseau
+        estErreurReseau(e)
           ? 'Connexion instable — ta saisie est conservée, réessaie dans un instant.'
           : msg || 'Erreur lors de la clôture.'
       );

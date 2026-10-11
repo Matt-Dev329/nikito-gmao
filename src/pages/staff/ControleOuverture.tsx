@@ -1,5 +1,6 @@
 import { useState, useCallback, useMemo, useEffect } from 'react';
 import { aujourdhuiParis } from '@/lib/dates';
+import { estErreurReseau, mettreActionEnFile } from '@/lib/horsLigne/file';
 import { useNavigate } from 'react-router-dom';
 import { ControleEcran, photoManquante, type PointControleVue, type ZoneVue } from '@/components/controles/ControleEcran';
 import { ModaleQuitterSansValider } from '@/components/ui/ModaleQuitterSansValider';
@@ -125,6 +126,7 @@ export function ControleOuverture({ typeControle = 'quotidien' }: { typeControle
   const [startTime] = useState(() => Date.now());
   const [elapsed, setElapsed] = useState(0);
   const [validated, setValidated] = useState(false);
+  const [valideHorsLigne, setValideHorsLigne] = useState(false);
   useEffect(() => {
     if (validated) return;
     const interval = setInterval(() => {
@@ -284,6 +286,32 @@ export function ControleOuverture({ typeControle = 'quotidien' }: { typeControle
       setDirty(false);
       setValidated(true);
     } catch (err: unknown) {
+      // Sans réseau : le contrôle est gardé sur l'appareil et envoyé automatiquement
+      if (estErreurReseau(err)) {
+        try {
+          await mettreActionEnFile('controle_staff', `${L.titre} · ${parc?.code ?? ''} · ${datePlanifiee}`, {
+            p_parc_id: parcId,
+            p_type: typeControle,
+            p_date_planifiee: datePlanifiee,
+            p_realise_par_id: utilisateur.id,
+            p_realise_par_nom: `${utilisateur.prenom} ${utilisateur.nom}`,
+            p_realise_par_role: utilisateur.role_code,
+            p_items: items.map((i) => ({
+              point_id: i.point_id,
+              etat: i.etat,
+              commentaire: i.commentaire ?? null,
+              photo_url: i.photo_url ?? null,
+            })),
+          });
+          draft.clear();
+          setDirty(false);
+          setValideHorsLigne(true);
+          setValidated(true);
+          return;
+        } catch {
+          // stockage local indisponible : on affiche l'erreur réseau
+        }
+      }
       const msg = err instanceof Error ? err.message : 'Erreur inconnue';
       setErreurValidation(msg);
     }
@@ -342,6 +370,12 @@ export function ControleOuverture({ typeControle = 'quotidien' }: { typeControle
         <div className="text-4xl mb-3">OK</div>
         <div className="text-lg font-semibold mb-1">{L.valide}</div>
         <div className="text-dim text-sm mb-4">{totalFaits} points controles - {today}</div>
+        {valideHorsLigne && (
+          <div className="text-amber text-[13px] mb-4 max-w-[420px] mx-auto">
+            Enregistré sur la tablette (hors connexion) : il sera envoyé automatiquement au retour du réseau. Laisse
+            l'application ouverte ou rouvre-la une fois connecté.
+          </div>
+        )}
         <button
           onClick={() => navigate(retourDestination)}
           className="bg-gradient-cta text-text px-6 py-3 rounded-[10px] text-[13px] font-bold min-h-[44px]"

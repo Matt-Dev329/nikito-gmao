@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabase';
 import { cn } from '@/lib/utils';
 import { useSignedUrl } from '@/hooks/useSignedUrl';
 import type { AlbaBucket } from '@/lib/uploadPhotoControle';
+import { envoyerPhotoOuMettreEnFile } from '@/lib/horsLigne/file';
 
 interface PhotoCaptureProps {
   bucketName: string;
@@ -69,6 +70,7 @@ export function PhotoCapture({
   const [state, setState] = useState<UploadState>(existingUrl ? 'done' : 'idle');
   const [photoUrl, setPhotoUrl] = useState<string | null>(resolvedExisting ?? existingUrl ?? null);
   const [errMsg, setErrMsg] = useState('');
+  const [enAttente, setEnAttente] = useState(false);
   const storedPathRef = useRef<string | null>(needsSignedUrl ? existingUrl ?? null : null);
   const resigneRef = useRef(false);
   const galleryRef = useRef<HTMLInputElement>(null);
@@ -99,18 +101,20 @@ export function PhotoCapture({
       try {
         const compressed = await compressImage(source);
         const fileName = `${storagePath}_${Date.now()}.jpg`;
-        const { error } = await supabase.storage
-          .from(bucketName)
-          .upload(fileName, compressed, { contentType: 'image/jpeg' });
-        if (error) throw error;
-
-        const { data: signedData } = await supabase.storage
-          .from(bucketName)
-          .createSignedUrl(fileName, 3600);
+        // Sans réseau, la photo est gardée sur l'appareil et partira toute seule
+        const { enAttente: gardee } = await envoyerPhotoOuMettreEnFile(bucketName, fileName, compressed, 'image/jpeg');
 
         storedPathRef.current = fileName;
         resigneRef.current = false;
-        setPhotoUrl(signedData?.signedUrl ?? fileName);
+        setEnAttente(gardee);
+        if (gardee) {
+          setPhotoUrl(URL.createObjectURL(compressed));
+        } else {
+          const { data: signedData } = await supabase.storage
+            .from(bucketName)
+            .createSignedUrl(fileName, 3600);
+          setPhotoUrl(signedData?.signedUrl ?? fileName);
+        }
         setState('done');
         onPhotoUploaded(fileName);
       } catch (err) {
@@ -173,6 +177,7 @@ export function PhotoCapture({
   );
 
   const reprendre = () => {
+    setEnAttente(false);
     setPhotoUrl(null);
     setState('idle');
   };
@@ -182,7 +187,7 @@ export function PhotoCapture({
   // L'URL signée (1 h) a expiré : on la renouvelle une seule fois.
   const resigner = async () => {
     const chemin = storedPathRef.current;
-    if (!chemin || resigneRef.current) return;
+    if (!chemin || resigneRef.current || enAttente) return;
     resigneRef.current = true;
     const { data } = await supabase.storage.from(bucketName).createSignedUrl(chemin, 3600);
     if (data?.signedUrl) setPhotoUrl(data.signedUrl);
@@ -205,6 +210,11 @@ export function PhotoCapture({
             className="w-full max-h-[240px] object-contain cursor-zoom-in"
             onClick={() => setZoomed(true)}
           />
+          {enAttente && (
+            <span className="absolute top-2 left-2 bg-amber text-bg-app px-2 py-1 rounded-md text-[10px] font-semibold">
+              Hors connexion · envoi automatique
+            </span>
+          )}
           <button
             onClick={reprendre}
             className="absolute top-2 right-2 bg-black/60 backdrop-blur text-white px-3 py-1.5 rounded-lg text-[11px] font-medium min-h-[34px]"

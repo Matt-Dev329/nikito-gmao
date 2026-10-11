@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabase'
+import { envoyerPhotoOuMettreEnFile } from '@/lib/horsLigne/file'
 
 export type AlbaBucket =
   | 'alba-controles'
@@ -42,10 +42,12 @@ export async function uploadPhotoControle(
   const ext = blob.type === 'image/png' ? 'png' : 'jpg'
   const path = `${parcCode}/${contexte}/${timestamp}_${random}.${ext}`
 
-  const { error } = await supabase.storage.from(bucket).upload(path, blob, {
-    cacheControl: '3600', upsert: false, contentType: blob.type,
-  })
-  if (error) throw new Error(`Upload échoué : ${error.message}`)
+  // Sans réseau, la photo est gardée sur l'appareil et envoyée au retour du réseau
+  try {
+    await envoyerPhotoOuMettreEnFile(bucket, path, blob, blob.type)
+  } catch (e) {
+    throw new Error(`Upload échoué : ${e instanceof Error ? e.message : String((e as { message?: unknown })?.message ?? e)}`)
+  }
 
   const dims = await getImageDimensions(blob)
   return { path, bucket, size: blob.size, width: dims.width, height: dims.height }

@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { cn } from '@/lib/utils';
 import { supabase, supabaseUrl, supabaseAnonKey } from '@/lib/supabase';
+import { estErreurReseau, mettreActionEnFile } from '@/lib/horsLigne/file';
 import { useAuth } from '@/hooks/useAuth';
 import { chargerToutesLesPages } from '@/lib/paginer';
 import { uploadPhotoControle } from '@/lib/uploadPhotoControle';
@@ -241,8 +242,35 @@ export function ModaleSignalerV2({ open, onClose, via, parcId: propParcId, modeE
       } : null,
     };
 
+    let res: Response;
     try {
-      const res = await fetch(apiUrl, { method: 'POST', headers, body: JSON.stringify(payload) });
+      res = await fetch(apiUrl, { method: 'POST', headers, body: JSON.stringify(payload) });
+    } catch (e) {
+      // Sans réseau : le signalement est gardé sur l'appareil et envoyé automatiquement
+      if (estErreurReseau(e)) {
+        try {
+          await mettreActionEnFile(
+            'signalement',
+            `${state.categorie.nom}${state.equipement ? ` · ${state.equipement.code}` : ''}`,
+            payload
+          );
+          setResultBt(null);
+          setResultPriorite(
+            state.prioriteOverride ?? (state.prioriteEscaladee ? 'bloquant' : (state.categorie.criticite_defaut ?? 'mineur'))
+          );
+          setResultValidation('hors_ligne');
+          setEtape('succes');
+          setSubmitting(false);
+          return;
+        } catch {
+          // stockage local indisponible
+        }
+      }
+      setSubmitError('Erreur reseau -- verifiez votre connexion');
+      setSubmitting(false);
+      return;
+    }
+    try {
       const data = await res.json();
       if (!data.success) {
         setSubmitError(data.error ?? 'Erreur inconnue');
@@ -254,7 +282,7 @@ export function ModaleSignalerV2({ open, onClose, via, parcId: propParcId, modeE
       setResultValidation(data.validation_manager);
       setEtape('succes');
     } catch {
-      setSubmitError('Erreur reseau -- verifiez votre connexion');
+      setSubmitError('Réponse du serveur illisible — réessaie dans un instant');
     }
     setSubmitting(false);
   }, [parcId, state, userCtx, via, modeExpert]);
@@ -1176,7 +1204,12 @@ function EtapeSucces({
         <div className="text-2xl font-bold text-white mb-2">Signalement #{numeroBt}</div>
       )}
 
-      {needsApproval ? (
+      {validationManager === 'hors_ligne' ? (
+        <div className="text-sm text-[#FFB547] mb-6 max-w-[320px]">
+          Hors connexion : le signalement est enregistré sur l'appareil et sera envoyé automatiquement au retour du
+          réseau.
+        </div>
+      ) : needsApproval ? (
         <div className="text-sm text-[#FFB547] mb-6 max-w-[300px]">
           Votre signalement a ete enregistre et est en attente de validation par le manager de votre parc.
         </div>
