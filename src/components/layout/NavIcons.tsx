@@ -247,6 +247,7 @@ const iconMap: Record<string, (props: { className?: string }) => JSX.Element> = 
   'Tableau de bord': IconTableauBord,
   'Mon parc': IconParc,
   'Opérations': IconOperations,
+  'Rapports de réparation': IconRapports,
   'Équipements': IconEquipements,
   'Récurrences': IconRecurrences,
   '5 Pourquoi': IconCinqPourquoi,
@@ -270,6 +271,16 @@ const iconMap: Record<string, (props: { className?: string }) => JSX.Element> = 
   'Aide': IconAide,
   'Administration IT': IconAdminIT,
 };
+
+function IconRapports({ className = s }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M5 2h7l3 3v13H5z" />
+      <path d="M12 2v3h3" />
+      <path d="M8 9h4M8 12h4M8 15h2" />
+    </svg>
+  );
+}
 
 export function getNavIcon(label: string) {
   return iconMap[label] ?? IconTableauBord;
