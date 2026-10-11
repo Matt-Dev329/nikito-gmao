@@ -101,7 +101,10 @@ Deno.serve(async (req: Request) => {
 
   // Commande dont l'envoi a été réservé : libérée si une erreur survient ensuite
   let reserveeId: string | null = null;
-  let supabase: ReturnType<typeof createClient> | null = null;
+  const supabase = createClient(
+    Deno.env.get("SUPABASE_URL")!,
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+  );
 
   try {
     const apiKey = Deno.env.get("RESEND_API_KEY");
@@ -109,11 +112,6 @@ Deno.serve(async (req: Request) => {
 
     const { commande_id } = await req.json();
     if (!commande_id) return json({ success: false, error: "commande_id manquant" }, 400);
-
-    supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-    );
 
     // Réserve l'envoi : ne passe qu'une fois par commande
     const { data: commande } = await supabase
@@ -176,7 +174,7 @@ Deno.serve(async (req: Request) => {
     return json({ success: true });
   } catch (err) {
     console.error("notifier-commande error:", err);
-    if (supabase && reserveeId) {
+    if (reserveeId) {
       await supabase.from("commandes").update({ email_envoye_le: null }).eq("id", reserveeId);
     }
     return json({ success: false, error: "Erreur interne", detail: String(err) }, 500);
