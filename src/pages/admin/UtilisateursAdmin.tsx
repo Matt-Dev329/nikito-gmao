@@ -311,7 +311,7 @@ const roleHomePage: Record<RoleUtilisateur, string> = {
   technicien: '/gmao/operations',
   manager_parc: '/gmao/mon-parc',
   staff_operationnel: '/staff/controle-ouverture',
-  admin_it: '/gmao/admin-it',
+  admin_it: '/gmao/it-admin',
 };
 
 function filtrerUtilisateurs(users: UtilisateurRow[], q: string): UtilisateurRow[] {

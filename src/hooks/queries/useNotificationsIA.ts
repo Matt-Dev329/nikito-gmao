@@ -171,6 +171,7 @@ export function useValiderHypothese() {
 
   return useMutation({
     mutationFn: async ({ id, statut, commentaire }: { id: string; statut: 'validee' | 'rejetee'; commentaire?: string }) => {
+      if (!utilisateur?.id) throw new Error('Utilisateur non identifié');
       const { error } = await supabase
         .from('hypotheses_ia')
         .update({
@@ -183,14 +184,15 @@ export function useValiderHypothese() {
 
       if (error) throw error;
 
-      await supabase.from('historique_decisions_ia').insert({
+      const { error: errHisto } = await supabase.from('historique_decisions_ia').insert({
         hypothese_id: id,
         action: statut,
-        utilisateur_id: utilisateur?.id ?? '',
+        utilisateur_id: utilisateur.id,
         utilisateur_nom: `${utilisateur?.prenom ?? ''} ${utilisateur?.nom ?? ''}`.trim(),
         commentaire: commentaire ?? null,
         donnees_snapshot: { statut },
       });
+      if (errHisto) throw errHisto;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['hypotheses-ia'] });
@@ -209,6 +211,7 @@ export function useEvaluerResultat() {
 
   return useMutation({
     mutationFn: async ({ id, resultat, commentaire }: { id: string; resultat: 'bon_choix' | 'mauvais_choix'; commentaire?: string }) => {
+      if (!utilisateur?.id) throw new Error('Utilisateur non identifié');
       const { error } = await supabase
         .from('hypotheses_ia')
         .update({
@@ -221,14 +224,15 @@ export function useEvaluerResultat() {
 
       if (error) throw error;
 
-      await supabase.from('historique_decisions_ia').insert({
+      const { error: errHisto } = await supabase.from('historique_decisions_ia').insert({
         hypothese_id: id,
         action: resultat === 'bon_choix' ? 'resultat_bon' : 'resultat_mauvais',
-        utilisateur_id: utilisateur?.id ?? '',
+        utilisateur_id: utilisateur.id,
         utilisateur_nom: `${utilisateur?.prenom ?? ''} ${utilisateur?.nom ?? ''}`.trim(),
         commentaire: commentaire ?? null,
         donnees_snapshot: { resultat },
       });
+      if (errHisto) throw errHisto;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['hypotheses-ia'] });

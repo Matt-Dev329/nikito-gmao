@@ -69,6 +69,8 @@ export function PhotoCapture({
   const [state, setState] = useState<UploadState>(existingUrl ? 'done' : 'idle');
   const [photoUrl, setPhotoUrl] = useState<string | null>(resolvedExisting ?? existingUrl ?? null);
   const [errMsg, setErrMsg] = useState('');
+  const storedPathRef = useRef<string | null>(needsSignedUrl ? existingUrl ?? null : null);
+  const resigneRef = useRef(false);
   const galleryRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -106,6 +108,8 @@ export function PhotoCapture({
           .from(bucketName)
           .createSignedUrl(fileName, 3600);
 
+        storedPathRef.current = fileName;
+        resigneRef.current = false;
         setPhotoUrl(signedData?.signedUrl ?? fileName);
         setState('done');
         onPhotoUploaded(fileName);
@@ -175,6 +179,15 @@ export function PhotoCapture({
 
   const [zoomed, setZoomed] = useState(false);
 
+  // L'URL signée (1 h) a expiré : on la renouvelle une seule fois.
+  const resigner = async () => {
+    const chemin = storedPathRef.current;
+    if (!chemin || resigneRef.current) return;
+    resigneRef.current = true;
+    const { data } = await supabase.storage.from(bucketName).createSignedUrl(chemin, 3600);
+    if (data?.signedUrl) setPhotoUrl(data.signedUrl);
+  };
+
   if (state === 'done' && photoUrl) {
     return (
       <div className="flex flex-col gap-2">
@@ -188,6 +201,7 @@ export function PhotoCapture({
           <img
             src={photoUrl}
             alt="Photo"
+            onError={resigner}
             className="w-full max-h-[240px] object-contain cursor-zoom-in"
             onClick={() => setZoomed(true)}
           />

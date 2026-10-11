@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer,
   ReferenceLine, Cell, PieChart, Pie, Cell as PieCell, Tooltip,
@@ -18,8 +19,6 @@ import { useIncidents } from '@/hooks/queries/useTickets';
 import { useParcs } from '@/hooks/queries/useReferentiel';
 import { useControlesOuvertureManquants } from '@/hooks/queries/useControlesManquants';
 import type { Criticite } from '@/types/database';
-
-type Periode = '7j' | '30j' | '90j';
 
 function SkeletonBlock({ className }: { className?: string }) {
   return (
@@ -44,6 +43,10 @@ function avg(values: number[]): number {
 
 function sum(values: number[]): number {
   return values.reduce((a, b) => a + b, 0);
+}
+
+function clampPct(n: number): number {
+  return Math.min(100, Math.max(0, n));
 }
 
 function fmtNum(n: number, decimals = 1): string {
@@ -95,7 +98,7 @@ function mapCriticite(priorite: Record<string, unknown> | null): Criticite {
 }
 
 export function TableauDeBord() {
-  const [periode, setPeriode] = useState<Periode>('30j');
+  const navigate = useNavigate();
   const [parcActif, setParcActif] = useState<string | null>(null);
 
   const perfQ = useKpiPerformance();
@@ -115,7 +118,7 @@ export function TableauDeBord() {
     return perfQ.data.map((r: Record<string, unknown>) => ({
       parc: (r.parc_nom as string) ?? '',
       parc_id: r.parc_id as string,
-      perf: (r.performance_pct as number) ?? 0,
+      perf: clampPct((r.performance_pct as number) ?? 0),
     }));
   }, [perfQ.data]);
 
@@ -137,13 +140,20 @@ export function TableauDeBord() {
     const plaintes = filterByParc(plaintesQ.data as Record<string, unknown>[] | undefined);
 
     return {
-      performance: fmtNum(avg(perf.map((r) => (r.performance_pct as number) ?? 0))),
+      performance: fmtNum(avg(perf.map((r) => clampPct((r.performance_pct as number) ?? 0)))),
       mtbf: fmtNum(avg(mtbf.map((r) => (r.mtbf_jours as number) ?? 0))),
       mttr: Math.round(avg(mttr.map((r) => (r.mttr_minutes as number) ?? 0))).toString(),
       premierCoup: Math.round(avg(pc.map((r) => (r.premier_coup_pct as number) ?? 0))).toString(),
       plaintes: sum(plaintes.map((r) => (r.plaintes_7j as number) ?? 0)).toString(),
     };
   }, [perfQ.data, mtbfQ.data, mttrQ.data, premierCoupQ.data, plaintesQ.data, parcActif]);
+
+  const alertesTotal = useMemo(() => {
+    if (!incidentsQ.data) return 0;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const all = incidentsQ.data as any[];
+    return parcActif ? all.filter((i) => i.equipements?.parc_id === parcActif).length : all.length;
+  }, [incidentsQ.data, parcActif]);
 
   const alertes = useMemo(() => {
     if (!incidentsQ.data) return [];
@@ -152,13 +162,11 @@ export function TableauDeBord() {
     if (parcActif) {
       filtered = filtered.filter((i) => i.equipements?.parc_id === parcActif);
     }
-    const prioriteOrder = ['P1', 'P2', 'P3'];
-    return filtered
-      .sort((a, b) => {
-        const aCode = a.niveaux_priorite?.code ?? 'P3';
-        const bCode = b.niveaux_priorite?.code ?? 'P3';
-        return prioriteOrder.indexOf(aCode) - prioriteOrder.indexOf(bCode);
-      })
+    const prioriteOrder = ['bloquant', 'majeur', 'mineur'];
+    const rang = (i: { niveaux_priorite?: Record<string, unknown> | null }) =>
+      prioriteOrder.indexOf(mapCriticite(i.niveaux_priorite ?? null));
+    return [...filtered]
+      .sort((a, b) => rang(a) - rang(b))
       .slice(0, 10);
   }, [incidentsQ.data, parcActif]);
 
@@ -225,22 +233,6 @@ export function TableauDeBord() {
           </div>
 
           <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-            <div className="flex gap-2 rounded-lg bg-bg-deep p-1 border border-white/[0.07]">
-              {(['7j', '30j', '90j'] as Periode[]).map((p) => (
-                <button
-                  key={p}
-                  onClick={() => setPeriode(p)}
-                  className={
-                    periode === p
-                      ? 'bg-white/[0.1] text-text px-3.5 py-2 rounded-md text-xs font-semibold min-h-[40px] md:min-h-0 shadow-sm'
-                      : 'text-dim hover:text-text hover:bg-white/[0.04] px-3.5 py-2 rounded-md text-xs min-h-[40px] md:min-h-0'
-                  }
-                >
-                  {p === '7j' ? '7 jours' : p === '30j' ? '30 jours' : '90 jours'}
-                </button>
-              ))}
-            </div>
-
             <div className="hidden md:block">
               <SignalerInlineButton />
             </div>
@@ -341,7 +333,7 @@ export function TableauDeBord() {
               label={kpiLabels.performance}
               valeur={kpiAgreg.performance}
               unite="%"
-              delta={{ texte: `moy. ${periode}`, tone: 'neutre' }}
+              delta={{ texte: 'aujourd\'hui · moy. des parcs', tone: 'neutre' }}
               couleur="lime"
             />
             <KpiCard
@@ -356,7 +348,7 @@ export function TableauDeBord() {
               label={kpiLabels.mtbf}
               valeur={kpiAgreg.mtbf}
               unite=" j"
-              delta={{ texte: `moy. ${periode}`, tone: 'neutre' }}
+              delta={{ texte: '30 derniers jours', tone: 'neutre' }}
               couleur="cyan"
               compact
             />
@@ -364,7 +356,7 @@ export function TableauDeBord() {
               label={kpiLabels.mttr}
               valeur={kpiAgreg.mttr}
               unite=" min"
-              delta={{ texte: `moy. ${periode}`, tone: 'neutre' }}
+              delta={{ texte: '30 derniers jours', tone: 'neutre' }}
               couleur="violet"
               compact
             />
@@ -372,7 +364,7 @@ export function TableauDeBord() {
               label={kpiLabels.premierCoup}
               valeur={kpiAgreg.premierCoup}
               unite="%"
-              delta={{ texte: `cible 90% · ${periode}`, tone: 'neutre' }}
+              delta={{ texte: 'cible 90% · 30 derniers jours', tone: 'neutre' }}
               couleur="green"
               compact
             />
@@ -382,7 +374,7 @@ export function TableauDeBord() {
 
       <div className="grid grid-cols-1 lg:grid-cols-[1.5fr_1fr] gap-3.5 mb-[18px]">
         <Card>
-          <CardHead titre={`Performance par parc · ${periode === '7j' ? '7' : periode === '30j' ? '30' : '90'} derniers jours`} meta="% disponibilité bloquants" />
+          <CardHead titre={'Performance par parc · aujourd\'hui'} meta="% disponibilité bloquants" />
           <div className="h-[200px]">
             {perfQ.isLoading ? (
               <div className="flex items-center justify-center h-full">
@@ -416,7 +408,7 @@ export function TableauDeBord() {
         </Card>
 
         <Card>
-          <CardHead titre="Tickets par criticité · 7j" meta={`${totalTickets} au total`} />
+          <CardHead titre="Tickets ouverts par criticité" meta={`${totalTickets} au total`} />
           <div className="h-[200px] flex items-center gap-4">
             {incidentsQ.isLoading ? (
               <div className="flex-1 flex items-center justify-center">
@@ -457,8 +449,8 @@ export function TableauDeBord() {
       <Card>
         <CardHead
           titre="Alertes en cours · à arbitrer"
-          meta={`${alertes.length} active${alertes.length > 1 ? 's' : ''}`}
-          metaTone={alertes.length > 0 ? 'red' : 'default'}
+          meta={`${alertesTotal} active${alertesTotal > 1 ? 's' : ''}${alertesTotal > alertes.length ? ` · ${alertes.length} affichées` : ''}`}
+          metaTone={alertesTotal > 0 ? 'red' : 'default'}
         />
         {incidentsQ.isLoading ? (
           <div className="flex flex-col gap-2">
@@ -497,7 +489,10 @@ export function TableauDeBord() {
                   <div className="text-[11px] text-dim">
                     {parc?.code as string ?? ''} · {parc?.nom as string ?? ''}{zone ? ` · ${zone.nom as string}` : ''}
                   </div>
-                  <button className="bg-transparent border border-nikito-cyan text-nikito-cyan px-2.5 py-2 rounded-md text-[11px] min-h-[44px] self-start">
+                  <button
+                    onClick={() => navigate(`/gmao/operations/${a.numero_bt as string}`)}
+                    className="bg-transparent border border-nikito-cyan text-nikito-cyan px-2.5 py-2 rounded-md text-[11px] min-h-[44px] self-start"
+                  >
                     Ouvrir
                   </button>
                 </div>
@@ -534,7 +529,10 @@ export function TableauDeBord() {
                       <td className="py-3 text-[11px] text-dim whitespace-nowrap">depuis {formatDuree(declareLe)}</td>
                       <td className={`py-3 text-[11px] whitespace-nowrap ${statutToneClass[statutInfo.tone]}`}>{statutInfo.texte}</td>
                       <td className="py-3 pr-3.5 rounded-r-lg">
-                        <button className="bg-transparent border border-nikito-cyan text-nikito-cyan px-2.5 py-1.5 rounded-md text-[11px]">
+                        <button
+                          onClick={() => navigate(`/gmao/operations/${a.numero_bt as string}`)}
+                          className="bg-transparent border border-nikito-cyan text-nikito-cyan px-2.5 py-1.5 rounded-md text-[11px]"
+                        >
                           Ouvrir
                         </button>
                       </td>

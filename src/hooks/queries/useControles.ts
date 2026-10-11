@@ -56,6 +56,52 @@ export interface ItemSaisiMensuel extends ItemSaisi {
   point_type_controle_snapshot: string;
 }
 
+/**
+ * Cherche un contrôle réutilisable pour (parc, type, date) : à faire / en cours,
+ * ou déjà « validé » mais sans aucun item (reprise après un échec d'insertion
+ * des items, pour ne pas créer de doublon). Lève en cas d'erreur de lecture.
+ */
+async function trouverControleReutilisable(
+  parcId: string,
+  type: TypeControle,
+  datePlanifiee: string,
+  estFormation: boolean
+): Promise<{ id: string } | null> {
+  const { data: ouverts, error } = await supabase
+    .from('controles')
+    .select('id')
+    .eq('parc_id', parcId)
+    .eq('type', type)
+    .eq('date_planifiee', datePlanifiee)
+    .eq('est_formation', estFormation)
+    .in('statut', ['a_faire', 'en_cours'])
+    .order('cree_le', { ascending: false })
+    .limit(1);
+  if (error) throw error;
+  if (ouverts && ouverts.length > 0) return ouverts[0];
+
+  const { data: valides, error: errValides } = await supabase
+    .from('controles')
+    .select('id')
+    .eq('parc_id', parcId)
+    .eq('type', type)
+    .eq('date_planifiee', datePlanifiee)
+    .eq('est_formation', estFormation)
+    .eq('statut', 'valide')
+    .order('cree_le', { ascending: false })
+    .limit(10);
+  if (errValides) throw errValides;
+  for (const c of valides ?? []) {
+    const { count, error: errCount } = await supabase
+      .from('controle_items')
+      .select('id', { count: 'exact', head: true })
+      .eq('controle_id', c.id);
+    if (errCount) throw errCount;
+    if (count === 0) return { id: c.id };
+  }
+  return null;
+}
+
 export function useValiderControle() {
   const qc = useQueryClient();
   const { estFormation } = useFormationFilter();
@@ -71,15 +117,12 @@ export function useValiderControle() {
     }) => {
       const now = new Date().toISOString();
 
-      const { data: existant } = await supabase
-        .from('controles')
-        .select('id')
-        .eq('parc_id', params.parc_id)
-        .eq('type', params.type)
-        .eq('date_planifiee', params.date_planifiee)
-        .eq('est_formation', estFormation)
-        .in('statut', ['a_faire', 'en_cours'])
-        .maybeSingle();
+      const existant = await trouverControleReutilisable(
+        params.parc_id,
+        params.type,
+        params.date_planifiee,
+        estFormation
+      );
 
       let controleId: string;
 
@@ -166,15 +209,12 @@ export function useValiderControleMensuel() {
     }) => {
       const now = new Date().toISOString();
 
-      const { data: existant } = await supabase
-        .from('controles')
-        .select('id')
-        .eq('parc_id', params.parc_id)
-        .eq('type', 'mensuel')
-        .eq('date_planifiee', params.date_planifiee)
-        .eq('est_formation', estFormation)
-        .in('statut', ['a_faire', 'en_cours'])
-        .maybeSingle();
+      const existant = await trouverControleReutilisable(
+        params.parc_id,
+        'mensuel',
+        params.date_planifiee,
+        estFormation
+      );
 
       let controleId: string;
 

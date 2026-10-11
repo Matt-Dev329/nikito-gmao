@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
+import { chargerToutesLesPages } from '@/lib/paginer';
 import { useFormationFilter } from '@/hooks/useFormation';
 import type { MaintenanceData, MaintenanceEquipementData, MaintenanceParcsData } from '@/types/ia-predictive';
 
@@ -16,17 +17,25 @@ async function fetchMaintenanceData(estFormation: boolean): Promise<MaintenanceD
     perfRes,
     stockRes,
   ] = await Promise.all([
-    supabase
-      .from('equipements')
-      .select('id, code, libelle, parc_id, statut, date_mise_service, date_fin_garantie, a_surveiller, parcs(code, nom)')
-      .neq('statut', 'archive')
-      .eq('est_formation', estFormation)
-      .range(0, 4999),
-    supabase
-      .from('incidents')
-      .select('id, equipement_id, declare_le, statut')
-      .gte('declare_le', d90)
-      .eq('est_formation', estFormation),
+    chargerToutesLesPages<Record<string, unknown>>((debut, fin) =>
+      supabase
+        .from('equipements')
+        .select('id, code, libelle, parc_id, statut, date_mise_service, date_fin_garantie, a_surveiller, parcs(code, nom)')
+        .neq('statut', 'archive')
+        .eq('est_formation', estFormation)
+        .order('id')
+        .range(debut, fin)
+    ),
+    chargerToutesLesPages<Record<string, unknown>>((debut, fin) =>
+      supabase
+        .from('incidents')
+        .select('id, equipement_id, declare_le, statut')
+        .gte('declare_le', d90)
+        .eq('est_formation', estFormation)
+        .order('declare_le')
+        .order('id')
+        .range(debut, fin)
+    ),
     supabase
       .from('vue_recurrences_actives')
       .select('*')
@@ -41,8 +50,12 @@ async function fetchMaintenanceData(estFormation: boolean): Promise<MaintenanceD
       .eq('est_formation', estFormation),
   ]);
 
-  const equipements = (equipRes.data ?? []) as Array<Record<string, unknown>>;
-  const incidents = (incidentsRes.data ?? []) as Array<Record<string, unknown>>;
+  for (const res of [recurrencesRes, perfRes, stockRes]) {
+    if (res.error) throw res.error;
+  }
+
+  const equipements = equipRes;
+  const incidents = incidentsRes;
   const recurrences = (recurrencesRes.data ?? []) as Array<Record<string, unknown>>;
   const performances = (perfRes.data ?? []) as Array<Record<string, unknown>>;
   const stock = (stockRes.data ?? []) as Array<Record<string, unknown>>;

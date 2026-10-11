@@ -316,6 +316,7 @@ function CarteProductionParc({
 function ConfigLancement() {
   const { config, dateLancement, enProduction, isLoading } = useConfig();
   const invalidateConfig = useInvalidateConfig();
+  const toast = useToast();
   const [saving, setSaving] = useState(false);
   const [dateValue, setDateValue] = useState('');
   const [initialized, setInitialized] = useState(false);
@@ -328,16 +329,26 @@ function ConfigLancement() {
   const handleSaveDate = async () => {
     if (!dateValue) return;
     setSaving(true);
-    await updateConfig('date_lancement', dateValue);
-    invalidateConfig();
-    setSaving(false);
+    try {
+      await updateConfig('date_lancement', dateValue);
+      invalidateConfig();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Impossible d\'enregistrer la date de lancement.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleToggleProduction = async () => {
     setSaving(true);
-    await updateConfig('app_en_production', enProduction ? 'false' : 'true');
-    invalidateConfig();
-    setSaving(false);
+    try {
+      await updateConfig('app_en_production', enProduction ? 'false' : 'true');
+      invalidateConfig();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Impossible de modifier le statut de production.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   if (isLoading) return null;
@@ -437,6 +448,8 @@ export function ListeParcs() {
   const desactiverMut = useDesactiverProductionParc();
 
   const isDirection = utilisateur?.role_code === 'direction' || utilisateur?.role_code === 'admin_it' as string;
+  // RLS parcs (direction_total_access) : écriture réservée à ces rôles
+  const peutEcrireParcs = ['direction', 'chef_maintenance', 'directeur_parc'].includes(utilisateur?.role_code ?? '');
 
   const [modaleActiver, setModaleActiver] = useState<ParcProduction | null>(null);
   const [modaleDesactiver, setModaleDesactiver] = useState<ParcProduction | null>(null);
@@ -455,17 +468,25 @@ export function ListeParcs() {
 
   const handleActiver = async () => {
     if (!modaleActiver || !utilisateur) return;
-    await activerMut.mutateAsync({ parcId: modaleActiver.id, utilisateurId: utilisateur.id });
-    toast.success(`${modaleActiver.nom} est officiellement en production !`);
-    setModaleActiver(null);
+    try {
+      await activerMut.mutateAsync({ parcId: modaleActiver.id, utilisateurId: utilisateur.id });
+      toast.success(`${modaleActiver.nom} est officiellement en production !`);
+      setModaleActiver(null);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Impossible d\'activer la production.');
+    }
   };
 
   const handleDesactiver = async (motif: string) => {
     if (!modaleDesactiver) return;
     console.log(`[AUDIT] Desactivation production ${modaleDesactiver.code} - Motif: ${motif} - Par: ${utilisateur?.id}`);
-    await desactiverMut.mutateAsync({ parcId: modaleDesactiver.id });
-    toast.success(`${modaleDesactiver.nom} est repasse en pre-lancement.`);
-    setModaleDesactiver(null);
+    try {
+      await desactiverMut.mutateAsync({ parcId: modaleDesactiver.id });
+      toast.success(`${modaleDesactiver.nom} est repasse en pre-lancement.`);
+      setModaleDesactiver(null);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Impossible de desactiver la production.');
+    }
   };
 
   return (
@@ -482,8 +503,9 @@ export function ListeParcs() {
           </div>
         </div>
         <button
-          onClick={() => navigate('/gmao/parcs/nouveau')}
-          className="bg-gradient-cta text-text px-4 py-2.5 rounded-lg text-[13px] font-bold min-h-[44px] w-full sm:w-auto"
+          disabled
+          title="Bientôt disponible"
+          className="bg-gradient-cta text-text px-4 py-2.5 rounded-lg text-[13px] font-bold min-h-[44px] w-full sm:w-auto opacity-40 cursor-not-allowed"
         >
           + Creer un parc
         </button>
@@ -507,7 +529,7 @@ export function ListeParcs() {
                 <CarteProductionParc
                   key={p.id}
                   parc={p}
-                  isDirection={isDirection}
+                  isDirection={peutEcrireParcs}
                   onActiver={() => setModaleActiver(p)}
                   onDesactiver={() => setModaleDesactiver(p)}
                 />

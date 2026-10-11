@@ -17,6 +17,15 @@ export interface PointControleVue {
   commentaire?: string;
 }
 
+/**
+ * Vrai si le point est saisi mais qu'il lui manque une photo obligatoire
+ * (état dégradé / HS, ou point marqué `photoObligatoire`).
+ */
+export function photoManquante(p: PointControleVue): boolean {
+  if (p.etat === null || p.photoUrl) return false;
+  return p.etat === 'degrade' || p.etat === 'hs' || p.photoObligatoire;
+}
+
 export interface ZoneVue {
   code: string;
   label: string;
@@ -384,7 +393,7 @@ function PointRow({
     return () => registerRef(null);
   }, [registerRef]);
 
-  const needsPhoto = isKO && !point.photoUrl;
+  const needsPhoto = !!onPhotoUploaded && photoManquante(point);
 
   return (
     <div
@@ -513,7 +522,7 @@ function PointRow({
         </div>
       )}
 
-      {isOK && onPhotoUploaded && !point.photoUrl && !showPhotoOK && (
+      {isOK && onPhotoUploaded && !point.photoUrl && !showPhotoOK && !point.photoObligatoire && (
         <div className="px-3.5 pb-2">
           <button
             onClick={() => setShowPhotoOK(true)}
@@ -524,12 +533,13 @@ function PointRow({
         </div>
       )}
 
-      {isOK && onPhotoUploaded && (showPhotoOK || point.photoUrl) && (
+      {isOK && onPhotoUploaded && (showPhotoOK || point.photoUrl || point.photoObligatoire) && (
         <div className="px-3.5 pb-3">
           <PhotoCapture
             bucketName={bucketName}
             storagePath={storagePath}
             onPhotoUploaded={onPhotoUploaded}
+            required={point.photoObligatoire}
             existingUrl={point.photoUrl}
           />
         </div>

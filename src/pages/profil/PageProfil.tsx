@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useFormation } from '@/hooks/useFormation';
+import { useToast } from '@/components/ui/ToastProvider';
 import { supabase } from '@/lib/supabase';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getDeviceHash } from '@/lib/deviceFingerprint';
@@ -101,7 +102,8 @@ function InfoRow({ label, value }: { label: string; value: string }) {
 }
 
 function SectionGPS({ utilisateurId, initial }: { utilisateurId: string; initial: boolean }) {
-  const queryClient = useQueryClient();
+  const toast = useToast();
+  // Le contexte d'auth n'expose pas de rafraîchissement : l'état local fait foi.
   const [enabled, setEnabled] = useState(initial);
 
   const mutation = useMutation({
@@ -115,15 +117,18 @@ function SectionGPS({ utilisateurId, initial }: { utilisateurId: string; initial
         .eq('id', utilisateurId);
       if (error) throw error;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['utilisateur'] });
-    },
   });
 
   const toggle = () => {
-    const next = !enabled;
+    const precedent = enabled;
+    const next = !precedent;
     setEnabled(next);
-    mutation.mutate(next);
+    mutation.mutate(next, {
+      onError: (err) => {
+        setEnabled(precedent);
+        toast.error(err instanceof Error ? err.message : 'Impossible de modifier le consentement GPS');
+      },
+    });
   };
 
   return (

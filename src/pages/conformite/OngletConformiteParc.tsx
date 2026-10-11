@@ -1,3 +1,4 @@
+import { aujourdhuiParis } from '@/lib/dates';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
@@ -203,7 +204,7 @@ function ResultatBadge({ resultat }: { resultat: string }) {
 function ModaleChangerPhase({ parcId, onClose }: { parcId: string; onClose: () => void }) {
   const createPhase = useCreatePhase();
   const [phase, setPhase] = useState('');
-  const [dateDebut, setDateDebut] = useState(new Date().toISOString().slice(0, 10));
+  const [dateDebut, setDateDebut] = useState(aujourdhuiParis());
   const [notes, setNotes] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {

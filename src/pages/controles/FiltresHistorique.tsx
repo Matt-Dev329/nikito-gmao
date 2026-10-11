@@ -1,4 +1,5 @@
 import { cn } from '@/lib/utils';
+import { ymdLocal } from '@/lib/datesLocales';
 import { useParcs } from '@/hooks/queries/useReferentiel';
 import type { TypeControle, StatutControle } from '@/types/database';
 
@@ -10,7 +11,7 @@ interface Raccourci {
 
 function getRaccourcis(): Raccourci[] {
   const now = new Date();
-  const today = now.toISOString().slice(0, 10);
+  const today = ymdLocal(now);
 
   const j7 = new Date(now);
   j7.setDate(j7.getDate() - 7);
@@ -29,12 +30,12 @@ function getRaccourcis(): Raccourci[] {
 
   return [
     { label: "Aujourd'hui", debut: today, fin: today },
-    { label: '7 jours', debut: j7.toISOString().slice(0, 10), fin: today },
-    { label: '30 jours', debut: j30.toISOString().slice(0, 10), fin: today },
-    { label: 'Ce mois', debut: debutMois.toISOString().slice(0, 10), fin: today },
-    { label: 'Mois dernier', debut: moisDernier.toISOString().slice(0, 10), fin: finMoisDernier.toISOString().slice(0, 10) },
-    { label: 'Trimestre', debut: debutTrimestre.toISOString().slice(0, 10), fin: today },
-    { label: 'Annee', debut: debutAnnee.toISOString().slice(0, 10), fin: today },
+    { label: '7 jours', debut: ymdLocal(j7), fin: today },
+    { label: '30 jours', debut: ymdLocal(j30), fin: today },
+    { label: 'Ce mois', debut: ymdLocal(debutMois), fin: today },
+    { label: 'Mois dernier', debut: ymdLocal(moisDernier), fin: ymdLocal(finMoisDernier) },
+    { label: 'Trimestre', debut: ymdLocal(debutTrimestre), fin: today },
+    { label: 'Annee', debut: ymdLocal(debutAnnee), fin: today },
   ];
 }
 

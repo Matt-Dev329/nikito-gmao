@@ -31,11 +31,14 @@ export function useSidebarBadges() {
         supabase
           .from('vue_recurrences_actives')
           .select('equipement_id', { count: 'exact', head: true })
+          // Même filtre par défaut que la page Récurrences (seuil 3 pannes ou à surveiller)
+          .or('pannes_30j.gte.3,a_surveiller.eq.true')
           .eq('est_formation', estFormation),
         supabase
           .from('fiches_5_pourquoi')
           .select('id', { count: 'exact', head: true })
-          .eq('statut', 'ouvert')
+          // Même périmètre que la page Récurrences (« fiches ouvertes » = ouvert + valide)
+          .in('statut', ['ouvert', 'valide'])
           .eq('est_formation', estFormation),
         // Même périmètre que l'onglet « À faire » de la page Opérations :
         // seuls les incidents rattachés à un équipement y sont affichés.

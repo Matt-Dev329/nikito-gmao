@@ -5,6 +5,8 @@ import { ModaleQuitterSansValider } from '@/components/ui/ModaleQuitterSansValid
 import { SelectionParc } from '@/components/controles/SelectionParc';
 import { BoutonRetourGmao } from '@/components/controles/BoutonRetourGmao';
 import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/components/ui/ToastProvider';
+import { aujourdhuiParis } from '@/lib/dates';
 import { useParcs } from '@/hooks/queries/useReferentiel';
 import { usePointsControle, useValiderControleMensuel } from '@/hooks/queries/useControles';
 import { useUtilisateursActifs } from '@/hooks/queries/useUtilisateurs';
@@ -27,6 +29,7 @@ function SignatureCanvas({
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const isDrawing = useRef(false);
+  const hasStroke = useRef(false);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -67,10 +70,13 @@ function SignatureCanvas({
     const pos = getPos(e);
     ctx.lineTo(pos.x, pos.y);
     ctx.stroke();
+    hasStroke.current = true;
   };
 
   const endDraw = () => {
+    if (!isDrawing.current) return;
     isDrawing.current = false;
+    if (!hasStroke.current) return;
     const canvas = canvasRef.current;
     if (canvas) onSignature(canvas.toDataURL('image/png'));
   };
@@ -81,6 +87,7 @@ function SignatureCanvas({
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+    hasStroke.current = false;
     onSignature('');
   };
 
@@ -125,6 +132,7 @@ export function ControleMensuel() {
 
   const { data: pointsBruts, isLoading } = usePointsControle(parcId, 'mensuel');
   const validerMutation = useValiderControleMensuel();
+  const toast = useToast();
 
   const [etats, setEtats] = useState<Record<string, EtatPointMensuel>>({});
   const [zoneActive, setZoneActive] = useState('');
@@ -246,8 +254,7 @@ export function ControleMensuel() {
   const handleValider = async () => {
     if (!parcId || !utilisateur || !pointsBruts || !canValidate) return;
 
-    const now = new Date();
-    const datePlanifiee = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
+    const datePlanifiee = `${aujourdhuiParis().slice(0, 7)}-01`;
 
     const items = pointsBruts
       .filter((p) => etats[p.point_id])
@@ -260,21 +267,24 @@ export function ControleMensuel() {
         point_type_controle_snapshot: 'mensuel',
       }));
 
-    await validerMutation.mutateAsync({
-      parc_id: parcId,
-      date_planifiee: datePlanifiee,
-      realise_par_id: utilisateur.id,
-      realise_par_nom: `${utilisateur.prenom} ${utilisateur.nom}`,
-      realise_par_role: utilisateur.role_code,
-      signature_url: signatureControleur1,
-      meta: {
-        binome_nom: binomeNom.trim(),
-        binome_signature_url: signatureControleur2,
-      },
-      items,
-    });
-
-    setValidated(true);
+    try {
+      await validerMutation.mutateAsync({
+        parc_id: parcId,
+        date_planifiee: datePlanifiee,
+        realise_par_id: utilisateur.id,
+        realise_par_nom: `${utilisateur.prenom} ${utilisateur.nom}`,
+        realise_par_role: utilisateur.role_code,
+        signature_url: signatureControleur1,
+        meta: {
+          binome_nom: binomeNom.trim(),
+          binome_signature_url: signatureControleur2,
+        },
+        items,
+      });
+      setValidated(true);
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Erreur lors de la validation du controle');
+    }
   };
 
   const moisLabel = new Date().toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });

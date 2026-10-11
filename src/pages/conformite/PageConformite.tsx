@@ -1,3 +1,4 @@
+import { aujourdhuiParis } from '@/lib/dates';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useConformiteKpi, useParcsPhaseActuelle, usePrescriptions, useCommissions } from '@/hooks/queries/useConformite';
@@ -77,9 +78,9 @@ export function PageConformite() {
             const phase = phases?.find((p) => p.parc_id === parc.id);
             const parcPrescriptions = prescriptions?.filter((p) => p.parc_id === parc.id && ['a_lever', 'en_cours'].includes(p.statut)) ?? [];
             const bloquantes = parcPrescriptions.filter((p) => p.gravite === 'bloquante').length;
-            const retard = parcPrescriptions.filter((p) => p.delai_levee && p.delai_levee < new Date().toISOString().slice(0, 10)).length;
+            const retard = parcPrescriptions.filter((p) => p.delai_levee && p.delai_levee < aujourdhuiParis()).length;
             const prochaineComm = commissions
-              ?.filter((c) => c.parc_id === parc.id && c.date_visite >= new Date().toISOString().slice(0, 10))
+              ?.filter((c) => c.parc_id === parc.id && c.date_visite >= aujourdhuiParis())
               .sort((a, b) => a.date_visite.localeCompare(b.date_visite))[0];
 
             return (

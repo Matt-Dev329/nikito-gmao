@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
+import { chargerToutesLesPages } from '@/lib/paginer';
 import { useParcs } from '@/hooks/queries/useReferentiel';
 import { useFormationFilter } from '@/hooks/useFormation';
 import { useNavigate } from 'react-router-dom';
@@ -33,20 +34,21 @@ export function VueManagerParc() {
       if (!parcId) return null;
 
       const [eqRes, incRes, ctrlRes] = await Promise.all([
-        supabase
-          .from('equipements')
-          .select('statut')
-          .eq('parc_id', parcId)
-          .eq('est_formation', estFormation)
-          .range(0, 4999),
+        chargerToutesLesPages<{ statut: string }>((debut, fin) =>
+          supabase
+            .from('equipements')
+            .select('statut')
+            .eq('parc_id', parcId)
+            .eq('est_formation', estFormation)
+            .order('id')
+            .range(debut, fin)
+        ),
         supabase
           .from('incidents')
-          .select('id')
-          .eq('statut', 'ouvert')
+          .select('id, equipements!inner(parc_id)', { count: 'exact', head: true })
+          .eq('equipements.parc_id', parcId)
           .eq('est_formation', estFormation)
-          .in('equipement_id',
-            (await supabase.from('equipements').select('id').eq('parc_id', parcId).eq('est_formation', estFormation).range(0, 4999)).data?.map((e) => e.id) ?? []
-          ),
+          .in('statut', ['ouvert', 'assigne', 'en_cours', 'en_pause']),
         supabase
           .from('controles')
           .select('id, type, date_planifiee, date_validation, realise_par_id')
@@ -57,12 +59,15 @@ export function VueManagerParc() {
           .limit(1),
       ]);
 
-      const equipements = eqRes.data ?? [];
+      if (incRes.error) throw incRes.error;
+      if (ctrlRes.error) throw ctrlRes.error;
+
+      const equipements = eqRes;
       const actifs = equipements.filter((e) => e.statut === 'actif').length;
       const maintenance = equipements.filter((e) => e.statut === 'maintenance').length;
       const horsService = equipements.filter((e) => e.statut === 'hors_service').length;
 
-      const incidentsOuverts = incRes.data?.length ?? 0;
+      const incidentsOuverts = incRes.count ?? 0;
 
       const dernierControle = ctrlRes.data?.[0] ?? null;
 

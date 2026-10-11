@@ -1,8 +1,10 @@
+import { aujourdhuiParis } from '@/lib/dates';
 import { useState, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { usePrescriptions, useUpdatePrescriptionStatut, type Prescription } from '@/hooks/queries/useConformite';
 import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/components/ui/ToastProvider';
 
 const COLONNES = [
   { statut: 'a_lever', label: 'A lever', color: 'border-red' },
@@ -21,6 +23,11 @@ export function PageReserves() {
     statut: ['brouillon', 'a_lever', 'en_cours', 'levee_proposee', 'levee_validee'],
   });
   const updateStatut = useUpdatePrescriptionStatut();
+  const toast = useToast();
+  const onErreurStatut = useCallback(
+    (err: unknown) => toast.error(err instanceof Error ? err.message : 'Impossible de changer le statut'),
+    [toast]
+  );
 
   const [filtreParc, setFiltreParc] = useState<string>('');
   const [filtreCategorie, setFiltreCategorie] = useState<string>('');
@@ -58,7 +65,7 @@ export function PageReserves() {
     const item = prescriptions?.find((p) => p.id === dragItem);
     if (!item || item.statut === targetStatut) { setDragItem(null); return; }
 
-    if (targetStatut === 'levee_proposee' && item.statut === 'en_cours') {
+    if (targetStatut === 'levee_proposee') {
       setShowModaleJustif(item);
       setDragItem(null);
       return;
@@ -70,12 +77,12 @@ export function PageReserves() {
         setDragItem(null);
         return;
       }
-      updateStatut.mutate({ id: dragItem, statut: targetStatut, extras: { date_levee_effective: new Date().toISOString().slice(0, 10) } });
+      updateStatut.mutate({ id: dragItem, statut: targetStatut, extras: { date_levee_effective: aujourdhuiParis() } }, { onError: onErreurStatut });
     } else {
-      updateStatut.mutate({ id: dragItem, statut: targetStatut });
+      updateStatut.mutate({ id: dragItem, statut: targetStatut }, { onError: onErreurStatut });
     }
     setDragItem(null);
-  }, [dragItem, prescriptions, utilisateur?.role_code, updateStatut]);
+  }, [dragItem, prescriptions, utilisateur?.role_code, updateStatut, onErreurStatut]);
 
   const handleJustifSubmit = useCallback((notes: string) => {
     if (!showModaleJustif) return;
@@ -83,9 +90,9 @@ export function PageReserves() {
       id: showModaleJustif.id,
       statut: 'levee_proposee',
       extras: { preuve_levee_notes: notes },
-    });
+    }, { onError: onErreurStatut });
     setShowModaleJustif(null);
-  }, [showModaleJustif, updateStatut]);
+  }, [showModaleJustif, updateStatut, onErreurStatut]);
 
   return (
     <div className="p-4 md:p-6 lg:p-8 h-full flex flex-col">
@@ -214,7 +221,7 @@ export function PageReserves() {
 
 function PrescriptionCard({ item, onDragStart, isDragging }: { item: Prescription; onDragStart: () => void; isDragging: boolean }) {
   const graviteColor = item.gravite === 'bloquante' ? 'border-l-red' : item.gravite === 'majeure' ? 'border-l-amber' : 'border-l-yellow-400';
-  const isRetard = item.delai_levee && item.delai_levee < new Date().toISOString().slice(0, 10) && ['a_lever', 'en_cours'].includes(item.statut);
+  const isRetard = item.delai_levee && item.delai_levee < aujourdhuiParis() && ['a_lever', 'en_cours'].includes(item.statut);
 
   return (
     <div

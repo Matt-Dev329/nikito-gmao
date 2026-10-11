@@ -1,6 +1,7 @@
 import { useState, useCallback, useMemo, useEffect } from 'react';
+import { aujourdhuiParis } from '@/lib/dates';
 import { useNavigate } from 'react-router-dom';
-import { ControleEcran, type PointControleVue, type ZoneVue } from '@/components/controles/ControleEcran';
+import { ControleEcran, photoManquante, type PointControleVue, type ZoneVue } from '@/components/controles/ControleEcran';
 import { ModaleQuitterSansValider } from '@/components/ui/ModaleQuitterSansValider';
 import { ModaleSignalerV2 } from '@/components/forms/ModaleSignalerV2';
 import { SelectionParc } from '@/components/controles/SelectionParc';
@@ -123,12 +124,14 @@ export function ControleOuverture({ typeControle = 'quotidien' }: { typeControle
 
   const [startTime] = useState(() => Date.now());
   const [elapsed, setElapsed] = useState(0);
+  const [validated, setValidated] = useState(false);
   useEffect(() => {
+    if (validated) return;
     const interval = setInterval(() => {
       setElapsed(Math.floor((Date.now() - startTime) / 1000));
     }, 1000);
     return () => clearInterval(interval);
-  }, [startTime]);
+  }, [startTime, validated]);
 
   const [etats, setEtats] = useState<Record<string, { etat: EtatControleItem; saisiPar: string }>>({});
   const [photoUrls, setPhotoUrls] = useState<Record<string, string>>({});
@@ -137,11 +140,10 @@ export function ControleOuverture({ typeControle = 'quotidien' }: { typeControle
   const [dirty, setDirty] = useState(false);
   const [showModale, setShowModale] = useState(false);
   const [showSignaler, setShowSignaler] = useState(false);
-  const [validated, setValidated] = useState(false);
   const [erreurValidation, setErreurValidation] = useState<string | null>(null);
 
   const draftKey = parcId
-    ? `controle-${typeControle}:${parcId}:${new Date().toISOString().slice(0, 10)}`
+    ? `controle-${typeControle}:${parcId}:${aujourdhuiParis()}`
     : null;
   const draft = useDraftPersistence<{
     etats: Record<string, { etat: EtatControleItem; saisiPar: string }>;
@@ -162,7 +164,11 @@ export function ControleOuverture({ typeControle = 'quotidien' }: { typeControle
   }
 
   // Sauvegarde automatique des points saisis (anti-perte réseau/veille terrain).
-  useAutoSaveDraft(draft.save, { etats, photoUrls, commentaires }, dirty);
+  const valeursBrouillon = useMemo(
+    () => ({ etats, photoUrls, commentaires }),
+    [etats, photoUrls, commentaires]
+  );
+  useAutoSaveDraft(draft.save, valeursBrouillon, dirty && !validated);
 
   const zones: ZoneVue[] = useMemo(() => {
     if (!pointsBruts?.length) return [];
@@ -236,12 +242,24 @@ export function ControleOuverture({ typeControle = 'quotidien' }: { typeControle
   const totalPoints = zones.reduce((sum, z) => sum + z.count, 0);
   const totalFaits = zones.reduce((sum, z) => sum + z.fait, 0);
   const restants = totalPoints - totalFaits;
+  const photosManquantes = (pointsBruts ?? []).filter((p) =>
+    photoManquante({
+      id: p.point_id,
+      libelle: p.libelle,
+      ordre: p.ordre,
+      zone: p.categorie_id,
+      bloquantSiKO: p.bloquant,
+      photoObligatoire: p.photo_obligatoire,
+      etat: etats[p.point_id]?.etat ?? null,
+      photoUrl: photoUrls[p.point_id],
+    })
+  ).length;
 
   const handleValider = async () => {
     if (!parcId || !utilisateur || !utilisateur.id || !pointsBruts) return;
     setErreurValidation(null);
 
-    const datePlanifiee = new Date().toISOString().slice(0, 10);
+    const datePlanifiee = aujourdhuiParis();
 
     const items = pointsBruts
       .filter((p) => etats[p.point_id])
@@ -263,6 +281,7 @@ export function ControleOuverture({ typeControle = 'quotidien' }: { typeControle
         items,
       });
       draft.clear();
+      setDirty(false);
       setValidated(true);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Erreur inconnue';
@@ -352,7 +371,7 @@ export function ControleOuverture({ typeControle = 'quotidien' }: { typeControle
         onRetour={handleRetour}
         onChangerAgent={() => navigate('/staff/login')}
         onValider={handleValider}
-        validationDisabled={restants > 0 || validerMutation.isPending}
+        validationDisabled={restants > 0 || photosManquantes > 0 || validerMutation.isPending}
         validationDisabledRaison={
           validerMutation.isPending
             ? 'Enregistrement en cours...'
@@ -360,7 +379,9 @@ export function ControleOuverture({ typeControle = 'quotidien' }: { typeControle
               ? erreurValidation
               : restants > 0
                 ? `Disponible quand tous les points sont saisis (${restants} restants)`
-                : undefined
+                : photosManquantes > 0
+                  ? `Photo obligatoire manquante (${photosManquantes} point${photosManquantes > 1 ? 's' : ''})`
+                  : undefined
         }
         headerRightSlot={
           <div className="flex items-center gap-1.5">

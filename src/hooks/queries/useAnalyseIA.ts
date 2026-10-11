@@ -1,18 +1,19 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { useFormationFilter } from '@/hooks/useFormation';
+import { useAuth } from '@/hooks/useAuth';
 import { supabaseUrl, supabaseAnonKey } from '@/lib/supabase';
 import type { AnalyseIA, AnalyseIACachee, MaintenanceData } from '@/types/ia-predictive';
 
 const CACHE_PREFIX = 'alba_ia_predictive_cache';
 const CACHE_DURATION = 6 * 60 * 60 * 1000;
 
-function getCacheKey(estFormation: boolean) {
-  return `${CACHE_PREFIX}_${estFormation ? 'formation' : 'production'}`;
+function getCacheKey(estFormation: boolean, userId: string) {
+  return `${CACHE_PREFIX}_${userId}_${estFormation ? 'formation' : 'production'}`;
 }
 
-function getCache(estFormation: boolean): AnalyseIACachee | null {
+function getCache(estFormation: boolean, userId: string): AnalyseIACachee | null {
   try {
-    const raw = localStorage.getItem(getCacheKey(estFormation));
+    const raw = localStorage.getItem(getCacheKey(estFormation, userId));
     if (!raw) return null;
     const parsed: AnalyseIACachee = JSON.parse(raw);
     if (Date.now() - parsed.timestamp > CACHE_DURATION) return null;
@@ -22,9 +23,13 @@ function getCache(estFormation: boolean): AnalyseIACachee | null {
   }
 }
 
-function setCache(estFormation: boolean, analyse: AnalyseIA) {
+function setCache(estFormation: boolean, userId: string, analyse: AnalyseIA) {
   const cached: AnalyseIACachee = { timestamp: Date.now(), analyse };
-  localStorage.setItem(getCacheKey(estFormation), JSON.stringify(cached));
+  try {
+    localStorage.setItem(getCacheKey(estFormation, userId), JSON.stringify(cached));
+  } catch {
+    // stockage indisponible : l'analyse reste en mémoire
+  }
 }
 
 function hasMinimumData(data: MaintenanceData): boolean {
@@ -37,7 +42,9 @@ function hasMinimumData(data: MaintenanceData): boolean {
 
 export function useAnalyseIA() {
   const { estFormation } = useFormationFilter();
-  const cached = getCache(estFormation);
+  const { utilisateur } = useAuth();
+  const userId = utilisateur?.id ?? 'anonyme';
+  const cached = getCache(estFormation, userId);
   const [analyse, setAnalyse] = useState<AnalyseIA | null>(cached?.analyse ?? null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -45,11 +52,12 @@ export function useAnalyseIA() {
     cached ? new Date(cached.timestamp) : null
   );
 
-  const prevFormation = useRef(estFormation);
+  const prevCle = useRef(`${userId}:${estFormation}`);
   useEffect(() => {
-    if (prevFormation.current !== estFormation) {
-      prevFormation.current = estFormation;
-      const c = getCache(estFormation);
+    const cle = `${userId}:${estFormation}`;
+    if (prevCle.current !== cle) {
+      prevCle.current = cle;
+      const c = getCache(estFormation, userId);
       if (c) {
         setAnalyse(c.analyse);
         setLastAnalyse(new Date(c.timestamp));
@@ -60,11 +68,11 @@ export function useAnalyseIA() {
         setError(null);
       }
     }
-  }, [estFormation]);
+  }, [estFormation, userId]);
 
   const lancer = useCallback(async (data: MaintenanceData, force = false) => {
     if (!force) {
-      const c = getCache(estFormation);
+      const c = getCache(estFormation, userId);
       if (c) {
         setAnalyse(c.analyse);
         setLastAnalyse(new Date(c.timestamp));
@@ -124,7 +132,7 @@ export function useAnalyseIA() {
       }
 
       setAnalyse(ia);
-      setCache(estFormation, ia);
+      setCache(estFormation, userId, ia);
       setLastAnalyse(new Date());
       return ia;
     } catch (err) {
@@ -135,7 +143,7 @@ export function useAnalyseIA() {
     } finally {
       setLoading(false);
     }
-  }, [estFormation]);
+  }, [estFormation, userId]);
 
   return { analyse, loading, error, lastAnalyse, lancer };
 }

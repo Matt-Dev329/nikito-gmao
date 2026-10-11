@@ -72,6 +72,13 @@ export function LoginStaff() {
       return;
     }
 
+    if (data[0].is_locked) {
+      const min = Math.max(1, Math.ceil((data[0].lock_remaining_seconds ?? 0) / 60));
+      setErreur(`Trop d'essais, réessaie dans ${min} min.`);
+      reset();
+      return;
+    }
+
     sessionStorage.setItem(
       'staff_session',
       JSON.stringify({

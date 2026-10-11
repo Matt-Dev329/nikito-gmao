@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { ymdLocal } from '@/lib/datesLocales';
 import { useHistoriqueControles, type ControleHistorique } from '@/hooks/queries/useHistoriqueControles';
 import { useParcs } from '@/hooks/queries/useReferentiel';
 import { FiltresHistorique } from './FiltresHistorique';
@@ -8,17 +9,18 @@ import { ModaleDetailControle } from './ModaleDetailControle';
 import { ModaleEnvoyerRapport } from './ModaleEnvoyerRapport';
 import { exportControlesCSV } from './exportCSV';
 import { exportControlePDF } from './exportPDF';
+import { useToast } from '@/components/ui/ToastProvider';
 import { SignalerInlineButton } from '@/components/shared/SignalerInlineButton';
 import type { TypeControle, StatutControle } from '@/types/database';
 
 function get30DaysAgo(): string {
   const d = new Date();
   d.setDate(d.getDate() - 30);
-  return d.toISOString().slice(0, 10);
+  return ymdLocal(d);
 }
 
 export function PageHistoriqueControles() {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = ymdLocal(new Date());
   const [dateDebut, setDateDebut] = useState(get30DaysAgo);
   const [dateFin, setDateFin] = useState(today);
   const [parcId, setParcId] = useState('');
@@ -30,6 +32,15 @@ export function PageHistoriqueControles() {
   const [showModaleEmail, setShowModaleEmail] = useState(false);
 
   const { data: parcs } = useParcs();
+  const toast = useToast();
+
+  const handleExportPDF = async (c: ControleHistorique) => {
+    try {
+      await exportControlePDF(c);
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Impossible de generer le PDF");
+    }
+  };
 
   const parcCode = parcId ? parcs?.find((p) => p.id === parcId)?.code : undefined;
 
@@ -117,7 +128,7 @@ export function PageHistoriqueControles() {
         <ModaleDetailControle
           controle={controleSelectionne}
           onClose={() => setControleSelectionne(null)}
-          onExportPDF={exportControlePDF}
+          onExportPDF={handleExportPDF}
           onNavigateCorrection={handleNavigateCorrection}
         />
       )}

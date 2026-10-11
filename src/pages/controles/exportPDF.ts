@@ -47,7 +47,7 @@ function formatDuree(debut: string | null, fin: string | null): string {
 }
 
 export async function exportControlePDF(controle: ControleHistorique) {
-  const { data: itemsRaw } = await supabase
+  const { data: itemsRaw, error: errItems } = await supabase
     .from('controle_items')
     .select(`
       id, point_id, etat, commentaire, photo_url,
@@ -55,6 +55,7 @@ export async function exportControlePDF(controle: ControleHistorique) {
       bibliotheque_points(libelle, categories_equipement(nom))
     `)
     .eq('controle_id', controle.id);
+  if (errItems) throw errItems;
 
   const items: ControleItemDetail[] = (itemsRaw ?? []).map((item: Record<string, unknown>) => {
     const bp = item.bibliotheque_points as { libelle: string; categories_equipement: { nom: string } | null } | null;

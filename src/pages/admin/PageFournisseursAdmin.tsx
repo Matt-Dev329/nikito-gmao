@@ -3,6 +3,8 @@ import { cn } from '@/lib/utils';
 import { useFournisseurs } from '@/hooks/queries/useReferentiel';
 import { supabase } from '@/lib/supabase';
 import { useQueryClient } from '@tanstack/react-query';
+import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/components/ui/ToastProvider';
 
 const types = [
   { value: 'maintenance', label: 'Maintenance' },
@@ -25,8 +27,13 @@ interface Fournisseur {
   actif: boolean;
 }
 
+// RLS fournisseurs_ecriture_admin : écriture réservée à ces rôles
+const ROLES_ECRITURE_FOURNISSEURS = ['direction', 'chef_maintenance', 'directeur_parc'];
+
 export function PageFournisseursAdmin() {
   const { data: fournisseurs } = useFournisseurs();
+  const { utilisateur } = useAuth();
+  const peutEcrire = ROLES_ECRITURE_FOURNISSEURS.includes(utilisateur?.role_code ?? '');
   const [editeurOuvert, setEditeurOuvert] = useState(false);
   const [editFournisseur, setEditFournisseur] = useState<Fournisseur | null>(null);
   const [recherche, setRecherche] = useState('');
@@ -57,12 +64,14 @@ export function PageFournisseursAdmin() {
             {fournisseurs?.length ?? 0} fournisseurs - contrats et SLA
           </div>
         </div>
-        <button
-          onClick={() => setEditeurOuvert(true)}
-          className="bg-gradient-cta text-text px-5 py-2.5 rounded-[10px] text-[13px] font-bold flex items-center gap-2 min-h-[44px] w-full sm:w-auto justify-center sm:justify-start"
-        >
-          <span className="text-base">+</span> Nouveau fournisseur
-        </button>
+        {peutEcrire && (
+          <button
+            onClick={() => setEditeurOuvert(true)}
+            className="bg-gradient-cta text-text px-5 py-2.5 rounded-[10px] text-[13px] font-bold flex items-center gap-2 min-h-[44px] w-full sm:w-auto justify-center sm:justify-start"
+          >
+            <span className="text-base">+</span> Nouveau fournisseur
+          </button>
+        )}
       </div>
 
       <div className="mb-4">
@@ -83,8 +92,11 @@ export function PageFournisseursAdmin() {
         {filtered.map((f) => (
           <button
             key={f.id}
-            onClick={() => openEdit(f as Fournisseur)}
-            className="bg-bg-card rounded-2xl p-4 px-5 text-left hover:bg-bg-card/80 transition-colors"
+            onClick={() => peutEcrire && openEdit(f as Fournisseur)}
+            className={cn(
+              'bg-bg-card rounded-2xl p-4 px-5 text-left transition-colors',
+              peutEcrire ? 'hover:bg-bg-card/80' : 'cursor-default'
+            )}
           >
             <div className="flex justify-between items-start mb-2">
               <div>
@@ -152,6 +164,7 @@ function ModaleFournisseur({
   onSaved?: (data?: { id: string; nom: string }) => void;
 }) {
   const queryClient = useQueryClient();
+  const toast = useToast();
   const isEdit = !!fournisseur;
   const [nom, setNom] = useState(fournisseur?.nom ?? '');
   const [type, setType] = useState(fournisseur?.type ?? 'maintenance');
@@ -177,15 +190,22 @@ function ModaleFournisseur({
     };
 
     if (isEdit) {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('fournisseurs')
         .update(payload)
-        .eq('id', fournisseur.id);
+        .eq('id', fournisseur.id)
+        .select('id');
       setSubmitting(false);
-      if (!error) {
-        queryClient.invalidateQueries({ queryKey: ['fournisseurs'] });
-        onSaved?.();
+      if (error) {
+        toast.error(`Enregistrement impossible : ${error.message}`);
+        return;
       }
+      if (!data || data.length === 0) {
+        toast.error('Enregistrement refusé : vous n\'avez pas les droits pour modifier ce fournisseur.');
+        return;
+      }
+      queryClient.invalidateQueries({ queryKey: ['fournisseurs'] });
+      onSaved?.();
     } else {
       const { data, error } = await supabase
         .from('fournisseurs')
@@ -193,10 +213,12 @@ function ModaleFournisseur({
         .select('id, nom')
         .single();
       setSubmitting(false);
-      if (!error && data) {
-        queryClient.invalidateQueries({ queryKey: ['fournisseurs'] });
-        onSaved?.(data);
+      if (error || !data) {
+        toast.error(`Création impossible : ${error?.message ?? 'aucune donnée retournée'}`);
+        return;
       }
+      queryClient.invalidateQueries({ queryKey: ['fournisseurs'] });
+      onSaved?.(data);
     }
   };
 

@@ -5,6 +5,8 @@ import { ModaleQuitterSansValider } from '@/components/ui/ModaleQuitterSansValid
 import { SelectionParc } from '@/components/controles/SelectionParc';
 import { BoutonRetourGmao } from '@/components/controles/BoutonRetourGmao';
 import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/components/ui/ToastProvider';
+import { dateParis } from '@/lib/dates';
 import { useParcs } from '@/hooks/queries/useReferentiel';
 import { usePointsControle, useValiderControle } from '@/hooks/queries/useControles';
 import type { EtatControleItem } from '@/types/database';
@@ -25,6 +27,7 @@ export function ControleHebdo() {
 
   const { data: pointsBruts, isLoading } = usePointsControle(parcId, 'hebdo');
   const validerMutation = useValiderControle();
+  const toast = useToast();
 
   const [etats, setEtats] = useState<Record<string, { etat: EtatControleItem; saisiPar: string }>>({});
   const [zoneActive, setZoneActive] = useState<string>('');
@@ -96,10 +99,11 @@ export function ControleHebdo() {
   const handleValider = async () => {
     if (!parcId || !utilisateur || !pointsBruts) return;
 
-    const now = new Date();
-    const lundi = new Date(now);
-    lundi.setDate(now.getDate() - ((now.getDay() + 6) % 7));
-    const datePlanifiee = lundi.toISOString().slice(0, 10);
+    // Lundi de la semaine courante, calculé sur la date de Paris (pas en UTC).
+    const [y, m, d] = dateParis().split('-').map(Number);
+    const jourUtc = new Date(Date.UTC(y, m - 1, d));
+    jourUtc.setUTCDate(jourUtc.getUTCDate() - ((jourUtc.getUTCDay() + 6) % 7));
+    const datePlanifiee = jourUtc.toISOString().slice(0, 10);
 
     const items = pointsBruts
       .filter((p) => etats[p.point_id])
@@ -108,17 +112,20 @@ export function ControleHebdo() {
         etat: etats[p.point_id].etat,
       }));
 
-    await validerMutation.mutateAsync({
-      parc_id: parcId,
-      type: 'hebdo',
-      date_planifiee: datePlanifiee,
-      realise_par_id: utilisateur.id,
-      realise_par_nom: `${utilisateur.prenom} ${utilisateur.nom}`,
-      realise_par_role: utilisateur.role_code,
-      items,
-    });
-
-    setValidated(true);
+    try {
+      await validerMutation.mutateAsync({
+        parc_id: parcId,
+        type: 'hebdo',
+        date_planifiee: datePlanifiee,
+        realise_par_id: utilisateur.id,
+        realise_par_nom: `${utilisateur.prenom} ${utilisateur.nom}`,
+        realise_par_role: utilisateur.role_code,
+        items,
+      });
+      setValidated(true);
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Erreur lors de la validation du controle');
+    }
   };
 
   const now = new Date();

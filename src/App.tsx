@@ -4,6 +4,8 @@ import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { TabletLayout } from '@/components/layout/TabletLayout';
 import { RouteProtegee } from '@/components/auth/RouteProtegee';
 import { Login } from '@/pages/auth/Login';
+import { useAuth } from '@/hooks/useAuth';
+import { useEffectiveRole } from '@/hooks/useViewAs';
 
 // Helper : lazy-load d'un export nommé
 function page<T extends Record<string, unknown>>(factory: () => Promise<T>, name: keyof T) {
@@ -60,6 +62,16 @@ const PageDocuments = page(() => import('@/pages/conformite/PageDocuments'), 'Pa
 const PageActeurs = page(() => import('@/pages/conformite/PageActeurs'), 'PageActeurs');
 const PageExtractionRevue = page(() => import('@/pages/conformite/PageExtractionRevue'), 'PageExtractionRevue');
 
+// Page d'accueil de /gmao selon le rôle (cohérent avec la Sidebar desktop)
+function AccueilParRole() {
+  const { utilisateur } = useAuth();
+  const role = useEffectiveRole(utilisateur?.role_code ?? 'direction');
+  if (role === 'manager_parc') return <Navigate to="/gmao/mon-parc" replace />;
+  if (role === 'technicien') return <Navigate to="/gmao/operations" replace />;
+  if (role === 'staff_operationnel') return <Navigate to="/staff/controle-ouverture" replace />;
+  return <TableauDeBord />;
+}
+
 function ChargementPage() {
   return (
     <div className="min-h-screen bg-bg-app flex items-center justify-center">
@@ -95,7 +107,7 @@ export function App() {
             </RouteProtegee>
           }
         >
-          <Route index element={<TableauDeBord />} />
+          <Route index element={<AccueilParRole />} />
           <Route path="operations" element={<Operations />} />
           <Route path="operations/:btNumero" element={<Intervention />} />
           <Route path="equipements" element={<PageEquipements />} />

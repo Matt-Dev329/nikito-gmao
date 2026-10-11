@@ -112,7 +112,6 @@ export function CreationParcWizard() {
           ‹ Étape précédente
         </button>
         <div className="flex gap-2.5 items-center">
-          <span className="text-[11px] text-green">✓ Sauvegardé il y a 12s</span>
           <button
             onClick={() => {
               if (etapeIndex < etapes.length - 1) setEtapeActive(etapes[etapeIndex + 1].code);

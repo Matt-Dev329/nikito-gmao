@@ -46,6 +46,8 @@ export function useSignedUrl(
     },
     enabled,
     staleTime: Math.max((expiresIn - 600) * 1000, 60_000),
+    // Re-signe avant l'expiration du jeton pour que les images restent valides.
+    refetchInterval: Math.max((expiresIn - 600) * 1000, 60_000),
     gcTime: expiresIn * 1000,
     refetchOnWindowFocus: false,
   })
@@ -78,6 +80,7 @@ export function useSignedUrls(
     },
     enabled: options.enabled !== false && cleanPaths.length > 0,
     staleTime: Math.max((expiresIn - 600) * 1000, 60_000),
+    refetchInterval: Math.max((expiresIn - 600) * 1000, 60_000),
     gcTime: expiresIn * 1000,
     refetchOnWindowFocus: false,
   })

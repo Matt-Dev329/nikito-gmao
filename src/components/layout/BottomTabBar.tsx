@@ -62,14 +62,15 @@ function getTabsForRole(roleCode: RoleUtilisateur, isTablet: boolean): TabDef[] 
     ];
   }
 
+  // Même accueil que l'index de /gmao (cf. AccueilParRole dans App.tsx)
+  const accueil: TabDef[] = roleCode === 'manager_parc'
+    ? [{ id: 'dashboard', label: 'Mon parc', matchPaths: ['/gmao/mon-parc'], action: 'navigate', route: '/gmao/mon-parc' }]
+    : roleCode === 'technicien'
+      ? []
+      : [{ id: 'dashboard', label: 'Dashboard', matchPaths: ['/gmao'], action: 'navigate', route: '/gmao' }];
+
   const tabs: TabDef[] = [
-    {
-      id: 'dashboard',
-      label: 'Dashboard',
-      matchPaths: ['/gmao'],
-      action: 'navigate',
-      route: '/gmao',
-    },
+    ...accueil,
     {
       id: 'operations',
       label: 'Operations',

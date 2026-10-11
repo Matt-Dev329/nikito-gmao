@@ -7,6 +7,7 @@ import { useParc } from '@/hooks/queries/useReferentiel';
 import { useAttractionsParc } from '@/hooks/queries/useAttractionsParc';
 import { usePointsPourParc } from '@/hooks/queries/usePointsCategoriePourParc';
 import { useAuth } from '@/hooks/useAuth';
+import { useFormationFilter } from '@/hooks/useFormation';
 import { NotesChantierParc } from './NotesChantierParc';
 import { CarteHorairesParc } from '@/components/parc/CarteHorairesParc';
 import { ToggleVacancesParc } from '@/components/parc/ToggleVacancesParc';
@@ -257,15 +258,16 @@ function OngletControles({ parcId }: { parcId: string | undefined }) {
 }
 
 function OngletEquipements({ parcId }: { parcId: string | undefined }) {
+  const { estFormation } = useFormationFilter();
   const { data: equipements, isLoading } = useQuery({
-    queryKey: ['equipements_parc_fiche', parcId],
+    queryKey: ['equipements_parc_fiche', parcId, estFormation],
     queryFn: async () => {
       if (!parcId) return [];
       const { data, error } = await supabase
         .from('equipements')
         .select('id, code, libelle, statut, categories_equipement(nom), zones(nom)')
         .eq('parc_id', parcId)
-        .eq('est_formation', false)
+        .eq('est_formation', estFormation)
         .order('code');
       if (error) throw error;
       return data ?? [];

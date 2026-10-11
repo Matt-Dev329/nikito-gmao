@@ -1,3 +1,4 @@
+import { aujourdhuiParis } from '@/lib/dates';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 
@@ -217,11 +218,11 @@ export function useConformiteKpi() {
           .from('prescriptions_securite')
           .select('id', { count: 'exact', head: true })
           .in('statut', ['a_lever', 'en_cours'])
-          .lt('delai_levee', new Date().toISOString().slice(0, 10)),
+          .lt('delai_levee', aujourdhuiParis()),
         supabase
           .from('commissions_securite')
           .select('date_visite')
-          .gte('date_visite', new Date().toISOString().slice(0, 10))
+          .gte('date_visite', aujourdhuiParis())
           .order('date_visite', { ascending: true })
           .limit(1),
       ]);
@@ -390,11 +391,12 @@ export function useCreatePhase() {
   return useMutation({
     mutationFn: async (payload: { parc_id: string; phase: string; date_debut: string; notes?: string }) => {
       // Close current phase
-      await supabase
+      const { error: errClose } = await supabase
         .from('parcs_phases')
         .update({ date_fin: new Date().toISOString() })
         .eq('parc_id', payload.parc_id)
         .is('date_fin', null);
+      if (errClose) throw errClose;
       // Insert new phase
       const { data, error } = await supabase
         .from('parcs_phases')

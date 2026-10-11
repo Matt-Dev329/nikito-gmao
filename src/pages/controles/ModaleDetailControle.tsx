@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { cn } from '@/lib/utils';
 import { PhotoLightbox } from '@/components/shared/PhotoLightbox';
 import { PrivateImage } from '@/components/PrivateImage';
@@ -229,6 +229,11 @@ export function ModaleDetailControle({ controle, onClose, onExportPDF, onNavigat
 
 function SignedLightbox({ path, onClose }: { path: string; onClose: () => void }) {
   const { data: url, isLoading } = useSignedUrl(path, 'alba-controles');
+  const introuvable = !isLoading && !url;
+
+  useEffect(() => {
+    if (introuvable) onClose();
+  }, [introuvable, onClose]);
 
   if (isLoading) {
     return (
@@ -238,10 +243,7 @@ function SignedLightbox({ path, onClose }: { path: string; onClose: () => void }
     );
   }
 
-  if (!url) {
-    onClose();
-    return null;
-  }
+  if (!url) return null;
 
   return <PhotoLightbox photos={[url]} onClose={onClose} />;
 }

@@ -5,6 +5,7 @@ import { useParc } from '@/hooks/queries/useReferentiel';
 import { supabase } from '@/lib/supabase';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/components/ui/ToastProvider';
 
 // ============================================================
 // Page Notes chantier d'un parc · accessible :
@@ -46,6 +47,7 @@ export function NotesChantierParc() {
   const { data: parc } = useParc(parcId);
   const { utilisateur } = useAuth();
   const queryClient = useQueryClient();
+  const toast = useToast();
   const [filtreCategorie, setFiltreCategorie] = useState<Categorie | null>(null);
   const [editeurOuvert, setEditeurOuvert] = useState(false);
   const [noteASupprimer, setNoteASupprimer] = useState<string | null>(null);
@@ -53,16 +55,18 @@ export function NotesChantierParc() {
 
   const peutSupprimer =
     utilisateur?.role_code != null &&
-    ['direction', 'chef_maintenance', 'directeur_parc', 'technicien', 'manager_parc'].includes(utilisateur.role_code);
+    ['direction', 'chef_maintenance', 'directeur_parc'].includes(utilisateur.role_code); // RLS notes_chantier : écriture réservée
 
   const supprimerNote = async (noteId: string) => {
     setSuppEnCours(true);
     const { error } = await supabase.from('notes_chantier').delete().eq('id', noteId);
     setSuppEnCours(false);
-    if (!error) {
-      setNoteASupprimer(null);
-      queryClient.invalidateQueries({ queryKey: ['notes_chantier', parcId] });
+    if (error) {
+      toast.error(`Suppression impossible : ${error.message}`);
+      return;
     }
+    setNoteASupprimer(null);
+    queryClient.invalidateQueries({ queryKey: ['notes_chantier', parcId] });
   };
 
   const { data: notes } = useQuery({
@@ -92,12 +96,14 @@ export function NotesChantierParc() {
             Décisions, comptes-rendus, audits · historique permanent
           </div>
         </div>
-        <button
-          onClick={() => setEditeurOuvert(true)}
-          className="bg-gradient-cta text-text px-5 py-2.5 rounded-[10px] text-[13px] font-bold flex items-center gap-2 min-h-[44px] w-full sm:w-auto justify-center sm:justify-start"
-        >
-          <span className="text-base">+</span> Nouvelle note
-        </button>
+        {peutSupprimer && (
+          <button
+            onClick={() => setEditeurOuvert(true)}
+            className="bg-gradient-cta text-text px-5 py-2.5 rounded-[10px] text-[13px] font-bold flex items-center gap-2 min-h-[44px] w-full sm:w-auto justify-center sm:justify-start"
+          >
+            <span className="text-base">+</span> Nouvelle note
+          </button>
+        )}
       </div>
 
       <div className="flex gap-1.5 mb-5 flex-wrap">
@@ -268,6 +274,8 @@ export function NotesChantierParc() {
 // ============================================================
 function EditeurNoteChantier({ parcId, onClose }: { parcId: string; onClose: () => void }) {
   const queryClient = useQueryClient();
+  const { utilisateur } = useAuth();
+  const toast = useToast();
   const [titre, setTitre] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [categorie, setCategorie] = useState<Categorie>('autre');
@@ -280,6 +288,7 @@ function EditeurNoteChantier({ parcId, onClose }: { parcId: string; onClose: () 
     setSubmitting(true);
     const { error } = await supabase.from('notes_chantier').insert({
       parc_id: parcId,
+      cree_par_id: utilisateur?.id,
       titre,
       date_reunion: date,
       categorie,
@@ -294,10 +303,12 @@ function EditeurNoteChantier({ parcId, onClose }: { parcId: string; onClose: () 
         .filter(Boolean),
     });
     setSubmitting(false);
-    if (!error) {
-      queryClient.invalidateQueries({ queryKey: ['notes_chantier', parcId] });
-      onClose();
+    if (error) {
+      toast.error(`Enregistrement impossible : ${error.message}`);
+      return;
     }
+    queryClient.invalidateQueries({ queryKey: ['notes_chantier', parcId] });
+    onClose();
   };
 
   return (

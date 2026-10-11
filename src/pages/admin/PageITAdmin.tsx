@@ -3,6 +3,7 @@ import { cn } from '@/lib/utils';
 import { supabase, supabaseUrl, supabaseAnonKey } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
 import { useConfig } from '@/hooks/useConfig';
+import { useToast } from '@/components/ui/ToastProvider';
 
 interface SystemCheck {
   label: string;
@@ -52,7 +53,7 @@ const CORE_TABLES = [
   'controles',
   'controle_items',
   'categories_equipement',
-  'points_controle',
+  'bibliotheque_points',
   'niveaux_priorite',
   'fournisseurs',
   'config_globale',
@@ -146,7 +147,8 @@ export function PageITAdmin() {
 
     // Users count
     try {
-      const { count } = await supabase.from('utilisateurs').select('id', { count: 'exact', head: true }).eq('actif', true);
+      const { count, error } = await supabase.from('utilisateurs').select('id', { count: 'exact', head: true }).eq('actif', true);
+      if (error) throw error;
       results.push({
         label: 'Utilisateurs actifs',
         status: (count ?? 0) > 0 ? 'ok' : 'warning',
@@ -158,7 +160,8 @@ export function PageITAdmin() {
 
     // Parcs
     try {
-      const { count } = await supabase.from('parcs').select('id', { count: 'exact', head: true });
+      const { count, error } = await supabase.from('parcs').select('id', { count: 'exact', head: true });
+      if (error) throw error;
       results.push({
         label: 'Parcs configures',
         status: (count ?? 0) > 0 ? 'ok' : 'warning',
@@ -170,11 +173,12 @@ export function PageITAdmin() {
 
     // Incidents ouverts
     try {
-      const { count } = await supabase
+      const { count, error } = await supabase
         .from('incidents')
         .select('id', { count: 'exact', head: true })
         .in('statut', ['ouvert', 'assigne', 'en_cours'])
         .eq('est_formation', false);
+      if (error) throw error;
       results.push({
         label: 'Incidents ouverts (production)',
         status: (count ?? 0) > 10 ? 'warning' : 'ok',
@@ -227,7 +231,8 @@ export function PageITAdmin() {
 
     for (const table of CORE_TABLES) {
       try {
-        const { count } = await supabase.from(table).select('*', { count: 'exact', head: true });
+        const { count, error } = await supabase.from(table).select('*', { count: 'exact', head: true });
+        if (error) throw error;
         results.push({ name: table, count: count ?? 0, hasRls: true });
       } catch {
         results.push({ name: table, count: -1, hasRls: false });
@@ -476,16 +481,18 @@ interface FeatureFlag {
 }
 
 function TabAccesModules() {
+  const toast = useToast();
   const [features, setFeatures] = useState<FeatureFlag[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('feature_flags')
         .select('*')
         .order('ordre');
+      if (error) toast.error(`Chargement des modules impossible : ${error.message}`);
       setFeatures((data ?? []) as FeatureFlag[]);
       setLoading(false);
     })();
@@ -494,11 +501,14 @@ function TabAccesModules() {
   const toggleGlobal = async (feature: FeatureFlag) => {
     setSaving(feature.id);
     const newVal = !feature.actif_global;
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('feature_flags')
       .update({ actif_global: newVal, modifie_le: new Date().toISOString() })
-      .eq('id', feature.id);
-    if (!error) {
+      .eq('id', feature.id)
+      .select('id');
+    if (error || !data || data.length === 0) {
+      toast.error(error ? `Modification impossible : ${error.message}` : 'Modification refusée (droits insuffisants).');
+    } else {
       setFeatures((prev) =>
         prev.map((f) => (f.id === feature.id ? { ...f, actif_global: newVal } : f))
       );
@@ -513,11 +523,14 @@ function TabAccesModules() {
       ? feature.roles_autorises.filter((r) => r !== roleCode)
       : [...feature.roles_autorises, roleCode];
 
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('feature_flags')
       .update({ roles_autorises: newRoles, modifie_le: new Date().toISOString() })
-      .eq('id', feature.id);
-    if (!error) {
+      .eq('id', feature.id)
+      .select('id');
+    if (error || !data || data.length === 0) {
+      toast.error(error ? `Modification impossible : ${error.message}` : 'Modification refusée (droits insuffisants).');
+    } else {
       setFeatures((prev) =>
         prev.map((f) => (f.id === feature.id ? { ...f, roles_autorises: newRoles } : f))
       );
