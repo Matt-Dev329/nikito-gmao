@@ -279,7 +279,11 @@ export function useChangerStatutCommande() {
     onSuccess: (_d, params) => {
       qc.invalidateQueries({ queryKey: ['commandes'] });
       // La livraison fait entrer les produits en stock (trigger en base)
-      if (params.statut === 'livree') qc.invalidateQueries({ queryKey: ['pieces_detachees'] });
+      if (params.statut === 'livree') {
+        qc.invalidateQueries({ queryKey: ['pieces_detachees'] });
+        // Les tickets en attente de cette commande repassent « à faire » (trigger en base)
+        qc.invalidateQueries({ queryKey: ['incidents'] });
+      }
     },
   });
 }

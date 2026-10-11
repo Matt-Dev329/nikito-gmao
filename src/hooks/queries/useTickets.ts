@@ -18,7 +18,8 @@ export function useIncidents(filtres?: {
           `*,
           equipements!inner(code, libelle, parc_id, parcs(code, nom), zones(nom), categories_equipement(nom)),
           niveaux_priorite(code, nom, sla_h, couleur_hex),
-          externe_fournisseur:fournisseurs!incidents_externe_fournisseur_id_fkey(nom, contact_tel, contact_nom)`
+          externe_fournisseur:fournisseurs!incidents_externe_fournisseur_id_fkey(nom, contact_tel, contact_nom),
+          attente_commande:commandes!incidents_attente_piece_commande_id_fkey(numero, statut)`
         )
         .eq('est_formation', estFormation)
         .order('declare_le', { ascending: false });
@@ -50,7 +51,8 @@ export function useIncident(numeroBT: string | undefined) {
           equipements(*, parcs(code, nom), zones(nom), categories_equipement(nom)),
           niveaux_priorite(*),
           interventions(*, pieces_utilisees(*, pieces_detachees(*))),
-          externe_fournisseur:fournisseurs!incidents_externe_fournisseur_id_fkey(nom, contact_tel, contact_nom)`
+          externe_fournisseur:fournisseurs!incidents_externe_fournisseur_id_fkey(nom, contact_tel, contact_nom),
+          attente_commande:commandes!incidents_attente_piece_commande_id_fkey(numero, statut)`
         )
         .eq('numero_bt', numeroBT)
         .eq('est_formation', estFormation)
@@ -257,6 +259,34 @@ export function useCloturerTicketExterieur() {
         p_incident_id: p.incidentId,
         p_compte_rendu: p.compteRendu,
       });
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['incidents'] }),
+  });
+}
+
+// --- Pièce en attente --------------------------------------------------------
+
+export function useMettreEnAttentePiece() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (p: { incidentId: string; detail: string; commandeId: string | null }) => {
+      const { error } = await supabase.rpc('mettre_en_attente_piece', {
+        p_incident_id: p.incidentId,
+        p_detail: p.detail || null,
+        p_commande_id: p.commandeId,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['incidents'] }),
+  });
+}
+
+export function useLeverAttentePiece() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (incidentId: string) => {
+      const { error } = await supabase.rpc('lever_attente_piece', { p_incident_id: incidentId });
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['incidents'] }),
