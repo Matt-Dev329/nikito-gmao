@@ -21,7 +21,7 @@ export function OngletPanier({
   const { utilisateur } = useAuth();
   const toast = useToast();
   const parcCourant = useParcCourant((s) => s.parc);
-  const { data: catalogue } = useCatalogueCommandes();
+  const { data: catalogue, isLoading: chargementCatalogue, isError: erreurCatalogue } = useCatalogueCommandes();
   const { data: tousParcs } = useParcs();
   const { lignes, definir, retirer, vider } = usePanier();
   const passer = usePasserCommande();
@@ -68,6 +68,24 @@ export function OngletPanier({
       toast.error(`Envoi impossible : ${(e as Error).message}`);
     }
   };
+
+  // Tant que le catalogue n'est pas chargé, on ne peut pas savoir quels produits sont disponibles
+  if (items.length > 0 && chargementCatalogue) {
+    return (
+      <div className="space-y-2.5">
+        {items.map((i) => (
+          <div key={i.id} className="bg-bg-card rounded-xl h-16 animate-pulse" />
+        ))}
+      </div>
+    );
+  }
+  if (items.length > 0 && erreurCatalogue) {
+    return (
+      <div className="text-red text-[13px] bg-red/10 rounded-lg p-3">
+        Impossible de charger le catalogue pour vérifier le panier. Réessaie dans un instant.
+      </div>
+    );
+  }
 
   if (items.length === 0) {
     return (

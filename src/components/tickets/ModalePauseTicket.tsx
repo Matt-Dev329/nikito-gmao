@@ -6,9 +6,11 @@ interface Props {
   incidentId: string;
   numeroBT: string;
   onClose: () => void;
+  /** Appelé après une mise en pause réussie (par défaut : onClose) */
+  onSuccess?: () => void;
 }
 
-export function ModalePauseTicket({ incidentId, numeroBT, onClose }: Props) {
+export function ModalePauseTicket({ incidentId, numeroBT, onClose, onSuccess }: Props) {
   const pause = useMettreEnPauseIncident();
   const [motif, setMotif] = useState('');
   const [erreur, setErreur] = useState<string | null>(null);
@@ -17,7 +19,7 @@ export function ModalePauseTicket({ incidentId, numeroBT, onClose }: Props) {
     setErreur(null);
     try {
       await pause.mutateAsync({ incidentId, motif: motif.trim() || null });
-      onClose();
+      (onSuccess ?? onClose)();
     } catch (e) {
       setErreur(e instanceof Error ? e.message : 'Erreur lors de la mise en pause');
     }

@@ -38,6 +38,7 @@ interface Ligne {
   unite: string;
   quantite: number;
   prix_unitaire: number | null;
+  lien: string | null;
 }
 
 function buildHtml(p: {
@@ -54,6 +55,7 @@ function buildHtml(p: {
         <td style="padding:8px 0;font-size:14px;color:#ffffff;border-bottom:1px solid #1f2550;">
           ${esc(l.produit_nom)}${l.reference ? ` <span style="color:#8b92b8;font-size:12px;">· ${esc(l.reference)}</span>` : ""}
           ${l.activite_nom ? `<div style="font-size:11px;color:#8b92b8;">${esc(l.activite_nom)}</div>` : ""}
+          ${l.lien && /^https?:\/\//i.test(l.lien) ? `<div style="font-size:11px;"><a href="${esc(l.lien)}" style="color:#5DE5FF;">Voir l'article</a></div>` : ""}
         </td>
         <td style="padding:8px 0;font-size:14px;color:#ffffff;text-align:right;border-bottom:1px solid #1f2550;white-space:nowrap;">
           ${l.quantite} ${esc(l.unite)}
@@ -97,6 +99,10 @@ Deno.serve(async (req: Request) => {
     return new Response(null, { status: 200, headers: corsHeaders });
   }
 
+  // Commande dont l'envoi a été réservé : libérée si une erreur survient ensuite
+  let reserveeId: string | null = null;
+  let supabase: ReturnType<typeof createClient> | null = null;
+
   try {
     const apiKey = Deno.env.get("RESEND_API_KEY");
     if (!apiKey) return json({ success: false, error: "RESEND_API_KEY non configuree" }, 500);
@@ -104,7 +110,7 @@ Deno.serve(async (req: Request) => {
     const { commande_id } = await req.json();
     if (!commande_id) return json({ success: false, error: "commande_id manquant" }, 400);
 
-    const supabase = createClient(
+    supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
@@ -118,11 +124,12 @@ Deno.serve(async (req: Request) => {
       .select("id, numero, commentaire, total_estime, demandeur_id, parc_id")
       .maybeSingle();
     if (!commande) return json({ success: true, skipped: "deja_envoye_ou_introuvable" });
+    reserveeId = commande.id;
 
     const [{ data: lignes }, { data: demandeur }, { data: parc }, { data: gestionnaires }] = await Promise.all([
       supabase
         .from("commande_lignes")
-        .select("activite_nom, produit_nom, reference, unite, quantite, prix_unitaire")
+        .select("activite_nom, produit_nom, reference, unite, quantite, prix_unitaire, lien")
         .eq("commande_id", commande.id),
       supabase.from("utilisateurs").select("prenom, nom, email").eq("id", commande.demandeur_id).maybeSingle(),
       supabase.from("parcs").select("nom").eq("id", commande.parc_id).maybeSingle(),
@@ -162,12 +169,16 @@ Deno.serve(async (req: Request) => {
       console.error("Resend error:", resendRes.status, detail);
       // Libère la réservation pour permettre un nouvel essai
       await supabase.from("commandes").update({ email_envoye_le: null }).eq("id", commande.id);
+      reserveeId = null;
       return json({ success: false, error: "Echec envoi email", detail }, 502);
     }
 
     return json({ success: true });
   } catch (err) {
     console.error("notifier-commande error:", err);
+    if (supabase && reserveeId) {
+      await supabase.from("commandes").update({ email_envoye_le: null }).eq("id", reserveeId);
+    }
     return json({ success: false, error: "Erreur interne", detail: String(err) }, 500);
   }
 });

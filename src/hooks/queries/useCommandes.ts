@@ -153,9 +153,12 @@ export function useCatalogueCommandes(inclureInactifs = false) {
 
       const a = await qa;
       if (a.error) throw a.error;
+      const activites = (a.data ?? []) as ActiviteCommande[];
+      // Une activité masquée masque aussi ses produits (la commande les refuserait)
+      const idsActives = new Set(activites.map((x) => x.id));
       return {
-        activites: (a.data ?? []) as ActiviteCommande[],
-        produits,
+        activites,
+        produits: inclureInactifs ? produits : produits.filter((p) => idsActives.has(p.activite_id)),
       };
     },
   });
@@ -249,8 +252,14 @@ export function useChangerStatutCommande() {
   const qc = useQueryClient();
   const { utilisateur } = useAuth();
   return useMutation({
-    mutationFn: async (params: { id: string; statut: StatutCommande; motifRefus?: string }) => {
-      const { error } = await supabase
+    mutationFn: async (params: {
+      id: string;
+      statut: StatutCommande;
+      /** Statut affiché au moment du clic : refuse la mise à jour si la commande a changé entre-temps */
+      statutActuel: StatutCommande;
+      motifRefus?: string;
+    }) => {
+      const { data, error } = await supabase
         .from('commandes')
         .update({
           statut: params.statut,
@@ -258,9 +267,15 @@ export function useChangerStatutCommande() {
           traitee_le: new Date().toISOString(),
           traitee_par_id: utilisateur?.id ?? null,
         })
-        .eq('id', params.id);
+        .eq('id', params.id)
+        .eq('statut', params.statutActuel)
+        .select('id');
       if (error) throw error;
+      if (!data || data.length === 0) {
+        throw new Error('Commande déjà traitée ou annulée entre-temps — la liste a été actualisée');
+      }
     },
+    onError: () => qc.invalidateQueries({ queryKey: ['commandes'] }),
     onSuccess: (_d, params) => {
       qc.invalidateQueries({ queryKey: ['commandes'] });
       // La livraison fait entrer les produits en stock (trigger en base)

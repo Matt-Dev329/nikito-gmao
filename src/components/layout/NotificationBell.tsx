@@ -51,7 +51,7 @@ function buildItems(badges: {
   if (badges.interventionsEnCours > 0)
     items.push({ key: 'interventionsEnCours', label: 'Interventions en cours', count: badges.interventionsEnCours, tone: 'red', to: '/gmao/operations' });
   if (badges.commandesATraiter > 0)
-    items.push({ key: 'commandesATraiter', label: 'Commandes à traiter', count: badges.commandesATraiter, tone: 'amber', to: '/gmao/commander' });
+    items.push({ key: 'commandesATraiter', label: 'Commandes à traiter', count: badges.commandesATraiter, tone: 'amber', to: '/gmao/commander?onglet=a_traiter' });
   if (badges.recurrences > 0)
     items.push({ key: 'recurrences', label: 'Recurrences detectees', count: badges.recurrences, tone: 'red', to: '/gmao/recurrences' });
   if (badges.cinqPourquoi > 0)
@@ -151,7 +151,7 @@ export function NotificationBell({ compact, onNavClick }: Props) {
             <>
               {items.map((item) => (
                 <button
-                  key={item.to}
+                  key={item.key}
                   onClick={() => handleNav(item.to)}
                   className="flex items-center gap-2.5 w-full px-3 py-2 text-[12px] text-dim hover:text-text hover:bg-white/[0.04] transition-colors"
                 >

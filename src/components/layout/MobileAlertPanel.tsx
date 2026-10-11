@@ -40,7 +40,7 @@ export function MobileAlertPanel({ open, onClose }: MobileAlertPanelProps) {
     if (badges.interventionsEnCours > 0)
       items.push({ key: 'int', label: 'Interventions en cours', count: badges.interventionsEnCours, tone: 'red', to: '/gmao/operations' });
     if (badges.commandesATraiter > 0)
-      items.push({ key: 'cmd', label: 'Commandes à traiter', count: badges.commandesATraiter, tone: 'amber', to: '/gmao/commander' });
+      items.push({ key: 'cmd', label: 'Commandes à traiter', count: badges.commandesATraiter, tone: 'amber', to: '/gmao/commander?onglet=a_traiter' });
     if (badges.recurrences > 0)
       items.push({ key: 'rec', label: 'Recurrences detectees', count: badges.recurrences, tone: 'red', to: '/gmao/recurrences' });
     if (badges.cinqPourquoi > 0)

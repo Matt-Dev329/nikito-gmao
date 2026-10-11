@@ -4,6 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useParcCourant } from '@/hooks/useParcCourant';
 import { useParcs } from '@/hooks/queries/useReferentiel';
 import { useToast } from '@/components/ui/ToastProvider';
+import { ChampQuantite } from '@/components/ui/ChampQuantite';
 import { useCatalogueCommandes, usePasserCommandeSpecifique } from '@/hooks/queries/useCommandes';
 
 const ROLES_MULTI_PARCS = ['direction', 'chef_maintenance', 'directeur_parc', 'admin_it'];
@@ -111,11 +112,9 @@ export function OngletCommandeSpecifique({ onEnvoyee }: { onEnvoyee: () => void 
 
         <div className="grid grid-cols-2 gap-2.5">
           <Field label="Quantité *">
-            <input
-              type="number"
-              min={1}
-              value={quantite}
-              onChange={(e) => setQuantite(Math.max(1, parseInt(e.target.value) || 1))}
+            <ChampQuantite
+              valeur={quantite}
+              onChange={setQuantite}
               className={champ}
             />
           </Field>

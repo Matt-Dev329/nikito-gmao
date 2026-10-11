@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { cn } from '@/lib/utils';
+import { ChampQuantite } from '@/components/ui/ChampQuantite';
 import { usePiecesStockOptions, type PieceStockOption } from '@/hooks/queries/useStockOptions';
 
 /** Choix d'une pièce du stock + quantité (pièces utilisées pendant une réparation). */
@@ -75,11 +76,9 @@ export function ModaleAjouterPiece({
 
         <div className="flex items-center gap-3">
           <label className="text-[11px] text-dim uppercase tracking-wider">Quantité</label>
-          <input
-            type="number"
-            min={1}
-            value={quantite}
-            onChange={(e) => setQuantite(Math.max(1, parseInt(e.target.value) || 1))}
+          <ChampQuantite
+            valeur={quantite}
+            onChange={setQuantite}
             className="w-20 bg-bg-deep border border-white/[0.08] rounded-[10px] p-2.5 text-text text-[13px] outline-none focus:border-nikito-cyan min-h-[44px]"
           />
           <button

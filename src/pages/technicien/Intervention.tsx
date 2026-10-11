@@ -86,7 +86,8 @@ export function Intervention() {
         id: p.id as string,
         nom: (pd?.nom as string) ?? 'Pièce',
         reference: (pd?.reference as string) ?? '',
-        stockApres: ((pd?.stock_actuel as number) ?? 0) - ((p.quantite as number) ?? 1),
+        // Le stock en base est déjà décrémenté par le trigger à l'enregistrement de la pièce
+        stockApres: (pd?.stock_actuel as number) ?? 0,
         quantite: (p.quantite as number) ?? 1,
       };
     });
@@ -106,6 +107,8 @@ export function Intervention() {
 
   const [etapeActive, setEtapeActive] = useState<Etape>(currentEtape);
   const [diagnostic, setDiagnostic] = useState('');
+  // Un diagnostic déjà enregistré s'affiche en lecture jusqu'au clic sur « Modifier »
+  const [editionDiagnostic, setEditionDiagnostic] = useState(false);
   const [actions, setActions] = useState('');
   const [premierCoup, setPremierCoup] = useState<boolean | null>(null);
   const [photoAvant, setPhotoAvant] = useState<string | null>(null);
@@ -322,13 +325,19 @@ export function Intervention() {
             <div className={cn('text-[13px] font-semibold', diagnostic ? 'text-green' : 'text-nikito-cyan')}>
               {diagnostic ? '✓' : '▸'} Diagnostic
             </div>
-            {diagnostic && (
-              <button onClick={() => setEtapeActive('diagnostic')} className="bg-transparent border-none text-nikito-cyan text-[11px]">
+            {existingDiagnostic && !editionDiagnostic && (
+              <button
+                onClick={() => {
+                  setEditionDiagnostic(true);
+                  setEtapeActive('diagnostic');
+                }}
+                className="bg-transparent border-none text-nikito-cyan text-[11px]"
+              >
                 Modifier
               </button>
             )}
           </div>
-          {diagnostic ? (
+          {existingDiagnostic && !editionDiagnostic ? (
             <div className="text-[13px] text-text leading-relaxed bg-bg-deep p-3 rounded-lg">{diagnostic}</div>
           ) : (
             <textarea
@@ -514,7 +523,8 @@ export function Intervention() {
         <ModalePauseTicket
           incidentId={incident.id as string}
           numeroBT={btNumero ?? ''}
-          onClose={() => {
+          onClose={() => setShowPause(false)}
+          onSuccess={() => {
             setShowPause(false);
             navigate(-1);
           }}

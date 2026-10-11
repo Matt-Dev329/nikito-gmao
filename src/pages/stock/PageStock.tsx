@@ -9,6 +9,9 @@ import { useFournisseurs } from '@/hooks/queries/useReferentiel';
 import { useFormationFilter } from '@/hooks/useFormation';
 import { Pill } from '@/components/ui/Pill';
 import { cn } from '@/lib/utils';
+import { chargerToutesLesPages } from '@/lib/paginer';
+import { useToast } from '@/components/ui/ToastProvider';
+import { ChampQuantite } from '@/components/ui/ChampQuantite';
 import { SignalerInlineButton } from '@/components/shared/SignalerInlineButton';
 import type { PieceDetacheeAvecJoins } from '@/types/database';
 
@@ -18,33 +21,26 @@ function usePiecesDetachees() {
   const { estFormation } = useFormationFilter();
   return useQuery({
     queryKey: ['pieces_detachees', estFormation],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('pieces_detachees')
-        .select('*, fournisseurs(nom, contact_tel)')
-        .eq('est_formation', estFormation)
-        .order('nom');
-      if (error) throw error;
-      return (data ?? []) as PieceDetacheeAvecJoins[];
-    },
+    queryFn: () =>
+      chargerToutesLesPages<PieceDetacheeAvecJoins>((debut, fin) =>
+        supabase
+          .from('pieces_detachees')
+          .select('*, fournisseurs(nom, contact_tel)')
+          .eq('est_formation', estFormation)
+          .order('nom')
+          .order('id')
+          .range(debut, fin)
+      ),
   });
 }
 
 function useModifierStock() {
   const qc = useQueryClient();
   return useMutation({
+    // Mouvement appliqué en une requête côté base (pas de lecture puis réécriture
+    // qui écraserait une livraison ou une clôture d'intervention simultanée)
     mutationFn: async ({ id, delta }: { id: string; delta: number }) => {
-      const { data: current, error: fetchErr } = await supabase
-        .from('pieces_detachees')
-        .select('stock_actuel')
-        .eq('id', id)
-        .single();
-      if (fetchErr) throw fetchErr;
-      const newQty = Math.max(0, (current.stock_actuel ?? 0) + delta);
-      const { error } = await supabase
-        .from('pieces_detachees')
-        .update({ stock_actuel: newQty })
-        .eq('id', id);
+      const { error } = await supabase.rpc('mouvement_stock', { p_piece_id: id, p_delta: delta });
       if (error) throw error;
     },
     onSuccess: () => {
@@ -89,7 +85,14 @@ export function PageStock() {
   return <ContenuStock />;
 }
 
+// Rôles autorisés à modifier le stock (alignés sur la RLS de pieces_detachees) ;
+// les autres rôles ayant accès à la page la consultent en lecture seule.
+const ROLES_ECRITURE_STOCK = ['direction', 'chef_maintenance', 'directeur_parc', 'technicien'];
+
 function ContenuStock() {
+  const { utilisateur } = useAuth();
+  const toast = useToast();
+  const peutModifier = ROLES_ECRITURE_STOCK.includes(utilisateur?.role_code ?? '');
   const { data: pieces, isLoading } = usePiecesDetachees();
   const { data: fournisseurs } = useFournisseurs();
   const modStock = useModifierStock();
@@ -125,9 +128,14 @@ function ContenuStock() {
   const submitMouvement = async () => {
     if (!mouvementPiece) return;
     const delta = mouvementPiece.type === 'entree' ? mouvementQty : -mouvementQty;
-    await modStock.mutateAsync({ id: mouvementPiece.id, delta });
-    setMouvementPiece(null);
-    setMouvementQty(1);
+    try {
+      await modStock.mutateAsync({ id: mouvementPiece.id, delta });
+      toast.success(`${mouvementPiece.nom} : ${delta > 0 ? '+' : ''}${delta}`);
+      setMouvementPiece(null);
+      setMouvementQty(1);
+    } catch {
+      // erreur affichée dans la modale (modStock.isError)
+    }
   };
 
   return (
@@ -141,12 +149,14 @@ function ContenuStock() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <button
-            onClick={() => setModaleCreer(true)}
-            className="bg-gradient-cta text-text px-5 py-2.5 rounded-[10px] text-[13px] font-bold flex items-center gap-2 min-h-[44px] w-full sm:w-auto justify-center"
-          >
-            <span className="text-base leading-none">+</span> Nouvelle piece
-          </button>
+          {peutModifier && (
+            <button
+              onClick={() => setModaleCreer(true)}
+              className="bg-gradient-cta text-text px-5 py-2.5 rounded-[10px] text-[13px] font-bold flex items-center gap-2 min-h-[44px] w-full sm:w-auto justify-center"
+            >
+              <span className="text-base leading-none">+</span> Nouvelle piece
+            </button>
+          )}
           <div className="hidden md:flex items-center gap-2 ml-1">
             <div className="h-8 w-px bg-white/[0.08]" />
             <SignalerInlineButton />
@@ -238,18 +248,30 @@ function ContenuStock() {
                     </td>
                     <td className="py-3 px-3 text-dim">{p.emplacement ?? '—'}</td>
                     <td className="py-3 px-4 text-right whitespace-nowrap">
-                      <button
-                        onClick={() => setMouvementPiece({ id: p.id, nom: p.nom, type: 'entree' })}
-                        className="text-green text-[11px] font-medium mr-3 hover:underline"
-                      >
-                        +Entree
-                      </button>
-                      <button
-                        onClick={() => setMouvementPiece({ id: p.id, nom: p.nom, type: 'sortie' })}
-                        className="text-red text-[11px] font-medium hover:underline"
-                      >
-                        -Sortie
-                      </button>
+                      {peutModifier ? (
+                        <>
+                          <button
+                            onClick={() => {
+                              modStock.reset();
+                              setMouvementPiece({ id: p.id, nom: p.nom, type: 'entree' });
+                            }}
+                            className="text-green text-[11px] font-medium mr-3 hover:underline"
+                          >
+                            +Entree
+                          </button>
+                          <button
+                            onClick={() => {
+                              modStock.reset();
+                              setMouvementPiece({ id: p.id, nom: p.nom, type: 'sortie' });
+                            }}
+                            className="text-red text-[11px] font-medium hover:underline"
+                          >
+                            -Sortie
+                          </button>
+                        </>
+                      ) : (
+                        <span className="text-faint text-[11px]">Lecture seule</span>
+                      )}
                     </td>
                   </tr>
                 );
@@ -267,11 +289,9 @@ function ContenuStock() {
             </div>
             <div className="text-[17px] font-semibold mt-1 mb-4">{mouvementPiece.nom}</div>
             <label className="block text-[11px] text-dim uppercase tracking-wider mb-2">Quantite</label>
-            <input
-              type="number"
-              min={1}
-              value={mouvementQty}
-              onChange={(e) => setMouvementQty(Math.max(1, parseInt(e.target.value) || 1))}
+            <ChampQuantite
+              valeur={mouvementQty}
+              onChange={setMouvementQty}
               className="w-full bg-bg-deep border border-white/[0.08] rounded-[10px] p-3 text-text text-[13px] outline-none focus:border-nikito-cyan min-h-[44px] mb-4"
             />
             {modStock.isError && (
@@ -328,16 +348,20 @@ function ModaleCreerPiece({
 
   const submit = async () => {
     if (!reference.trim() || !nom.trim()) return;
-    await creer.mutateAsync({
-      reference: reference.trim(),
-      nom: nom.trim(),
-      fournisseur_id: fournisseurId || null,
-      stock_actuel: 0,
-      stock_min: stockMin,
-      prix_unitaire_ht: prixHt ? parseFloat(prixHt) : null,
-      emplacement: emplacement.trim() || null,
-    });
-    onClose();
+    try {
+      await creer.mutateAsync({
+        reference: reference.trim(),
+        nom: nom.trim(),
+        fournisseur_id: fournisseurId || null,
+        stock_actuel: 0,
+        stock_min: stockMin,
+        prix_unitaire_ht: prixHt ? parseFloat(prixHt) : null,
+        emplacement: emplacement.trim() || null,
+      });
+      onClose();
+    } catch {
+      // erreur affichée dans la modale (creer.isError)
+    }
   };
 
   return (

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useSearchParams } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
 import { usePanier, nombreArticles } from '@/hooks/usePanier';
@@ -17,7 +17,9 @@ export function PageCommander() {
   const { peutCommander, estGestionnaire, peutGererCatalogue, isLoading } = useAccesCommandes();
   const lignes = usePanier((s) => s.lignes);
   const rattacher = usePanier((s) => s.rattacher);
-  const [onglet, setOnglet] = useState<Onglet>('catalogue');
+  const [params] = useSearchParams();
+  // Lien direct vers un onglet (ex. notification « Commandes à traiter » → ?onglet=a_traiter)
+  const [onglet, setOnglet] = useState<Onglet>(() => (params.get('onglet') as Onglet | null) ?? 'catalogue');
   const toutes = useCommandes('toutes');
 
   useEffect(() => {

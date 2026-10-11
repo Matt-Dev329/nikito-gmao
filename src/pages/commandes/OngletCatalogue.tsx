@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { cn } from '@/lib/utils';
 import { Pill } from '@/components/ui/Pill';
+import { ChampQuantite } from '@/components/ui/ChampQuantite';
 import { usePanier, nombreArticles } from '@/hooks/usePanier';
 import { useCatalogueCommandes, type ProduitCommande } from '@/hooks/queries/useCommandes';
 import { formatPrix } from './format';
@@ -254,11 +255,9 @@ export function Quantite({ valeur, onChange }: { valeur: number; onChange: (q: n
       >
         −
       </button>
-      <input
-        type="number"
-        min={0}
-        value={valeur}
-        onChange={(e) => onChange(Math.max(0, parseInt(e.target.value) || 0))}
+      <ChampQuantite
+        valeur={valeur}
+        onChange={onChange}
         className="w-10 bg-transparent text-center text-[13px] text-text outline-none [appearance:textfield]"
         aria-label="Quantité"
       />

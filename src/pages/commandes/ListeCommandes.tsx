@@ -105,7 +105,7 @@ function CarteCommande({ commande: c, gestion }: { commande: Commande; gestion: 
 
   const appliquer = async (s: StatutCommande, motifRefus?: string) => {
     try {
-      await changer.mutateAsync({ id: c.id, statut: s, motifRefus });
+      await changer.mutateAsync({ id: c.id, statut: s, statutActuel: c.statut, motifRefus });
       setRefus(null);
       toast.success(
         s === 'livree'
