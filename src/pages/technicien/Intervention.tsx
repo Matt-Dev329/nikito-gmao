@@ -136,6 +136,9 @@ export function Intervention() {
   const [photoAvant, setPhotoAvant] = useState<string | null>(null);
   // Rien ne peut être saisi tant que la photo AVANT n'est pas prise
   const verrouPhoto = !photoAvant && !estResolu;
+  // Intervention pas encore démarrée (ou en pause) : seul le bloc « Démarrer » est proposé
+  const aDemarrer = !estResolu && incident?.externe !== true && (!latestIntervention || statutIncident === 'en_pause');
+  const formulaireVisible = estResolu || (!aDemarrer && incident?.externe !== true);
   const [photoApres, setPhotoApres] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
   const [showModale, setShowModale] = useState(false);
@@ -328,30 +331,18 @@ export function Intervention() {
       </div>
 
       <main className="p-4 px-[18px] bg-bg-app flex flex-col gap-3.5">
-        <PhotosTicket
-          incidentId={incident.id as string}
-          chemins={((incident.photos_urls as string[] | null) ?? []).filter(Boolean)}
-          dossier={`${(parc?.code as string) ?? 'PARC'}/${btNumero ?? 'ticket'}`}
-          modifiable={!estResolu}
-        />
-
-        {/* Rangements du ticket (sans le fermer) : pièce en attente, intervenant extérieur */}
-        {incident.externe !== true && <PanneauAttentePiece incident={incident as Record<string, unknown>} />}
-        {incident.attente_piece !== true && (
-          <PanneauIntervenantExterieur incident={incident as Record<string, unknown>} onCloture={() => navigate(-1)} />
-        )}
-
-        {!estResolu && incident.externe !== true && (!latestIntervention || statutIncident === 'en_pause') && (
-          <div className="bg-bg-card rounded-xl p-4 border border-nikito-cyan/30 flex flex-col sm:flex-row sm:items-center gap-3">
+        {aDemarrer && (
+          <div className="bg-bg-card rounded-2xl p-5 border-2 border-nikito-cyan shadow-lg flex flex-col gap-4">
             <div className="flex-1">
-              <div className="text-[14px] font-semibold">
+              <div className="text-[18px] font-bold">
                 {statutIncident === 'en_pause' ? 'Intervention en pause' : 'Intervention non démarrée'}
               </div>
-              <div className="text-[12px] text-dim mt-0.5">
+              <div className="text-[14px] text-dim mt-1">
                 {statutIncident === 'en_pause'
                   ? `Motif : ${(incident.pause_motif as string | null) || 'non précisé'}. Reprends pour relancer le ticket.`
                   : 'Étape 1 : photo AVANT du problème. Étape 2 : démarrer (chrono, ticket « en cours »).'}
               </div>
+              {photoAvant && <div className="text-green text-[14px] font-semibold mt-3">✓ Photo AVANT prise</div>}
               {!photoAvant && (
                 <div className="mt-3">
                   <PhotoCapture
@@ -368,7 +359,7 @@ export function Intervention() {
               onClick={demarrerIntervention}
               disabled={demarrer.isPending || !photoAvant}
               className={cn(
-                'bg-gradient-cta text-text px-5 py-3 rounded-[10px] text-[14px] font-bold min-h-[48px] sm:self-end',
+                'bg-gradient-cta text-text px-6 py-5 rounded-2xl text-[18px] font-bold min-h-[64px] w-full shadow-lg',
                 (demarrer.isPending || !photoAvant) && 'opacity-40'
               )}
             >
@@ -383,6 +374,22 @@ export function Intervention() {
           </div>
         )}
 
+        <PhotosTicket
+          incidentId={incident.id as string}
+          chemins={((incident.photos_urls as string[] | null) ?? []).filter(Boolean)}
+          dossier={`${(parc?.code as string) ?? 'PARC'}/${btNumero ?? 'ticket'}`}
+          modifiable={!estResolu}
+        />
+
+        {/* Rangements du ticket (sans le fermer) : pièce en attente, intervenant extérieur */}
+        {incident.externe !== true && <PanneauAttentePiece incident={incident as Record<string, unknown>} />}
+        {incident.attente_piece !== true && (
+          <PanneauIntervenantExterieur incident={incident as Record<string, unknown>} onCloture={() => navigate(-1)} />
+        )}
+
+        {/* Le formulaire de réparation n'apparaît qu'une fois l'intervention démarrée */}
+        {formulaireVisible && (
+          <>
         {/* Stepper */}
         <div>
           <div className="flex justify-between mb-2.5">
@@ -608,6 +615,8 @@ export function Intervention() {
         >
           Mettre en pause · sauvegarder brouillon
         </button>
+          </>
+        )}
       </main>
 
       <ModaleQuitterSansValider
