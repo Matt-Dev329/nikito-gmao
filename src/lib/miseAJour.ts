@@ -42,8 +42,30 @@ export async function verifierMiseAJour(): Promise<void> {
   }
 }
 
-/** Vérifie la version puis recharge complètement l'appli. */
+/**
+ * Attend que la nouvelle version en cours d'installation soit active
+ * (au plus `delaiMs`). Sans cette attente, le rechargement repartait sur
+ * l'ancienne version encore en cache.
+ */
+function attendreNouvelleVersion(delaiMs: number): Promise<void> {
+  const nouvelle = registration?.installing ?? registration?.waiting;
+  if (!nouvelle) return Promise.resolve();
+  return new Promise((resolve) => {
+    const fin = window.setTimeout(resolve, delaiMs);
+    const terminer = () => {
+      window.clearTimeout(fin);
+      resolve();
+    };
+    navigator.serviceWorker.addEventListener('controllerchange', terminer, { once: true });
+    nouvelle.addEventListener('statechange', () => {
+      if (nouvelle.state === 'activated' || nouvelle.state === 'redundant') terminer();
+    });
+  });
+}
+
+/** Vérifie la version, attend qu'elle soit installée, puis recharge complètement l'appli. */
 export async function actualiserApplication(): Promise<void> {
   await verifierMiseAJour();
+  await attendreNouvelleVersion(15000);
   window.location.reload();
 }
