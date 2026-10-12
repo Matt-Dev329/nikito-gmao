@@ -554,7 +554,7 @@ export function Intervention() {
                   <div className="flex-1">
                     <div className="text-[13px] font-medium">{p.nom}</div>
                     <div className="text-[11px] text-dim font-mono">
-                      {p.reference} · stock après clôture : {p.stock - p.quantite}
+                      {p.reference}{p.reference ? ' · ' : ''}{p.stock > 0 ? `stock après clôture : ${Math.max(0, p.stock - p.quantite)}` : 'hors stock'}
                     </div>
                   </div>
                   <div className="bg-nikito-cyan/20 text-nikito-cyan px-2.5 py-1 rounded-md text-xs font-semibold">
