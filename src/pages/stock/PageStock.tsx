@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useAccesCommandes } from '@/hooks/queries/useCommandes';
-import { peutVoirStock } from '@/lib/acces';
+import { peutEntrerStock, peutVoirStock } from '@/lib/acces';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useFournisseurs } from '@/hooks/queries/useReferentiel';
@@ -85,14 +85,13 @@ export function PageStock() {
   return <ContenuStock />;
 }
 
-// Rôles autorisés à modifier le stock (alignés sur la RLS de pieces_detachees) ;
-// les autres rôles ayant accès à la page la consultent en lecture seule.
-const ROLES_ECRITURE_STOCK = ['direction', 'chef_maintenance', 'directeur_parc', 'technicien'];
-
 function ContenuStock() {
   const { utilisateur } = useAuth();
   const toast = useToast();
-  const peutModifier = ROLES_ECRITURE_STOCK.includes(utilisateur?.role_code ?? '');
+  const { estGestionnaire } = useAccesCommandes();
+  // Sorties : tout le monde ; entrées et nouvelles pièces : chef d'équipe / gestionnaires
+  const peutSortir = peutVoirStock(utilisateur?.role_code, estGestionnaire);
+  const peutEntrer = peutEntrerStock(utilisateur?.role_code, estGestionnaire);
   const { data: pieces, isLoading } = usePiecesDetachees();
   const { data: fournisseurs } = useFournisseurs();
   const modStock = useModifierStock();
@@ -149,7 +148,7 @@ function ContenuStock() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          {peutModifier && (
+          {peutEntrer && (
             <button
               onClick={() => setModaleCreer(true)}
               className="bg-gradient-cta text-text px-5 py-2.5 rounded-[10px] text-[13px] font-bold flex items-center gap-2 min-h-[44px] w-full sm:w-auto justify-center"
@@ -248,17 +247,19 @@ function ContenuStock() {
                     </td>
                     <td className="py-3 px-3 text-dim">{p.emplacement ?? '—'}</td>
                     <td className="py-3 px-4 text-right whitespace-nowrap">
-                      {peutModifier ? (
+                      {peutSortir ? (
                         <>
-                          <button
-                            onClick={() => {
-                              modStock.reset();
-                              setMouvementPiece({ id: p.id, nom: p.nom, type: 'entree' });
-                            }}
-                            className="text-green text-[11px] font-medium mr-3 hover:underline"
-                          >
-                            +Entree
-                          </button>
+                          {peutEntrer && (
+                            <button
+                              onClick={() => {
+                                modStock.reset();
+                                setMouvementPiece({ id: p.id, nom: p.nom, type: 'entree' });
+                              }}
+                              className="text-green text-[11px] font-medium mr-3 hover:underline"
+                            >
+                              +Entree
+                            </button>
+                          )}
                           <button
                             onClick={() => {
                               modStock.reset();

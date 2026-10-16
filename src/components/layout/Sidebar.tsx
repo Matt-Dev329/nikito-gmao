@@ -102,7 +102,7 @@ const sections: { titre: string; items: NavItem[] }[] = [
       { to: '/gmao/parcs', label: 'Parcs', featureCode: 'admin_parcs', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'admin_it'] },
       { to: '/gmao/utilisateurs', label: 'Utilisateurs', featureCode: 'admin_utilisateurs', badgeKey: 'invitationsPending', badgeTone: 'amber', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'manager_parc', 'admin_it'] },
       { to: '/gmao/bibliotheque', label: 'Bibliothèque points', featureCode: 'bibliotheque', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'admin_it'] },
-      { to: '/gmao/fournisseurs', label: 'Fournisseurs', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'admin_it'] },
+      { to: '/gmao/fournisseurs', label: 'Fournisseurs', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'technicien', 'admin_it'] },
       { to: '/gmao/it-admin', label: 'Administration IT', featureCode: 'admin_it', roles: ['direction', 'admin_it'] },
     ],
   },
