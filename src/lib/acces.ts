@@ -17,3 +17,6 @@ export function peutEntrerStock(role: RoleUtilisateur | undefined, estGestionnai
 export function peutVoirStock(role: RoleUtilisateur | undefined, estGestionnaireCommandes: boolean): boolean {
   return estGestionnaireCommandes || (!!role && ROLES_STOCK.includes(role));
 }
+
+/** Rapports et analyses prestataires : chef d'équipe et directeurs de parc */
+export const ROLES_PRESTATAIRES = ['chef_maintenance', 'directeur_parc'];

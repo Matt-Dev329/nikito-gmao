@@ -12,15 +12,36 @@ import { Pill } from '@/components/ui/Pill';
 import type { AlbaBucket } from '@/lib/uploadPhotoControle';
 import { envoyerDocument, recollerDocument } from '@/lib/envoiGrosFichier';
 import { enregistrerBlob, nomDepuisChemin, telechargerUrl } from '@/lib/telecharger';
+import { ROLES_PRESTATAIRES } from '@/lib/acces';
 
-export type TypeDocument = 'plan' | 'manuel';
+export type TypeDocument = 'plan' | 'manuel' | 'prestataire';
 
 export const ROLES_DOCUMENTATION = ['direction', 'chef_maintenance', 'directeur_parc', 'manager_parc', 'technicien', 'admin_it'];
 const ROLES_EDITION = ['direction', 'chef_maintenance', 'directeur_parc', 'admin_it'];
 
+
 const BUCKET: AlbaBucket = 'alba-techniques';
 const PLAN_GENERAL = 'Plan général du parc';
 const TAILLE_MAX = 500 * 1024 * 1024;
+
+/** Domaines courants des prestataires extérieurs (saisie libre possible) */
+const DOMAINES_PRESTATAIRES = [
+  'Extincteurs',
+  'Électricité',
+  'Alarme incendie / SSI',
+  'Désenfumage',
+  'Portes coupe-feu',
+  'Éclairage de sécurité',
+  'Ascenseur / monte-charge',
+  'Chauffage / climatisation (CVC)',
+  'Gaz',
+  'Plomberie',
+  'Trampolines / structures',
+  'Aires de jeux',
+  'Dératisation / désinsectisation',
+  'Nettoyage',
+  'Bureau de contrôle',
+];
 
 interface DocumentTechnique {
   id: string;
@@ -34,6 +55,10 @@ interface DocumentTechnique {
   taille: number | null;
   /** Nombre de parties si le fichier a été découpé (gros fichiers) */
   parties: number | null;
+  /** Rapports prestataires : société, date d'intervention, prochaine visite */
+  prestataire?: string | null;
+  date_document?: string | null;
+  prochaine_echeance?: string | null;
   cree_le: string;
   parc: { code: string; nom: string } | null;
 }
@@ -51,7 +76,15 @@ const TEXTES: Record<TypeDocument, { titre: string; sousTitre: string; vide: str
     vide: 'Aucun manuel pour l’instant.',
     ajouter: '+ Ajouter un manuel',
   },
+  prestataire: {
+    titre: 'Rapports prestataires',
+    sousTitre: 'Comptes rendus des prestataires extérieurs (extincteurs, électricité…), rangés par domaine',
+    vide: 'Aucun rapport de prestataire pour l’instant.',
+    ajouter: '+ Ajouter un rapport',
+  },
 };
+
+const COLONNES = 'id, type, parc_id, activite, titre, description, chemin, mime, taille, parties, cree_le, parc:parcs(code, nom)';
 
 const champ =
   'w-full bg-bg-deep border border-white/[0.08] rounded-[10px] p-3 text-text text-[13px] outline-none focus:border-nikito-cyan min-h-[44px]';
@@ -62,10 +95,10 @@ function useDocuments(type: TypeDocument) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('documents_techniques')
-        .select('id, type, parc_id, activite, titre, description, chemin, mime, taille, parties, cree_le, parc:parcs(code, nom)')
+        .select(type === 'prestataire' ? `${COLONNES}, prestataire, date_document, prochaine_echeance` : COLONNES)
         .eq('type', type)
         .eq('actif', true)
-        .order('titre');
+        .order(type === 'prestataire' ? 'date_document' : 'titre', { ascending: type !== 'prestataire' });
       if (error) throw error;
       return (data ?? []) as unknown as DocumentTechnique[];
     },
@@ -75,13 +108,14 @@ function useDocuments(type: TypeDocument) {
 /** Plans (par parc) ou manuels (par activité) : consultation et ajout de documents PDF / images. */
 export function PageDocumentsTechniques({ type }: { type: TypeDocument }) {
   const { utilisateur } = useAuth();
-  if (utilisateur && !ROLES_DOCUMENTATION.includes(utilisateur.role_code)) return <Navigate to="/" replace />;
+  const roles = type === 'prestataire' ? ROLES_PRESTATAIRES : ROLES_DOCUMENTATION;
+  if (utilisateur && !roles.includes(utilisateur.role_code)) return <Navigate to="/" replace />;
   return <ContenuDocuments key={type} type={type} />;
 }
 
 function ContenuDocuments({ type }: { type: TypeDocument }) {
   const { utilisateur } = useAuth();
-  const peutEditer = ROLES_EDITION.includes(utilisateur?.role_code ?? '');
+  const peutEditer = (type === 'prestataire' ? ROLES_PRESTATAIRES : ROLES_EDITION).includes(utilisateur?.role_code ?? '');
   const t = TEXTES[type];
   const { data: documents, isLoading, isError, error } = useDocuments(type);
   const [filtre, setFiltre] = useState<string | null>(null);
@@ -105,7 +139,7 @@ function ContenuDocuments({ type }: { type: TypeDocument }) {
     const m = new Map<string, DocumentTechnique[]>();
     (documents ?? [])
       .filter((d) => !filtreActif || groupeDe(d) === filtreActif)
-      .filter((d) => !q || [d.titre, d.description, d.activite, d.parc?.nom].filter(Boolean).join(' ').toLowerCase().includes(q))
+      .filter((d) => !q || [d.titre, d.description, d.activite, d.parc?.nom, d.prestataire].filter(Boolean).join(' ').toLowerCase().includes(q))
       .forEach((d) => m.set(groupeDe(d), [...(m.get(groupeDe(d)) ?? []), d]));
     return [...m.entries()].sort((a, b) => a[0].localeCompare(b[0], 'fr'));
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -272,10 +306,22 @@ function CarteDocument({ doc, url, peutEditer, type }: { doc: DocumentTechnique;
       <div className="p-3.5 flex-1 flex flex-col">
         <div className="text-[14px] font-semibold leading-tight">{doc.titre}</div>
         <div className="text-[11px] text-dim mt-0.5">
-          {[type === 'plan' ? doc.activite : doc.parc?.code, new Date(doc.cree_le).toLocaleDateString('fr-FR'), doc.taille ? `${(doc.taille / 1024 / 1024).toFixed(1)} Mo` : null]
+          {(type === 'prestataire'
+            ? [
+                doc.prestataire,
+                doc.parc?.code,
+                doc.date_document ? `le ${new Date(doc.date_document).toLocaleDateString('fr-FR')}` : null,
+              ]
+            : [
+                type === 'plan' ? doc.activite : doc.parc?.code,
+                new Date(doc.cree_le).toLocaleDateString('fr-FR'),
+                doc.taille ? `${(doc.taille / 1024 / 1024).toFixed(1)} Mo` : null,
+              ]
+          )
             .filter(Boolean)
             .join(' · ')}
         </div>
+        {type === 'prestataire' && doc.prochaine_echeance && <BadgeEcheance date={doc.prochaine_echeance} />}
         {doc.description && <div className="text-[12px] text-faint mt-1 line-clamp-2">{doc.description}</div>}
         <div className="mt-auto pt-3 flex items-center justify-between gap-2">
           <a
@@ -323,21 +369,28 @@ function FormulaireAjout({ type, onFini }: { type: TypeDocument; onFini: () => v
   const { data: parcs } = useParcs();
   const { data: catalogue } = useCatalogueCommandes();
   const [titre, setTitre] = useState('');
-  const [parcId, setParcId] = useState('');
+  const [parcId, setParcId] = useState(type === 'prestataire' && utilisateur?.parc_ids?.length === 1 ? utilisateur.parc_ids[0] : '');
   const [activite, setActivite] = useState(type === 'plan' ? PLAN_GENERAL : '');
+  const [prestataire, setPrestataire] = useState('');
+  const [dateDocument, setDateDocument] = useState(() => new Date().toISOString().slice(0, 10));
+  const [echeance, setEcheance] = useState('');
   const [description, setDescription] = useState('');
   const [fichier, setFichier] = useState<File | null>(null);
   const [progression, setProgression] = useState<number | null>(null);
 
   const suggestions = useMemo(() => {
     const noms = (catalogue?.activites ?? []).map((a) => a.nom);
+    if (type === 'prestataire') return DOMAINES_PRESTATAIRES;
     return type === 'plan' ? [PLAN_GENERAL, ...noms] : noms;
   }, [catalogue, type]);
 
   const envoyer = useMutation({
     mutationFn: async () => {
       if (!fichier) throw new Error('Choisis un fichier (PDF ou image)');
-      if (!titre.trim()) throw new Error('Donne un titre au document');
+      if (type === 'prestataire' && !activite.trim()) throw new Error('Indique le domaine (ex. Extincteurs)');
+      if (type === 'prestataire' && !prestataire.trim()) throw new Error('Indique le nom du prestataire');
+      const titreFinal = titre.trim() || (type === 'prestataire' ? `${activite.trim()} — ${prestataire.trim()}` : '');
+      if (!titreFinal) throw new Error('Donne un titre au document');
       if (type === 'manuel' && !activite.trim()) throw new Error('Indique l’activité du manuel');
       if (fichier.size > TAILLE_MAX) throw new Error('Fichier trop lourd (500 Mo maximum)');
       const parc = (parcs as Array<{ id: string; code: string }> | undefined)?.find((p) => p.id === parcId);
@@ -345,22 +398,29 @@ function FormulaireAjout({ type, onFini }: { type: TypeDocument; onFini: () => v
       const chemin = `${type}/${parc?.code ?? 'commun'}/${Date.now()}_${nomPropre}`;
       setProgression(0);
       const parties = await envoyerDocument(BUCKET, chemin, fichier, setProgression);
-      const { error } = await supabase.from('documents_techniques').insert({
+      const { data: cree, error } = await supabase.from('documents_techniques').insert({
         type,
         parc_id: parcId || null,
         activite: activite.trim() || null,
-        titre: titre.trim(),
+        titre: titreFinal,
         description: description.trim() || null,
+        ...(type === 'prestataire'
+          ? { prestataire: prestataire.trim(), date_document: dateDocument || null, prochaine_echeance: echeance || null }
+          : {}),
         chemin,
         mime: fichier.type || null,
         taille: fichier.size,
         parties,
         cree_par_id: utilisateur?.id ?? null,
-      });
+      }).select('id').single();
       if (error) throw error;
+      // Rapport prestataire : analyse automatique (points conformes / non conformes, renouvellement)
+      if (type === 'prestataire' && cree?.id) {
+        void supabase.functions.invoke('analyser-rapport-prestataire', { body: { document_id: cree.id } });
+      }
     },
     onSuccess: () => {
-      toast.success('Document ajouté');
+      toast.success(type === 'prestataire' ? 'Rapport ajouté — analyse en cours (onglet « Analyses prestataires »)' : 'Document ajouté');
       qc.invalidateQueries({ queryKey: ['documents-techniques', type] });
       onFini();
     },
@@ -370,11 +430,27 @@ function FormulaireAjout({ type, onFini }: { type: TypeDocument; onFini: () => v
 
   return (
     <div className="bg-bg-card rounded-xl border border-nikito-cyan/30 p-4 mb-4 grid gap-2.5 max-w-[640px]">
-      <div className="text-[14px] font-semibold">{type === 'plan' ? 'Nouveau plan' : 'Nouveau manuel'}</div>
-      <input value={titre} onChange={(e) => setTitre(e.target.value)} placeholder="Titre (ex. Plan trampoline zone A)" className={champ} />
+      <div className="text-[14px] font-semibold">
+        {type === 'plan' ? 'Nouveau plan' : type === 'manuel' ? 'Nouveau manuel' : 'Nouveau rapport de prestataire'}
+      </div>
+      {type === 'prestataire' && (
+        <div className="grid sm:grid-cols-2 gap-2.5">
+          <input value={prestataire} onChange={(e) => setPrestataire(e.target.value)} placeholder="Prestataire (ex. Sicli)" className={champ} />
+          <label className="grid gap-1">
+            <span className="text-[11px] text-dim">Date d’intervention</span>
+            <input type="date" value={dateDocument} onChange={(e) => setDateDocument(e.target.value)} className={champ} />
+          </label>
+        </div>
+      )}
+      <input
+        value={titre}
+        onChange={(e) => setTitre(e.target.value)}
+        placeholder={type === 'prestataire' ? 'Titre (facultatif, ex. Vérification annuelle)' : 'Titre (ex. Plan trampoline zone A)'}
+        className={champ}
+      />
       <div className="grid sm:grid-cols-2 gap-2.5">
         <select value={parcId} onChange={(e) => setParcId(e.target.value)} className={champ}>
-          <option value="">{type === 'plan' ? 'Tous les parcs' : 'Tous les parcs (manuel commun)'}</option>
+          <option value="">{type === 'manuel' ? 'Tous les parcs (manuel commun)' : 'Tous les parcs'}</option>
           {((parcs ?? []) as Array<{ id: string; code: string; nom: string }>).map((p) => (
             <option key={p.id} value={p.id}>
               {p.code} · {p.nom}
@@ -385,7 +461,9 @@ function FormulaireAjout({ type, onFini }: { type: TypeDocument; onFini: () => v
           value={activite}
           onChange={(e) => setActivite(e.target.value)}
           list={`activites-${type}`}
-          placeholder={type === 'plan' ? 'Type de plan (ex. Trampoline)' : 'Activité (ex. Bowling)'}
+          placeholder={
+            type === 'plan' ? 'Type de plan (ex. Trampoline)' : type === 'prestataire' ? 'Domaine (ex. Extincteurs)' : 'Activité (ex. Bowling)'
+          }
           className={champ}
         />
         <datalist id={`activites-${type}`}>
@@ -394,6 +472,12 @@ function FormulaireAjout({ type, onFini }: { type: TypeDocument; onFini: () => v
           ))}
         </datalist>
       </div>
+      {type === 'prestataire' && (
+        <label className="grid gap-1 max-w-[280px]">
+          <span className="text-[11px] text-dim">Prochaine visite (facultatif)</span>
+          <input type="date" value={echeance} onChange={(e) => setEcheance(e.target.value)} className={champ} />
+        </label>
+      )}
       <textarea
         value={description}
         onChange={(e) => setDescription(e.target.value)}
@@ -440,4 +524,24 @@ export function PagePlans() {
 
 export function PageManuels() {
   return <PageDocumentsTechniques type="manuel" />;
+}
+
+export function PageRapportsPrestataires() {
+  return <PageDocumentsTechniques type="prestataire" />;
+}
+
+/** Prochaine visite du prestataire : rouge si dépassée, orange sous 30 jours. */
+function BadgeEcheance({ date }: { date: string }) {
+  const jours = Math.ceil((new Date(date).getTime() - Date.now()) / 86_400_000);
+  const libelle = new Date(date).toLocaleDateString('fr-FR');
+  return (
+    <div
+      className={cn(
+        'mt-1.5 self-start text-[11px] px-2 py-0.5 rounded',
+        jours < 0 ? 'bg-red/15 text-red' : jours <= 30 ? 'bg-amber/15 text-amber' : 'bg-green/15 text-green'
+      )}
+    >
+      {jours < 0 ? `Visite dépassée (${libelle})` : `Prochaine visite : ${libelle}`}
+    </div>
+  );
 }

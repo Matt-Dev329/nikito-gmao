@@ -9,13 +9,15 @@ interface MenuDrawerProps {
   onClose: () => void;
 }
 
-const menuItems = [
+const menuItems: { to: string; label: string; icon: string; roles?: string[] }[] = [
   { to: '/gmao', label: 'Tableau de bord', icon: '📊' },
   { to: '/tech/controles', label: 'Contrôles', icon: '✅' },
   { to: '/tech/rapports', label: 'Rapports de réparation', icon: '📋' },
   { to: '/tech/bons', label: "Bons d'intervention", icon: '🧾' },
   { to: '/tech/plans', label: 'Plans', icon: '🗺️' },
   { to: '/tech/manuels', label: 'Manuels', icon: '📘' },
+  { to: '/tech/prestataires', label: 'Rapports prestataires', icon: '🧯', roles: ['chef_maintenance', 'directeur_parc'] },
+  { to: '/tech/analyses-prestataires', label: 'Analyses prestataires', icon: '🔎', roles: ['chef_maintenance', 'directeur_parc'] },
   { to: '/gmao/commander', label: 'Commander', icon: '🛒' },
   { to: '/gmao/profil', label: 'Mon profil', icon: '👤' },
 ];
@@ -77,7 +79,7 @@ export function MenuDrawer({ open, onClose }: MenuDrawerProps) {
         </div>
 
         <nav className="flex-1 p-3 flex flex-col gap-1">
-          {menuItems.map((item) => (
+          {menuItems.filter((item) => !item.roles || item.roles.includes(utilisateur?.role_code ?? '')).map((item) => (
             <button
               key={item.to}
               onClick={() => handleNav(item.to)}
