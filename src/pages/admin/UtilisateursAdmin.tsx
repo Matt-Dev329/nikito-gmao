@@ -324,6 +324,8 @@ function filtrerUtilisateurs(users: UtilisateurRow[], q: string): UtilisateurRow
   );
 }
 
+const ORDRE_ROLES: RoleUtilisateur[] = ['direction', 'chef_maintenance', 'directeur_parc', 'manager_parc', 'technicien', 'staff_operationnel', 'admin_it'];
+
 function ListeActifs({ recherche }: { recherche: string }) {
   const { utilisateur } = useAuth();
   const effectiveRole = useEffectiveRole(utilisateur?.role_code ?? 'staff_operationnel');
@@ -337,8 +339,37 @@ function ListeActifs({ recherche }: { recherche: string }) {
   const canEdit = isDirection || effectiveRole === 'chef_maintenance' || effectiveRole === 'directeur_parc';
   const canViewAs = canEdit;
   const [editUser, setEditUser] = useState<UtilisateurRow | null>(null);
+  const [parcFiltre, setParcFiltre] = useState<string | null>(null);
 
   const filtres = useMemo(() => filtrerUtilisateurs(data ?? [], recherche), [data, recherche]);
+
+  // Rangement par parc puis par rôle ; les personnes rattachées à plusieurs
+  // parcs (ou à aucun, ex. direction) sont regroupées à part
+  const groupes = useMemo(() => {
+    const cleParc = (u: UtilisateurRow) =>
+      u.parcs.length === 0 ? 'Tous les parcs' : u.parcs.length > 1 ? 'Plusieurs parcs' : u.parcs[0].code;
+    const ordreParc = (c: string) => (c === 'Tous les parcs' ? '0' : c === 'Plusieurs parcs' ? '1' : `2${c}`);
+    const m = new Map<string, Map<string, UtilisateurRow[]>>();
+    filtres
+      .filter((u) => !parcFiltre || cleParc(u) === parcFiltre || u.parcs.some((p) => p.code === parcFiltre))
+      .forEach((u) => {
+        const parc = parcFiltre && u.parcs.some((p) => p.code === parcFiltre) ? parcFiltre : cleParc(u);
+        if (!m.has(parc)) m.set(parc, new Map());
+        const parRole = m.get(parc)!;
+        parRole.set(u.role_code, [...(parRole.get(u.role_code) ?? []), u]);
+      });
+    return [...m.entries()]
+      .sort((a, b) => ordreParc(a[0]).localeCompare(ordreParc(b[0])))
+      .map(([parc, parRole]) => ({
+        parc,
+        total: [...parRole.values()].reduce((n, l) => n + l.length, 0),
+        roles: [...parRole.entries()].sort((a, b) => ORDRE_ROLES.indexOf(a[0] as RoleUtilisateur) - ORDRE_ROLES.indexOf(b[0] as RoleUtilisateur)),
+      }));
+  }, [filtres, parcFiltre]);
+  const codesParcs = useMemo(
+    () => [...new Set((data ?? []).flatMap((u) => u.parcs.map((p) => p.code)))].sort(),
+    [data]
+  );
 
   if (isLoading) return <div className="text-dim text-sm text-center py-8">Chargement...</div>;
   if (!data || data.length === 0) return <EmptyState text="Aucun utilisateur actif." />;
@@ -373,16 +404,50 @@ function ListeActifs({ recherche }: { recherche: string }) {
 
   return (
     <>
+      {codesParcs.length > 1 && (
+        <div className="flex gap-1.5 overflow-x-auto px-4 py-3 border-b border-white/[0.06]">
+          <button
+            onClick={() => setParcFiltre(null)}
+            className={cn('px-3 rounded-full text-[12px] min-h-[32px] border', !parcFiltre ? 'bg-nikito-cyan/15 border-nikito-cyan/50 text-nikito-cyan' : 'border-white/[0.08] text-dim')}
+          >
+            Tous
+          </button>
+          {codesParcs.map((c) => (
+            <button
+              key={c}
+              onClick={() => setParcFiltre(c)}
+              className={cn('px-3 rounded-full text-[12px] min-h-[32px] border', parcFiltre === c ? 'bg-nikito-cyan/15 border-nikito-cyan/50 text-nikito-cyan' : 'border-white/[0.08] text-dim')}
+            >
+              {c}
+            </button>
+          ))}
+        </div>
+      )}
       <div>
-        {filtres.map((u) => (
-          <UserRow
-            key={u.id}
-            user={u}
-            onViewAs={canViewAs && u.id !== utilisateur?.id ? () => handleViewAs(u) : undefined}
-            onEditer={canEdit && u.id !== utilisateur?.id ? () => setEditUser(u) : undefined}
-            onSupprimer={peutSupprimer(u) ? () => supprimer(u.id, `${u.prenom} ${u.nom}`) : undefined}
-            supprimant={supprimerMutation.isPending}
-          />
+        {groupes.map((g) => (
+          <section key={g.parc}>
+            <div className="px-4 pt-4 pb-1.5 text-[12px] font-semibold text-nikito-cyan uppercase tracking-wider">
+              {g.parc === 'Tous les parcs' || g.parc === 'Plusieurs parcs' ? g.parc : (parcs ?? []).find((p) => p.code === g.parc)?.nom ?? g.parc}{' '}
+              <span className="text-faint font-normal">· {g.total}</span>
+            </div>
+            {g.roles.map(([role, liste]) => (
+              <div key={role}>
+                <div className="px-4 pt-2 pb-1 text-[11px] text-dim uppercase tracking-wider">
+                  {roleLabels[role as RoleUtilisateur] ?? role} <span className="text-faint">· {liste.length}</span>
+                </div>
+                {liste.map((u) => (
+                  <UserRow
+                    key={u.id}
+                    user={u}
+                    onViewAs={canViewAs && u.id !== utilisateur?.id ? () => handleViewAs(u) : undefined}
+                    onEditer={canEdit && u.id !== utilisateur?.id ? () => setEditUser(u) : undefined}
+                    onSupprimer={peutSupprimer(u) ? () => supprimer(u.id, `${u.prenom} ${u.nom}`) : undefined}
+                    supprimant={supprimerMutation.isPending}
+                  />
+                ))}
+              </div>
+            ))}
+          </section>
         ))}
       </div>
       {editUser && (
