@@ -3,6 +3,7 @@ import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useAccesCommandes } from '@/hooks/queries/useCommandes';
 import { peutEntrerStock, peutVoirStock } from '@/lib/acces';
+import { ModaleImportFacture } from './ModaleImportFacture';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useFournisseurs } from '@/hooks/queries/useReferentiel';
@@ -97,6 +98,7 @@ function ContenuStock() {
   const modStock = useModifierStock();
 
   const [recherche, setRecherche] = useState('');
+  const [importFacture, setImportFacture] = useState(false);
   const [fournisseurFilter, setFournisseurFilter] = useState('');
   const [filtreCrit, setFiltreCrit] = useState<FiltreCritique>('tous');
   const [modaleCreer, setModaleCreer] = useState(false);
@@ -147,7 +149,15 @@ function ContenuStock() {
             <span className="text-red font-medium">{kpis.critique} en rupture</span>
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          {peutEntrer && (
+            <button
+              onClick={() => setImportFacture(true)}
+              className="bg-bg-deep border border-nikito-cyan/40 text-nikito-cyan px-4 py-2.5 rounded-[10px] text-[13px] font-semibold min-h-[44px] w-full sm:w-auto"
+            >
+              📄 Importer une facture
+            </button>
+          )}
           {peutEntrer && (
             <button
               onClick={() => setModaleCreer(true)}
@@ -281,6 +291,8 @@ function ContenuStock() {
           </table>
         </div>
       )}
+
+      {importFacture && <ModaleImportFacture onClose={() => setImportFacture(false)} />}
 
       {mouvementPiece && (
         <div className="fixed inset-0 z-50 bg-black/60 flex items-end md:items-center justify-center md:p-4">
