@@ -21,6 +21,8 @@ const Recurrences = page(() => import('@/pages/ryad/Recurrences'), 'Recurrences'
 const Operations = page(() => import('@/pages/technicien/Operations'), 'Operations');
 const PagePlans = page(() => import('@/pages/documentation/PageDocumentsTechniques'), 'PagePlans');
 const PageManuels = page(() => import('@/pages/documentation/PageDocumentsTechniques'), 'PageManuels');
+const PageBonsIntervention = page(() => import('@/pages/interventions/PageBonsIntervention'), 'PageBonsIntervention');
+const PageControles = page(() => import('@/pages/controles/PageControles'), 'PageControles');
 const PageRapportsReparation = page(() => import('@/pages/interventions/PageRapportsReparation'), 'PageRapportsReparation');
 const Intervention = page(() => import('@/pages/technicien/Intervention'), 'Intervention');
 const ControleHebdo = page(() => import('@/pages/technicien/ControleHebdo'), 'ControleHebdo');
@@ -125,6 +127,8 @@ export function App() {
           <Route path="operations" element={<Operations />} />
           <Route path="operations/:btNumero" element={<Intervention />} />
           <Route path="rapports" element={<PageRapportsReparation />} />
+          <Route path="bons" element={<PageBonsIntervention />} />
+          <Route path="controles" element={<PageControles />} />
           <Route path="plans" element={<PagePlans />} />
           <Route path="manuels" element={<PageManuels />} />
           <Route path="equipements" element={<PageEquipements />} />
@@ -175,6 +179,8 @@ export function App() {
           <Route path="operations" element={<Operations />} />
           <Route path="operations/:btNumero" element={<Intervention />} />
           <Route path="rapports" element={<PageRapportsReparation />} />
+          <Route path="bons" element={<PageBonsIntervention />} />
+          <Route path="controles" element={<PageControles />} />
           <Route path="plans" element={<PagePlans />} />
           <Route path="manuels" element={<PageManuels />} />
           <Route path="controle-hebdo" element={<ControleHebdo />} />

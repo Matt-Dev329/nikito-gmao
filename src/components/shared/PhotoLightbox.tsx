@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { BoutonTelecharger } from '@/components/ui/BoutonTelecharger';
 
 interface PhotoLightboxProps {
   photos: string[];
@@ -56,6 +57,10 @@ export function PhotoLightbox({ photos, initialIndex = 0, onClose }: PhotoLightb
       >
         &#10005;
       </button>
+
+      <div className="absolute top-4 left-4 z-10" onClick={(e) => e.stopPropagation()}>
+        <BoutonTelecharger url={photos[idx]} className="bg-white/10 border-white/20 text-white backdrop-blur-sm" />
+      </div>
 
       {multi && (
         <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-white/10 backdrop-blur-sm text-white text-[13px] px-3 py-1 rounded-full z-10">

@@ -11,6 +11,7 @@ import { useToast } from '@/components/ui/ToastProvider';
 import { Pill } from '@/components/ui/Pill';
 import type { AlbaBucket } from '@/lib/uploadPhotoControle';
 import { envoyerDocument, recollerDocument } from '@/lib/envoiGrosFichier';
+import { enregistrerBlob, nomDepuisChemin, telechargerUrl } from '@/lib/telecharger';
 
 export type TypeDocument = 'plan' | 'manuel';
 
@@ -227,6 +228,25 @@ function CarteDocument({ doc, url, peutEditer, type }: { doc: DocumentTechnique;
   };
   const lienOuvrir = doc.parties ? '#' : url;
 
+  const [telechargement, setTelechargement] = useState(false);
+  const telecharger = async () => {
+    // Nom lisible : titre du document + extension d'origine
+    const extension = (doc.chemin.match(/\.[a-z0-9]+$/i)?.[0] ?? '').toLowerCase();
+    const nom = `${doc.titre.normalize('NFD').replace(/[^\w.-]+/g, '_')}${extension}` || nomDepuisChemin(doc.chemin);
+    setTelechargement(true);
+    try {
+      if (doc.parties) {
+        enregistrerBlob(await recollerDocument(BUCKET, doc.chemin, doc.parties, doc.mime), nom);
+      } else if (url) {
+        await telechargerUrl(url, nom);
+      }
+    } catch (err) {
+      toast.error((err as Error).message);
+    } finally {
+      setTelechargement(false);
+    }
+  };
+
   const retirer = async () => {
     const { error } = await supabase.from('documents_techniques').update({ actif: false }).eq('id', doc.id);
     if (error) {
@@ -270,6 +290,16 @@ function CarteDocument({ doc, url, peutEditer, type }: { doc: DocumentTechnique;
           >
             {chargement !== null ? `Chargement ${chargement} %` : 'Ouvrir'}
           </a>
+          <button
+            onClick={telecharger}
+            disabled={telechargement || (!doc.parties && !url)}
+            className={cn(
+              'bg-bg-deep border border-white/[0.08] text-nikito-cyan px-3 py-1.5 rounded-lg text-[12px] font-semibold min-h-[36px]',
+              (telechargement || (!doc.parties && !url)) && 'opacity-40'
+            )}
+          >
+            {telechargement ? '…' : '⬇ Télécharger'}
+          </button>
           {peutEditer &&
             (confirmer ? (
               <button onClick={retirer} className="text-red text-[12px] font-semibold min-h-[36px]">

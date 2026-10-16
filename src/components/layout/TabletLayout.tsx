@@ -10,7 +10,7 @@ import { useAccesCommandes } from '@/hooks/queries/useCommandes';
 
 const navTabs = [
   { to: '/tech/operations', label: 'Operations', icon: '\u2699' },
-  { to: '/tech/controle-hebdo', label: 'Controles', icon: '\u2713' },
+  { to: '/tech/controles', label: 'Contrôles', icon: '\u2713' },
   { to: '/tech/stock', label: 'Stock', icon: '\u{1F4E6}' },
 ];
 

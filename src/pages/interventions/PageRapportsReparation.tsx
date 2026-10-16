@@ -9,6 +9,8 @@ import { useFormationFilter } from '@/hooks/useFormation';
 import { useSignedUrls } from '@/hooks/useSignedUrl';
 import { useToast } from '@/components/ui/ToastProvider';
 import { Pill } from '@/components/ui/Pill';
+import { BoutonTelecharger } from '@/components/ui/BoutonTelecharger';
+import { nomDepuisChemin } from '@/lib/telecharger';
 
 export const ROLES_RAPPORTS = ['direction', 'chef_maintenance', 'directeur_parc', 'manager_parc', 'technicien', 'admin_it'];
 
@@ -271,8 +273,14 @@ function CarteRapport({ rapport: r }: { rapport: Rapport }) {
           {(r.photos_avant.length > 0 || r.photos_apres.length > 0) && (
             <div className="grid grid-cols-2 gap-2">
               {[...r.photos_avant.map((p) => ['AVANT', p]), ...r.photos_apres.map((p) => ['APRÈS', p])].map(([lib, p]) => (
-                <a key={p} href={urls?.[p]} target="_blank" rel="noreferrer" className="block">
+                <a key={p} href={urls?.[p]} target="_blank" rel="noreferrer" className="block relative">
                   <div className="text-[10px] text-dim mb-1">{lib}</div>
+                  <BoutonTelecharger
+                    url={urls?.[p]}
+                    nom={nomDepuisChemin(p, `${r.numero_bt}_${lib === 'AVANT' ? 'avant' : 'apres'}`)}
+                    compact
+                    className="absolute top-6 right-1.5"
+                  />
                   {urls?.[p] ? (
                     <img src={urls[p]} alt={`Photo ${lib}`} loading="lazy" className="w-full aspect-[4/3] object-cover rounded-lg bg-bg-deep" />
                   ) : (

@@ -5,6 +5,8 @@ import { useSignedUrls } from '@/hooks/useSignedUrl';
 import { useToast } from '@/components/ui/ToastProvider';
 import { PhotoCapture } from '@/components/shared/PhotoCapture';
 import { estCheminVideo } from '@/lib/utils';
+import { BoutonTelecharger } from '@/components/ui/BoutonTelecharger';
+import { nomDepuisChemin } from '@/lib/telecharger';
 
 /**
  * Photos du problème (prises au signalement, stockées dans alba-incidents)
@@ -26,7 +28,7 @@ export function PhotosTicket({
   const toast = useToast();
   const qc = useQueryClient();
   const { data: urls } = useSignedUrls(chemins, 'alba-incidents');
-  const [zoom, setZoom] = useState<string | null>(null);
+  const [zoom, setZoom] = useState<{ url: string; chemin: string } | null>(null);
   const [ajout, setAjout] = useState(false);
 
   const enregistrer = async (chemin: string) => {
@@ -60,12 +62,17 @@ export function PhotosTicket({
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
           {chemins.map((c) => {
             const url = urls?.[c];
-            return url && estCheminVideo(c) ? (
-              <video key={c} src={url} controls playsInline preload="metadata" className="w-full rounded-lg bg-black aspect-[4/3]" />
-            ) : url ? (
-              <button key={c} onClick={() => setZoom(url)} className="block rounded-lg overflow-hidden bg-bg-deep aspect-[4/3]">
-                <img src={url} alt="Photo du problème" loading="lazy" className="w-full h-full object-cover" />
-              </button>
+            return url ? (
+              <div key={c} className="relative">
+                {estCheminVideo(c) ? (
+                  <video src={url} controls playsInline preload="metadata" className="w-full rounded-lg bg-black aspect-[4/3]" />
+                ) : (
+                  <button onClick={() => setZoom({ url, chemin: c })} className="block w-full rounded-lg overflow-hidden bg-bg-deep aspect-[4/3]">
+                    <img src={url} alt="Photo du problème" loading="lazy" className="w-full h-full object-cover" />
+                  </button>
+                )}
+                <BoutonTelecharger url={url} nom={nomDepuisChemin(c, dossier.replace(/\//g, '_'))} compact className="absolute top-1.5 right-1.5" />
+              </div>
             ) : (
               <div key={c} className="rounded-lg bg-bg-deep aspect-[4/3] animate-pulse" />
             );
@@ -87,7 +94,10 @@ export function PhotosTicket({
           className="fixed inset-0 z-[120] bg-black/90 flex items-center justify-center p-4 cursor-zoom-out"
           onClick={() => setZoom(null)}
         >
-          <img src={zoom} alt="Photo du problème en grand" className="max-w-full max-h-full object-contain" />
+          <img src={zoom.url} alt="Photo du problème en grand" className="max-w-full max-h-full object-contain" />
+          <div className="absolute top-4 left-4" onClick={(e) => e.stopPropagation()}>
+            <BoutonTelecharger url={zoom.url} nom={nomDepuisChemin(zoom.chemin, dossier.replace(/\//g, '_'))} />
+          </div>
         </div>
       )}
     </div>

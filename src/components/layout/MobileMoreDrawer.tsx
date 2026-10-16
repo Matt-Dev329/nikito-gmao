@@ -25,7 +25,9 @@ interface DrawerItem {
 
 const pilotageItems: DrawerItem[] = [
   { to: '/gmao/mon-parc', label: 'Mon parc', iconLabel: 'Mon parc', roles: ['manager_parc'] },
+  { to: '/gmao/controles', label: 'Contrôles', iconLabel: 'Contrôles', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'technicien', 'manager_parc', 'admin_it'] },
   { to: '/gmao/rapports', label: 'Rapports de réparation', iconLabel: 'Rapports de réparation', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'technicien', 'manager_parc', 'admin_it'] },
+  { to: '/gmao/bons', label: "Bons d'intervention", iconLabel: "Bons d'intervention", roles: ['direction', 'chef_maintenance', 'directeur_parc', 'technicien', 'manager_parc', 'admin_it'] },
   { to: '/gmao/plans', label: 'Plans', iconLabel: 'Plans', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'technicien', 'manager_parc', 'admin_it'] },
   { to: '/gmao/manuels', label: 'Manuels', iconLabel: 'Manuels', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'technicien', 'manager_parc', 'admin_it'] },
   { to: '/gmao/equipements', label: 'Equipements', iconLabel: 'Équipements', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'technicien', 'manager_parc', 'admin_it'] },
@@ -39,7 +41,7 @@ const pilotageItems: DrawerItem[] = [
   { to: '/gmao/certifications', label: 'Certifications', iconLabel: 'Certifications', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'admin_it'] },
   { to: '/gmao/plaintes', label: 'Plaintes clients', iconLabel: 'Plaintes clients', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'manager_parc', 'admin_it'] },
   { to: '/gmao/conformite', label: 'Conformite', iconLabel: 'Conformité', roles: ['direction', 'admin_it', 'chef_maintenance', 'directeur_parc', 'manager_parc'] },
-  { to: '/gmao/controles-historique', label: 'Historique controles', iconLabel: 'Contrôles', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'admin_it'] },
+  { to: '/gmao/controles-historique', label: 'Historique contrôles', iconLabel: 'Contrôles', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'technicien', 'manager_parc', 'admin_it'] },
 ];
 
 const configItems: DrawerItem[] = [

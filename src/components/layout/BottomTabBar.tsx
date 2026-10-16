@@ -36,10 +36,10 @@ function getTabsForRole(roleCode: RoleUtilisateur, isTablet: boolean): TabDef[] 
       },
       {
         id: 'controles',
-        label: 'Controles',
-        matchPaths: ['/staff/controle-ouverture', '/gmao/controles-historique', '/tech/controle-hebdo', '/tech/controle-mensuel'],
+        label: 'Contrôles',
+        matchPaths: ['/staff/controle-ouverture', '/gmao/controles', '/gmao/controles-historique', '/tech/controle-hebdo', '/tech/controle-mensuel'],
         action: 'navigate',
-        route: roleCode === 'staff_operationnel' ? '/staff/controle-ouverture' : '/gmao/controles-historique',
+        route: roleCode === 'staff_operationnel' ? '/staff/controle-ouverture' : '/gmao/controles',
       },
       {
         id: 'signaler',
@@ -80,6 +80,14 @@ function getTabsForRole(roleCode: RoleUtilisateur, isTablet: boolean): TabDef[] 
     },
   ];
 
+  const ongletControles: TabDef = {
+    id: 'controles',
+    label: 'Contrôles',
+    matchPaths: ['/gmao/controles', '/gmao/controles-historique', '/staff/controle-ouverture', '/tech/controle-hebdo', '/tech/controle-mensuel'],
+    action: 'navigate',
+    route: '/gmao/controles',
+  };
+
   if (showSignaler) {
     tabs.push({
       id: 'signaler',
@@ -87,14 +95,10 @@ function getTabsForRole(roleCode: RoleUtilisateur, isTablet: boolean): TabDef[] 
       matchPaths: [],
       action: 'signaler',
     });
+    // Les techniciens font les contrôles hebdo / mensuels depuis leur téléphone
+    if (roleCode === 'technicien') tabs.push(ongletControles);
   } else {
-    tabs.push({
-      id: 'controles',
-      label: 'Controles',
-      matchPaths: ['/gmao/controles-historique', '/staff/controle-ouverture', '/tech/controle-hebdo', '/tech/controle-mensuel'],
-      action: 'navigate',
-      route: '/gmao/controles-historique',
-    });
+    tabs.push(ongletControles);
   }
 
   tabs.push(
