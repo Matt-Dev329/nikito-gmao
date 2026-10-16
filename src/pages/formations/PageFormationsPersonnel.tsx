@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
@@ -44,8 +44,12 @@ interface Formation {
   date_expiration: string | null;
   attestation: string | null;
   notes: string | null;
+  categorie: string | null;
   parc: { code: string; nom: string } | null;
 }
+
+type Vue = 'categorie' | 'personne' | 'formation';
+const A_CLASSER = 'À classer (rangement en cours)';
 
 type Etat = 'a_jour' | 'a_renouveler' | 'expiree' | 'sans_limite';
 
@@ -102,7 +106,9 @@ function ContenuFormations() {
   const [parc, setParc] = useState<string | null>(null);
   const [etat, setEtat] = useState<Etat | 'tous'>('tous');
   const [recherche, setRecherche] = useState('');
-  const [vue, setVue] = useState<'personne' | 'formation'>('personne');
+  const [vue, setVue] = useState<Vue>('categorie');
+  const [categorie, setCategorie] = useState<string | null>(null);
+  const qc = useQueryClient();
 
   // Seule la formation la plus récente compte pour une même personne et un même intitulé
   const actuelles = useMemo(() => {
@@ -115,6 +121,24 @@ function ContenuFormations() {
     });
   }, [formations]);
 
+  // Rangement automatique (IA) des formations encore sans catégorie
+  const tentees = useRef(new Set<string>());
+  useEffect(() => {
+    const nouvelles = (formations ?? []).filter((f) => !f.categorie && !tentees.current.has(f.id));
+    if (nouvelles.length === 0) return;
+    nouvelles.forEach((f) => tentees.current.add(f.id));
+    supabase.functions
+      .invoke('classer-formations', { body: {} })
+      .catch(() => undefined)
+      .finally(() => qc.invalidateQueries({ queryKey: ['formations-personnel'] }));
+  }, [formations, qc]);
+
+  const categories = useMemo(() => {
+    const m = new Map<string, number>();
+    actuelles.forEach((f) => m.set(f.categorie ?? A_CLASSER, (m.get(f.categorie ?? A_CLASSER) ?? 0) + 1));
+    return [...m.entries()].sort((a, b) => (a[0] === A_CLASSER ? 1 : b[0] === A_CLASSER ? -1 : a[0].localeCompare(b[0], 'fr')));
+  }, [actuelles]);
+
   const parcs = useMemo(() => {
     const m = new Map<string, number>();
     actuelles.forEach((f) => m.set(f.parc?.code ?? 'Sans parc', (m.get(f.parc?.code ?? 'Sans parc') ?? 0) + 1));
@@ -126,27 +150,30 @@ function ContenuFormations() {
     return actuelles.filter(
       (f) =>
         (!parc || (f.parc?.code ?? 'Sans parc') === parc) &&
+        (!categorie || (f.categorie ?? A_CLASSER) === categorie) &&
         (etat === 'tous' || etatDe(f, aujourdhui) === etat) &&
-        (!q || [f.personne, f.poste, f.intitule, f.organisme, f.parc?.code].filter(Boolean).join(' ').toLowerCase().includes(q))
+        (!q || [f.personne, f.poste, f.intitule, f.organisme, f.categorie, f.parc?.code].filter(Boolean).join(' ').toLowerCase().includes(q))
     );
-  }, [actuelles, parc, etat, recherche, aujourdhui]);
+  }, [actuelles, parc, categorie, etat, recherche, aujourdhui]);
 
   const groupes = useMemo(() => {
     const m = new Map<string, Formation[]>();
     filtrees.forEach((f) => {
-      const cle = vue === 'personne' ? `${f.personne}${f.parc ? ` · ${f.parc.code}` : ''}` : f.intitule;
+      const cle =
+        vue === 'categorie' ? f.categorie ?? A_CLASSER : vue === 'personne' ? `${f.personne}${f.parc ? ` · ${f.parc.code}` : ''}` : f.intitule;
       m.set(cle, [...(m.get(cle) ?? []), f]);
     });
-    return [...m.entries()].sort((a, b) => a[0].localeCompare(b[0], 'fr'));
+    return [...m.entries()].sort((a, b) => (a[0] === A_CLASSER ? 1 : b[0] === A_CLASSER ? -1 : a[0].localeCompare(b[0], 'fr')));
   }, [filtrees, vue]);
 
   const compte = (e: Etat | 'tous') => (e === 'tous' ? actuelles.length : actuelles.filter((f) => etatDe(f, aujourdhui) === e).length);
 
   const exporterCsv = () => {
     const lignes = [
-      ['Parc', 'Personne', 'Poste', 'Formation', 'Organisme', 'Date', 'Expiration', 'État'],
+      ['Parc', 'Catégorie', 'Personne', 'Poste', 'Formation', 'Organisme', 'Date', 'Expiration', 'État'],
       ...filtrees.map((f) => [
         f.parc?.code ?? '',
+        f.categorie ?? '',
         f.personne,
         f.poste ?? '',
         f.intitule,
@@ -194,6 +221,18 @@ function ContenuFormations() {
             </Pill>
           ))}
         </div>
+        {categories.length > 0 && (
+          <div className="flex gap-1.5 overflow-x-auto pb-1">
+            <Pill variant="cyan" active={!categorie} onClick={() => setCategorie(null)}>
+              Toutes les catégories
+            </Pill>
+            {categories.map(([c, n]) => (
+              <Pill key={c} variant="cyan" active={categorie === c} onClick={() => setCategorie(c)}>
+                {c === A_CLASSER ? 'À classer' : c} <span className="opacity-60">· {n}</span>
+              </Pill>
+            ))}
+          </div>
+        )}
         {parcs.length > 1 && (
           <div className="flex gap-1.5 overflow-x-auto pb-1">
             <Pill variant="cyan" active={!parc} onClick={() => setParc(null)}>
@@ -214,7 +253,8 @@ function ContenuFormations() {
             placeholder="Rechercher (personne, formation, poste…)"
             className="flex-1 bg-bg-deep border border-white/[0.08] rounded-xl px-4 py-2.5 text-[13px] text-text placeholder:text-faint outline-none focus:border-nikito-cyan/50 min-h-[44px]"
           />
-          <select value={vue} onChange={(e) => setVue(e.target.value as 'personne' | 'formation')} className={cn(champ, 'w-auto')}>
+          <select value={vue} onChange={(e) => setVue(e.target.value as Vue)} className={cn(champ, 'w-auto')}>
+            <option value="categorie">Par catégorie</option>
             <option value="personne">Par personne</option>
             <option value="formation">Par formation</option>
           </select>
@@ -240,7 +280,7 @@ function ContenuFormations() {
               </h2>
               <div className="grid gap-2">
                 {liste.map((f) => (
-                  <LigneFormation key={f.id} formation={f} vue={vue} aujourdhui={aujourdhui} />
+                  <LigneFormation key={f.id} formation={f} vue={vue} aujourdhui={aujourdhui} categories={categories.map(([c]) => c).filter((c) => c !== A_CLASSER)} />
                 ))}
               </div>
             </section>
@@ -251,10 +291,34 @@ function ContenuFormations() {
   );
 }
 
-function LigneFormation({ formation: f, vue, aujourdhui }: { formation: Formation; vue: 'personne' | 'formation'; aujourdhui: string }) {
+function LigneFormation({
+  formation: f,
+  vue,
+  aujourdhui,
+  categories,
+}: {
+  formation: Formation;
+  vue: Vue;
+  aujourdhui: string;
+  categories: string[];
+}) {
   const qc = useQueryClient();
   const toast = useToast();
   const [confirmer, setConfirmer] = useState(false);
+  const [editionCategorie, setEditionCategorie] = useState<string | null>(null);
+  const qui = `${f.personne}${f.parc ? ` · ${f.parc.code}` : ''}`;
+
+  const changerCategorie = async () => {
+    const nom = editionCategorie?.trim();
+    setEditionCategorie(null);
+    if (!nom || nom === f.categorie) return;
+    const { error } = await supabase.from('formations_personnel').update({ categorie: nom }).eq('id', f.id);
+    if (error) toast.error(error.message);
+    else {
+      toast.success(`Rangée dans « ${nom} »`);
+      qc.invalidateQueries({ queryKey: ['formations-personnel'] });
+    }
+  };
   const badge = BADGES[etatDe(f, aujourdhui)];
 
   const telechargerAttestation = async () => {
@@ -280,7 +344,7 @@ function LigneFormation({ formation: f, vue, aujourdhui }: { formation: Formatio
   return (
     <div className="bg-bg-card rounded-xl border border-white/[0.06] p-3 px-4 flex flex-col sm:flex-row sm:items-center gap-2">
       <div className="flex-1 min-w-0">
-        <div className="text-[14px] font-semibold">{vue === 'personne' ? f.intitule : `${f.personne}${f.parc ? ` · ${f.parc.code}` : ''}`}</div>
+        <div className="text-[14px] font-semibold">{vue === 'personne' ? f.intitule : vue === 'formation' ? qui : `${f.intitule} — ${qui}`}</div>
         <div className="text-[12px] text-dim mt-0.5">
           {[
             f.poste,
@@ -294,6 +358,31 @@ function LigneFormation({ formation: f, vue, aujourdhui }: { formation: Formatio
       </div>
       <div className="flex items-center gap-2 flex-wrap">
         <span className={cn('text-[10px] px-2 py-0.5 rounded', badge.classe)}>{badge.label}</span>
+        {editionCategorie !== null ? (
+          <>
+            <input
+              autoFocus
+              list={`categories-formation-${f.id}`}
+              value={editionCategorie}
+              onChange={(e) => setEditionCategorie(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && changerCategorie()}
+              placeholder="Catégorie"
+              className="bg-bg-deep border border-white/[0.08] rounded-lg px-2 py-1 text-[12px] text-text w-40 min-h-[36px]"
+            />
+            <datalist id={`categories-formation-${f.id}`}>
+              {categories.map((c) => (
+                <option key={c} value={c} />
+              ))}
+            </datalist>
+            <button onClick={changerCategorie} className="text-nikito-cyan text-[12px] font-semibold min-h-[36px] px-1">
+              OK
+            </button>
+          </>
+        ) : (
+          <button onClick={() => setEditionCategorie(f.categorie ?? '')} className="text-dim text-[12px] min-h-[36px] px-1">
+            {vue === 'categorie' ? 'Changer de catégorie' : f.categorie ?? 'À classer'}
+          </button>
+        )}
         {f.attestation && (
           <button onClick={telechargerAttestation} className="text-nikito-cyan text-[12px] font-semibold min-h-[36px] px-1">
             ⬇ Attestation
