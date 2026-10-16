@@ -56,8 +56,6 @@ function buildItems(badges: {
     items.push({ key: 'recurrences', label: 'Recurrences detectees', count: badges.recurrences, tone: 'red', to: '/gmao/recurrences' });
   if (badges.cinqPourquoi > 0)
     items.push({ key: 'cinqPourquoi', label: 'Fiches 5P ouvertes', count: badges.cinqPourquoi, tone: 'amber', to: '/gmao/cinq-pourquoi' });
-  if (badges.notificationsIA > 0)
-    items.push({ key: 'notificationsIA', label: 'Hypotheses IA en attente', count: badges.notificationsIA, tone: 'amber', to: '/gmao/notifications-ia' });
   if (badges.invitationsPending > 0)
     items.push({ key: 'invitationsPending', label: 'Invitations en attente', count: badges.invitationsPending, tone: 'amber', to: '/gmao/utilisateurs' });
   return items;

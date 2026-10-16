@@ -70,13 +70,6 @@ export const tourSteps: TourStep[] = [
     position: 'right',
   },
   {
-    selector: '[data-tour="plaintes"]',
-    titre: 'Plaintes clients',
-    description:
-      'Centralisez et traitez les remontees clients liees a la securite ou au fonctionnement des attractions.',
-    position: 'right',
-  },
-  {
     selector: '[data-tour="controles"]',
     titre: 'Historique controles',
     description:

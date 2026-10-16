@@ -140,10 +140,8 @@ export function BottomTabBar({ roleCode, onAlertsClick, onMoreClick, alertsOpen,
       badges.operations +
       badges.recurrences +
       badges.cinqPourquoi +
-      badges.notificationsIA +
       badges.invitationsPending +
       badges.interventionsEnCours +
-      badges.plaintesAQualifier +
       badges.commandesATraiter
     : 0;
 
