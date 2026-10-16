@@ -37,17 +37,21 @@ export function ModaleInviterUtilisateur({
   const { utilisateur } = useAuth();
   const { data: parcs } = useParcs();
   const toast = useToast();
-  const [authMode, setAuthMode] = useState<AuthMode>('email_password');
+  // Un manager de parc ne crée que du staff : connexion par code PIN d'office
+  const [authMode, setAuthMode] = useState<AuthMode>(roleInviteur === 'manager_parc' ? 'pin_seul' : 'email_password');
   const [email, setEmail] = useState('');
   const [prenom, setPrenom] = useState('');
   const [nom, setNom] = useState('');
-  const [roleChoisi, setRoleChoisi] = useState<RoleUtilisateur | null>(null);
+  const [roleChoisi, setRoleChoisi] = useState<RoleUtilisateur | null>(
+    roleInviteur === 'manager_parc' ? 'staff_operationnel' : null
+  );
   const [parcsChoisis, setParcsChoisis] = useState<string[]>([]);
   const [estManager, setEstManager] = useState(false);
   const [methodeEnvoi, setMethodeEnvoi] = useState<'email' | 'lien'>('email');
   const [submitting, setSubmitting] = useState(false);
   const [lienGenere, setLienGenere] = useState<string | null>(null);
   const [pinGenere, setPinGenere] = useState<string | null>(null);
+  const [pinEnvoyeA, setPinEnvoyeA] = useState<string | null>(null);
   const [emailStatus, setEmailStatus] = useState<'idle' | 'sending' | 'sent' | 'failed'>('idle');
   const [emailDestinataire, setEmailDestinataire] = useState('');
   const [emailErreurDetail, setEmailErreurDetail] = useState<Record<string, unknown> | null>(null);
@@ -89,50 +93,35 @@ export function ModaleInviterUtilisateur({
       Math.random().toString(36).slice(2, 10);
 
     if (authMode === 'pin_seul') {
-      const { data: newUser, error: userErr } = await supabase
-        .from('utilisateurs')
-        .insert({
-          email: email || null,
-          prenom: prenom || 'Staff',
-          nom: nom || '',
-          role_id: role.id,
-          auth_mode: 'pin_seul',
-          statut_validation: 'valide',
-          actif: true,
-          valide_par_id: utilisateur.id,
-          valide_le: new Date().toISOString(),
-        })
-        .select('id')
-        .single();
-
-      if (userErr || !newUser) {
-        const isDuplicate =
-          userErr?.code === '23505' || /duplicate|unique/i.test(userErr?.message ?? '');
-        toast.error(
-          isDuplicate
-            ? 'Cet email est déjà utilisé par un autre compte. Laisse-le vide ou utilise-en un autre.'
-            : `Impossible de créer le compte : ${userErr?.message ?? 'erreur inconnue'}`
-        );
+      // Création côté serveur : rôle et parcs de l'inviteur vérifiés par la base
+      const { data: nouvelId, error: userErr } = await supabase.rpc('creer_staff_pin', {
+        p_prenom: prenom,
+        p_nom: nom,
+        p_email: email.trim() || null,
+        p_parc_ids: parcsChoisis,
+      });
+      if (userErr || !nouvelId) {
+        toast.error(`Impossible de créer le compte : ${userErr?.message ?? 'erreur inconnue'}`);
         setSubmitting(false);
         return;
       }
 
-      for (const parcId of parcsChoisis) {
-        const { error: lienErr } = await supabase.from('parcs_utilisateurs').upsert(
-          { utilisateur_id: newUser.id, parc_id: parcId },
-          { onConflict: 'utilisateur_id,parc_id' }
-        );
-        if (lienErr) {
-          toast.error(`Compte créé mais l'affectation au parc a échoué : ${lienErr.message}`);
+      // Avec un email : le code part directement par mail, sans s'afficher ici
+      if (email.trim()) {
+        const { data: rep, error: errEnvoi } = await supabase.functions.invoke('envoyer-pin-staff', {
+          body: { utilisateur_id: nouvelId },
+        });
+        if (!errEnvoi && rep?.success !== false) {
+          setPinEnvoyeA(email.trim());
           setSubmitting(false);
           return;
         }
+        toast.error(`Mail non envoyé (${rep?.error ?? 'erreur'}) : voici le code à transmettre`);
       }
 
       const { data: pinClair, error: pinErr } = await supabase.rpc('generer_pin_staff', {
-        p_utilisateur_id: newUser.id,
+        p_utilisateur_id: nouvelId,
       });
-
       if (pinErr || !pinClair) {
         toast.error(
           `Compte créé mais la génération du PIN a échoué : ${pinErr?.message ?? 'erreur inconnue'}`
@@ -140,21 +129,6 @@ export function ModaleInviterUtilisateur({
         setSubmitting(false);
         return;
       }
-
-      await supabase.from('invitations').insert({
-        token,
-        email: email || null,
-        prenom: prenom || null,
-        nom: nom || null,
-        role_id: role.id,
-        parcs_assignes: parcsChoisis,
-        est_manager: false,
-        auth_mode: 'pin_seul',
-        invite_par_id: utilisateur.id,
-        utilisateur_cree_id: newUser.id,
-        utilise_le: new Date().toISOString(),
-        notes: `Staff PIN créé par ${utilisateur.prenom} ${utilisateur.nom}`,
-      });
 
       setPinGenere(pinClair);
       setSubmitting(false);
@@ -244,7 +218,18 @@ export function ModaleInviterUtilisateur({
           </button>
         </div>
 
-        {pinGenere ? (
+        {pinEnvoyeA ? (
+          <div className="text-center py-4">
+            <div className="text-5xl mb-3">✅</div>
+            <div className="text-base font-semibold mb-2">Compte créé</div>
+            <div className="text-sm text-dim mb-5">
+              Le code de connexion a été envoyé par mail à <strong className="text-text">{pinEnvoyeA}</strong>.
+            </div>
+            <button onClick={onClose} className="bg-gradient-cta text-text px-5 py-2.5 rounded-lg text-xs font-bold min-h-[44px]">
+              Fermer
+            </button>
+          </div>
+        ) : pinGenere ? (
           <SuccessPin pin={pinGenere} prenom={prenom} nom={nom} onClose={onClose} />
         ) : lienGenere ? (
           <SuccessLien
@@ -313,12 +298,12 @@ export function ModaleInviterUtilisateur({
 
             {authMode === 'pin_seul' && (
               <div className="mb-3.5">
-                <Field label="Email (optionnel, pour envoyer le PIN)">
+                <Field label="Email (optionnel : le code est envoyé par mail)">
                   <input
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="prenom.nom@nikito.com (optionnel)"
+                    placeholder="adresse mail perso ou pro (optionnel)"
                     className="w-full bg-bg-deep border border-white/[0.08] rounded-[10px] p-3 px-3.5 text-text text-[13px] outline-none min-h-[44px]"
                   />
                 </Field>
