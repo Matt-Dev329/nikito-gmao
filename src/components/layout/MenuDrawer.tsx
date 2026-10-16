@@ -16,6 +16,7 @@ const menuItems = [
   { to: '/tech/bons', label: "Bons d'intervention", icon: '🧾' },
   { to: '/tech/plans', label: 'Plans', icon: '🗺️' },
   { to: '/tech/manuels', label: 'Manuels', icon: '📘' },
+  { to: '/tech/prestataires', label: 'Rapports prestataires', icon: '🧯' },
   { to: '/gmao/commander', label: 'Commander', icon: '🛒' },
   { to: '/gmao/profil', label: 'Mon profil', icon: '👤' },
 ];

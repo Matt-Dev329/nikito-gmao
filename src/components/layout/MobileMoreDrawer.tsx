@@ -30,6 +30,7 @@ const pilotageItems: DrawerItem[] = [
   { to: '/gmao/bons', label: "Bons d'intervention", iconLabel: "Bons d'intervention", roles: ['direction', 'chef_maintenance', 'directeur_parc', 'technicien', 'manager_parc', 'admin_it'] },
   { to: '/gmao/plans', label: 'Plans', iconLabel: 'Plans', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'technicien', 'manager_parc', 'admin_it'] },
   { to: '/gmao/manuels', label: 'Manuels', iconLabel: 'Manuels', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'technicien', 'manager_parc', 'admin_it'] },
+  { to: '/gmao/prestataires', label: 'Rapports prestataires', iconLabel: 'Rapports prestataires', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'technicien', 'manager_parc', 'admin_it'] },
   { to: '/gmao/equipements', label: 'Equipements', iconLabel: 'Équipements', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'technicien', 'manager_parc', 'admin_it'] },
   { to: '/gmao/recurrences', label: 'Recurrences', iconLabel: 'Récurrences', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'admin_it'] },
   { to: '/gmao/cinq-pourquoi', label: '5 Pourquoi', iconLabel: '5 Pourquoi', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'admin_it'] },

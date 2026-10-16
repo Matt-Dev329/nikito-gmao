@@ -68,6 +68,7 @@ const sections: { titre: string; items: NavItem[] }[] = [
       { to: '/gmao/bons', label: "Bons d'intervention", roles: ['direction', 'chef_maintenance', 'directeur_parc', 'technicien', 'manager_parc', 'admin_it'] },
       { to: '/gmao/plans', label: 'Plans', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'technicien', 'manager_parc', 'admin_it'] },
       { to: '/gmao/manuels', label: 'Manuels', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'technicien', 'manager_parc', 'admin_it'] },
+      { to: '/gmao/prestataires', label: 'Rapports prestataires', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'technicien', 'manager_parc', 'admin_it'] },
       { to: '/gmao/equipements', label: 'Équipements', featureCode: 'equipements', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'technicien', 'manager_parc', 'admin_it'] },
       { to: '/gmao/recurrences', label: 'Récurrences', featureCode: 'recurrences', badgeKey: 'recurrences', badgeTone: 'red', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'admin_it'] },
       { to: '/gmao/cinq-pourquoi', label: '5 Pourquoi', featureCode: 'cinq_pourquoi', badgeKey: 'cinqPourquoi', badgeTone: 'amber', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'admin_it'] },

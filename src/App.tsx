@@ -21,6 +21,7 @@ const Recurrences = page(() => import('@/pages/ryad/Recurrences'), 'Recurrences'
 const Operations = page(() => import('@/pages/technicien/Operations'), 'Operations');
 const PagePlans = page(() => import('@/pages/documentation/PageDocumentsTechniques'), 'PagePlans');
 const PageManuels = page(() => import('@/pages/documentation/PageDocumentsTechniques'), 'PageManuels');
+const PageRapportsPrestataires = page(() => import('@/pages/documentation/PageDocumentsTechniques'), 'PageRapportsPrestataires');
 const PageBonsIntervention = page(() => import('@/pages/interventions/PageBonsIntervention'), 'PageBonsIntervention');
 const PageControles = page(() => import('@/pages/controles/PageControles'), 'PageControles');
 const PageRapportsReparation = page(() => import('@/pages/interventions/PageRapportsReparation'), 'PageRapportsReparation');
@@ -127,6 +128,7 @@ export function App() {
           <Route path="controles" element={<PageControles />} />
           <Route path="plans" element={<PagePlans />} />
           <Route path="manuels" element={<PageManuels />} />
+          <Route path="prestataires" element={<PageRapportsPrestataires />} />
           <Route path="equipements" element={<PageEquipements />} />
           <Route path="recurrences" element={<Recurrences />} />
           <Route path="cinq-pourquoi" element={<ListeCinqPourquoi />} />
@@ -180,6 +182,7 @@ export function App() {
           <Route path="controles" element={<PageControles />} />
           <Route path="plans" element={<PagePlans />} />
           <Route path="manuels" element={<PageManuels />} />
+          <Route path="prestataires" element={<PageRapportsPrestataires />} />
           <Route path="controle-hebdo" element={<ControleHebdo />} />
           <Route path="controle-mensuel" element={<ControleMensuel />} />
           <Route path="stock" element={<PageStock />} />
