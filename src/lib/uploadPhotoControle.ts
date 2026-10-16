@@ -8,6 +8,7 @@ export type AlbaBucket =
   | 'alba-signatures'
   | 'alba-documents'
   | 'alba-techniques'
+  | 'alba-bons'
 
 export interface UploadPhotoOptions {
   bucket: AlbaBucket

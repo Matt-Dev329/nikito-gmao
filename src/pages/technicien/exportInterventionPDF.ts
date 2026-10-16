@@ -86,7 +86,7 @@ export async function exportInterventionPDF(data: InterventionPDFData) {
   doc.text('ALBA by Nikito', margin, y);
   doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
-  doc.text(`Bon d'intervention ${data.numeroBT}`, margin, y + 6);
+  doc.text(`Bon de travail ${data.numeroBT}`, margin, y + 6);
   y += 16;
 
   doc.setDrawColor(200);
