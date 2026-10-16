@@ -1,4 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
+import { motDePasseValide } from '@/lib/motDePasse';
+import { ReglesMotDePasse } from '@/components/auth/ReglesMotDePasse';
 import { useNavigate } from 'react-router-dom';
 import { AlbaLoginHero } from '@/components/ui/Logo';
 import { supabase } from '@/lib/supabase';
@@ -15,7 +17,7 @@ function getPasswordStrength(pw: string): PasswordStrength {
 }
 
 const strengthConfig: Record<PasswordStrength, { label: string; color: string; width: string }> = {
-  weak: { label: 'Trop court (min. 6 caracteres)', color: 'bg-red', width: 'w-1/3' },
+  weak: { label: 'Trop faible', color: 'bg-red', width: 'w-1/3' },
   medium: { label: 'Moyen', color: 'bg-orange-400', width: 'w-2/3' },
   strong: { label: 'Fort', color: 'bg-green', width: 'w-full' },
 };
@@ -88,7 +90,7 @@ export function ResetPassword() {
   const strength = useMemo(() => getPasswordStrength(password), [password]);
   const cfg = strengthConfig[strength];
   const mismatch = confirm.length > 0 && password !== confirm;
-  const canSubmit = password.length >= 6 && password === confirm && !loading;
+  const canSubmit = motDePasseValide(password) && password === confirm && !loading;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -252,6 +254,7 @@ export function ResetPassword() {
                 </p>
               </div>
             )}
+            <ReglesMotDePasse motDePasse={password} />
           </div>
 
           <div>

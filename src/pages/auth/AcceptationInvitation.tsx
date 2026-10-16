@@ -1,4 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
+import { motDePasseValide } from '@/lib/motDePasse';
+import { ReglesMotDePasse } from '@/components/auth/ReglesMotDePasse';
 import { useParams, useNavigate } from 'react-router-dom';
 import { AlbaLoginHero } from '@/components/ui/Logo';
 import { PhotoCapture } from '@/components/shared/PhotoCapture';
@@ -187,7 +189,7 @@ export function AcceptationInvitation() {
     telValide &&
     acceptCgu &&
     (isEmailMode
-      ? password.length >= 6 && password === passwordConfirm
+      ? motDePasseValide(password) && password === passwordConfirm
       : pin.length === 6 && pin === pinConfirm);
 
   const accepter = async () => {
@@ -218,7 +220,12 @@ export function AcceptationInvitation() {
             },
           });
           if (compteError || !compte?.success) {
-            throw new Error(compte?.error ?? 'Impossible de créer le compte. Réessayez ou contactez votre responsable.');
+            const detail = String(compte?.error ?? '');
+            throw new Error(
+              /password/i.test(detail)
+                ? 'Mot de passe refusé : il faut au moins 8 caractères avec une minuscule, une majuscule, un chiffre et un caractère spécial.'
+                : detail || 'Impossible de créer le compte. Réessayez ou contactez votre responsable.'
+            );
           }
           const { data: connexion, error: connexionError } = await supabase.auth.signInWithPassword({
             email: invitation.email!,
@@ -337,14 +344,10 @@ export function AcceptationInvitation() {
                     type="password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Minimum 6 caracteres"
+                    placeholder="Ex. Nikito2026!"
                     className="field-input"
                   />
-                  {password.length > 0 && password.length < 6 && (
-                    <div className="text-[10px] text-amber mt-1.5">
-                      Encore {6 - password.length} caractere(s)
-                    </div>
-                  )}
+                  <ReglesMotDePasse motDePasse={password} />
                 </FieldBlock>
                 <FieldBlock label="Confirmer le mot de passe" required className="mb-4">
                   <input
@@ -360,7 +363,7 @@ export function AcceptationInvitation() {
                   {passwordConfirm.length > 0 && password !== passwordConfirm && (
                     <div className="text-[10px] text-red mt-1.5">Les mots de passe ne correspondent pas</div>
                   )}
-                  {passwordConfirm.length > 0 && password === passwordConfirm && password.length >= 6 && (
+                  {passwordConfirm.length > 0 && password === passwordConfirm && motDePasseValide(password) && (
                     <div className="text-[10px] text-green mt-1.5">Les mots de passe correspondent</div>
                   )}
                 </FieldBlock>

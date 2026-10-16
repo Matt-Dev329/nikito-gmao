@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react';
+import { motDePasseValide } from '@/lib/motDePasse';
+import { ReglesMotDePasse } from '@/components/auth/ReglesMotDePasse';
 import { useAuth } from '@/hooks/useAuth';
 import { useFormation } from '@/hooks/useFormation';
 import { useToast } from '@/components/ui/ToastProvider';
@@ -565,8 +567,7 @@ function SectionMotDePasse() {
   const [submitting, setSubmitting] = useState(false);
 
   const mismatch = confirm.length > 0 && newPwd !== confirm;
-  const tooShort = newPwd.length > 0 && newPwd.length < 6;
-  const canSubmit = newPwd.length >= 6 && newPwd === confirm && !submitting;
+  const canSubmit = motDePasseValide(newPwd) && newPwd === confirm && !submitting;
 
   const handleSubmit = async () => {
     setSubmitting(true);
@@ -594,10 +595,10 @@ function SectionMotDePasse() {
             type="password"
             value={newPwd}
             onChange={(e) => setNewPwd(e.target.value)}
-            placeholder="6 caracteres minimum"
+            placeholder="Ex. Nikito2026!"
             className="w-full bg-bg-deep border border-white/[0.08] rounded-[10px] p-3 px-3.5 text-text text-[13px] outline-none focus:border-nikito-cyan"
           />
-          {tooShort && <div className="text-amber text-[11px] mt-1">6 caracteres minimum</div>}
+          {newPwd.length > 0 && <ReglesMotDePasse motDePasse={newPwd} />}
         </div>
         <div>
           <label className="block text-[11px] text-dim uppercase tracking-wider mb-1.5">
