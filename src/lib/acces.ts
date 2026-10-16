@@ -13,6 +13,13 @@ export function peutEntrerStock(role: RoleUtilisateur | undefined, estGestionnai
   return estGestionnaireCommandes || (!!role && ROLES_ENTREE_STOCK.includes(role));
 }
 
+/** Entrées de stock et création de pièces : chef d'équipe, direction, admin IT et gestionnaires des commandes */
+export const ROLES_ENTREE_STOCK: RoleUtilisateur[] = ['direction', 'chef_maintenance', 'admin_it'];
+
+export function peutEntrerStock(role: RoleUtilisateur | undefined, estGestionnaireCommandes: boolean): boolean {
+  return estGestionnaireCommandes || (!!role && ROLES_ENTREE_STOCK.includes(role));
+}
+
 export function peutVoirStock(role: RoleUtilisateur | undefined, estGestionnaireCommandes: boolean): boolean {
   return estGestionnaireCommandes || (!!role && ROLES_STOCK.includes(role));
 }
