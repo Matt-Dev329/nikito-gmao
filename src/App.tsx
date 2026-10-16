@@ -49,7 +49,6 @@ const PageCommander = page(() => import('@/pages/commandes/PageCommander'), 'Pag
 const PageBibliotheque = page(() => import('@/pages/bibliotheque/PageBibliotheque'), 'PageBibliotheque');
 const FicheCinqPourquoi = page(() => import('@/pages/cinq-pourquoi/FicheCinqPourquoi'), 'FicheCinqPourquoi');
 const ListeCinqPourquoi = page(() => import('@/pages/cinq-pourquoi/ListeCinqPourquoi'), 'ListeCinqPourquoi');
-const PagePlaintes = page(() => import('@/pages/plaintes/PagePlaintes'), 'PagePlaintes');
 const PagePreventif = page(() => import('@/pages/preventif/PagePreventif'), 'PagePreventif');
 const PageCertifications = page(() => import('@/pages/certifications/PageCertifications'), 'PageCertifications');
 const VueManagerParc = page(() => import('@/pages/parc/VueManagerParc'), 'VueManagerParc');
@@ -57,9 +56,6 @@ const PageProfil = page(() => import('@/pages/profil/PageProfil'), 'PageProfil')
 const MesSignalements = page(() => import('@/pages/staff/MesSignalements'), 'MesSignalements');
 const PageAide = page(() => import('@/pages/aide/PageAide'), 'PageAide');
 const PageFormation = page(() => import('@/pages/formation/PageFormation'), 'PageFormation');
-const PageIAPredictive = page(() => import('@/pages/ia-predictive/PageIAPredictive'), 'PageIAPredictive');
-const PageNotificationsIA = page(() => import('@/pages/notifications/PageNotificationsIA'), 'PageNotificationsIA');
-const PageFlotte = page(() => import('@/pages/flotte/PageFlotte'), 'PageFlotte');
 const LayoutConformite = page(() => import('@/pages/conformite/LayoutConformite'), 'LayoutConformite');
 const PageConformite = page(() => import('@/pages/conformite/PageConformite'), 'PageConformite');
 const PageReserves = page(() => import('@/pages/conformite/PageReserves'), 'PageReserves');
@@ -139,7 +135,8 @@ export function App() {
           <Route path="commander" element={<PageCommander />} />
           <Route path="preventif" element={<PagePreventif />} />
           <Route path="certifications" element={<PageCertifications />} />
-          <Route path="plaintes" element={<PagePlaintes />} />
+          {/* Modules retirés (Flotte, Plaintes clients, IA prédictive) : retour à l'accueil */}
+          <Route path="plaintes" element={<Navigate to="/gmao" replace />} />
           <Route path="profil" element={<PageProfil />} />
           <Route path="mon-parc" element={<VueManagerParc />} />
           <Route path="parcs" element={<ListeParcs />} />
@@ -151,9 +148,9 @@ export function App() {
           <Route path="bibliotheque" element={<PageBibliotheque />} />
           <Route path="fournisseurs" element={<PageFournisseursAdmin />} />
           <Route path="controles-historique" element={<PageHistoriqueControles />} />
-          <Route path="ia-predictive" element={<PageIAPredictive />} />
-          <Route path="notifications-ia" element={<PageNotificationsIA />} />
-          <Route path="flotte" element={<PageFlotte />} />
+          <Route path="ia-predictive" element={<Navigate to="/gmao" replace />} />
+          <Route path="notifications-ia" element={<Navigate to="/gmao" replace />} />
+          <Route path="flotte" element={<Navigate to="/gmao" replace />} />
           <Route path="conformite" element={<LayoutConformite />}>
             <Route index element={<PageConformite />} />
             <Route path="reserves" element={<PageReserves />} />
