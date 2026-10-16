@@ -12,11 +12,13 @@ import { Pill } from '@/components/ui/Pill';
 import type { AlbaBucket } from '@/lib/uploadPhotoControle';
 import { envoyerDocument, recollerDocument } from '@/lib/envoiGrosFichier';
 import { enregistrerBlob, nomDepuisChemin, telechargerUrl } from '@/lib/telecharger';
+import { ROLES_PRESTATAIRES } from '@/lib/acces';
 
 export type TypeDocument = 'plan' | 'manuel' | 'prestataire';
 
 export const ROLES_DOCUMENTATION = ['direction', 'chef_maintenance', 'directeur_parc', 'manager_parc', 'technicien', 'admin_it'];
 const ROLES_EDITION = ['direction', 'chef_maintenance', 'directeur_parc', 'admin_it'];
+
 
 const BUCKET: AlbaBucket = 'alba-techniques';
 const PLAN_GENERAL = 'Plan général du parc';
@@ -106,13 +108,14 @@ function useDocuments(type: TypeDocument) {
 /** Plans (par parc) ou manuels (par activité) : consultation et ajout de documents PDF / images. */
 export function PageDocumentsTechniques({ type }: { type: TypeDocument }) {
   const { utilisateur } = useAuth();
-  if (utilisateur && !ROLES_DOCUMENTATION.includes(utilisateur.role_code)) return <Navigate to="/" replace />;
+  const roles = type === 'prestataire' ? ROLES_PRESTATAIRES : ROLES_DOCUMENTATION;
+  if (utilisateur && !roles.includes(utilisateur.role_code)) return <Navigate to="/" replace />;
   return <ContenuDocuments key={type} type={type} />;
 }
 
 function ContenuDocuments({ type }: { type: TypeDocument }) {
   const { utilisateur } = useAuth();
-  const peutEditer = ROLES_EDITION.includes(utilisateur?.role_code ?? '');
+  const peutEditer = (type === 'prestataire' ? ROLES_PRESTATAIRES : ROLES_EDITION).includes(utilisateur?.role_code ?? '');
   const t = TEXTES[type];
   const { data: documents, isLoading, isError, error } = useDocuments(type);
   const [filtre, setFiltre] = useState<string | null>(null);
@@ -395,7 +398,7 @@ function FormulaireAjout({ type, onFini }: { type: TypeDocument; onFini: () => v
       const chemin = `${type}/${parc?.code ?? 'commun'}/${Date.now()}_${nomPropre}`;
       setProgression(0);
       const parties = await envoyerDocument(BUCKET, chemin, fichier, setProgression);
-      const { error } = await supabase.from('documents_techniques').insert({
+      const { data: cree, error } = await supabase.from('documents_techniques').insert({
         type,
         parc_id: parcId || null,
         activite: activite.trim() || null,
@@ -409,11 +412,15 @@ function FormulaireAjout({ type, onFini }: { type: TypeDocument; onFini: () => v
         taille: fichier.size,
         parties,
         cree_par_id: utilisateur?.id ?? null,
-      });
+      }).select('id').single();
       if (error) throw error;
+      // Rapport prestataire : analyse automatique (points conformes / non conformes, renouvellement)
+      if (type === 'prestataire' && cree?.id) {
+        void supabase.functions.invoke('analyser-rapport-prestataire', { body: { document_id: cree.id } });
+      }
     },
     onSuccess: () => {
-      toast.success('Document ajouté');
+      toast.success(type === 'prestataire' ? 'Rapport ajouté — analyse en cours (onglet « Analyses prestataires »)' : 'Document ajouté');
       qc.invalidateQueries({ queryKey: ['documents-techniques', type] });
       onFini();
     },

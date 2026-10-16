@@ -21,6 +21,8 @@ const Recurrences = page(() => import('@/pages/ryad/Recurrences'), 'Recurrences'
 const Operations = page(() => import('@/pages/technicien/Operations'), 'Operations');
 const PagePlans = page(() => import('@/pages/documentation/PageDocumentsTechniques'), 'PagePlans');
 const PageManuels = page(() => import('@/pages/documentation/PageDocumentsTechniques'), 'PageManuels');
+const PageAnalysesPrestataires = page(() => import('@/pages/documentation/PageAnalysesPrestataires'), 'PageAnalysesPrestataires');
+const PageFormationsPersonnel = page(() => import('@/pages/formations/PageFormationsPersonnel'), 'PageFormationsPersonnel');
 const PageRapportsPrestataires = page(() => import('@/pages/documentation/PageDocumentsTechniques'), 'PageRapportsPrestataires');
 const PageBonsIntervention = page(() => import('@/pages/interventions/PageBonsIntervention'), 'PageBonsIntervention');
 const PageControles = page(() => import('@/pages/controles/PageControles'), 'PageControles');
@@ -129,6 +131,8 @@ export function App() {
           <Route path="plans" element={<PagePlans />} />
           <Route path="manuels" element={<PageManuels />} />
           <Route path="prestataires" element={<PageRapportsPrestataires />} />
+          <Route path="analyses-prestataires" element={<PageAnalysesPrestataires />} />
+          <Route path="formations-personnel" element={<PageFormationsPersonnel />} />
           <Route path="equipements" element={<PageEquipements />} />
           <Route path="recurrences" element={<Recurrences />} />
           <Route path="cinq-pourquoi" element={<ListeCinqPourquoi />} />
@@ -183,6 +187,8 @@ export function App() {
           <Route path="plans" element={<PagePlans />} />
           <Route path="manuels" element={<PageManuels />} />
           <Route path="prestataires" element={<PageRapportsPrestataires />} />
+          <Route path="analyses-prestataires" element={<PageAnalysesPrestataires />} />
+          <Route path="formations-personnel" element={<PageFormationsPersonnel />} />
           <Route path="controle-hebdo" element={<ControleHebdo />} />
           <Route path="controle-mensuel" element={<ControleMensuel />} />
           <Route path="stock" element={<PageStock />} />

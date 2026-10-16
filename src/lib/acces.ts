@@ -10,3 +10,9 @@ export const ROLES_STOCK: RoleUtilisateur[] = ['direction', 'chef_maintenance', 
 export function peutVoirStock(role: RoleUtilisateur | undefined, estGestionnaireCommandes: boolean): boolean {
   return estGestionnaireCommandes || (!!role && ROLES_STOCK.includes(role));
 }
+
+/** Rapports et analyses prestataires : chef d'équipe et directeurs de parc */
+export const ROLES_PRESTATAIRES = ['chef_maintenance', 'directeur_parc'];
+
+/** Formations du personnel */
+export const ROLES_FORMATIONS = ['direction', 'chef_maintenance', 'directeur_parc', 'admin_it'];
