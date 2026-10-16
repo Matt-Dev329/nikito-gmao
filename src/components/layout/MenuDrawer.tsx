@@ -19,7 +19,7 @@ const menuItems: { to: string; label: string; icon: string; roles?: string[] }[]
   { to: '/tech/prestataires', label: 'Rapports prestataires', icon: '🧯', roles: ['chef_maintenance', 'directeur_parc'] },
   { to: '/tech/analyses-prestataires', label: 'Analyses prestataires', icon: '🔎', roles: ['chef_maintenance', 'directeur_parc'] },
   { to: '/tech/formations-personnel', label: 'Formations du personnel', icon: '🎓', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'admin_it'] },
-  { to: '/gmao/commander', label: 'Commander', icon: '🛒' },
+  { to: '/gmao/commander', label: 'Commander', icon: '🛒', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'manager_parc', 'technicien', 'admin_it'] },
   { to: '/gmao/profil', label: 'Mon profil', icon: '👤' },
 ];
 
