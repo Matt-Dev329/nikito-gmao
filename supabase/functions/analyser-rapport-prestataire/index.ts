@@ -36,6 +36,7 @@ Le chef d'équipe maintenance lira ta synthèse pour savoir quoi corriger et qua
 - prochaine_echeance : date du prochain contrôle (AAAA-MM-JJ). Si le document l'indique, reprends-la. Sinon, si la périodicité réglementaire usuelle est claire pour ce type de contrôle (ex. extincteurs : annuelle), calcule-la à partir de date_controle et indique-le dans periodicite. Sinon null.
 - periodicite : ex. "annuelle", "semestrielle", "tous les 5 ans", avec « (réglementaire usuelle) » si elle ne figure pas dans le document ; null si inconnue.
 - prestataire : nom de la société qui a réalisé le contrôle, si présent.
+- categorie : la catégorie de rangement du rapport (le domaine contrôlé). Reprends EXACTEMENT une des catégories existantes fournies si l'une correspond ; sinon crée une catégorie courte de 1 à 4 mots, au pluriel si c'est naturel, avec une majuscule initiale (ex. « Extincteurs », « Alarme incendie / SSI », « Installations électriques », « Portes coupe-feu »).
 
 N'invente rien : si une information n'est pas dans le document, mets null ou une liste vide. Si le document n'est pas un rapport de contrôle ou est illisible, résultat "indetermine" et explique-le dans le résumé.`;
 
@@ -51,6 +52,7 @@ const SCHEMA = {
     "prochaine_echeance",
     "periodicite",
     "prestataire",
+    "categorie",
   ],
   properties: {
     resultat_global: { type: "string", enum: ["conforme", "conforme_avec_reserves", "non_conforme", "indetermine"] },
@@ -82,6 +84,7 @@ const SCHEMA = {
     prochaine_echeance: { type: ["string", "null"] },
     periodicite: { type: ["string", "null"] },
     prestataire: { type: ["string", "null"] },
+    categorie: { type: "string" },
   },
 };
 
@@ -94,6 +97,7 @@ interface Analyse {
   prochaine_echeance: string | null;
   periodicite: string | null;
   prestataire: string | null;
+  categorie: string;
 }
 
 const repondre = (corps: unknown, status = 200) =>
@@ -181,8 +185,18 @@ Deno.serve(async (req: Request) => {
       throw new Error(`Format non pris en charge pour l'analyse (${mime}) : déposer un PDF, JPEG ou PNG`);
     }
 
+    // Catégories déjà créées : l'IA les réutilise ou en crée une nouvelle
+    const { data: existantes } = await service
+      .from("documents_techniques")
+      .select("activite")
+      .eq("type", "prestataire")
+      .eq("actif", true)
+      .not("activite", "is", null);
+    const categories = [...new Set((existantes ?? []).map((e: { activite: string | null }) => (e.activite ?? "").trim()).filter(Boolean))].sort();
+
     const contexte = [
-      doc.activite ? `Domaine indiqué : ${doc.activite}` : null,
+      `Catégories existantes : ${categories.length ? categories.join(" ; ") : "aucune pour l'instant"}`,
+      doc.activite ? `Domaine indiqué par l'utilisateur : ${doc.activite}` : null,
       doc.prestataire ? `Prestataire indiqué : ${doc.prestataire}` : null,
       `Titre : ${doc.titre}`,
     ]
@@ -225,12 +239,18 @@ Deno.serve(async (req: Request) => {
       })
       .eq("document_id", documentId);
 
-    // Échéance non saisie au dépôt : on reprend celle trouvée dans le rapport
-    if (echeance && !doc.prochaine_echeance) {
-      await service.from("documents_techniques").update({ prochaine_echeance: echeance }).eq("id", documentId);
+    // Rangement automatique : catégorie (si non choisie au dépôt), prestataire
+    // et échéance (si non saisis) repris de l'analyse
+    const categorie = (analyse.categorie ?? "").trim().slice(0, 60);
+    const majDoc: Record<string, unknown> = {};
+    if (categorie && !(doc.activite ?? "").trim()) majDoc.activite = categorie;
+    if (analyse.prestataire && !(doc.prestataire ?? "").trim()) majDoc.prestataire = analyse.prestataire.slice(0, 120);
+    if (echeance && !doc.prochaine_echeance) majDoc.prochaine_echeance = echeance;
+    if (Object.keys(majDoc).length) {
+      await service.from("documents_techniques").update(majDoc).eq("id", documentId);
     }
 
-    return repondre({ success: true, resultat_global: analyse.resultat_global, prochaine_echeance: echeance });
+    return repondre({ success: true, resultat_global: analyse.resultat_global, prochaine_echeance: echeance, categorie: majDoc.activite ?? doc.activite });
   } catch (err) {
     const message =
       err instanceof Anthropic.RateLimitError

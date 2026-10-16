@@ -124,7 +124,16 @@ function ContenuDocuments({ type }: { type: TypeDocument }) {
 
   // Plans rangés par parc, manuels par activité
   const groupeDe = (d: DocumentTechnique) =>
-    type === 'plan' ? (d.parc ? `${d.parc.code} · ${d.parc.nom}` : 'Tous les parcs') : d.activite || 'Autres';
+    type === 'plan'
+      ? d.parc
+        ? `${d.parc.code} · ${d.parc.nom}`
+        : 'Tous les parcs'
+      : d.activite || (type === 'prestataire' ? 'À classer (analyse en cours)' : 'Autres');
+
+  const categoriesExistantes = useMemo(
+    () => [...new Set((documents ?? []).map((d) => (d.activite ?? '').trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'fr')),
+    [documents]
+  );
 
   const groupesDispo = useMemo(() => {
     const m = new Map<string, number>();
@@ -203,7 +212,7 @@ function ContenuDocuments({ type }: { type: TypeDocument }) {
               <h2 className="text-[13px] text-dim uppercase tracking-wider mb-2">
                 {g} <span className="text-faint">· {docs.length}</span>
               </h2>
-              <GrilleDocuments documents={docs} peutEditer={peutEditer} type={type} />
+              <GrilleDocuments documents={docs} peutEditer={peutEditer} type={type} categories={categoriesExistantes} />
             </section>
           ))}
         </div>
@@ -212,7 +221,17 @@ function ContenuDocuments({ type }: { type: TypeDocument }) {
   );
 }
 
-function GrilleDocuments({ documents, peutEditer, type }: { documents: DocumentTechnique[]; peutEditer: boolean; type: TypeDocument }) {
+function GrilleDocuments({
+  documents,
+  peutEditer,
+  type,
+  categories,
+}: {
+  documents: DocumentTechnique[];
+  peutEditer: boolean;
+  type: TypeDocument;
+  categories: string[];
+}) {
   const { data: urls } = useSignedUrls(
     documents.filter((d) => !d.parties).map((d) => d.chemin),
     BUCKET
@@ -220,13 +239,25 @@ function GrilleDocuments({ documents, peutEditer, type }: { documents: DocumentT
   return (
     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
       {documents.map((d) => (
-        <CarteDocument key={d.id} doc={d} url={urls?.[d.chemin]} peutEditer={peutEditer} type={type} />
+        <CarteDocument key={d.id} doc={d} url={urls?.[d.chemin]} peutEditer={peutEditer} type={type} categories={categories} />
       ))}
     </div>
   );
 }
 
-function CarteDocument({ doc, url, peutEditer, type }: { doc: DocumentTechnique; url?: string; peutEditer: boolean; type: TypeDocument }) {
+function CarteDocument({
+  doc,
+  url,
+  peutEditer,
+  type,
+  categories,
+}: {
+  doc: DocumentTechnique;
+  url?: string;
+  peutEditer: boolean;
+  type: TypeDocument;
+  categories: string[];
+}) {
   const qc = useQueryClient();
   const toast = useToast();
   const [confirmer, setConfirmer] = useState(false);
@@ -281,6 +312,22 @@ function CarteDocument({ doc, url, peutEditer, type }: { doc: DocumentTechnique;
     }
   };
 
+  // Rapports prestataires : changer la catégorie proposée par l'analyse
+  const [reclasser, setReclasser] = useState(false);
+  const [nouvelleCategorie, setNouvelleCategorie] = useState(doc.activite ?? '');
+  const enregistrerCategorie = async () => {
+    const valeur = nouvelleCategorie.trim();
+    const { error } = await supabase.from('documents_techniques').update({ activite: valeur || null }).eq('id', doc.id);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    setReclasser(false);
+    toast.success(valeur ? `Rangé dans « ${valeur} »` : 'Catégorie retirée');
+    qc.invalidateQueries({ queryKey: ['documents-techniques', type] });
+    qc.invalidateQueries({ queryKey: ['analyses-prestataires'] });
+  };
+
   const retirer = async () => {
     const { error } = await supabase.from('documents_techniques').update({ actif: false }).eq('id', doc.id);
     if (error) {
@@ -322,6 +369,31 @@ function CarteDocument({ doc, url, peutEditer, type }: { doc: DocumentTechnique;
             .join(' · ')}
         </div>
         {type === 'prestataire' && doc.prochaine_echeance && <BadgeEcheance date={doc.prochaine_echeance} />}
+        {type === 'prestataire' && peutEditer && (
+          reclasser ? (
+            <div className="mt-2 flex gap-1.5">
+              <input
+                value={nouvelleCategorie}
+                onChange={(e) => setNouvelleCategorie(e.target.value)}
+                list={`categories-${doc.id}`}
+                autoFocus
+                className="flex-1 min-w-0 bg-bg-deep border border-white/[0.08] rounded-lg px-2 py-1.5 text-[12px] text-text outline-none focus:border-nikito-cyan"
+              />
+              <datalist id={`categories-${doc.id}`}>
+                {categories.map((c) => (
+                  <option key={c} value={c} />
+                ))}
+              </datalist>
+              <button onClick={enregistrerCategorie} className="text-nikito-cyan text-[12px] font-semibold px-1.5">
+                OK
+              </button>
+            </div>
+          ) : (
+            <button onClick={() => setReclasser(true)} className="mt-1.5 self-start text-[11px] text-dim underline-offset-2 hover:underline">
+              Changer de catégorie
+            </button>
+          )
+        )}
         {doc.description && <div className="text-[12px] text-faint mt-1 line-clamp-2">{doc.description}</div>}
         <div className="mt-auto pt-3 flex items-center justify-between gap-2">
           <a
@@ -387,9 +459,13 @@ function FormulaireAjout({ type, onFini }: { type: TypeDocument; onFini: () => v
   const envoyer = useMutation({
     mutationFn: async () => {
       if (!fichier) throw new Error('Choisis un fichier (PDF ou image)');
-      if (type === 'prestataire' && !activite.trim()) throw new Error('Indique le domaine (ex. Extincteurs)');
-      if (type === 'prestataire' && !prestataire.trim()) throw new Error('Indique le nom du prestataire');
-      const titreFinal = titre.trim() || (type === 'prestataire' ? `${activite.trim()} — ${prestataire.trim()}` : '');
+      // Rapports prestataires : domaine et prestataire facultatifs, l'analyse
+      // automatique range le rapport dans une catégorie (existante ou créée)
+      const titreFinal =
+        titre.trim() ||
+        (type === 'prestataire'
+          ? [activite.trim(), prestataire.trim()].filter(Boolean).join(' — ') || fichier.name.replace(/\.[^.]+$/, '')
+          : '');
       if (!titreFinal) throw new Error('Donne un titre au document');
       if (type === 'manuel' && !activite.trim()) throw new Error('Indique l’activité du manuel');
       if (fichier.size > TAILLE_MAX) throw new Error('Fichier trop lourd (500 Mo maximum)');
@@ -416,7 +492,13 @@ function FormulaireAjout({ type, onFini }: { type: TypeDocument; onFini: () => v
       if (error) throw error;
       // Rapport prestataire : analyse automatique (points conformes / non conformes, renouvellement)
       if (type === 'prestataire' && cree?.id) {
-        void supabase.functions.invoke('analyser-rapport-prestataire', { body: { document_id: cree.id } });
+        // Une fois l'analyse finie, le rapport est rangé dans sa catégorie
+        void supabase.functions
+          .invoke('analyser-rapport-prestataire', { body: { document_id: cree.id } })
+          .finally(() => {
+            qc.invalidateQueries({ queryKey: ['documents-techniques', 'prestataire'] });
+            qc.invalidateQueries({ queryKey: ['analyses-prestataires'] });
+          });
       }
     },
     onSuccess: () => {
@@ -435,7 +517,7 @@ function FormulaireAjout({ type, onFini }: { type: TypeDocument; onFini: () => v
       </div>
       {type === 'prestataire' && (
         <div className="grid sm:grid-cols-2 gap-2.5">
-          <input value={prestataire} onChange={(e) => setPrestataire(e.target.value)} placeholder="Prestataire (ex. Sicli)" className={champ} />
+          <input value={prestataire} onChange={(e) => setPrestataire(e.target.value)} placeholder="Prestataire (facultatif, lu sur le rapport)" className={champ} />
           <label className="grid gap-1">
             <span className="text-[11px] text-dim">Date d’intervention</span>
             <input type="date" value={dateDocument} onChange={(e) => setDateDocument(e.target.value)} className={champ} />
@@ -462,7 +544,7 @@ function FormulaireAjout({ type, onFini }: { type: TypeDocument; onFini: () => v
           onChange={(e) => setActivite(e.target.value)}
           list={`activites-${type}`}
           placeholder={
-            type === 'plan' ? 'Type de plan (ex. Trampoline)' : type === 'prestataire' ? 'Domaine (ex. Extincteurs)' : 'Activité (ex. Bowling)'
+            type === 'plan' ? 'Type de plan (ex. Trampoline)' : type === 'prestataire' ? 'Catégorie (automatique si vide)' : 'Activité (ex. Bowling)'
           }
           className={champ}
         />

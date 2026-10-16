@@ -92,6 +92,8 @@ function ContenuAnalyses() {
   const { data: rapports, isLoading, isError, error } = useAnalyses();
   const [filtre, setFiltre] = useState<Filtre>('tous');
   const [recherche, setRecherche] = useState('');
+  const [categorie, setCategorie] = useState<string | null>(null);
+  const categorieDe = (r: RapportAnalyse) => r.activite?.trim() || 'À classer';
 
   const aCorriger = (r: RapportAnalyse) => (analyseDe(r)?.points_non_conformes ?? []).length > 0;
   const aRenouveler = (r: RapportAnalyse) => {
@@ -111,6 +113,7 @@ function ContenuAnalyses() {
               ? analyseDe(r)?.resultat_global === 'conforme'
               : true
       )
+      .filter((r) => !categorie || categorieDe(r) === categorie)
       .filter(
         (r) =>
           !q ||
@@ -125,7 +128,19 @@ function ContenuAnalyses() {
         if (rang(a) !== rang(b)) return rang(a) - rang(b);
         return (echeanceDe(a) ?? '9999').localeCompare(echeanceDe(b) ?? '9999');
       });
-  }, [rapports, filtre, recherche]);
+  }, [rapports, filtre, recherche, categorie]);
+
+  // Catégories créées au fil des analyses (rangement automatique)
+  const categories = useMemo(() => {
+    const m = new Map<string, number>();
+    (rapports ?? []).forEach((r) => m.set(categorieDe(r), (m.get(categorieDe(r)) ?? 0) + 1));
+    return [...m.entries()].sort((a, b) => (a[0] === 'À classer' ? 1 : b[0] === 'À classer' ? -1 : a[0].localeCompare(b[0], 'fr')));
+  }, [rapports]);
+  const groupes = useMemo(() => {
+    const m = new Map<string, RapportAnalyse[]>();
+    liste.forEach((r) => m.set(categorieDe(r), [...(m.get(categorieDe(r)) ?? []), r]));
+    return [...m.entries()].sort((a, b) => (a[0] === 'À classer' ? 1 : b[0] === 'À classer' ? -1 : a[0].localeCompare(b[0], 'fr')));
+  }, [liste]);
 
   const compte = (f: Filtre) =>
     (rapports ?? []).filter((r) =>
@@ -154,6 +169,18 @@ function ContenuAnalyses() {
             </Pill>
           ))}
         </div>
+        {categories.length > 1 && (
+          <div className="flex gap-1.5 overflow-x-auto pb-1">
+            <Pill variant="cyan" active={!categorie} onClick={() => setCategorie(null)}>
+              Toutes catégories
+            </Pill>
+            {categories.map(([c, n]) => (
+              <Pill key={c} variant="cyan" active={categorie === c} onClick={() => setCategorie(c)}>
+                {c} <span className="opacity-60">· {n}</span>
+              </Pill>
+            ))}
+          </div>
+        )}
         <input
           type="text"
           value={recherche}
@@ -176,9 +203,18 @@ function ContenuAnalyses() {
           Aucun rapport. Dépose les comptes rendus dans l’onglet « Rapports prestataires » : ils sont analysés automatiquement.
         </div>
       ) : (
-        <div className="flex flex-col gap-3">
-          {liste.map((r) => (
-            <CarteAnalyse key={r.id} rapport={r} />
+        <div className="flex flex-col gap-6">
+          {groupes.map(([c, rs]) => (
+            <section key={c}>
+              <h2 className="text-[13px] text-dim uppercase tracking-wider mb-2">
+                {c} <span className="text-faint">· {rs.length}</span>
+              </h2>
+              <div className="flex flex-col gap-3">
+                {rs.map((r) => (
+                  <CarteAnalyse key={r.id} rapport={r} />
+                ))}
+              </div>
+            </section>
           ))}
         </div>
       )}
