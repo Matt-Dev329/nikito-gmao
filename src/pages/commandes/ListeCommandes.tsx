@@ -11,6 +11,7 @@ import {
   type Commande,
   type StatutCommande,
 } from '@/hooks/queries/useCommandes';
+import { usePanier } from '@/hooks/usePanier';
 import { formatDateHeure, formatPrix } from './format';
 
 const TONES: Record<string, string> = {
@@ -37,7 +38,7 @@ const LIBELLES_ACTION: Partial<Record<StatutCommande, string>> = {
 
 type Filtre = 'en_cours' | 'toutes' | StatutCommande;
 
-export function ListeCommandes({ portee }: { portee: 'miennes' | 'toutes' }) {
+export function ListeCommandes({ portee, onModifier }: { portee: 'miennes' | 'toutes'; onModifier?: () => void }) {
   const { data, isLoading, isError, error } = useCommandes(portee);
   const [filtre, setFiltre] = useState<Filtre>(portee === 'toutes' ? 'demandee' : 'toutes');
 
@@ -87,7 +88,7 @@ export function ListeCommandes({ portee }: { portee: 'miennes' | 'toutes' }) {
       ) : (
         <div className="space-y-2.5">
           {commandes.map((c) => (
-            <CarteCommande key={c.id} commande={c} gestion={portee === 'toutes'} />
+            <CarteCommande key={c.id} commande={c} gestion={portee === 'toutes'} onModifier={onModifier} />
           ))}
         </div>
       )}
@@ -95,13 +96,15 @@ export function ListeCommandes({ portee }: { portee: 'miennes' | 'toutes' }) {
   );
 }
 
-function CarteCommande({ commande: c, gestion }: { commande: Commande; gestion: boolean }) {
+function CarteCommande({ commande: c, gestion, onModifier }: { commande: Commande; gestion: boolean; onModifier?: () => void }) {
   const toast = useToast();
   const [ouverte, setOuverte] = useState(false);
   const [refus, setRefus] = useState<string | null>(null);
   const changer = useChangerStatutCommande();
   const annuler = useAnnulerCommande();
   const livrer = useMarquerCommandeLivree();
+  const ajouterAuPanier = usePanier((s) => s.ajouter);
+  const [confirmerModif, setConfirmerModif] = useState(false);
   const statut = STATUTS_COMMANDE[c.statut];
   const nbArticles = c.commande_lignes.reduce((s, l) => s + l.quantite, 0);
 
@@ -125,6 +128,25 @@ function CarteCommande({ commande: c, gestion }: { commande: Commande; gestion: 
     try {
       await livrer.mutateAsync(c.id);
       toast.success(`Commande ${c.numero} livrée — produits entrés en stock`);
+    } catch (e) {
+      toast.error((e as Error).message);
+    }
+  };
+
+  // Modifier une commande pas encore traitée : elle est annulée et ses articles
+  // reviennent dans le panier, où on change les quantités avant de la renvoyer.
+  const lignesSpecifiques = c.commande_lignes.filter((l) => l.specifique || !l.produit_id);
+  const modifierCommande = async () => {
+    try {
+      await annuler.mutateAsync(c.id);
+      c.commande_lignes.filter((l) => l.produit_id && !l.specifique).forEach((l) => ajouterAuPanier(l.produit_id as string, l.quantite));
+      toast.success(
+        lignesSpecifiques.length
+          ? `Commande ${c.numero} remise dans le panier — ${lignesSpecifiques.length} article(s) spécifique(s) à ressaisir`
+          : `Commande ${c.numero} remise dans le panier : modifie-la puis renvoie-la`
+      );
+      setConfirmerModif(false);
+      onModifier?.();
     } catch (e) {
       toast.error((e as Error).message);
     }
@@ -220,7 +242,39 @@ function CarteCommande({ commande: c, gestion }: { commande: Commande; gestion: 
                 {livrer.isPending ? '…' : '✓ Marquer comme livrée (reçue)'}
               </button>
             )}
-            {!gestion && c.statut === 'demandee' && (
+            {!gestion && c.statut === 'demandee' && onModifier && !confirmerModif && (
+              <button
+                onClick={() => setConfirmerModif(true)}
+                className="bg-nikito-cyan/12 text-nikito-cyan border border-nikito-cyan/40 px-4 py-2 rounded-[10px] text-[13px] font-semibold min-h-[44px]"
+              >
+                ✏️ Modifier la commande
+              </button>
+            )}
+            {confirmerModif && (
+              <div className="w-full bg-bg-deep rounded-xl p-3 text-[12px] text-dim">
+                La commande va être retirée et ses articles remis dans ton panier : tu changes les quantités, ajoutes ou retires
+                des articles, puis tu la renvoies.
+                {lignesSpecifiques.length > 0 && (
+                  <span className="block text-amber mt-1">
+                    Articles spécifiques à ressaisir dans « Commande spécifique » :{' '}
+                    {lignesSpecifiques.map((l) => `${l.quantite} × ${l.produit_nom}`).join(', ')}
+                  </span>
+                )}
+                <div className="flex gap-2 justify-end mt-2">
+                  <button onClick={() => setConfirmerModif(false)} className="text-dim px-3 min-h-[40px]">
+                    Retour
+                  </button>
+                  <button
+                    onClick={modifierCommande}
+                    disabled={annuler.isPending}
+                    className="bg-gradient-cta text-text px-4 rounded-[10px] text-[13px] font-bold min-h-[40px]"
+                  >
+                    {annuler.isPending ? '…' : 'Modifier dans le panier'}
+                  </button>
+                </div>
+              </div>
+            )}
+            {!gestion && c.statut === 'demandee' && !confirmerModif && (
               <button
                 onClick={annulerCommande}
                 disabled={annuler.isPending}
