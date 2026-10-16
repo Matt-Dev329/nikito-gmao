@@ -78,7 +78,6 @@ export function AcceptationInvitation() {
   const [invitation, setInvitation] = useState<InvitationDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [erreur, setErreur] = useState<string | null>(null);
-  const [attenteConfirmation, setAttenteConfirmation] = useState(false);
 
   const [prenom, setPrenom] = useState('');
   const [nom, setNom] = useState('');
@@ -179,32 +178,6 @@ export function AcceptationInvitation() {
 
   if (!invitation) return null;
 
-  // Show "check your email" screen after signUp when email confirmation is required
-  if (attenteConfirmation) {
-    return (
-      <div className="min-h-screen bg-[#060918] text-text flex items-center justify-center p-6">
-        <div className="bg-[#131836] rounded-2xl p-8 max-w-md text-center border border-white/[0.06]">
-          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-[#5DE5FF]/10 flex items-center justify-center">
-            <svg className="w-8 h-8 text-[#5DE5FF]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
-            </svg>
-          </div>
-          <div className="text-lg font-semibold mb-2">Confirmez votre adresse email</div>
-          <div className="text-sm text-dim leading-relaxed mb-4">
-            Un email de confirmation a ete envoye a{' '}
-            <span className="text-[#5DE5FF] font-medium">{invitation.email}</span>.
-            Cliquez sur le lien dans cet email pour activer votre compte.
-          </div>
-          <div className="bg-[#0a0e27] rounded-xl p-4 text-[12px] text-dim leading-relaxed">
-            <div className="font-semibold text-text mb-1">Vous ne trouvez pas l'email ?</div>
-            Verifiez vos spams ou dossier courrier indesirable. L'email provient de{' '}
-            <span className="text-text">noreply@nikito.tech</span>.
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   const isEmailMode = invitation.auth_mode === 'email_password';
   const telValide = TEL_REGEX.test(telephone.replace(/\s/g, ''));
 
@@ -232,77 +205,29 @@ export function AcceptationInvitation() {
         if (existingUser && existingUser.email?.toLowerCase() === invitation.email?.toLowerCase()) {
           authUserId = existingUser.id;
         } else {
-          // Try to sign up
-          const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-            email: invitation.email!,
-            password,
-            options: {
-              emailRedirectTo: `${window.location.origin}/invitation/${token}`,
-              data: {
-                prenom: prenom.trim(),
-                nom: nom.trim(),
-              },
+          // Compte créé (ou mis à jour) côté serveur, confirmé d'office grâce au
+          // jeton d'invitation : pas de mail de confirmation à attendre.
+          const { data: compte, error: compteError } = await supabase.functions.invoke('provision-auth-accounts', {
+            body: {
+              action: 'compte-invitation',
+              token,
+              email: invitation.email,
+              newPassword: password,
+              prenom: prenom.trim(),
+              nom: nom.trim(),
             },
           });
-
-          if (signUpError) {
-            if (signUpError.message?.includes('already registered') || signUpError.message?.includes('already exists')) {
-              // User already exists in auth.users -- try to sign in with the new password
-              const { data: signInData, error: signInError } =
-                await supabase.auth.signInWithPassword({
-                  email: invitation.email!,
-                  password,
-                });
-              if (signInError) {
-                // Account was pre-provisioned with a random password.
-                // Use the edge function to update the password and sign in.
-                const { data: resetData, error: resetError } = await supabase.functions.invoke(
-                  'provision-auth-accounts',
-                  {
-                    body: { action: 'reset-for-invitation', email: invitation.email, newPassword: password },
-                  }
-                );
-                if (resetError || !resetData?.auth_user_id) {
-                  throw new Error(
-                    "Ce compte existe deja. Utilisez 'Mot de passe oublie' sur la page de connexion " +
-                    "pour reinitialiser votre mot de passe, puis revenez sur ce lien d'invitation."
-                  );
-                }
-                // Now sign in with the updated password
-                const { data: retrySignIn, error: retryError } =
-                  await supabase.auth.signInWithPassword({
-                    email: invitation.email!,
-                    password,
-                  });
-                if (retryError || !retrySignIn.user) {
-                  throw new Error(
-                    "Impossible de vous connecter. Utilisez 'Mot de passe oublie' sur la page de connexion."
-                  );
-                }
-                authUserId = retrySignIn.user.id;
-              } else {
-                authUserId = signInData.user?.id ?? null;
-              }
-            } else {
-              throw signUpError;
-            }
-          } else {
-            // signUp succeeded -- check if user is auto-confirmed or needs email confirmation
-            const user = signUpData.user;
-            const session = signUpData.session;
-
-            if (session && user) {
-              // Auto-confirmed (or email confirmation disabled) -- proceed immediately
-              authUserId = user.id;
-            } else if (user && !session) {
-              // Email confirmation is required. Show the waiting screen.
-              setAttenteConfirmation(true);
-              setSubmitting(false);
-              return;
-            } else {
-              throw new Error("Impossible de creer le compte. Reessayez ou contactez le support.");
-            }
+          if (compteError || !compte?.success) {
+            throw new Error(compte?.error ?? 'Impossible de créer le compte. Réessayez ou contactez votre responsable.');
           }
+          const { data: connexion, error: connexionError } = await supabase.auth.signInWithPassword({
+            email: invitation.email!,
+            password,
+          });
+          if (connexionError || !connexion.user) {
+            throw new Error("Compte créé, mais connexion impossible : utilisez « Mot de passe oublié » sur la page de connexion.");
+          }
+          authUserId = connexion.user.id;
         }
       }
 
