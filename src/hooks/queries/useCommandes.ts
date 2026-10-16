@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
+import { useEffectiveRole } from '@/hooks/useViewAs';
 
 // Module « Commander » : catalogue activités → produits, panier, commandes.
 // Tables : commande_activites, commande_produits, commandes, commande_lignes.
@@ -95,6 +96,9 @@ export function useEstGestionnaireCommandes() {
  */
 export function useAccesCommandes() {
   const { utilisateur } = useAuth();
+  // « Voir en tant que » : on applique les droits du rôle simulé
+  const role = useEffectiveRole(utilisateur?.role_code ?? 'staff_operationnel');
+  const vueSimulee = !!utilisateur && role !== utilisateur.role_code;
   const gestionnaire = useEstGestionnaireCommandes();
   const flag = useQuery({
     queryKey: ['feature_flags', 'commandes'],
@@ -111,17 +115,16 @@ export function useAccesCommandes() {
     staleTime: 60_000,
   });
 
-  const parRole =
-    !!utilisateur &&
-    !!flag.data?.actif_global &&
-    flag.data.roles_autorises.includes(utilisateur.role_code);
-  const estGestionnaire = gestionnaire.data === true;
+  // Le staff opérationnel n'a jamais accès aux commandes
+  const estStaff = role === 'staff_operationnel';
+  const parRole = !!utilisateur && !estStaff && !!flag.data?.actif_global && flag.data.roles_autorises.includes(role);
+  const estGestionnaire = !estStaff && !vueSimulee && gestionnaire.data === true;
 
   return {
     peutCommander: estGestionnaire || parRole,
     estGestionnaire,
     /** « Gérer le catalogue » : réservé au rôle Chef d'équipe (chef_maintenance), aligné sur la RLS */
-    peutGererCatalogue: utilisateur?.role_code === 'chef_maintenance',
+    peutGererCatalogue: role === 'chef_maintenance',
     isLoading: gestionnaire.isLoading || flag.isLoading,
   };
 }
