@@ -29,6 +29,7 @@ const champ =
   'w-full bg-bg-deep border border-white/[0.08] rounded-[10px] p-3 text-text text-[13px] outline-none focus:border-nikito-cyan min-h-[44px]';
 
 const TAILLE_MAX_MEDIA = 50 * 1024 * 1024;
+const AUTRE = '__autre__';
 
 function useBons(jours: number) {
   const { estFormation } = useFormationFilter();
@@ -261,6 +262,23 @@ function FormulaireBon({ onFini }: { onFini: () => void }) {
 
   const [parcId, setParcId] = useState(utilisateur?.parc_ids?.length === 1 ? utilisateur.parc_ids[0] : '');
   const [activite, setActivite] = useState('');
+  const [activiteLibre, setActiviteLibre] = useState(false);
+  const { data: activitesEquipements } = useQuery({
+    queryKey: ['activites-equipements'],
+    queryFn: async () => {
+      const { data } = await supabase.from('categories_equipement').select('activite').not('activite', 'is', null);
+      return (data ?? []).map((c: { activite: string | null }) => c.activite ?? '').filter(Boolean);
+    },
+    staleTime: 10 * 60_000,
+  });
+  // Activités du catalogue + celles des équipements, sans doublon
+  const listeActivites = useMemo(
+    () =>
+      [...new Set([...(catalogue?.activites ?? []).map((a) => a.nom), ...(activitesEquipements ?? [])].map((a) => a.trim()).filter(Boolean))].sort(
+        (a, b) => a.localeCompare(b, 'fr')
+      ),
+    [catalogue, activitesEquipements]
+  );
   const [equipement, setEquipement] = useState('');
   const [date, setDate] = useState(maintenantLocal);
   const [duree, setDuree] = useState('');
@@ -365,12 +383,29 @@ function FormulaireBon({ onFini }: { onFini: () => void }) {
             </option>
           ))}
         </select>
-        <input value={activite} onChange={(e) => setActivite(e.target.value)} list="bons-activites" placeholder="Activité (ex. Bowling)" className={champ} />
-        <datalist id="bons-activites">
-          {(catalogue?.activites ?? []).map((a) => (
-            <option key={a.id} value={a.nom} />
-          ))}
-        </datalist>
+        {/* Liste déroulante (les suggestions libres ne s'affichent pas sur toutes les tablettes) */}
+        {activiteLibre ? (
+          <div className="flex gap-2">
+            <input value={activite} onChange={(e) => setActivite(e.target.value)} placeholder="Activité" autoFocus className={champ} />
+            <button type="button" onClick={() => (setActiviteLibre(false), setActivite(''))} className="text-dim text-[12px] px-2 min-h-[44px]">
+              Liste
+            </button>
+          </div>
+        ) : (
+          <select
+            value={activite}
+            onChange={(e) => (e.target.value === AUTRE ? (setActiviteLibre(true), setActivite('')) : setActivite(e.target.value))}
+            className={champ}
+          >
+            <option value="">Activité…</option>
+            {listeActivites.map((a) => (
+              <option key={a} value={a}>
+                {a}
+              </option>
+            ))}
+            <option value={AUTRE}>Autre (saisir)…</option>
+          </select>
+        )}
         <input value={equipement} onChange={(e) => setEquipement(e.target.value)} placeholder="Équipement / pièce concernée" className={champ} />
         <div className="grid grid-cols-[1fr_110px] gap-2.5">
           <input type="datetime-local" value={date} onChange={(e) => setDate(e.target.value)} className={champ} aria-label="Date de l'intervention" />
