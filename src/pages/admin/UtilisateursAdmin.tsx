@@ -1,5 +1,8 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/lib/supabase';
+import { useToast } from '@/components/ui/ToastProvider';
 import { cn } from '@/lib/utils';
 import { ModaleInviterUtilisateur } from '@/components/admin/ModaleInviterUtilisateur';
 import { ModaleEditerUtilisateur } from '@/components/admin/ModaleEditerUtilisateur';
@@ -208,8 +211,12 @@ function UserRow({
   onEditer,
   onReactiver,
   reactivant,
+  onEnvoyerPin,
+  envoiPin,
 }: {
   user: UtilisateurRow;
+  onEnvoyerPin?: () => void;
+  envoiPin?: boolean;
   onSupprimer?: () => void;
   supprimant?: boolean;
   onViewAs?: () => void;
@@ -264,6 +271,16 @@ function UserRow({
             <svg className="w-4 h-4" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M14.85 3.15a1.5 1.5 0 0 1 2.12 0l.88.88a1.5 1.5 0 0 1 0 2.12L7.5 16.5 3 17.5l1-4.5L14.85 3.15Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
+          </button>
+        )}
+        {onEnvoyerPin && (
+          <button
+            onClick={onEnvoyerPin}
+            disabled={envoiPin}
+            title="Envoyer un code de connexion par mail"
+            className="text-[11px] font-semibold px-3 py-1.5 rounded-lg bg-bg-deep border border-white/[0.08] text-nikito-cyan hover:border-nikito-cyan/30 transition-colors disabled:opacity-40"
+          >
+            {envoiPin ? '…' : '✉ Code'}
           </button>
         )}
         {onReactiver && (
@@ -340,8 +357,30 @@ function ListeActifs({ recherche }: { recherche: string }) {
   const canViewAs = canEdit;
   const [editUser, setEditUser] = useState<UtilisateurRow | null>(null);
   const [parcFiltre, setParcFiltre] = useState<string | null>(null);
+  const toast = useToast();
+  const qc = useQueryClient();
+  const [envoiPin, setEnvoiPin] = useState<Set<string>>(new Set());
+  const peutEnvoyerPin = isDirection || isManager || effectiveRole === 'chef_maintenance' || effectiveRole === 'directeur_parc';
+
+  // Génère un nouveau code et l'envoie par mail : le code ne s'affiche jamais ici
+  const envoyerPin = async (liste: UtilisateurRow[]) => {
+    setEnvoiPin((s) => new Set([...s, ...liste.map((u) => u.id)]));
+    let ok = 0;
+    for (const u of liste) {
+      const { data: rep, error } = await supabase.functions.invoke('envoyer-pin-staff', { body: { utilisateur_id: u.id } });
+      if (error || rep?.success === false) toast.error(`${u.prenom} ${u.nom} : ${rep?.error ?? 'envoi impossible'}`);
+      else ok++;
+    }
+    setEnvoiPin((s) => new Set([...s].filter((id) => !liste.some((u) => u.id === id))));
+    if (ok) toast.success(ok > 1 ? `${ok} codes envoyés par mail` : `Code envoyé par mail à ${liste[0].prenom}`);
+    qc.invalidateQueries({ queryKey: ['utilisateurs'] });
+  };
 
   const filtres = useMemo(() => filtrerUtilisateurs(data ?? [], recherche), [data, recherche]);
+  const sansCode = useMemo(
+    () => (data ?? []).filter((u) => u.auth_mode === 'pin_seul' && u.email && !u.code_pin_genere_le),
+    [data]
+  );
 
   // Rangement par parc puis par rôle ; les personnes rattachées à plusieurs
   // parcs (ou à aucun, ex. direction) sont regroupées à part
@@ -404,6 +443,21 @@ function ListeActifs({ recherche }: { recherche: string }) {
 
   return (
     <>
+      {peutEnvoyerPin && sansCode.length > 0 && (
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2 justify-between mx-4 mt-3 p-3 rounded-xl bg-nikito-cyan/10 border border-nikito-cyan/30">
+          <div className="text-[13px]">
+            {sansCode.length} staff sans code de connexion :{' '}
+            <span className="text-dim">{sansCode.map((u) => u.prenom).join(', ')}</span>
+          </div>
+          <button
+            onClick={() => envoyerPin(sansCode)}
+            disabled={envoiPin.size > 0}
+            className="bg-gradient-cta text-text px-4 rounded-[10px] text-[13px] font-bold min-h-[44px] disabled:opacity-50 shrink-0"
+          >
+            {envoiPin.size > 0 ? 'Envoi…' : '✉ Envoyer les codes par mail'}
+          </button>
+        </div>
+      )}
       {codesParcs.length > 1 && (
         <div className="flex gap-1.5 overflow-x-auto px-4 py-3 border-b border-white/[0.06]">
           <button
@@ -443,6 +497,14 @@ function ListeActifs({ recherche }: { recherche: string }) {
                     onEditer={canEdit && u.id !== utilisateur?.id ? () => setEditUser(u) : undefined}
                     onSupprimer={peutSupprimer(u) ? () => supprimer(u.id, `${u.prenom} ${u.nom}`) : undefined}
                     supprimant={supprimerMutation.isPending}
+                    onEnvoyerPin={
+                      peutEnvoyerPin && u.auth_mode === 'pin_seul' && u.email
+                        ? () => {
+                            if (!u.code_pin_genere_le || confirm(`Envoyer un nouveau code à ${u.prenom} ? L'ancien ne marchera plus.`)) envoyerPin([u]);
+                          }
+                        : undefined
+                    }
+                    envoiPin={envoiPin.has(u.id)}
                   />
                 ))}
               </div>

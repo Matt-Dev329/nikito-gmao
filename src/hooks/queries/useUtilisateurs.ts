@@ -15,6 +15,8 @@ export interface UtilisateurRow {
   role_id: string;
   role_code: RoleUtilisateur;
   parcs: { parc_id: string; code: string; est_manager: boolean }[];
+  /** Date du dernier code PIN généré (staff) ; null = jamais */
+  code_pin_genere_le?: string | null;
 }
 
 export interface InvitationRow {
@@ -68,7 +70,7 @@ export function useUtilisateursActifs() {
       const { data, error } = await supabase
         .from('utilisateurs')
         .select(
-          `id, email, prenom, nom, trigramme, actif, statut_validation, auth_mode, cree_le, role_id,
+          `id, email, prenom, nom, trigramme, actif, statut_validation, auth_mode, cree_le, role_id, code_pin_genere_le,
            roles!inner(code),
            parcs_utilisateurs(parc_id, est_manager, parcs(code))`
         )
