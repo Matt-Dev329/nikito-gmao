@@ -7,12 +7,6 @@ import type { RoleUtilisateur } from '@/types/database';
  */
 export const ROLES_STOCK: RoleUtilisateur[] = ['direction', 'chef_maintenance', 'directeur_parc', 'manager_parc', 'technicien', 'admin_it'];
 
-export const ROLES_ENTREE_STOCK: RoleUtilisateur[] = ['direction', 'chef_maintenance', 'admin_it'];
-
-export function peutEntrerStock(role: RoleUtilisateur | undefined, estGestionnaireCommandes: boolean): boolean {
-  return estGestionnaireCommandes || (!!role && ROLES_ENTREE_STOCK.includes(role));
-}
-
 /** Entrées de stock et création de pièces : chef d'équipe, direction, admin IT et gestionnaires des commandes */
 export const ROLES_ENTREE_STOCK: RoleUtilisateur[] = ['direction', 'chef_maintenance', 'admin_it'];
 
