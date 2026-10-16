@@ -99,7 +99,7 @@ export function PageCommander() {
         />
       )}
       {ongletActif === 'specifique' && <OngletCommandeSpecifique onEnvoyee={() => setOnglet('mes_commandes')} />}
-      {ongletActif === 'mes_commandes' && <ListeCommandes portee="miennes" />}
+      {ongletActif === 'mes_commandes' && <ListeCommandes portee="miennes" onModifier={() => setOnglet('panier')} />}
       {ongletActif === 'a_traiter' && <ListeCommandes portee="toutes" />}
       {ongletActif === 'gestion' && <GestionCatalogue />}
     </div>
