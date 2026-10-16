@@ -45,7 +45,7 @@ const configItems: DrawerItem[] = [
   { to: '/gmao/parcs', label: 'Parcs', iconLabel: 'Parcs', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'admin_it'] },
   { to: '/gmao/utilisateurs', label: 'Utilisateurs', iconLabel: 'Utilisateurs', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'manager_parc', 'admin_it'] },
   { to: '/gmao/bibliotheque', label: 'Bibliotheque points', iconLabel: 'Bibliothèque points', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'admin_it'] },
-  { to: '/gmao/fournisseurs', label: 'Fournisseurs', iconLabel: 'Fournisseurs', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'admin_it'] },
+  { to: '/gmao/fournisseurs', label: 'Fournisseurs', iconLabel: 'Fournisseurs', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'technicien', 'admin_it'] },
   { to: '/gmao/it-admin', label: 'Administration IT', iconLabel: 'Administration IT', roles: ['direction', 'admin_it'] },
 ];
 
