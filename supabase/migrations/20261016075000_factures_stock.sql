@@ -115,8 +115,6 @@ BEGIN
     RAISE EXCEPTION 'Facture déjà intégrée';
   END IF;
 
-  DELETE FROM factures_stock_lignes WHERE facture_id = p_facture_id;
-
   FOR l IN SELECT * FROM jsonb_array_elements(COALESCE(p_lignes, '[]'::jsonb))
   LOOP
     v_ordre := v_ordre + 1;
