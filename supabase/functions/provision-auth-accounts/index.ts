@@ -20,37 +20,79 @@ Deno.serve(async (req: Request) => {
     const siteUrl = Deno.env.get("SITE_URL") || "https://nikito.tech";
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Handle reset-for-invitation action (update password for pre-provisioned accounts)
+    const repondre = (corps: unknown, status = 200) =>
+      new Response(JSON.stringify(corps), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+
+    // Création / mise à jour du compte d'un invité, confirmé d'office.
+    // Sécurisé par le jeton d'invitation (valide, non utilisé, non expiré,
+    // même email) : sans lui, impossible de toucher au mot de passe d'un compte.
+    // Évite le mail de confirmation Supabase (non délivré sans SMTP dédié).
     const contentType = req.headers.get("content-type") || "";
-    if (contentType.includes("application/json")) {
-      const body = await req.json();
-      if (body?.action === "reset-for-invitation" && body?.email && body?.newPassword) {
-        const { data: listData } = await supabase.auth.admin.listUsers();
-        const existingUser = listData?.users?.find(
-          (u) => u.email?.toLowerCase() === body.email.toLowerCase()
-        );
-        if (!existingUser) {
-          return new Response(
-            JSON.stringify({ error: "User not found" }),
-            { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-          );
-        }
-        const { error: updateErr } = await supabase.auth.admin.updateUserById(existingUser.id, {
-          password: body.newPassword,
-          user_metadata: { ...existingUser.user_metadata, password_must_change: false },
-        });
-        if (updateErr) {
-          return new Response(
-            JSON.stringify({ error: updateErr.message }),
-            { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-          );
-        }
-        return new Response(
-          JSON.stringify({ success: true, auth_user_id: existingUser.id }),
-          { headers: { ...corsHeaders, "Content-Type": "application/json" } },
-        );
+    const body = contentType.includes("application/json") ? await req.json().catch(() => null) : null;
+    if (body?.action === "compte-invitation" || body?.action === "reset-for-invitation") {
+      const token = typeof body.token === "string" ? body.token : "";
+      const motDePasse = typeof body.newPassword === "string" ? body.newPassword : "";
+      if (!token || motDePasse.length < 6) return repondre({ error: "Jeton d'invitation et mot de passe (6 caractères min.) requis" }, 400);
+
+      const { data: invitation } = await supabase
+        .from("invitations")
+        .select("email, auth_mode, expire_le, utilise_le")
+        .eq("token", token)
+        .maybeSingle();
+      if (
+        !invitation?.email ||
+        invitation.auth_mode !== "email_password" ||
+        invitation.utilise_le ||
+        new Date(invitation.expire_le).getTime() < Date.now()
+      ) {
+        return repondre({ error: "Invitation invalide ou expirée" }, 403);
       }
+      if (body.email && String(body.email).toLowerCase() !== invitation.email.toLowerCase()) {
+        return repondre({ error: "Invitation invalide" }, 403);
+      }
+
+      const metadonnees = {
+        ...(typeof body.prenom === "string" ? { prenom: body.prenom.trim() } : {}),
+        ...(typeof body.nom === "string" ? { nom: body.nom.trim() } : {}),
+        password_must_change: false,
+      };
+
+      // Compte déjà créé (inscription non confirmée, ou pré-provisionné) ?
+      let existant: { id: string; user_metadata?: Record<string, unknown> } | undefined;
+      for (let page = 1; page <= 20 && !existant; page++) {
+        const { data: liste } = await supabase.auth.admin.listUsers({ page, perPage: 200 });
+        existant = liste?.users?.find((u) => u.email?.toLowerCase() === invitation.email.toLowerCase());
+        if (!liste?.users?.length || liste.users.length < 200) break;
+      }
+
+      if (existant) {
+        const { error } = await supabase.auth.admin.updateUserById(existant.id, {
+          password: motDePasse,
+          email_confirm: true,
+          user_metadata: { ...existant.user_metadata, ...metadonnees },
+        });
+        if (error) return repondre({ error: error.message }, 500);
+        return repondre({ success: true, auth_user_id: existant.id });
+      }
+
+      const { data: cree, error } = await supabase.auth.admin.createUser({
+        email: invitation.email,
+        password: motDePasse,
+        email_confirm: true,
+        user_metadata: metadonnees,
+      });
+      if (error || !cree?.user) return repondre({ error: error?.message ?? "Création impossible" }, 500);
+      return repondre({ success: true, auth_user_id: cree.user.id });
     }
+
+    // Provisionnement en masse : réservé à la direction / admin IT
+    const jeton = (req.headers.get("Authorization") ?? "").replace(/^Bearer\s+/i, "");
+    const { data: appelantAuth } = await supabase.auth.getUser(jeton);
+    const { data: appelant } = appelantAuth?.user
+      ? await supabase.from("utilisateurs").select("roles(code)").eq("auth_user_id", appelantAuth.user.id).maybeSingle()
+      : { data: null };
+    const roleAppelant = (appelant?.roles as { code?: string } | null)?.code ?? "";
+    if (!["direction", "admin_it"].includes(roleAppelant)) return repondre({ error: "Accès refusé" }, 403);
 
     // Find all email_password users without auth_user_id
     const { data: orphans, error: queryErr } = await supabase
