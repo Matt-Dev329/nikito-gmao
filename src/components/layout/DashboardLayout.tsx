@@ -8,7 +8,6 @@ import { BottomTabBar } from './BottomTabBar';
 import { MobileMoreDrawer } from './MobileMoreDrawer';
 import { MobileAlertPanel } from './MobileAlertPanel';
 import { TourOverlay } from '@/components/tour/TourOverlay';
-import { useTour } from '@/components/tour/useTour';
 import { ModaleSignalerV2, type SignalerVia } from '@/components/forms/ModaleSignalerV2';
 import { useAuth } from '@/hooks/useAuth';
 import { useViewAs, useEffectiveRole } from '@/hooks/useViewAs';
@@ -109,16 +108,9 @@ export function DashboardLayout() {
       }
     : userMock;
 
-  const startTour = useTour((s) => s.start);
-  const tourActive = useTour((s) => s.active);
+  // Visite guidée : plus de lancement automatique à la première connexion
+  // (toujours disponible depuis le menu et la page Aide)
   const formationActive = useFormation((s) => s.active);
-
-  useEffect(() => {
-    if (!loading && utilisateur && !utilisateur.tour_vu && !tourActive) {
-      const timer = setTimeout(() => startTour(), 800);
-      return () => clearTimeout(timer);
-    }
-  }, [loading, utilisateur, startTour, tourActive]);
 
   if (loading) {
     return (
