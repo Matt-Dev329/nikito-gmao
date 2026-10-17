@@ -192,7 +192,10 @@ Deno.serve(async (req: Request) => {
         const h = horairesDuJour(parc, now.jour);
         if (!h) continue;
         const limite = enMinutes(h.ouverture) + DELAI_APRES_OUVERTURE_MIN;
-        if (now.minutes < limite || (h.fermeture && now.minutes > enMinutes(h.fermeture))) continue;
+        // Fermeture après minuit (ex. 01:00) : le parc reste ouvert jusqu'à la fin de la journée
+        const fermeApresMinuit = !!h.fermeture && enMinutes(h.fermeture) <= enMinutes(h.ouverture);
+        const apresFermeture = !!h.fermeture && !fermeApresMinuit && now.minutes > enMinutes(h.fermeture);
+        if (now.minutes < limite || apresFermeture) continue;
         const { count } = await service
           .from("controles")
           .select("id", { count: "exact", head: true })
