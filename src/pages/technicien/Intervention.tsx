@@ -87,21 +87,24 @@ export function Intervention() {
   }, [interventions, estResolu]);
 
   const demarrer = useDemarrerIntervention();
-  // Photo prise à la création du ticket : sert de photo AVANT (sinon elle est obligatoire)
-  const photoSignalement =
-    ((incident?.photos_urls as string[] | null) ?? []).find((c) => c && !estCheminVideo(c)) ?? null;
+  // Photo (ou vidéo) prise à la création du ticket : sert de photo AVANT (sinon elle est obligatoire)
+  const mediasSignalement = ((incident?.photos_urls as string[] | null) ?? []).filter(Boolean);
+  const photoSignalement = mediasSignalement.find((c) => !estCheminVideo(c)) ?? mediasSignalement[0] ?? null;
+  const signalementVideo = estCheminVideo(photoSignalement);
   const { data: urlPhotoSignalement } = useSignedUrl(photoSignalement, 'alba-incidents');
   const [autrePhoto, setAutrePhoto] = useState(false);
   const [copiePhoto, setCopiePhoto] = useState(false);
 
-  /** Recopie la photo du signalement dans le dossier de l'intervention (photo AVANT). */
+  /** Recopie la photo du signalement dans le dossier de l'intervention (photo AVANT).
+   *  Pour une vidéo, une image en est extraite. */
   const copierPhotoSignalement = async (chemin: string): Promise<string> => {
     const { data, error } = await supabase.storage.from('alba-incidents').download(chemin);
     if (error || !data) throw new Error('Photo du signalement inaccessible : prends une nouvelle photo');
+    const image = estCheminVideo(chemin) ? await imageDepuisVideo(data) : data;
     const cible = `intervention/${btNumero ?? 'draft'}/avant_signalement_${Date.now()}.jpg`;
     const { error: upErr } = await supabase.storage
       .from('alba-interventions')
-      .upload(cible, data, { contentType: data.type || 'image/jpeg' });
+      .upload(cible, image, { contentType: image.type || 'image/jpeg' });
     if (upErr) throw upErr;
     return cible;
   };
@@ -445,19 +448,23 @@ export function Intervention() {
                 {statutIncident === 'en_pause'
                   ? `Motif : ${(incident.pause_motif as string | null) || 'non précisé'}. Reprends pour relancer le ticket.`
                   : photoSignalement && !autrePhoto
-                    ? 'La photo prise à la création du ticket sert de photo AVANT. Démarre quand tu es prêt.'
+                    ? signalementVideo
+                      ? 'La vidéo prise à la création du ticket sert de photo AVANT. Démarre quand tu es prêt.'
+                      : 'La photo prise à la création du ticket sert de photo AVANT. Démarre quand tu es prêt.'
                     : 'Étape 1 : photo AVANT du problème. Étape 2 : démarrer (chrono, ticket « en cours »).'}
               </div>
               {photoAvant && <div className="text-green text-[14px] font-semibold mt-3">✓ Photo AVANT prise</div>}
               {!photoAvant && photoSignalement && !autrePhoto && (
                 <div className="mt-3 flex items-center gap-3">
-                  {urlPhotoSignalement ? (
+                  {urlPhotoSignalement && signalementVideo ? (
+                    <video src={urlPhotoSignalement} muted playsInline preload="metadata" className="w-20 h-20 rounded-lg object-cover bg-bg-deep" />
+                  ) : urlPhotoSignalement ? (
                     <img src={urlPhotoSignalement} alt="Photo du signalement" className="w-20 h-20 rounded-lg object-cover bg-bg-deep" />
                   ) : (
                     <div className="w-20 h-20 rounded-lg bg-bg-deep animate-pulse" />
                   )}
                   <div>
-                    <div className="text-green text-[14px] font-semibold">✓ Photo AVANT : celle du signalement</div>
+                    <div className="text-green text-[14px] font-semibold">✓ Photo AVANT : {signalementVideo ? 'la vidéo du signalement' : 'celle du signalement'}</div>
                     <button onClick={() => setAutrePhoto(true)} className="text-nikito-cyan text-[13px] underline min-h-[36px]">
                       Prendre une autre photo
                     </button>
@@ -839,4 +846,40 @@ function SuiviLectureSeule({
       <div className="text-[11px] text-faint mt-3">Consultation seulement : l'intervention est gérée par l'équipe maintenance.</div>
     </div>
   );
+}
+
+/** Extrait une image JPEG d'une vidéo (début du film), pour servir de photo AVANT. */
+function imageDepuisVideo(video: Blob): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(video);
+    const el = document.createElement('video');
+    const echec = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error('Vidéo du signalement illisible ici : prends une photo AVANT'));
+    };
+    const minuteur = window.setTimeout(echec, 15000);
+    el.muted = true;
+    el.playsInline = true;
+    el.preload = 'auto';
+    el.onerror = () => { window.clearTimeout(minuteur); echec(); };
+    el.onloadedmetadata = () => {
+      el.currentTime = Math.min(0.5, (el.duration || 1) / 2);
+    };
+    el.onseeked = () => {
+      window.clearTimeout(minuteur);
+      const canvas = document.createElement('canvas');
+      const echelle = Math.min(1, 1600 / Math.max(el.videoWidth || 1, el.videoHeight || 1));
+      canvas.width = Math.round((el.videoWidth || 1) * echelle);
+      canvas.height = Math.round((el.videoHeight || 1) * echelle);
+      const ctx = canvas.getContext('2d');
+      if (!ctx || !el.videoWidth) return echec();
+      ctx.drawImage(el, 0, 0, canvas.width, canvas.height);
+      canvas.toBlob((b) => {
+        URL.revokeObjectURL(url);
+        if (b) resolve(b);
+        else reject(new Error('Vidéo du signalement illisible ici : prends une photo AVANT'));
+      }, 'image/jpeg', 0.85);
+    };
+    el.src = url;
+  });
 }
