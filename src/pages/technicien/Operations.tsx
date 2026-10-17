@@ -5,14 +5,16 @@ import { TicketCard, type TicketSummary } from '@/components/tickets/TicketCard'
 import { ModaleReassignerTicket } from '@/components/tickets/ModaleReassignerTicket';
 import { Pill } from '@/components/ui/Pill';
 import { cn, estCheminVideo, formatDateCourt, formatDuree } from '@/lib/utils';
-import { useIncidents, useReprendreIncident } from '@/hooks/queries/useTickets';
+import { useIncidents, useReprendreIncident, useTicketsAValider, useValiderTicket } from '@/hooks/queries/useTickets';
+import { ModaleSupprimerTicket } from '@/components/tickets/ModaleSupprimerTicket';
+import { estManagerPrincipal, peutValiderTicket } from '@/lib/acces';
 import { useAuth } from '@/hooks/useAuth';
 import { useParcs } from '@/hooks/queries/useReferentiel';
 import { useToast } from '@/components/ui/ToastProvider';
 import { useSignedUrls } from '@/hooks/useSignedUrl';
 import type { Criticite } from '@/types/database';
 
-type Onglet = 'a_faire' | 'en_cours' | 'attente_piece' | 'exterieur' | 'resolus' | 'controles' | 'preventif';
+type Onglet = 'a_valider' | 'a_faire' | 'en_cours' | 'attente_piece' | 'exterieur' | 'resolus' | 'controles' | 'preventif';
 
 interface ParcOption {
   id: string;
@@ -82,7 +84,9 @@ function incidentToTicket(inc: Record<string, unknown>): TicketSummary {
       : undefined,
     badges: badges.length > 0 ? badges : undefined,
     slaAlert: heuresDepuis > slaH ? `SLA dépassé · ${formatDuree(declareLe)}` : undefined,
-    meta: `${parc?.code as string ?? ''} · ${inc.numero_bt as string} · ${formatDuree(declareLe)}`,
+    meta: [parc?.code as string | undefined, inc.numero_bt as string, formatDuree(declareLe), inc.declare_par_nom ? `par ${inc.declare_par_nom as string}` : null]
+      .filter(Boolean)
+      .join(' · '),
     enAttente: inc.statut === 'assigne',
     enPause: inc.statut === 'en_pause',
     photoPath: ((inc.photos_urls as string[] | null) ?? [])[0] ?? undefined,
@@ -119,6 +123,13 @@ export function Operations() {
   const [activiteFiltre, setActiviteFiltre] = useState<string>('toutes');
   const [parcActif, setParcActif] = useState<string | null>(null);
   const [reassignerCible, setReassignerCible] = useState<{ id: string; numeroBT: string } | null>(null);
+  const [suppressionCible, setSuppressionCible] = useState<{ id: string; numeroBT: string } | null>(null);
+  const validerTicket = useValiderTicket();
+
+  // Valideurs : chef d'équipe, direction, admin IT, directeurs de parc, managers principaux
+  const estValideur =
+    ['direction', 'chef_maintenance', 'admin_it', 'directeur_parc'].includes(utilisateur?.role_code ?? '') ||
+    estManagerPrincipal(utilisateur);
 
   const { parcsVisibles, peutVoirTous } = useParcsVisibles();
 
@@ -154,6 +165,25 @@ export function Operations() {
   const allIncidentsQ = useIncidents({
     parcId: parcIdEffectif,
   });
+
+  // Tickets à valider (staff, managers non principaux) des parcs que l'utilisateur peut valider
+  const aValiderQ = useTicketsAValider(estValideur);
+  const ticketsAValider = useMemo(
+    () =>
+      ((aValiderQ.data ?? []) as Record<string, unknown>[])
+        .filter((i) => {
+          const parcId = (i.equipements as { parc_id?: string } | null)?.parc_id;
+          return (!parcIdEffectif || parcId === parcIdEffectif) && peutValiderTicket(utilisateur, parcId);
+        })
+        .map(incidentToTicket),
+    [aValiderQ.data, parcIdEffectif, utilisateur]
+  );
+
+  const valider = (t: TicketSummary) =>
+    validerTicket.mutate(t.id, {
+      onSuccess: () => toast.success(`Ticket ${t.numeroBT} validé : il est dans Opérations`),
+      onError: (e) => toast.error((e as Error).message),
+    });
 
   const tickets = useMemo(() => {
     if (!incidentsQ.data) return [];
@@ -265,6 +295,9 @@ export function Operations() {
 
       <div className="px-3 md:px-[18px] pt-3 bg-bg-deep flex gap-2 overflow-x-auto">
         {[
+          ...(estValideur
+            ? [{ code: 'a_valider' as Onglet, label: 'À valider', badge: ticketsAValider.length, badgeTone: 'amber' }]
+            : []),
           { code: 'a_faire' as Onglet, label: 'À faire', badge: compteurs.aFaire, badgeTone: 'white' },
           { code: 'en_cours' as Onglet, label: 'En cours', badge: compteurs.enCours, badgeTone: 'amber' },
           { code: 'attente_piece' as Onglet, label: 'Pièce en attente', badge: compteurs.attentePiece, badgeTone: 'amber' },
@@ -351,6 +384,31 @@ export function Operations() {
             <TicketSkeleton />
             <TicketSkeleton />
           </>
+        ) : onglet === 'a_valider' ? (
+          ticketsAValider.length === 0 ? (
+            <div className="text-center py-12 text-dim text-sm">Aucun ticket à valider</div>
+          ) : (
+            ticketsAValider.map((t) => (
+              <div key={t.numeroBT} className="flex flex-col gap-1.5">
+                <TicketCard ticket={t} variant="compact" onClick={() => navigate(`/tech/operations/${t.numeroBT}`)} />
+                <div className="flex gap-2 justify-end">
+                  <button
+                    onClick={() => setSuppressionCible({ id: t.id, numeroBT: t.numeroBT })}
+                    className="px-4 rounded-[10px] text-[12px] font-semibold min-h-[40px] bg-bg-card border border-red/40 text-red"
+                  >
+                    Supprimer
+                  </button>
+                  <button
+                    onClick={() => valider(t)}
+                    disabled={validerTicket.isPending}
+                    className="px-4 rounded-[10px] text-[12px] font-bold min-h-[40px] bg-gradient-cta text-text disabled:opacity-50"
+                  >
+                    ✓ Valider
+                  </button>
+                </div>
+              </div>
+            ))
+          )
         ) : onglet === 'controles' || onglet === 'preventif' ? (
           <div className="text-center py-12 text-dim text-sm">
             {onglet === 'controles' ? 'Contrôles à venir' : 'Préventif à venir'}
@@ -394,6 +452,14 @@ export function Operations() {
           </>
         )}
       </div>
+
+      {suppressionCible && (
+        <ModaleSupprimerTicket
+          incidentId={suppressionCible.id}
+          numeroBT={suppressionCible.numeroBT}
+          onClose={() => setSuppressionCible(null)}
+        />
+      )}
 
       {reassignerCible && (
         <ModaleReassignerTicket

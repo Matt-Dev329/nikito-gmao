@@ -107,3 +107,20 @@ export function peutVoirComme(
   if (!g || !rolesAttribuables(g.role_code).includes(role)) return false;
   return !(principal && g.role_code === 'manager_parc' && (g.parcs_manager_principal?.length ?? 0) === 0);
 }
+
+/**
+ * Valider ou supprimer un ticket (même règle qu'en base : peut_valider_ticket) :
+ * chef d'équipe, direction, admin IT partout ; directeur de parc sur ses parcs ;
+ * manager principal sur les parcs où il a le badge MGR.
+ */
+export function peutValiderTicket(
+  u: { role_code: string; parc_ids: string[]; parcs_manager_principal?: string[] } | null | undefined,
+  parcId: string | null | undefined
+): boolean {
+  if (!u) return false;
+  if (['direction', 'chef_maintenance', 'admin_it'].includes(u.role_code)) return true;
+  if (!parcId) return false;
+  if (u.role_code === 'directeur_parc') return u.parc_ids.includes(parcId);
+  if (u.role_code === 'manager_parc') return (u.parcs_manager_principal ?? []).includes(parcId);
+  return false;
+}

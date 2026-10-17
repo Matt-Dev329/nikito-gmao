@@ -8,7 +8,9 @@ import { ModalePauseTicket } from '@/components/tickets/ModalePauseTicket';
 import { ModaleAjouterPiece } from '@/components/shared/ModaleAjouterPiece';
 import { useAccesCommandes } from '@/hooks/queries/useCommandes';
 import { useChrono } from '@/hooks/useChrono';
-import { useIncident, useDemarrerIntervention } from '@/hooks/queries/useTickets';
+import { useIncident, useDemarrerIntervention, useValiderTicket } from '@/hooks/queries/useTickets';
+import { ModaleSupprimerTicket } from '@/components/tickets/ModaleSupprimerTicket';
+import { peutValiderTicket } from '@/lib/acces';
 import { useCloturerIntervention } from '@/hooks/mutations';
 import { useAuth } from '@/hooks/useAuth';
 import { useDraftPersistence, useAutoSaveDraft } from '@/hooks/useDraftPersistence';
@@ -65,6 +67,12 @@ export function Intervention() {
   const interventions = (incident?.interventions ?? []) as Record<string, unknown>[];
 
   const statutIncident = (incident?.statut as string | undefined) ?? '';
+  // Validation (tickets du staff / managers non principaux) et suppression avec motif
+  const enAttenteValidation = incident?.validation_manager === 'en_attente' && statutIncident !== 'annule';
+  const estAnnule = statutIncident === 'annule';
+  const peutValider = peutValiderTicket(utilisateur, equip?.parc_id as string | undefined);
+  const validerTicket = useValiderTicket();
+  const [suppression, setSuppression] = useState(false);
   const estResolu = statutIncident === 'resolu' || statutIncident === 'ferme';
   // Intervention en cours (fin vide) ; pour un ticket résolu, la dernière intervention.
   // Une intervention déjà clôturée d'un ticket rouvert ne doit pas être reprise ni écrasée.
@@ -369,7 +377,62 @@ export function Intervention() {
       </div>
 
       <main className="p-4 px-[18px] bg-bg-app flex flex-col gap-3.5">
-        {aDemarrer && (
+        <div className="bg-bg-card rounded-xl px-4 py-3 border border-white/[0.06] flex flex-wrap items-center gap-2 text-[13px]">
+          <span className="text-dim">
+            Signalé par <strong className="text-text">{(incident.declare_par_nom as string | null) || 'inconnu'}</strong>
+            {incident.declare_le ? ` le ${new Date(incident.declare_le as string).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}` : ''}
+          </span>
+          {peutValider && !estAnnule && (
+            <button
+              onClick={() => setSuppression(true)}
+              className="ml-auto px-3 rounded-lg text-[12px] font-semibold min-h-[36px] border border-red/40 text-red"
+            >
+              Supprimer le ticket
+            </button>
+          )}
+        </div>
+
+        {estAnnule && (
+          <div className="bg-red/10 border border-red/30 rounded-xl px-4 py-3 text-[13px]">
+            <strong className="text-red">Ticket supprimé</strong>
+            {incident.supprime_le ? ` le ${new Date(incident.supprime_le as string).toLocaleDateString('fr-FR')}` : ''}
+            {incident.supprime_motif ? <div className="text-dim mt-1">Motif : {incident.supprime_motif as string}</div> : null}
+          </div>
+        )}
+
+        {enAttenteValidation && (
+          <div className="bg-amber/10 border border-amber/40 rounded-xl px-4 py-3 flex flex-wrap items-center gap-3">
+            <div className="text-[13px] flex-1 min-w-[200px]">
+              <strong className="text-amber">En attente de validation</strong>
+              <div className="text-dim">Le ticket arrivera dans Opérations une fois validé par le directeur, un manager principal ou le chef d'équipe.</div>
+            </div>
+            {peutValider && (
+              <button
+                onClick={() =>
+                  validerTicket.mutate(incident.id as string, {
+                    onSuccess: () => toast.success('Ticket validé : il est dans Opérations'),
+                    onError: (e) => toast.error((e as Error).message),
+                  })
+                }
+                disabled={validerTicket.isPending}
+                className="px-4 rounded-[10px] text-[13px] font-bold min-h-[44px] bg-gradient-cta text-text disabled:opacity-50"
+              >
+                ✓ Valider le ticket
+              </button>
+            )}
+          </div>
+        )}
+
+        {suppression && (
+          <ModaleSupprimerTicket
+            incidentId={incident.id as string}
+            numeroBT={btNumero ?? ''}
+            onClose={() => setSuppression(false)}
+            onSupprime={() => navigate(-1)}
+          />
+        )}
+
+        {aDemarrer && !enAttenteValidation && !estAnnule && (
           <div className="bg-bg-card rounded-2xl p-5 border-2 border-nikito-cyan shadow-lg flex flex-col gap-4">
             <div className="flex-1">
               <div className="text-[18px] font-bold">

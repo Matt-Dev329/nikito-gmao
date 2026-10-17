@@ -3,6 +3,13 @@ import { supabase } from '@/lib/supabase';
 import { useFormationFilter } from '@/hooks/useFormation';
 import type { StatutIncident } from '@/types/database';
 
+const SELECT_INCIDENTS = `*,
+          equipements!inner(code, libelle, parc_id, parcs(code, nom), zones(nom), categories_equipement(nom, activite)),
+          niveaux_priorite(code, nom, sla_h, couleur_hex),
+          externe_fournisseur:fournisseurs!incidents_externe_fournisseur_id_fkey(nom, contact_tel, contact_nom),
+          attente_commande:commandes!incidents_attente_piece_commande_id_fkey(numero, statut)`;
+
+/** Tickets publiés (hors tickets en attente de validation, cf useTicketsAValider) */
 export function useIncidents(filtres?: {
   parcId?: string;
   statuts?: StatutIncident[];
@@ -14,14 +21,9 @@ export function useIncidents(filtres?: {
     queryFn: async () => {
       let q = supabase
         .from('incidents')
-        .select(
-          `*,
-          equipements!inner(code, libelle, parc_id, parcs(code, nom), zones(nom), categories_equipement(nom, activite)),
-          niveaux_priorite(code, nom, sla_h, couleur_hex),
-          externe_fournisseur:fournisseurs!incidents_externe_fournisseur_id_fkey(nom, contact_tel, contact_nom),
-          attente_commande:commandes!incidents_attente_piece_commande_id_fkey(numero, statut)`
-        )
+        .select(SELECT_INCIDENTS)
         .eq('est_formation', estFormation)
+        .or('validation_manager.is.null,validation_manager.neq.en_attente')
         .order('declare_le', { ascending: false });
 
       if (filtres?.parcId) {
@@ -177,6 +179,50 @@ export function useReprendreIncident() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['incidents'] });
     },
+  });
+}
+
+/** Tickets créés par le staff ou un manager non principal, en attente de validation */
+export function useTicketsAValider(actif: boolean) {
+  const { estFormation } = useFormationFilter();
+  return useQuery({
+    queryKey: ['incidents', 'a_valider', estFormation],
+    enabled: actif,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('incidents')
+        .select(SELECT_INCIDENTS)
+        .eq('est_formation', estFormation)
+        .eq('validation_manager', 'en_attente')
+        .neq('statut', 'annule')
+        .order('declare_le', { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+  });
+}
+
+/** Valide un ticket : il apparaît alors dans Opérations (RPC valider_ticket) */
+export function useValiderTicket() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (incidentId: string) => {
+      const { error } = await supabase.rpc('valider_ticket', { p_incident_id: incidentId });
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['incidents'] }),
+  });
+}
+
+/** Supprime (annule) un ticket avec un motif obligatoire (RPC supprimer_ticket) */
+export function useSupprimerTicket() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ incidentId, motif }: { incidentId: string; motif: string }) => {
+      const { error } = await supabase.rpc('supprimer_ticket', { p_incident_id: incidentId, p_motif: motif });
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['incidents'] }),
   });
 }
 
