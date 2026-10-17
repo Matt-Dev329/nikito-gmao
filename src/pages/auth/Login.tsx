@@ -19,6 +19,16 @@ interface Pending2FAState {
 
 const RESEND_COOLDOWN = 60;
 
+const CLE_DERNIER_EMAIL = 'alba:dernier_email';
+
+function memoriserEmail(email: string) {
+  try {
+    localStorage.setItem(CLE_DERNIER_EMAIL, email.trim().toLowerCase());
+  } catch {
+    /* stockage indisponible (navigation privée) : sans effet */
+  }
+}
+
 export function Login() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -31,7 +41,14 @@ export function Login() {
     forceRender((n) => n + 1);
   };
 
-  const [email, setEmail] = useState('');
+  // Dernier email utilisé sur cet appareil : accès rapide (Face ID…) en un geste
+  const [email, setEmail] = useState(() => {
+    try {
+      return localStorage.getItem(CLE_DERNIER_EMAIL) ?? '';
+    } catch {
+      return '';
+    }
+  });
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -104,7 +121,7 @@ export function Login() {
 
   const handleBiometric = async () => {
     if (!email) {
-      setError('Entrez votre email pour utiliser la connexion biometrique');
+      setError("Entre ton email pour utiliser l'accès rapide");
       return;
     }
     setError(null);
@@ -112,12 +129,13 @@ export function Login() {
     isProcessing.current = true;
 
     const result = await authenticateWithPasskey(email);
+    if (result.success) memoriserEmail(email);
 
     if (!result.success) {
       isProcessing.current = false;
       setBiometricLoading(false);
       if (result.error === 'Aucun passkey enregistre') {
-        setError('Aucun passkey enregistre pour ce compte. Connectez-vous par mot de passe puis activez la biometrie dans Profil.');
+        setError("L'accès rapide n'est pas encore activé sur ce compte : connecte-toi avec ton mot de passe, puis active-le dans Mon profil.");
       } else {
         setError(result.error || 'Echec de l\'authentification biometrique');
       }
@@ -152,6 +170,7 @@ export function Login() {
     isProcessing.current = true;
 
     const { data: signInData, error: signInError } = await signIn(email, password);
+    if (!signInError) memoriserEmail(email);
 
     if (signInError || !signInData.session) {
       isProcessing.current = false;
@@ -195,7 +214,7 @@ export function Login() {
     pending2FA.current = { email: userEmail, prenom, tempPassword: password };
     setScreen('2fa');
 
-    await supabase.auth.signOut();
+    await supabase.auth.signOut({ scope: 'local' });
 
     setLoading(false);
   };
@@ -414,7 +433,7 @@ export function Login() {
               <svg className="w-5 h-5 text-nikito-cyan" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M7.864 4.243A7.5 7.5 0 0119.5 10.5c0 2.92-.556 5.709-1.568 8.268M5.742 6.364A7.465 7.465 0 004.5 10.5a48.667 48.667 0 00-1.116 7.126M12 10.5a.75.75 0 11-1.5 0 .75.75 0 011.5 0zm0 0v5.25m0-5.25H9.75m2.25 0H14.25m-7.5 10.5h10.5a2.25 2.25 0 002.25-2.25v-1.5a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v1.5a2.25 2.25 0 002.25 2.25z" />
               </svg>
-              {biometricLoading ? 'Verification...' : 'Face ID / Empreinte'}
+              {biometricLoading ? 'Vérification...' : 'Accès rapide · Face ID, empreinte ou code du téléphone'}
             </button>
           )}
 

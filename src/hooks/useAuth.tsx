@@ -133,7 +133,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signOut = async () => {
-    return supabase.auth.signOut();
+    return supabase.auth.signOut({ scope: 'local' });
   };
 
   return (

@@ -105,7 +105,7 @@ export function Verification2FA({ email, prenom, tempPassword, onSuccess, onCanc
     });
 
     if (rpcError) {
-      await supabase.auth.signOut();
+      await supabase.auth.signOut({ scope: 'local' });
       setError('Erreur de verification. Reessayez.');
       setVerifying(false);
       return;
@@ -114,7 +114,7 @@ export function Verification2FA({ email, prenom, tempPassword, onSuccess, onCanc
     const result = data as { success: boolean; reason?: string };
 
     if (!result.success) {
-      await supabase.auth.signOut();
+      await supabase.auth.signOut({ scope: 'local' });
       if (result.reason === 'blocked') {
         setError('Trop de tentatives. Reessayez dans 15 minutes.');
       } else {
@@ -167,7 +167,7 @@ export function Verification2FA({ email, prenom, tempPassword, onSuccess, onCanc
       body: { email, code: newCode, prenom },
     });
 
-    await supabase.auth.signOut();
+    await supabase.auth.signOut({ scope: 'local' });
 
     setDigits(Array(CODE_LENGTH).fill(''));
     setResendCooldown(RESEND_COOLDOWN);

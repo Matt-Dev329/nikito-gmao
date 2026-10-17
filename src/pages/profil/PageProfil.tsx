@@ -307,11 +307,11 @@ function SectionPasskeys({ utilisateurId }: { utilisateurId: string }) {
         <svg className="w-5 h-5 text-nikito-cyan" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M7.864 4.243A7.5 7.5 0 0119.5 10.5c0 2.92-.556 5.709-1.568 8.268M5.742 6.364A7.465 7.465 0 004.5 10.5a48.667 48.667 0 00-1.116 7.126M12 10.5a.75.75 0 11-1.5 0 .75.75 0 011.5 0zm0 0v5.25m0-5.25H9.75m2.25 0H14.25m-7.5 10.5h10.5a2.25 2.25 0 002.25-2.25v-1.5a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v1.5a2.25 2.25 0 002.25 2.25z" />
         </svg>
-        <div className="text-[11px] text-dim uppercase tracking-wider">Connexion biometrique</div>
+        <div className="text-[11px] text-dim uppercase tracking-wider">Accès rapide</div>
       </div>
 
       <p className="text-[12px] text-dim mb-4 leading-relaxed">
-        Utilisez Face ID, Touch ID ou l'empreinte digitale de votre appareil pour vous connecter sans mot de passe.
+        Connecte-toi sans mot de passe avec Face ID, l'empreinte ou le code de déverrouillage de ce téléphone (ou de cette tablette). À activer sur chaque appareil.
       </p>
 
       {isLoading && <div className="text-dim text-xs mb-3">Chargement...</div>}
