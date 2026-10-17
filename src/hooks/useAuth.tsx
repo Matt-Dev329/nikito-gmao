@@ -10,6 +10,8 @@ export interface UtilisateurMetier {
   trigramme: string | null;
   role_code: 'direction' | 'chef_maintenance' | 'directeur_parc' | 'manager_parc' | 'technicien' | 'staff_operationnel' | 'admin_it';
   parc_ids: string[];
+  /** Parcs où l'utilisateur est manager principal (badge MGR) */
+  parcs_manager_principal: string[];
   consentement_gps: boolean;
   tour_vu: boolean;
 }
@@ -93,7 +95,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .select(
         `id, email, nom, prenom, trigramme, consentement_gps, tour_vu,
          roles!inner(code),
-         parcs_utilisateurs(parc_id)`
+         parcs_utilisateurs(parc_id, est_manager)`
       )
       .eq('auth_user_id', authUser.id)
       .maybeSingle()
@@ -104,7 +106,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         } else {
           const d = data as Record<string, unknown>;
           const roles = d.roles as { code: string };
-          const pu = d.parcs_utilisateurs as { parc_id: string }[];
+          const pu = d.parcs_utilisateurs as { parc_id: string; est_manager: boolean | null }[];
           setUtilisateur({
             id: d.id as string,
             email: d.email as string,
@@ -115,6 +117,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             tour_vu: (d.tour_vu as boolean) ?? false,
             role_code: roles.code as UtilisateurMetier['role_code'],
             parc_ids: pu.map((p) => p.parc_id),
+            parcs_manager_principal: pu.filter((p) => p.est_manager).map((p) => p.parc_id),
           });
         }
         setLoading(false);

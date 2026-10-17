@@ -7,6 +7,8 @@ import { Login } from '@/pages/auth/Login';
 import { useAuth } from '@/hooks/useAuth';
 import { rattacherAbonnementPush } from '@/lib/push';
 import { useEffectiveRole } from '@/hooks/useViewAs';
+import { GardeAcces } from '@/components/auth/GardeAcces';
+import { ROLES_ANALYSE_CAUSES, ROLES_PILOTAGE } from '@/lib/acces';
 
 // Helper : lazy-load d'un export nommé
 function page<T extends Record<string, unknown>>(factory: () => Promise<T>, name: keyof T) {
@@ -134,13 +136,13 @@ export function App() {
           <Route path="analyses-prestataires" element={<PageAnalysesPrestataires />} />
           <Route path="formations-personnel" element={<PageFormationsPersonnel />} />
           <Route path="equipements" element={<PageEquipements />} />
-          <Route path="recurrences" element={<Recurrences />} />
-          <Route path="cinq-pourquoi" element={<ListeCinqPourquoi />} />
-          <Route path="cinq-pourquoi/:id" element={<FicheCinqPourquoi />} />
+          <Route path="recurrences" element={<GardeAcces roles={ROLES_ANALYSE_CAUSES}><Recurrences /></GardeAcces>} />
+          <Route path="cinq-pourquoi" element={<GardeAcces roles={ROLES_ANALYSE_CAUSES}><ListeCinqPourquoi /></GardeAcces>} />
+          <Route path="cinq-pourquoi/:id" element={<GardeAcces roles={ROLES_ANALYSE_CAUSES}><FicheCinqPourquoi /></GardeAcces>} />
           <Route path="stock" element={<PageStock />} />
           <Route path="commander" element={<PageCommander />} />
-          <Route path="preventif" element={<PagePreventif />} />
-          <Route path="certifications" element={<PageCertifications />} />
+          <Route path="preventif" element={<GardeAcces roles={ROLES_PILOTAGE}><PagePreventif /></GardeAcces>} />
+          <Route path="certifications" element={<GardeAcces roles={ROLES_PILOTAGE}><PageCertifications /></GardeAcces>} />
           {/* Modules retirés (Flotte, Plaintes clients, IA prédictive) : retour à l'accueil */}
           <Route path="plaintes" element={<Navigate to="/gmao" replace />} />
           <Route path="profil" element={<PageProfil />} />

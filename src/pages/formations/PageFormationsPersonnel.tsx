@@ -10,7 +10,7 @@ import { useParcs } from '@/hooks/queries/useReferentiel';
 import { useToast } from '@/components/ui/ToastProvider';
 import { Pill } from '@/components/ui/Pill';
 import type { AlbaBucket } from '@/lib/uploadPhotoControle';
-import { ROLES_FORMATIONS } from '@/lib/acces';
+import { ROLES_PILOTAGE, aAcces } from '@/lib/acces';
 
 const BUCKET: AlbaBucket = 'alba-formations';
 const SEUIL_RECYCLAGE_JOURS = 60;
@@ -95,7 +95,7 @@ function useFormations() {
 /** Registre des formations du personnel de tous les parcs, avec alertes de recyclage. */
 export function PageFormationsPersonnel() {
   const { utilisateur } = useAuth();
-  if (utilisateur && !ROLES_FORMATIONS.includes(utilisateur.role_code)) return <Navigate to="/" replace />;
+  if (utilisateur && !aAcces(utilisateur, ROLES_PILOTAGE)) return <Navigate to="/" replace />;
   return <ContenuFormations />;
 }
 

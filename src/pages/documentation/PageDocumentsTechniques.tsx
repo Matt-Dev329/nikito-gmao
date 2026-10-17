@@ -12,7 +12,7 @@ import { Pill } from '@/components/ui/Pill';
 import type { AlbaBucket } from '@/lib/uploadPhotoControle';
 import { envoyerDocument, recollerDocument } from '@/lib/envoiGrosFichier';
 import { enregistrerBlob, nomDepuisChemin, telechargerUrl } from '@/lib/telecharger';
-import { ROLES_PRESTATAIRES } from '@/lib/acces';
+import { ROLES_PILOTAGE, aAcces } from '@/lib/acces';
 
 export type TypeDocument = 'plan' | 'manuel' | 'prestataire';
 
@@ -108,14 +108,14 @@ function useDocuments(type: TypeDocument) {
 /** Plans (par parc) ou manuels (par activité) : consultation et ajout de documents PDF / images. */
 export function PageDocumentsTechniques({ type }: { type: TypeDocument }) {
   const { utilisateur } = useAuth();
-  const roles = type === 'prestataire' ? ROLES_PRESTATAIRES : ROLES_DOCUMENTATION;
-  if (utilisateur && !roles.includes(utilisateur.role_code)) return <Navigate to="/" replace />;
+  const roles = type === 'prestataire' ? ROLES_PILOTAGE : ROLES_DOCUMENTATION;
+  if (utilisateur && !aAcces(utilisateur, roles)) return <Navigate to="/" replace />;
   return <ContenuDocuments key={type} type={type} />;
 }
 
 function ContenuDocuments({ type }: { type: TypeDocument }) {
   const { utilisateur } = useAuth();
-  const peutEditer = (type === 'prestataire' ? ROLES_PRESTATAIRES : ROLES_EDITION).includes(utilisateur?.role_code ?? '');
+  const peutEditer = aAcces(utilisateur, type === 'prestataire' ? ROLES_PILOTAGE : ROLES_EDITION);
   const t = TEXTES[type];
   const { data: documents, isLoading, isError, error } = useDocuments(type);
   const [filtre, setFiltre] = useState<string | null>(null);

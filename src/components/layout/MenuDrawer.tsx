@@ -3,6 +3,7 @@ import { actualiserApplication } from '@/lib/miseAJour';
 import { cn } from '@/lib/utils';
 import { Logo } from '@/components/ui/Logo';
 import { useAuth } from '@/hooks/useAuth';
+import { ROLES_PILOTAGE, aAcces } from '@/lib/acces';
 
 interface MenuDrawerProps {
   open: boolean;
@@ -16,9 +17,9 @@ const menuItems: { to: string; label: string; icon: string; roles?: string[] }[]
   { to: '/tech/bons', label: "Bons d'intervention", icon: '🧾' },
   { to: '/tech/plans', label: 'Plans', icon: '🗺️' },
   { to: '/tech/manuels', label: 'Manuels', icon: '📘' },
-  { to: '/tech/prestataires', label: 'Rapports prestataires', icon: '🧯', roles: ['chef_maintenance', 'directeur_parc'] },
-  { to: '/tech/analyses-prestataires', label: 'Analyses prestataires', icon: '🔎', roles: ['chef_maintenance', 'directeur_parc'] },
-  { to: '/tech/formations-personnel', label: 'Formations du personnel', icon: '🎓', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'admin_it'] },
+  { to: '/tech/prestataires', label: 'Rapports prestataires', icon: '🧯', roles: ROLES_PILOTAGE },
+  { to: '/tech/analyses-prestataires', label: 'Analyses prestataires', icon: '🔎', roles: ROLES_PILOTAGE },
+  { to: '/tech/formations-personnel', label: 'Formations du personnel', icon: '🎓', roles: ROLES_PILOTAGE },
   { to: '/gmao/commander', label: 'Commander', icon: '🛒', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'manager_parc', 'technicien', 'admin_it'] },
   { to: '/gmao/profil', label: 'Mon profil', icon: '👤' },
 ];
@@ -80,7 +81,7 @@ export function MenuDrawer({ open, onClose }: MenuDrawerProps) {
         </div>
 
         <nav className="flex-1 p-3 flex flex-col gap-1">
-          {menuItems.filter((item) => !item.roles || item.roles.includes(utilisateur?.role_code ?? '')).map((item) => (
+          {menuItems.filter((item) => !item.roles || aAcces(utilisateur, item.roles)).map((item) => (
             <button
               key={item.to}
               onClick={() => handleNav(item.to)}

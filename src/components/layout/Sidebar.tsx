@@ -13,7 +13,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useParcCourant } from '@/hooks/useParcCourant';
 import { useFeatureFlags } from '@/hooks/useFeatureFlags';
 import { useAccesCommandes } from '@/hooks/queries/useCommandes';
-import { ROLES_STOCK } from '@/lib/acces';
+import { ROLES_STOCK, ROLES_PILOTAGE, ROLES_ANALYSE_CAUSES, estManagerPrincipal } from '@/lib/acces';
 import type { RoleUtilisateur } from '@/types/database';
 
 const TOUR_KEYS: Record<string, string> = {
@@ -49,7 +49,8 @@ interface NavItem {
   featureCode?: string;
   badgeKey?: 'recurrences' | 'cinqPourquoi' | 'operations' | 'invitationsPending' | 'controlesManquants' | 'notificationsIA' | 'interventionsEnCours' | 'plaintesAQualifier' | 'commandesATraiter';
   badgeTone?: 'red' | 'amber';
-  roles: RoleUtilisateur[];
+  /** Rôles autorisés ; « manager_principal » = managers avec le badge MGR (cf lib/acces) */
+  roles: string[];
   /** Visible aussi pour le gestionnaire des commandes, quel que soit son rôle. */
   gestionnaireCommandes?: boolean;
   /** Visibilité pilotée par le module Commandes (gestionnaire ou flag `commandes`). */
@@ -68,14 +69,14 @@ const sections: { titre: string; items: NavItem[] }[] = [
       { to: '/gmao/bons', label: "Bons d'intervention", roles: ['direction', 'chef_maintenance', 'directeur_parc', 'technicien', 'manager_parc', 'admin_it'] },
       { to: '/gmao/plans', label: 'Plans', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'technicien', 'manager_parc', 'admin_it'] },
       { to: '/gmao/manuels', label: 'Manuels', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'technicien', 'manager_parc', 'admin_it'] },
-      { to: '/gmao/prestataires', label: 'Rapports prestataires', roles: ['chef_maintenance', 'directeur_parc'] },
-      { to: '/gmao/analyses-prestataires', label: 'Analyses prestataires', roles: ['chef_maintenance', 'directeur_parc'] },
-      { to: '/gmao/formations-personnel', label: 'Formations du personnel', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'admin_it'] },
+      { to: '/gmao/prestataires', label: 'Rapports prestataires', roles: ROLES_PILOTAGE },
+      { to: '/gmao/analyses-prestataires', label: 'Analyses prestataires', roles: ROLES_PILOTAGE },
+      { to: '/gmao/formations-personnel', label: 'Formations du personnel', roles: ROLES_PILOTAGE },
       { to: '/gmao/equipements', label: 'Équipements', featureCode: 'equipements', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'technicien', 'manager_parc', 'admin_it'] },
-      { to: '/gmao/recurrences', label: 'Récurrences', featureCode: 'recurrences', badgeKey: 'recurrences', badgeTone: 'red', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'admin_it'] },
-      { to: '/gmao/cinq-pourquoi', label: '5 Pourquoi', featureCode: 'cinq_pourquoi', badgeKey: 'cinqPourquoi', badgeTone: 'amber', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'admin_it'] },
-      { to: '/gmao/certifications', label: 'Certifications', featureCode: 'certifications', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'admin_it'] },
-      { to: '/gmao/preventif', label: 'Préventif', featureCode: 'preventif', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'manager_parc', 'admin_it'] },
+      { to: '/gmao/recurrences', label: 'Récurrences', featureCode: 'recurrences', badgeKey: 'recurrences', badgeTone: 'red', roles: ROLES_ANALYSE_CAUSES },
+      { to: '/gmao/cinq-pourquoi', label: '5 Pourquoi', featureCode: 'cinq_pourquoi', badgeKey: 'cinqPourquoi', badgeTone: 'amber', roles: ROLES_ANALYSE_CAUSES },
+      { to: '/gmao/certifications', label: 'Certifications', featureCode: 'certifications', roles: ROLES_PILOTAGE },
+      { to: '/gmao/preventif', label: 'Préventif', featureCode: 'preventif', roles: ROLES_PILOTAGE },
       { to: '/gmao/stock', label: 'Stock', featureCode: 'stock', roles: ROLES_STOCK, gestionnaireCommandes: true },
       { to: '/gmao/commander', label: 'Commander', badgeKey: 'commandesATraiter', badgeTone: 'amber', roles: [], accesCommandes: true },
     ],
@@ -233,7 +234,9 @@ export function Sidebar({ user, roleAffiche, roleCode, realRoleCode, compact = f
           const itemsVisibles = section.items.filter((it) =>
             (it.accesCommandes
               ? peutCommander || peutGererCatalogue
-              : it.roles.includes(roleCode) || (!!it.gestionnaireCommandes && estGestionnaire)) &&
+              : it.roles.includes(roleCode) ||
+                (roleCode === 'manager_parc' && it.roles.includes('manager_principal') && estManagerPrincipal(utilisateur)) ||
+                (!!it.gestionnaireCommandes && estGestionnaire)) &&
             (!it.featureCode || hasAccess(it.featureCode) || (!!it.gestionnaireCommandes && estGestionnaire))
           );
           if (itemsVisibles.length === 0) return null;

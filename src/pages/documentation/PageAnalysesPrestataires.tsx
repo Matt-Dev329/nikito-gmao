@@ -7,7 +7,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/components/ui/ToastProvider';
 import { Pill } from '@/components/ui/Pill';
 import { recollerDocument } from '@/lib/envoiGrosFichier';
-import { ROLES_PRESTATAIRES } from '@/lib/acces';
+import { ROLES_PILOTAGE, aAcces } from '@/lib/acces';
 
 interface PointConforme {
   intitule: string;
@@ -84,7 +84,7 @@ function useAnalyses() {
 /** Synthèse des rapports prestataires : points conformes / non conformes et renouvellements. */
 export function PageAnalysesPrestataires() {
   const { utilisateur } = useAuth();
-  if (utilisateur && !ROLES_PRESTATAIRES.includes(utilisateur.role_code)) return <Navigate to="/" replace />;
+  if (utilisateur && !aAcces(utilisateur, ROLES_PILOTAGE)) return <Navigate to="/" replace />;
   return <ContenuAnalyses />;
 }
 

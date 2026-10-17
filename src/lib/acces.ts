@@ -18,8 +18,29 @@ export function peutVoirStock(role: RoleUtilisateur | undefined, estGestionnaire
   return estGestionnaireCommandes || (!!role && ROLES_STOCK.includes(role));
 }
 
-/** Rapports et analyses prestataires : chef d'équipe et directeurs de parc */
-export const ROLES_PRESTATAIRES = ['chef_maintenance', 'directeur_parc'];
+/**
+ * Onglets de pilotage (rapports et analyses prestataires, formations du
+ * personnel, certifications, préventif) : direction, chef d'équipe, admin IT,
+ * directeurs de parc et managers principaux (badge MGR) — jamais les autres
+ * managers. Même règle en base (acces_pilotage_parc).
+ */
+export const ROLES_PILOTAGE: string[] = ['direction', 'chef_maintenance', 'directeur_parc', 'admin_it', 'manager_principal'];
 
-/** Formations du personnel */
-export const ROLES_FORMATIONS = ['direction', 'chef_maintenance', 'directeur_parc', 'admin_it'];
+/** Récurrences et 5 Pourquoi : chef d'équipe, direction et admin IT */
+export const ROLES_ANALYSE_CAUSES: string[] = ['direction', 'chef_maintenance', 'admin_it'];
+
+interface UtilisateurAcces {
+  role_code: string;
+  parcs_manager_principal?: string[];
+}
+
+/** « manager_principal » : rôle virtuel des managers ayant le badge MGR sur au moins un parc */
+export function estManagerPrincipal(u: UtilisateurAcces | null | undefined): boolean {
+  return u?.role_code === 'manager_parc' && (u.parcs_manager_principal?.length ?? 0) > 0;
+}
+
+/** Un utilisateur a-t-il accès à un onglet réservé à `roles` (rôle virtuel manager_principal compris) ? */
+export function aAcces(u: UtilisateurAcces | null | undefined, roles: string[]): boolean {
+  if (!u) return false;
+  return roles.includes(u.role_code) || (roles.includes('manager_principal') && estManagerPrincipal(u));
+}

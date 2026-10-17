@@ -3,6 +3,9 @@ import { supabase } from '@/lib/supabase';
 import { useFormationFilter } from '@/hooks/useFormation';
 import { useConfig } from '@/hooks/useConfig';
 import { useEstGestionnaireCommandes } from '@/hooks/queries/useCommandes';
+import { useAuth } from '@/hooks/useAuth';
+import { useEffectiveRole } from '@/hooks/useViewAs';
+import { ROLES_ANALYSE_CAUSES } from '@/lib/acces';
 
 interface SidebarBadges {
   recurrences: number;
@@ -20,12 +23,16 @@ export function useSidebarBadges() {
   const { estFormation } = useFormationFilter();
   const { enProduction } = useConfig();
   const { data: gestionnaireCommandes = false } = useEstGestionnaireCommandes();
+  const { utilisateur } = useAuth();
+  const role = useEffectiveRole(utilisateur?.role_code ?? 'staff_operationnel');
+  // Récurrences et 5 Pourquoi : compteurs seulement pour ceux qui ont ces onglets
+  const voitAnalyseCauses = ROLES_ANALYSE_CAUSES.includes(role);
   const now = new Date();
   const heure = now.getHours();
   const today = now.toISOString().slice(0, 10);
 
   return useQuery({
-    queryKey: ['sidebar-badges', estFormation, enProduction, today, gestionnaireCommandes],
+    queryKey: ['sidebar-badges', estFormation, enProduction, today, gestionnaireCommandes, voitAnalyseCauses],
     queryFn: async (): Promise<SidebarBadges> => {
       const [recRes, fpRes, incRes, invRes, notifRes, enCoursRes, plaintesRes] = await Promise.all([
         supabase
@@ -97,8 +104,8 @@ export function useSidebarBadges() {
       }
 
       return {
-        recurrences: recRes.count ?? 0,
-        cinqPourquoi: fpRes.count ?? 0,
+        recurrences: voitAnalyseCauses ? recRes.count ?? 0 : 0,
+        cinqPourquoi: voitAnalyseCauses ? fpRes.count ?? 0 : 0,
         operations: incRes.count ?? 0,
         invitationsPending: invRes.count ?? 0,
         controlesManquants,

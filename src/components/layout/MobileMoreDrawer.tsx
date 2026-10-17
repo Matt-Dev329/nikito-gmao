@@ -5,7 +5,8 @@ import { cn } from '@/lib/utils';
 import { getNavIcon } from './NavIcons';
 import type { RoleUtilisateur } from '@/types/database';
 import { useAccesCommandes } from '@/hooks/queries/useCommandes';
-import { ROLES_STOCK } from '@/lib/acces';
+import { ROLES_STOCK, ROLES_PILOTAGE, ROLES_ANALYSE_CAUSES, estManagerPrincipal } from '@/lib/acces';
+import { useAuth } from '@/hooks/useAuth';
 
 interface MobileMoreDrawerProps {
   open: boolean;
@@ -18,7 +19,8 @@ interface DrawerItem {
   to: string;
   label: string;
   iconLabel: string;
-  roles: RoleUtilisateur[];
+  /** Rôles autorisés ; « manager_principal » = managers avec le badge MGR (cf lib/acces) */
+  roles: string[];
   gestionnaireCommandes?: boolean;
   accesCommandes?: boolean;
 }
@@ -30,16 +32,16 @@ const pilotageItems: DrawerItem[] = [
   { to: '/gmao/bons', label: "Bons d'intervention", iconLabel: "Bons d'intervention", roles: ['direction', 'chef_maintenance', 'directeur_parc', 'technicien', 'manager_parc', 'admin_it'] },
   { to: '/gmao/plans', label: 'Plans', iconLabel: 'Plans', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'technicien', 'manager_parc', 'admin_it'] },
   { to: '/gmao/manuels', label: 'Manuels', iconLabel: 'Manuels', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'technicien', 'manager_parc', 'admin_it'] },
-  { to: '/gmao/prestataires', label: 'Rapports prestataires', iconLabel: 'Rapports prestataires', roles: ['chef_maintenance', 'directeur_parc'] },
-  { to: '/gmao/analyses-prestataires', label: 'Analyses prestataires', iconLabel: 'Analyses prestataires', roles: ['chef_maintenance', 'directeur_parc'] },
-  { to: '/gmao/formations-personnel', label: 'Formations du personnel', iconLabel: 'Formations du personnel', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'admin_it'] },
+  { to: '/gmao/prestataires', label: 'Rapports prestataires', iconLabel: 'Rapports prestataires', roles: ROLES_PILOTAGE },
+  { to: '/gmao/analyses-prestataires', label: 'Analyses prestataires', iconLabel: 'Analyses prestataires', roles: ROLES_PILOTAGE },
+  { to: '/gmao/formations-personnel', label: 'Formations du personnel', iconLabel: 'Formations du personnel', roles: ROLES_PILOTAGE },
   { to: '/gmao/equipements', label: 'Equipements', iconLabel: 'Équipements', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'technicien', 'manager_parc', 'admin_it'] },
-  { to: '/gmao/recurrences', label: 'Recurrences', iconLabel: 'Récurrences', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'admin_it'] },
-  { to: '/gmao/cinq-pourquoi', label: '5 Pourquoi', iconLabel: '5 Pourquoi', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'admin_it'] },
+  { to: '/gmao/recurrences', label: 'Recurrences', iconLabel: 'Récurrences', roles: ROLES_ANALYSE_CAUSES },
+  { to: '/gmao/cinq-pourquoi', label: '5 Pourquoi', iconLabel: '5 Pourquoi', roles: ROLES_ANALYSE_CAUSES },
   { to: '/gmao/stock', label: 'Stock', iconLabel: 'Stock', roles: ROLES_STOCK, gestionnaireCommandes: true },
   { to: '/gmao/commander', label: 'Commander', iconLabel: 'Commander', roles: [], accesCommandes: true },
-  { to: '/gmao/preventif', label: 'Preventif', iconLabel: 'Préventif', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'manager_parc', 'admin_it'] },
-  { to: '/gmao/certifications', label: 'Certifications', iconLabel: 'Certifications', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'admin_it'] },
+  { to: '/gmao/preventif', label: 'Preventif', iconLabel: 'Préventif', roles: ROLES_PILOTAGE },
+  { to: '/gmao/certifications', label: 'Certifications', iconLabel: 'Certifications', roles: ROLES_PILOTAGE },
   { to: '/gmao/conformite', label: 'Conformite', iconLabel: 'Conformité', roles: ['direction', 'admin_it', 'chef_maintenance', 'directeur_parc', 'manager_parc'] },
   { to: '/gmao/controles-historique', label: 'Historique contrôles', iconLabel: 'Contrôles', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'technicien', 'manager_parc', 'admin_it'] },
 ];
@@ -61,6 +63,7 @@ export function MobileMoreDrawer({ open, onClose, roleCode, onSignOut }: MobileM
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const { peutCommander, estGestionnaire, peutGererCatalogue } = useAccesCommandes();
+  const { utilisateur } = useAuth();
   const sheetRef = useRef<HTMLDivElement>(null);
   const [dragY, setDragY] = useState(0);
   const [dragging, setDragging] = useState(false);
@@ -112,7 +115,9 @@ export function MobileMoreDrawer({ open, onClose, roleCode, onSignOut }: MobileM
     items.filter((it) =>
       it.accesCommandes
         ? peutCommander || peutGererCatalogue
-        : it.roles.includes(roleCode) || (!!it.gestionnaireCommandes && estGestionnaire)
+        : it.roles.includes(roleCode) ||
+          (roleCode === 'manager_parc' && it.roles.includes('manager_principal') && estManagerPrincipal(utilisateur)) ||
+          (!!it.gestionnaireCommandes && estGestionnaire)
     );
 
   const visiblePilotage = filterByRole(pilotageItems);

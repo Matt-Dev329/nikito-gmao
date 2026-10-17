@@ -18,7 +18,6 @@ const corsHeaders = {
 };
 
 const MODELE = "claude-opus-5-5";
-const ROLES_FORMATIONS = ["direction", "chef_maintenance", "directeur_parc", "admin_it"];
 const LOT_MAX = 150;
 
 const CONSIGNES = `Tu ranges les formations suivies par le personnel de parcs de loisirs indoor (trampolines, bowling, laser game, escape game, restauration…) dans des catégories.
@@ -57,8 +56,8 @@ Deno.serve(async (req: Request) => {
     const utilisateur = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!, {
       global: { headers: { Authorization: `Bearer ${jeton}` } },
     });
-    const { data: role } = await utilisateur.rpc("current_role_code");
-    if (!ROLES_FORMATIONS.includes(String(role ?? ""))) return repondre({ success: false, error: "Accès refusé" }, 403);
+    const { data: autorise } = await utilisateur.rpc("acces_pilotage_parc", { p_parc: null });
+    if (autorise !== true) return repondre({ success: false, error: "Accès refusé" }, 403);
 
     const service = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
     const { data: lignes, error } = await service

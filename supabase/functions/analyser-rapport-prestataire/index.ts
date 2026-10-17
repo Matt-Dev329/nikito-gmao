@@ -21,7 +21,6 @@ const MODELE = "claude-opus-5-5";
 const BUCKET = "alba-techniques";
 // Limite de requête de l'API (32 Mo) moins la surcharge base64 (+33 %)
 const TAILLE_MAX_OCTETS = 22 * 1024 * 1024;
-const ROLES_DEPOT = ["chef_maintenance", "directeur_parc"];
 
 const CONSIGNES = `Tu analyses le compte rendu d'un prestataire extérieur intervenu dans un parc de loisirs indoor (trampolines, bowling, laser game, escape game…) en France : vérification d'extincteurs, installation électrique, alarme incendie / SSI, désenfumage, éclairage de sécurité, portes coupe-feu, ascenseur, gaz, CVC, aires de jeux, etc.
 
@@ -124,13 +123,6 @@ Deno.serve(async (req: Request) => {
     const jeton = (req.headers.get("Authorization") ?? "").replace(/^Bearer\s+/i, "");
     const { data: auth } = await service.auth.getUser(jeton);
     if (!auth?.user) return repondre({ success: false, error: "Non authentifié" }, 401);
-    const { data: appelant } = await service
-      .from("utilisateurs")
-      .select("id, roles(code)")
-      .eq("auth_user_id", auth.user.id)
-      .maybeSingle();
-    const role = (appelant?.roles as { code?: string } | null)?.code ?? "";
-    if (!ROLES_DEPOT.includes(role)) return repondre({ success: false, error: "Accès refusé" }, 403);
 
     const corps = await req.json().catch(() => ({}));
     documentId = typeof corps.document_id === "string" ? corps.document_id : null;
@@ -138,11 +130,19 @@ Deno.serve(async (req: Request) => {
 
     const { data: doc } = await service
       .from("documents_techniques")
-      .select("id, type, titre, activite, prestataire, chemin, mime, taille, parties, prochaine_echeance")
+      .select("id, parc_id, type, titre, activite, prestataire, chemin, mime, taille, parties, prochaine_echeance")
       .eq("id", documentId)
       .eq("type", "prestataire")
       .maybeSingle();
     if (!doc) return repondre({ success: false, error: "Rapport prestataire introuvable" }, 404);
+
+    // Mêmes droits que la lecture du rapport : direction, chef d'équipe, admin IT,
+    // directeurs de parc et managers principaux sur leur parc
+    const appelant = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!, {
+      global: { headers: { Authorization: `Bearer ${jeton}` } },
+    });
+    const { data: autorise } = await appelant.rpc("acces_pilotage_parc", { p_parc: doc.parc_id });
+    if (autorise !== true) return repondre({ success: false, error: "Accès refusé" }, 403);
 
     await service
       .from("analyses_rapports_prestataires")
