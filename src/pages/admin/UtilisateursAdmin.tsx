@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/components/ui/ToastProvider';
-import { ROLES_GESTION_COMPTES, peutGererCompte } from '@/lib/acces';
+import { ROLES_GESTION_COMPTES, peutGererCompte, peutVoirComme } from '@/lib/acces';
 import type { UtilisateurMetier } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
 import { ModaleInviterUtilisateur } from '@/components/admin/ModaleInviterUtilisateur';
@@ -352,13 +352,11 @@ const ORDRE_ROLES: RoleUtilisateur[] = ['direction', 'chef_maintenance', 'direct
 
 function ListeActifs({ recherche }: { recherche: string }) {
   const { utilisateur } = useAuth();
-  const effectiveRole = useEffectiveRole(utilisateur?.role_code ?? 'staff_operationnel');
   const { data, isLoading } = useUtilisateursActifs();
   const { data: parcs } = useParcs();
   const supprimerMutation = useSupprimerUtilisateur();
   const { activate } = useViewAs();
   const navigate = useNavigate();
-  const canViewAs = ['direction', 'admin_it', 'chef_maintenance', 'directeur_parc'].includes(effectiveRole);
   const gere = (u: UtilisateurRow) => peutGererUtilisateur(utilisateur, u);
   const [editUser, setEditUser] = useState<UtilisateurRow | null>(null);
   const [parcFiltre, setParcFiltre] = useState<string | null>(null);
@@ -491,7 +489,7 @@ function ListeActifs({ recherche }: { recherche: string }) {
                   <UserRow
                     key={u.id}
                     user={u}
-                    onViewAs={canViewAs && u.id !== utilisateur?.id ? () => handleViewAs(u) : undefined}
+                    onViewAs={u.id !== utilisateur?.id && peutVoirComme(utilisateur, u.role_code, u.parcs.some((p) => p.est_manager)) && gere(u) ? () => handleViewAs(u) : undefined}
                     onEditer={gere(u) ? () => setEditUser(u) : undefined}
                     onSupprimer={gere(u) ? () => supprimer(u.id, `${u.prenom} ${u.nom}`) : undefined}
                     supprimant={supprimerMutation.isPending}

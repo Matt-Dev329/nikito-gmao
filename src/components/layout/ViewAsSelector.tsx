@@ -4,6 +4,8 @@ import { useViewAs } from '@/hooks/useViewAs';
 import { roleLabels } from '@/lib/tokens';
 import { useParcs } from '@/hooks/queries/useReferentiel';
 import type { RoleUtilisateur } from '@/types/database';
+import { useAuth } from '@/hooks/useAuth';
+import { peutVoirComme } from '@/lib/acces';
 
 interface RoleSimulable {
   code: RoleUtilisateur;
@@ -29,6 +31,10 @@ interface ViewAsSelectorProps {
 
 export function ViewAsSelector({ compact = false }: ViewAsSelectorProps) {
   const { role, principal, activate, reset } = useViewAs();
+  const { utilisateur } = useAuth();
+  // Seulement les vues de son niveau et en dessous
+  const rolesProposes = simulableRoles.filter((r) => peutVoirComme(utilisateur, r.code, !!r.principal));
+  const maVue = utilisateur ? roleLabels[utilisateur.role_code] : '';
   const activeRole = role;
   const actif = simulableRoles.find((r) => r.code === role && !!r.principal === principal) ?? null;
   const [open, setOpen] = useState(false);
@@ -89,6 +95,8 @@ export function ViewAsSelector({ compact = false }: ViewAsSelectorProps) {
           <DropdownPanel
             activeRole={activeRole}
             actif={actif}
+            rolesProposes={rolesProposes}
+            maVue={maVue}
             parcPickerFor={parcPickerFor}
             parcs={parcs ?? []}
             onSelect={handleSelect}
@@ -123,6 +131,8 @@ export function ViewAsSelector({ compact = false }: ViewAsSelectorProps) {
         <DropdownPanel
           activeRole={activeRole}
           actif={actif}
+          rolesProposes={rolesProposes}
+          maVue={maVue}
           parcPickerFor={parcPickerFor}
           parcs={parcs ?? []}
           onSelect={handleSelect}
@@ -139,6 +149,8 @@ export function ViewAsSelector({ compact = false }: ViewAsSelectorProps) {
 function DropdownPanel({
   activeRole,
   actif,
+  rolesProposes,
+  maVue,
   parcPickerFor,
   parcs,
   onSelect,
@@ -149,6 +161,8 @@ function DropdownPanel({
 }: {
   activeRole: RoleUtilisateur | null;
   actif: RoleSimulable | null;
+  rolesProposes: RoleSimulable[];
+  maVue: string;
   parcPickerFor: RoleSimulable | null;
   parcs: { id: string; code: string; nom: string }[];
   onSelect: (r: RoleSimulable) => void;
@@ -203,10 +217,10 @@ function DropdownPanel({
         )}
       >
         <span className="w-1.5 h-1.5 rounded-full bg-nikito-cyan flex-shrink-0" style={{ opacity: !activeRole ? 1 : 0 }} />
-        Ma vue (Direction)
+        Ma vue ({maVue})
       </button>
       <div className="h-px bg-white/[0.06] mx-2 my-1" />
-      {simulableRoles.map((r) => (
+      {rolesProposes.map((r) => (
         <button
           key={r.label}
           onClick={() => onSelect(r)}

@@ -14,7 +14,7 @@ import { useViewAs } from '@/hooks/useViewAs';
 import { useParcCourant } from '@/hooks/useParcCourant';
 import { useFeatureFlags } from '@/hooks/useFeatureFlags';
 import { useAccesCommandes } from '@/hooks/queries/useCommandes';
-import { ROLES_STOCK, ROLES_PILOTAGE, ROLES_ANALYSE_CAUSES, ROLES_BONS, estManagerPrincipal } from '@/lib/acces';
+import { ROLES_STOCK, ROLES_PILOTAGE, ROLES_ANALYSE_CAUSES, ROLES_BONS, estManagerPrincipal, rolesAttribuables } from '@/lib/acces';
 import type { RoleUtilisateur } from '@/types/database';
 
 const TOUR_KEYS: Record<string, string> = {
@@ -137,8 +137,9 @@ export function Sidebar({ user, roleAffiche, roleCode, realRoleCode, compact = f
   const { peutCommander, estGestionnaire, peutGererCatalogue } = useAccesCommandes();
   const formationActive = useFormation((s) => s.active);
   const startTour = useTour((s) => s.start);
-  const showViewAs = (realRoleCode ?? roleCode) === 'direction' || (realRoleCode ?? roleCode) === 'chef_maintenance' || (realRoleCode ?? roleCode) === 'directeur_parc' || (realRoleCode ?? roleCode) === 'admin_it';
-  const showFormation = showViewAs;
+  const roleReel = realRoleCode ?? roleCode;
+  const showViewAs = rolesAttribuables(roleReel).length > 0;
+  const showFormation = ['direction', 'chef_maintenance', 'directeur_parc', 'admin_it'].includes(roleReel);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const { utilisateur } = useAuth();
   const vuePrincipal = useViewAs((s) => s.principal);

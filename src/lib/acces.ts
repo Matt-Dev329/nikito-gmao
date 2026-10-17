@@ -93,3 +93,17 @@ export function peutGererCompte(
   }
   return true;
 }
+
+/**
+ * « Voir comme » : même règle que la gestion des comptes — chacun ne peut
+ * simuler que les rôles de son niveau et en dessous (rolesAttribuables).
+ * La vue « manager principal » n'est proposée à un manager que s'il l'est lui-même.
+ */
+export function peutVoirComme(
+  g: { role_code: RoleUtilisateur; parcs_manager_principal?: string[] } | null | undefined,
+  role: RoleUtilisateur,
+  principal = false
+): boolean {
+  if (!g || !rolesAttribuables(g.role_code).includes(role)) return false;
+  return !(principal && g.role_code === 'manager_parc' && (g.parcs_manager_principal?.length ?? 0) === 0);
+}

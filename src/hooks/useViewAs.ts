@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import type { RoleUtilisateur } from '@/types/database';
+import { rolesAttribuables } from '@/lib/acces';
 
 interface ViewAsState {
   role: RoleUtilisateur | null;
@@ -31,6 +32,6 @@ export const useViewAs = create<ViewAsState>((set) => ({
 
 export function useEffectiveRole(realRole: RoleUtilisateur): RoleUtilisateur {
   const viewAsRole = useViewAs((s) => s.role);
-  const canViewAs = realRole === 'direction' || realRole === 'chef_maintenance' || realRole === 'directeur_parc' || realRole === 'admin_it';
-  return canViewAs && viewAsRole ? viewAsRole : realRole;
+  // Seulement un rôle de son niveau ou en dessous (même règle que la gestion des comptes)
+  return viewAsRole && rolesAttribuables(realRole).includes(viewAsRole) ? viewAsRole : realRole;
 }
