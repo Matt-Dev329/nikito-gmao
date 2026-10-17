@@ -433,7 +433,8 @@ function ListeActifs({ recherche }: { recherche: string }) {
       u.role_code,
       firstParc?.id ?? null,
       parcLabel,
-      `${u.prenom} ${u.nom}`
+      `${u.prenom} ${u.nom}`,
+      u.parcs.some((p) => p.est_manager)
     );
     navigate(roleHomePage[u.role_code] ?? '/gmao');
   };

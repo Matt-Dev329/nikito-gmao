@@ -10,6 +10,7 @@ import { useFormation } from '@/hooks/useFormation';
 import { useSidebarBadges } from '@/hooks/queries/useSidebarBadges';
 import { useTour } from '@/components/tour/useTour';
 import { useAuth } from '@/hooks/useAuth';
+import { useViewAs } from '@/hooks/useViewAs';
 import { useParcCourant } from '@/hooks/useParcCourant';
 import { useFeatureFlags } from '@/hooks/useFeatureFlags';
 import { useAccesCommandes } from '@/hooks/queries/useCommandes';
@@ -140,6 +141,7 @@ export function Sidebar({ user, roleAffiche, roleCode, realRoleCode, compact = f
   const showFormation = showViewAs;
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const { utilisateur } = useAuth();
+  const vuePrincipal = useViewAs((s) => s.principal);
   const parcCourant = useParcCourant((s) => s.parc);
   const navigate = useNavigate();
   const isAdminRole = roleCode === 'direction' || roleCode === 'chef_maintenance' || roleCode === 'directeur_parc' || roleCode === 'admin_it';
@@ -235,7 +237,7 @@ export function Sidebar({ user, roleAffiche, roleCode, realRoleCode, compact = f
             (it.accesCommandes
               ? peutCommander || peutGererCatalogue
               : it.roles.includes(roleCode) ||
-                (roleCode === 'manager_parc' && it.roles.includes('manager_principal') && estManagerPrincipal(utilisateur)) ||
+                (roleCode === 'manager_parc' && it.roles.includes('manager_principal') && (vuePrincipal || estManagerPrincipal(utilisateur))) ||
                 (!!it.gestionnaireCommandes && estGestionnaire)) &&
             (!it.featureCode || hasAccess(it.featureCode) || (!!it.gestionnaireCommandes && estGestionnaire))
           );

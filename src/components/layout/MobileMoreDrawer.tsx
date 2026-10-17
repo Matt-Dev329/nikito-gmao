@@ -7,6 +7,7 @@ import type { RoleUtilisateur } from '@/types/database';
 import { useAccesCommandes } from '@/hooks/queries/useCommandes';
 import { ROLES_STOCK, ROLES_PILOTAGE, ROLES_ANALYSE_CAUSES, ROLES_BONS, estManagerPrincipal } from '@/lib/acces';
 import { useAuth } from '@/hooks/useAuth';
+import { useViewAs } from '@/hooks/useViewAs';
 
 interface MobileMoreDrawerProps {
   open: boolean;
@@ -64,6 +65,7 @@ export function MobileMoreDrawer({ open, onClose, roleCode, onSignOut }: MobileM
   const { pathname } = useLocation();
   const { peutCommander, estGestionnaire, peutGererCatalogue } = useAccesCommandes();
   const { utilisateur } = useAuth();
+  const vuePrincipal = useViewAs((s) => s.principal);
   const sheetRef = useRef<HTMLDivElement>(null);
   const [dragY, setDragY] = useState(0);
   const [dragging, setDragging] = useState(false);
@@ -116,7 +118,7 @@ export function MobileMoreDrawer({ open, onClose, roleCode, onSignOut }: MobileM
       it.accesCommandes
         ? peutCommander || peutGererCatalogue
         : it.roles.includes(roleCode) ||
-          (roleCode === 'manager_parc' && it.roles.includes('manager_principal') && estManagerPrincipal(utilisateur)) ||
+          (roleCode === 'manager_parc' && it.roles.includes('manager_principal') && (vuePrincipal || estManagerPrincipal(utilisateur))) ||
           (!!it.gestionnaireCommandes && estGestionnaire)
     );
 

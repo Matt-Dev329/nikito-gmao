@@ -11,10 +11,10 @@ const roleLabelsUpper: Record<string, string> = {
 };
 
 export function ViewAsBanner({ topOffset = 0 }: { topOffset?: number }) {
-  const { role, parcLabel, userLabel, reset } = useViewAs();
+  const { role, principal, parcLabel, userLabel, reset } = useViewAs();
   if (!role) return null;
 
-  const label = roleLabelsUpper[role] ?? roleLabels[role] ?? role;
+  const label = role === 'manager_parc' && principal ? 'MANAGER PRINCIPAL' : roleLabelsUpper[role] ?? roleLabels[role] ?? role;
   const details = [userLabel, parcLabel].filter(Boolean).join(' - ');
 
   return (

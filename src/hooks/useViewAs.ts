@@ -6,7 +6,15 @@ interface ViewAsState {
   parcId: string | null;
   parcLabel: string | null;
   userLabel: string | null;
-  activate: (role: RoleUtilisateur, parcId?: string | null, parcLabel?: string | null, userLabel?: string | null) => void;
+  /** Vue « manager principal » (badge MGR) : débloque ses onglets de pilotage */
+  principal: boolean;
+  activate: (
+    role: RoleUtilisateur,
+    parcId?: string | null,
+    parcLabel?: string | null,
+    userLabel?: string | null,
+    principal?: boolean
+  ) => void;
   reset: () => void;
 }
 
@@ -15,9 +23,10 @@ export const useViewAs = create<ViewAsState>((set) => ({
   parcId: null,
   parcLabel: null,
   userLabel: null,
-  activate: (role, parcId = null, parcLabel = null, userLabel = null) =>
-    set({ role, parcId, parcLabel, userLabel }),
-  reset: () => set({ role: null, parcId: null, parcLabel: null, userLabel: null }),
+  principal: false,
+  activate: (role, parcId = null, parcLabel = null, userLabel = null, principal = false) =>
+    set({ role, parcId, parcLabel, userLabel, principal: role === 'manager_parc' && principal }),
+  reset: () => set({ role: null, parcId: null, parcLabel: null, userLabel: null, principal: false }),
 }));
 
 export function useEffectiveRole(realRole: RoleUtilisateur): RoleUtilisateur {
