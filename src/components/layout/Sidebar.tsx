@@ -140,7 +140,6 @@ export function Sidebar({ user, roleAffiche, roleCode, realRoleCode, compact = f
   const startTour = useTour((s) => s.start);
   const roleReel = realRoleCode ?? roleCode;
   const showViewAs = rolesAttribuables(roleReel).length > 0;
-  const showFormation = ['direction', 'chef_maintenance', 'directeur_parc', 'admin_it'].includes(roleReel);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const { utilisateur } = useAuth();
   const vuePrincipal = useViewAs((s) => s.principal);
@@ -207,30 +206,29 @@ export function Sidebar({ user, roleAffiche, roleCode, realRoleCode, compact = f
       <div className={cn('flex items-center gap-1 flex-shrink-0', compact ? 'justify-center' : 'px-1')}>
         <NotificationBell compact={compact} onNavClick={onNavClick} />
         <BoutonActualiser className="w-8 h-8 text-[16px]" />
-        {showFormation && (
-          <NavLink
-            to="/gmao/formation"
-            onClick={onNavClick}
-            title="Formation"
-            className={({ isActive }) =>
-              cn(
-                'group relative flex items-center justify-center rounded-lg transition-colors w-[40px] min-h-[40px] flex-shrink-0',
-                isActive
-                  ? 'bg-[#7C3AED]/15 text-[#A78BFA]'
-                  : formationActive
-                    ? 'text-[#A78BFA] hover:text-text hover:bg-[#7C3AED]/10'
-                    : 'text-dim hover:text-text hover:bg-white/[0.05]'
-              )
-            }
-          >
-            <GraduationCapIcon className="w-[18px] h-[18px] flex-shrink-0" />
-            {compact && (
-              <span className="pointer-events-none absolute left-full ml-2 px-2.5 py-1.5 rounded-lg bg-bg-card text-text text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity z-50 shadow-lg border border-white/[0.08]">
-                Formation
-              </span>
-            )}
-          </NavLink>
-        )}
+        {/* Mode formation : pour tout le monde (bac à sable séparé des vraies données) */}
+        <NavLink
+          to="/gmao/formation"
+          onClick={onNavClick}
+          title="Formation"
+          className={({ isActive }) =>
+            cn(
+              'group relative flex items-center justify-center rounded-lg transition-colors w-[40px] min-h-[40px] flex-shrink-0',
+              isActive
+                ? 'bg-[#7C3AED]/15 text-[#A78BFA]'
+                : formationActive
+                  ? 'text-[#A78BFA] hover:text-text hover:bg-[#7C3AED]/10'
+                  : 'text-dim hover:text-text hover:bg-white/[0.05]'
+            )
+          }
+        >
+          <GraduationCapIcon className="w-[18px] h-[18px] flex-shrink-0" />
+          {compact && (
+            <span className="pointer-events-none absolute left-full ml-2 px-2.5 py-1.5 rounded-lg bg-bg-card text-text text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity z-50 shadow-lg border border-white/[0.08]">
+              Formation
+            </span>
+          )}
+        </NavLink>
       </div>
 
       <div className="flex-1 overflow-y-auto min-h-0">

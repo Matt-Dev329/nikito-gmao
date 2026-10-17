@@ -58,6 +58,7 @@ const configItems: DrawerItem[] = [
 const accountItems: DrawerItem[] = [
   { to: '/gmao/profil', label: 'Profil', iconLabel: 'Utilisateurs', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'manager_parc', 'technicien', 'staff_operationnel', 'admin_it'] },
   { to: '/gmao/aide', label: 'Aide', iconLabel: 'Aide', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'manager_parc', 'technicien', 'staff_operationnel', 'admin_it'] },
+  { to: '/gmao/formation', label: 'Mode formation', iconLabel: 'Aide', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'manager_parc', 'technicien', 'staff_operationnel', 'admin_it'] },
 ];
 
 export function MobileMoreDrawer({ open, onClose, roleCode, onSignOut }: MobileMoreDrawerProps) {
