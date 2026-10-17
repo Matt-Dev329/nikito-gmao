@@ -13,7 +13,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useParcCourant } from '@/hooks/useParcCourant';
 import { useFeatureFlags } from '@/hooks/useFeatureFlags';
 import { useAccesCommandes } from '@/hooks/queries/useCommandes';
-import { ROLES_STOCK, ROLES_PILOTAGE, ROLES_ANALYSE_CAUSES, estManagerPrincipal } from '@/lib/acces';
+import { ROLES_STOCK, ROLES_PILOTAGE, ROLES_ANALYSE_CAUSES, ROLES_BONS, estManagerPrincipal } from '@/lib/acces';
 import type { RoleUtilisateur } from '@/types/database';
 
 const TOUR_KEYS: Record<string, string> = {
@@ -66,7 +66,7 @@ const sections: { titre: string; items: NavItem[] }[] = [
       { to: '/gmao/mon-parc', label: 'Mon parc', roles: ['manager_parc'] },
       { to: '/gmao/operations', label: 'Opérations', featureCode: 'interventions', badgeKey: 'operations', badgeTone: 'red', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'technicien', 'manager_parc', 'admin_it'] },
       { to: '/gmao/rapports', label: 'Rapports de réparation', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'technicien', 'manager_parc', 'admin_it'] },
-      { to: '/gmao/bons', label: "Bons d'intervention", roles: ['direction', 'chef_maintenance', 'directeur_parc', 'technicien', 'manager_parc', 'admin_it'] },
+      { to: '/gmao/bons', label: "Bons d'intervention", roles: ROLES_BONS },
       { to: '/gmao/plans', label: 'Plans', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'technicien', 'manager_parc', 'admin_it'] },
       { to: '/gmao/manuels', label: 'Manuels', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'technicien', 'manager_parc', 'admin_it'] },
       { to: '/gmao/prestataires', label: 'Rapports prestataires', roles: ROLES_PILOTAGE },

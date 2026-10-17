@@ -26,6 +26,9 @@ export function peutVoirStock(role: RoleUtilisateur | undefined, estGestionnaire
  */
 export const ROLES_PILOTAGE: string[] = ['direction', 'chef_maintenance', 'directeur_parc', 'admin_it', 'manager_principal'];
 
+/** Bons d'intervention : techniciens et chef d'équipe (direction et admin IT compris) */
+export const ROLES_BONS: RoleUtilisateur[] = ['direction', 'chef_maintenance', 'technicien', 'admin_it'];
+
 /** Récurrences et 5 Pourquoi : chef d'équipe, direction et admin IT */
 export const ROLES_ANALYSE_CAUSES: string[] = ['direction', 'chef_maintenance', 'admin_it'];
 

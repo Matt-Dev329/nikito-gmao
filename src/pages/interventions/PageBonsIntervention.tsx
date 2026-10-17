@@ -15,7 +15,7 @@ import { useToast } from '@/components/ui/ToastProvider';
 import { Pill } from '@/components/ui/Pill';
 import { ZoneSignature } from '@/components/ui/ZoneSignature';
 import { BoutonTelecharger } from '@/components/ui/BoutonTelecharger';
-import { ROLES_RAPPORTS } from './PageRapportsReparation';
+import { ROLES_BONS } from '@/lib/acces';
 import { BUCKET_BONS, exportBonPDF, formatDuree, type BonIntervention } from './exportBonPDF';
 
 const PERIODES = [
@@ -52,7 +52,7 @@ function useBons(jours: number) {
 /** Bons d'intervention : réparations réalisées hors ticket, remplies et signées sur place. */
 export function PageBonsIntervention() {
   const { utilisateur } = useAuth();
-  if (utilisateur && !ROLES_RAPPORTS.includes(utilisateur.role_code)) return <Navigate to="/" replace />;
+  if (utilisateur && !ROLES_BONS.includes(utilisateur.role_code)) return <Navigate to="/" replace />;
   return <ContenuBons />;
 }
 

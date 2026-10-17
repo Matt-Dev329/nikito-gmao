@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils';
 import { getNavIcon } from './NavIcons';
 import type { RoleUtilisateur } from '@/types/database';
 import { useAccesCommandes } from '@/hooks/queries/useCommandes';
-import { ROLES_STOCK, ROLES_PILOTAGE, ROLES_ANALYSE_CAUSES, estManagerPrincipal } from '@/lib/acces';
+import { ROLES_STOCK, ROLES_PILOTAGE, ROLES_ANALYSE_CAUSES, ROLES_BONS, estManagerPrincipal } from '@/lib/acces';
 import { useAuth } from '@/hooks/useAuth';
 
 interface MobileMoreDrawerProps {
@@ -29,7 +29,7 @@ const pilotageItems: DrawerItem[] = [
   { to: '/gmao/mon-parc', label: 'Mon parc', iconLabel: 'Mon parc', roles: ['manager_parc'] },
   { to: '/gmao/controles', label: 'Contrôles', iconLabel: 'Contrôles', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'technicien', 'manager_parc', 'admin_it'] },
   { to: '/gmao/rapports', label: 'Rapports de réparation', iconLabel: 'Rapports de réparation', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'technicien', 'manager_parc', 'admin_it'] },
-  { to: '/gmao/bons', label: "Bons d'intervention", iconLabel: "Bons d'intervention", roles: ['direction', 'chef_maintenance', 'directeur_parc', 'technicien', 'manager_parc', 'admin_it'] },
+  { to: '/gmao/bons', label: "Bons d'intervention", iconLabel: "Bons d'intervention", roles: ROLES_BONS },
   { to: '/gmao/plans', label: 'Plans', iconLabel: 'Plans', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'technicien', 'manager_parc', 'admin_it'] },
   { to: '/gmao/manuels', label: 'Manuels', iconLabel: 'Manuels', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'technicien', 'manager_parc', 'admin_it'] },
   { to: '/gmao/prestataires', label: 'Rapports prestataires', iconLabel: 'Rapports prestataires', roles: ROLES_PILOTAGE },

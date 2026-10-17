@@ -3,7 +3,7 @@ import { actualiserApplication } from '@/lib/miseAJour';
 import { cn } from '@/lib/utils';
 import { Logo } from '@/components/ui/Logo';
 import { useAuth } from '@/hooks/useAuth';
-import { ROLES_PILOTAGE, aAcces } from '@/lib/acces';
+import { ROLES_PILOTAGE, ROLES_BONS, aAcces } from '@/lib/acces';
 
 interface MenuDrawerProps {
   open: boolean;
@@ -14,7 +14,7 @@ const menuItems: { to: string; label: string; icon: string; roles?: string[] }[]
   { to: '/gmao', label: 'Tableau de bord', icon: '📊' },
   { to: '/tech/controles', label: 'Contrôles', icon: '✅' },
   { to: '/tech/rapports', label: 'Rapports de réparation', icon: '📋' },
-  { to: '/tech/bons', label: "Bons d'intervention", icon: '🧾' },
+  { to: '/tech/bons', label: "Bons d'intervention", icon: '🧾', roles: ROLES_BONS },
   { to: '/tech/plans', label: 'Plans', icon: '🗺️' },
   { to: '/tech/manuels', label: 'Manuels', icon: '📘' },
   { to: '/tech/prestataires', label: 'Rapports prestataires', icon: '🧯', roles: ROLES_PILOTAGE },
