@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/components/ui/ToastProvider';
+import { ROLES_GESTION_COMPTES, peutGererCompte } from '@/lib/acces';
+import type { UtilisateurMetier } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
 import { ModaleInviterUtilisateur } from '@/components/admin/ModaleInviterUtilisateur';
 import { ModaleEditerUtilisateur } from '@/components/admin/ModaleEditerUtilisateur';
@@ -25,6 +27,15 @@ import {
   type InvitationRow,
 } from '@/hooks/queries/useUtilisateurs';
 
+/** Compte modifiable par l'utilisateur connecté (à hauteur de grade, ses parcs) — jamais le sien */
+function peutGererUtilisateur(moi: UtilisateurMetier | null, u: UtilisateurRow): boolean {
+  return (
+    !!moi &&
+    u.id !== moi.id &&
+    peutGererCompte(moi, u.role_code, u.parcs.map((p) => p.parc_id), u.parcs.some((p) => p.est_manager))
+  );
+}
+
 type Tab = 'a_valider' | 'actifs' | 'invitations' | 'desactives';
 
 const roleBadgeColors: Record<RoleUtilisateur, string> = {
@@ -46,11 +57,7 @@ export function UtilisateursAdmin() {
   const { data: compteurs } = useCompteursRoles();
   const { data: aValider } = useUtilisateursAValider();
 
-  const peutInviter =
-    effectiveRole === 'direction' ||
-    effectiveRole === 'chef_maintenance' ||
-    effectiveRole === 'directeur_parc' ||
-    effectiveRole === 'manager_parc';
+  const peutInviter = ROLES_GESTION_COMPTES.includes(effectiveRole);
 
   const nbAValider = aValider?.length ?? 0;
 
@@ -351,16 +358,13 @@ function ListeActifs({ recherche }: { recherche: string }) {
   const supprimerMutation = useSupprimerUtilisateur();
   const { activate } = useViewAs();
   const navigate = useNavigate();
-  const isDirection = effectiveRole === 'direction' || effectiveRole === 'admin_it';
-  const isManager = effectiveRole === 'manager_parc';
-  const canEdit = isDirection || effectiveRole === 'chef_maintenance' || effectiveRole === 'directeur_parc';
-  const canViewAs = canEdit;
+  const canViewAs = ['direction', 'admin_it', 'chef_maintenance', 'directeur_parc'].includes(effectiveRole);
+  const gere = (u: UtilisateurRow) => peutGererUtilisateur(utilisateur, u);
   const [editUser, setEditUser] = useState<UtilisateurRow | null>(null);
   const [parcFiltre, setParcFiltre] = useState<string | null>(null);
   const toast = useToast();
   const qc = useQueryClient();
   const [envoiPin, setEnvoiPin] = useState<Set<string>>(new Set());
-  const peutEnvoyerPin = isDirection || isManager || effectiveRole === 'chef_maintenance' || effectiveRole === 'directeur_parc';
 
   // Génère un nouveau code et l'envoie par mail : le code ne s'affiche jamais ici
   const envoyerPin = async (liste: UtilisateurRow[]) => {
@@ -378,8 +382,8 @@ function ListeActifs({ recherche }: { recherche: string }) {
 
   const filtres = useMemo(() => filtrerUtilisateurs(data ?? [], recherche), [data, recherche]);
   const sansCode = useMemo(
-    () => (data ?? []).filter((u) => u.auth_mode === 'pin_seul' && u.email && !u.code_pin_genere_le),
-    [data]
+    () => (data ?? []).filter((u) => u.auth_mode === 'pin_seul' && u.email && !u.code_pin_genere_le && peutGererUtilisateur(utilisateur, u)),
+    [data, utilisateur]
   );
 
   // Rangement par parc puis par rôle ; les personnes rattachées à plusieurs
@@ -416,13 +420,6 @@ function ListeActifs({ recherche }: { recherche: string }) {
 
   const parcMap = new Map((parcs ?? []).map((p) => [p.id, p]));
 
-  const peutSupprimer = (u: UtilisateurRow) => {
-    if (u.id === utilisateur?.id) return false;
-    if (isDirection) return true;
-    if (isManager) return u.role_code === 'staff_operationnel';
-    return false;
-  };
-
   const supprimer = (id: string, nom: string) => {
     if (confirm(`Desactiver le compte de ${nom} ?`)) {
       supprimerMutation.mutate(id);
@@ -443,7 +440,7 @@ function ListeActifs({ recherche }: { recherche: string }) {
 
   return (
     <>
-      {peutEnvoyerPin && sansCode.length > 0 && (
+      {sansCode.length > 0 && (
         <div className="flex flex-col sm:flex-row sm:items-center gap-2 justify-between mx-4 mt-3 p-3 rounded-xl bg-nikito-cyan/10 border border-nikito-cyan/30">
           <div className="text-[13px]">
             {sansCode.length} staff sans code de connexion :{' '}
@@ -494,11 +491,11 @@ function ListeActifs({ recherche }: { recherche: string }) {
                     key={u.id}
                     user={u}
                     onViewAs={canViewAs && u.id !== utilisateur?.id ? () => handleViewAs(u) : undefined}
-                    onEditer={canEdit && u.id !== utilisateur?.id ? () => setEditUser(u) : undefined}
-                    onSupprimer={peutSupprimer(u) ? () => supprimer(u.id, `${u.prenom} ${u.nom}`) : undefined}
+                    onEditer={gere(u) ? () => setEditUser(u) : undefined}
+                    onSupprimer={gere(u) ? () => supprimer(u.id, `${u.prenom} ${u.nom}`) : undefined}
                     supprimant={supprimerMutation.isPending}
                     onEnvoyerPin={
-                      peutEnvoyerPin && u.auth_mode === 'pin_seul' && u.email
+                      gere(u) && u.auth_mode === 'pin_seul' && u.email
                         ? () => {
                             if (!u.code_pin_genere_le || confirm(`Envoyer un nouveau code à ${u.prenom} ? L'ancien ne marchera plus.`)) envoyerPin([u]);
                           }
@@ -525,9 +522,7 @@ function ListeActifs({ recherche }: { recherche: string }) {
 
 function ListeAValider({ recherche }: { recherche: string }) {
   const { utilisateur } = useAuth();
-  const effectiveRole = useEffectiveRole(utilisateur?.role_code ?? 'staff_operationnel');
   const { data, isLoading } = useUtilisateursAValider();
-  const canEdit = effectiveRole === 'direction' || effectiveRole === 'chef_maintenance' || effectiveRole === 'directeur_parc' || effectiveRole === 'admin_it';
   const [editUser, setEditUser] = useState<UtilisateurRow | null>(null);
 
   const filtres = useMemo(() => filtrerUtilisateurs(data ?? [], recherche), [data, recherche]);
@@ -550,7 +545,7 @@ function ListeAValider({ recherche }: { recherche: string }) {
           <UserRow
             key={u.id}
             user={u}
-            onEditer={canEdit ? () => setEditUser(u) : undefined}
+            onEditer={peutGererUtilisateur(utilisateur, u) ? () => setEditUser(u) : undefined}
           />
         ))}
       </div>
@@ -567,11 +562,8 @@ function ListeAValider({ recherche }: { recherche: string }) {
 
 function ListeDesactives({ recherche }: { recherche: string }) {
   const { utilisateur } = useAuth();
-  const effectiveRole = useEffectiveRole(utilisateur?.role_code ?? 'staff_operationnel');
   const { data, isLoading } = useUtilisateursDesactives();
   const reactiverMutation = useReactiverUtilisateur();
-  const isDirection = effectiveRole === 'direction' || effectiveRole === 'admin_it';
-  const canEdit = isDirection || effectiveRole === 'chef_maintenance' || effectiveRole === 'directeur_parc';
   const [editUser, setEditUser] = useState<UtilisateurRow | null>(null);
 
   const filtres = useMemo(() => filtrerUtilisateurs(data ?? [], recherche), [data, recherche]);
@@ -593,8 +585,8 @@ function ListeDesactives({ recherche }: { recherche: string }) {
           <UserRow
             key={u.id}
             user={u}
-            onEditer={canEdit ? () => setEditUser(u) : undefined}
-            onReactiver={canEdit ? () => reactiver(u.id, `${u.prenom} ${u.nom}`) : undefined}
+            onEditer={peutGererUtilisateur(utilisateur, u) ? () => setEditUser(u) : undefined}
+            onReactiver={peutGererUtilisateur(utilisateur, u) ? () => reactiver(u.id, `${u.prenom} ${u.nom}`) : undefined}
             reactivant={reactiverMutation.isPending}
           />
         ))}

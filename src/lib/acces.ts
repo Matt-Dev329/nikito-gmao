@@ -44,3 +44,49 @@ export function aAcces(u: UtilisateurAcces | null | undefined, roles: string[]):
   if (!u) return false;
   return roles.includes(u.role_code) || (roles.includes('manager_principal') && estManagerPrincipal(u));
 }
+
+/**
+ * Gestion des comptes « à hauteur de grade » (même règle qu'en base :
+ * peut_gerer_compte) : direction, admin IT et chef d'équipe gèrent tous les
+ * comptes ; un directeur de parc les directeurs, managers et staff de ses
+ * parcs ; un manager les managers et le staff de ses parcs. Pas les autres.
+ */
+export const ROLES_GESTION_COMPTES: RoleUtilisateur[] = ['direction', 'admin_it', 'chef_maintenance', 'directeur_parc', 'manager_parc'];
+
+/** Rôles qu'un utilisateur peut attribuer */
+export function rolesAttribuables(role: RoleUtilisateur | undefined): RoleUtilisateur[] {
+  switch (role) {
+    case 'direction':
+    case 'admin_it':
+    case 'chef_maintenance':
+      return ['direction', 'chef_maintenance', 'directeur_parc', 'manager_parc', 'technicien', 'admin_it', 'staff_operationnel'];
+    case 'directeur_parc':
+      return ['directeur_parc', 'manager_parc', 'staff_operationnel'];
+    case 'manager_parc':
+      return ['manager_parc', 'staff_operationnel'];
+    default:
+      return [];
+  }
+}
+
+interface Gestionnaire {
+  role_code: RoleUtilisateur;
+  parc_ids: string[];
+  parcs_manager_principal?: string[];
+}
+
+/** Le gestionnaire peut-il créer / mettre un compte avec ce rôle, ces parcs et ce badge MGR ? */
+export function peutGererCompte(
+  g: Gestionnaire | null | undefined,
+  role: RoleUtilisateur,
+  parcs: string[],
+  estManager = false
+): boolean {
+  if (!g || !rolesAttribuables(g.role_code).includes(role)) return false;
+  if (['direction', 'admin_it', 'chef_maintenance'].includes(g.role_code)) return true;
+  if (parcs.length === 0 || !parcs.every((p) => g.parc_ids.includes(p))) return false;
+  if (g.role_code === 'manager_parc' && estManager) {
+    return parcs.every((p) => (g.parcs_manager_principal ?? []).includes(p));
+  }
+  return true;
+}

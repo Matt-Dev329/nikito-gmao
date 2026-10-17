@@ -8,6 +8,8 @@ import {
   type UtilisateurRow,
 } from '@/hooks/queries/useUtilisateurs';
 import { roleLabels } from '@/lib/tokens';
+import { useAuth } from '@/hooks/useAuth';
+import { rolesAttribuables } from '@/lib/acces';
 
 interface Props {
   open: boolean;
@@ -19,6 +21,12 @@ export function ModaleEditerUtilisateur({ open, onClose, utilisateur }: Props) {
   const { data: parcs } = useParcs();
   const { data: roles } = useRoles();
   const modifierMutation = useModifierUtilisateur();
+  const { utilisateur: moi } = useAuth();
+  // Rôles et parcs proposés à la hauteur de celui qui modifie (même règle qu'en base)
+  const attribuables = rolesAttribuables(moi?.role_code);
+  const rolesProposes = (roles ?? []).filter((r) => attribuables.includes(r.code));
+  const limiteASesParcs = moi?.role_code === 'directeur_parc' || moi?.role_code === 'manager_parc';
+  const parcsProposes = limiteASesParcs ? (parcs ?? []).filter((p) => moi?.parc_ids.includes(p.id)) : parcs ?? [];
 
   const [roleId, setRoleId] = useState(utilisateur.role_id);
   const [parcsChoisis, setParcsChoisis] = useState<string[]>(
@@ -91,7 +99,7 @@ export function ModaleEditerUtilisateur({ open, onClose, utilisateur }: Props) {
             Role
           </label>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-1.5">
-            {(roles ?? []).map((r) => (
+            {rolesProposes.map((r) => (
               <button
                 key={r.id}
                 onClick={() => setRoleId(r.id)}
@@ -106,7 +114,9 @@ export function ModaleEditerUtilisateur({ open, onClose, utilisateur }: Props) {
               </button>
             ))}
           </div>
-          {(roleCode === 'manager_parc' || roleCode === 'chef_maintenance' || roleCode === 'directeur_parc') && (
+          {(roleCode === 'manager_parc' || roleCode === 'chef_maintenance' || roleCode === 'directeur_parc') &&
+            (moi?.role_code !== 'manager_parc' ||
+              (parcsChoisis.length > 0 && parcsChoisis.every((p) => (moi.parcs_manager_principal ?? []).includes(p)))) && (
             <label className="flex items-center gap-2 mt-3 text-xs cursor-pointer">
               <input
                 type="checkbox"
@@ -124,7 +134,7 @@ export function ModaleEditerUtilisateur({ open, onClose, utilisateur }: Props) {
             Parcs assignes
           </label>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-1.5">
-            {(parcs ?? []).map((p) => {
+            {parcsProposes.map((p) => {
               const checked = parcsChoisis.includes(p.id);
               return (
                 <button

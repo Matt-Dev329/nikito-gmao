@@ -5,6 +5,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/components/ui/ToastProvider';
 import { supabase } from '@/lib/supabase';
 import { roleLabels } from '@/lib/tokens';
+import { rolesAttribuables } from '@/lib/acces';
 import type { RoleUtilisateur } from '@/types/database';
 
 interface ModaleInviterProps {
@@ -56,13 +57,16 @@ export function ModaleInviterUtilisateur({
   const [emailDestinataire, setEmailDestinataire] = useState('');
   const [emailErreurDetail, setEmailErreurDetail] = useState<Record<string, unknown> | null>(null);
 
-  const isManagerParc = roleInviteur === 'manager_parc';
-  const rolesDisponibles = isManagerParc
-    ? [{ value: 'staff_operationnel' as const, label: 'Staff opérationnel' }]
-    : rolesParAuth[authMode];
-  const parcsDisponibles = isManagerParc
+  // Rôles et parcs à la hauteur de l'inviteur (même règle qu'en base)
+  const attribuables = rolesAttribuables(roleInviteur);
+  const rolesDisponibles = rolesParAuth[authMode].filter((r) => attribuables.includes(r.value));
+  const limiteASesParcs = roleInviteur === 'directeur_parc' || roleInviteur === 'manager_parc';
+  const parcsDisponibles = limiteASesParcs
     ? parcs?.filter((p) => parcsInviteur.includes(p.id)) ?? []
     : parcs ?? [];
+  const peutNommerMgr =
+    roleInviteur !== 'manager_parc' ||
+    (parcsChoisis.length > 0 && parcsChoisis.every((p) => (utilisateur?.parcs_manager_principal ?? []).includes(p)));
 
   if (!open) return null;
 
@@ -142,7 +146,7 @@ export function ModaleInviterUtilisateur({
       nom: null,
       role_id: role.id,
       parcs_assignes: parcsChoisis,
-      est_manager: estManager,
+      est_manager: estManager && peutNommerMgr,
       auth_mode: authMode,
       invite_par_id: utilisateur.id,
     });
@@ -242,36 +246,34 @@ export function ModaleInviterUtilisateur({
           />
         ) : (
           <>
-            {!isManagerParc && (
-              <div className="mb-[18px]">
-                <label className="block text-[11px] text-dim uppercase tracking-wider mb-2.5">
-                  Mode d'authentification
-                </label>
-                <div className="grid grid-cols-2 gap-2.5">
-                  <CarteAuthMode
-                    icon="📧"
-                    titre="Email professionnel"
-                    description="Direction, Chef d'équipe, Manager, Technicien, Admin IT · @nikito.com"
-                    actif={authMode === 'email_password'}
-                    onClick={() => {
-                      setAuthMode('email_password');
-                      setRoleChoisi(null);
-                    }}
-                  />
-                  <CarteAuthMode
-                    icon="🔢"
-                    titre="Code PIN tablette"
-                    description="Staff opérationnel uniquement · pas d'email requis"
-                    actif={authMode === 'pin_seul'}
-                    onClick={() => {
-                      setAuthMode('pin_seul');
-                      setRoleChoisi('staff_operationnel');
-                      setEmail('');
-                    }}
-                  />
-                </div>
+            <div className="mb-[18px]">
+              <label className="block text-[11px] text-dim uppercase tracking-wider mb-2.5">
+                Mode d'authentification
+              </label>
+              <div className="grid grid-cols-2 gap-2.5">
+                <CarteAuthMode
+                  icon="📧"
+                  titre="Email professionnel"
+                  description={`${rolesParAuth.email_password.filter((x) => attribuables.includes(x.value)).map((x) => x.label).join(', ')} · @nikito.com`}
+                  actif={authMode === 'email_password'}
+                  onClick={() => {
+                    setAuthMode('email_password');
+                    setRoleChoisi(null);
+                  }}
+                />
+                <CarteAuthMode
+                  icon="🔢"
+                  titre="Code PIN tablette"
+                  description="Staff opérationnel uniquement · pas d'email requis"
+                  actif={authMode === 'pin_seul'}
+                  onClick={() => {
+                    setAuthMode('pin_seul');
+                    setRoleChoisi('staff_operationnel');
+                    setEmail('');
+                  }}
+                />
               </div>
-            )}
+            </div>
 
             {authMode === 'pin_seul' && (
               <div className="grid grid-cols-2 gap-2.5 mb-3.5">
@@ -364,7 +366,7 @@ export function ModaleInviterUtilisateur({
                   </button>
                 ))}
               </div>
-              {roleChoisi === 'manager_parc' && (
+              {roleChoisi === 'manager_parc' && peutNommerMgr && (
                 <label className="flex items-center gap-2 mt-3 text-xs">
                   <input
                     type="checkbox"
