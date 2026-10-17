@@ -96,7 +96,7 @@ function ContenuRapports() {
       (r) =>
         (!activiteActive || r.activite === activiteActive) &&
         (!q ||
-          [r.numero_bt, r.equipement, r.equipement_code, r.parc_code, r.intervenant, r.diagnostic, r.actions]
+          [r.numero_bt, r.equipement, r.equipement_code, r.parc_code, r.intervenant, r.diagnostic, r.actions, r.cle.startsWith('s:') ? 'supprimé' : null]
             .filter(Boolean)
             .join(' ')
             .toLowerCase()
@@ -117,7 +117,7 @@ function ContenuRapports() {
     <div className="p-4 md:p-6 md:px-7">
       <h1 className="text-xl md:text-[22px] font-semibold m-0">Rapports de réparation</h1>
       <p className="text-[13px] text-dim mt-1 mb-4">
-        Toutes les réparations terminées, rangées par activité ({(rapports ?? []).length} sur la période)
+        Toutes les réparations terminées et les tickets supprimés (avec leur motif), rangés par activité ({(rapports ?? []).length} sur la période)
       </p>
 
       <div className="flex flex-col gap-3 mb-4">
@@ -181,6 +181,8 @@ function ContenuRapports() {
 
 function CarteRapport({ rapport: r }: { rapport: Rapport }) {
   const [ouvert, setOuvert] = useState(false);
+  // Ticket supprimé (avec motif) : intervenant = auteur de la suppression, actions = motif
+  const supprime = r.cle.startsWith('s:');
   const navigate = useNavigate();
   const toast = useToast();
   const [pdfEnCours, setPdfEnCours] = useState(false);
@@ -226,12 +228,14 @@ function CarteRapport({ rapport: r }: { rapport: Rapport }) {
           <div className="text-[12px] text-dim mt-0.5">
             {new Date(r.fin).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: '2-digit' })} ·{' '}
             {r.numero_bt}
-            {r.parc_code ? ` · ${r.parc_code}` : ''} · {r.intervenant ?? '—'}
-            {!r.externe && ` · ${duree(r.debut, r.fin)}`}
+            {r.parc_code ? ` · ${r.parc_code}` : ''} · {supprime ? `supprimé par ${r.intervenant ?? '—'}` : r.intervenant ?? '—'}
+            {!r.externe && !supprime && ` · ${duree(r.debut, r.fin)}`}
           </div>
         </div>
         <div className="flex flex-col items-end gap-1 flex-shrink-0">
-          {r.externe ? (
+          {supprime ? (
+            <span className="text-[10px] bg-red/15 text-red px-2 py-0.5 rounded">Supprimé</span>
+          ) : r.externe ? (
             <span className="text-[10px] bg-amber/15 text-amber px-2 py-0.5 rounded">Extérieur</span>
           ) : r.resolu_premier_coup === true ? (
             <span className="text-[10px] bg-green/15 text-green px-2 py-0.5 rounded">1er coup</span>
@@ -244,7 +248,7 @@ function CarteRapport({ rapport: r }: { rapport: Rapport }) {
 
       {ouvert && (
         <div className="px-4 pb-4 border-t border-white/[0.06] pt-3 grid gap-3 text-[13px]">
-          {r.diagnostic && (
+          {r.diagnostic && !supprime && (
             <div>
               <div className="text-[11px] text-dim uppercase tracking-wider mb-1">Diagnostic</div>
               <div className="whitespace-pre-line">{r.diagnostic}</div>
@@ -253,7 +257,7 @@ function CarteRapport({ rapport: r }: { rapport: Rapport }) {
           {r.actions && (
             <div>
               <div className="text-[11px] text-dim uppercase tracking-wider mb-1">
-                {r.externe ? 'Compte-rendu de l’intervenant' : 'Actions réalisées'}
+                {supprime ? 'Motif de la suppression' : r.externe ? 'Compte-rendu de l’intervenant' : 'Actions réalisées'}
               </div>
               <div className="whitespace-pre-line">{r.actions}</div>
             </div>
@@ -297,7 +301,7 @@ function CarteRapport({ rapport: r }: { rapport: Rapport }) {
             >
               Voir le ticket
             </button>
-            {!r.externe && (
+            {!r.externe && !supprime && (
               <button
                 onClick={telechargerPdf}
                 disabled={pdfEnCours}
