@@ -32,6 +32,7 @@ const TOUR_KEYS: Record<string, string> = {
   'Contrôles': 'controles',
   'Contrôle d\'ouverture': 'controle-ouverture',
   'Contrôle hebdo': 'controle-hebdo',
+  'Contrôle hebdo technique': 'controle-hebdo',
   'Contrôle mensuel': 'controle-mensuel',
   'Parcs': 'parcs',
   'Utilisateurs': 'utilisateurs',
@@ -92,10 +93,10 @@ const sections: { titre: string; items: NavItem[] }[] = [
   {
     titre: 'Contrôles',
     items: [
-      { to: '/staff/controle-ouverture', label: 'Contrôle d\'ouverture', featureCode: 'controles', badgeKey: 'controlesManquants', badgeTone: 'red', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'staff_operationnel', 'admin_it'] },
-      { to: '/tech/controle-hebdo', label: 'Contrôle hebdo', featureCode: 'controles', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'technicien', 'admin_it'] },
-      { to: '/staff/controle-hebdo', label: 'Contrôle hebdo', featureCode: 'controles', roles: ['staff_operationnel', 'manager_parc'] },
-      { to: '/tech/controle-mensuel', label: 'Contrôle mensuel', featureCode: 'controles', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'technicien', 'admin_it'] },
+      { to: '/staff/controle-ouverture', label: 'Contrôle d\'ouverture', featureCode: 'controles', badgeKey: 'controlesManquants', badgeTone: 'red', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'manager_parc', 'technicien', 'staff_operationnel', 'admin_it'] },
+      { to: '/tech/controle-hebdo', label: 'Contrôle hebdo technique', featureCode: 'controles', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'manager_parc', 'technicien', 'admin_it'] },
+      { to: '/staff/controle-hebdo', label: 'Contrôle hebdo staff', featureCode: 'controles', roles: ['staff_operationnel', 'direction', 'chef_maintenance', 'directeur_parc', 'manager_parc', 'technicien', 'admin_it'] },
+      { to: '/tech/controle-mensuel', label: 'Contrôle mensuel', featureCode: 'controles', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'manager_parc', 'technicien', 'admin_it'] },
     ],
   },
   {

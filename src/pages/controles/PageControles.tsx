@@ -11,19 +11,20 @@ interface Entree {
   roles: RoleUtilisateur[];
 }
 
-const CHEFS: RoleUtilisateur[] = ['direction', 'chef_maintenance', 'directeur_parc', 'admin_it'];
+/** Tous les contrôles pour tous les rôles internes (le staff garde ses écrans dédiés) */
+const TOUS: RoleUtilisateur[] = ['direction', 'chef_maintenance', 'directeur_parc', 'manager_parc', 'technicien', 'admin_it'];
 
 const ENTREES: Entree[] = [
-  { to: '/staff/controle-ouverture', titre: 'Contrôle d’ouverture', detail: 'Contrôle quotidien avant ouverture', icone: '☀️', roles: CHEFS },
-  { to: '/tech/controle-hebdo', titre: 'Contrôle hebdo', detail: 'Contrôle technique de la semaine', icone: '🗓️', roles: [...CHEFS, 'technicien'] },
-  { to: '/staff/controle-hebdo', titre: 'Contrôle hebdo', detail: 'Contrôle de la semaine', icone: '🗓️', roles: ['manager_parc'] },
-  { to: '/tech/controle-mensuel', titre: 'Contrôle mensuel', detail: 'Contrôle technique du mois', icone: '📅', roles: [...CHEFS, 'technicien'] },
+  { to: '/staff/controle-ouverture', titre: 'Contrôle d’ouverture', detail: 'Contrôle quotidien avant ouverture', icone: '☀️', roles: TOUS },
+  { to: '/tech/controle-hebdo', titre: 'Contrôle hebdo technique', detail: 'Contrôle technique de la semaine', icone: '🗓️', roles: TOUS },
+  { to: '/staff/controle-hebdo', titre: 'Contrôle hebdo staff', detail: 'Contrôle de la semaine du staff', icone: '🗓️', roles: TOUS },
+  { to: '/tech/controle-mensuel', titre: 'Contrôle mensuel', detail: 'Contrôle technique du mois', icone: '📅', roles: TOUS },
   {
     to: '/gmao/controles-historique',
     titre: 'Historique des contrôles',
     detail: 'Contrôles réalisés, anomalies, photos et PDF',
     icone: '📋',
-    roles: [...CHEFS, 'technicien', 'manager_parc'],
+    roles: TOUS,
   },
 ];
 
