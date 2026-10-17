@@ -162,15 +162,25 @@ export function TicketCard({ ticket, variant, onDemarrer, onReassigner, onRepren
           >
             ▶ Reprendre
           </button>
-        ) : (
+        ) : onDemarrer ? (
           <button
             onClick={(e) => {
               e.stopPropagation();
-              onDemarrer?.();
+              onDemarrer();
             }}
             className="flex-1 bg-gradient-action text-bg-app py-3.5 rounded-[10px] text-sm font-bold"
           >
             📷 Photo AVANT puis démarrer
+          </button>
+        ) : (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onClick?.();
+            }}
+            className="flex-1 bg-bg-deep border border-white/10 text-text py-3.5 rounded-[10px] text-sm"
+          >
+            Voir le suivi
           </button>
         )}
         {onReassigner && (

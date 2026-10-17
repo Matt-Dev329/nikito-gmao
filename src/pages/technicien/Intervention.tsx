@@ -183,8 +183,11 @@ export function Intervention() {
   // Démarrage possible : photo AVANT prise, ou photo du signalement réutilisée
   const photoDisponible = !!photoAvant || (!!photoSignalement && !autrePhoto);
   // Intervention pas encore démarrée (ou en pause) : seul le bloc « Démarrer » est proposé
-  const aDemarrer = !estResolu && incident?.externe !== true && (!latestIntervention || statutIncident === 'en_pause');
-  const formulaireVisible = estResolu || (!aDemarrer && incident?.externe !== true);
+  // Managers de parc : suivi en lecture seule (pas de démarrage ni de saisie)
+  const lectureSeule = utilisateur?.role_code === 'manager_parc';
+  const aDemarrer =
+    !lectureSeule && !estResolu && incident?.externe !== true && (!latestIntervention || statutIncident === 'en_pause');
+  const formulaireVisible = !lectureSeule && (estResolu || (!aDemarrer && incident?.externe !== true));
   const [photoApres, setPhotoApres] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
   const [showModale, setShowModale] = useState(false);
@@ -496,12 +499,14 @@ export function Intervention() {
           incidentId={incident.id as string}
           chemins={((incident.photos_urls as string[] | null) ?? []).filter(Boolean)}
           dossier={`${(parc?.code as string) ?? 'PARC'}/${btNumero ?? 'ticket'}`}
-          modifiable={!estResolu}
+          modifiable={!estResolu && !lectureSeule}
         />
 
+        {lectureSeule && <SuiviLectureSeule incident={incident as Record<string, unknown>} intervention={latestIntervention} />}
+
         {/* Rangements du ticket (sans le fermer) : pièce en attente, intervenant extérieur */}
-        {incident.externe !== true && <PanneauAttentePiece incident={incident as Record<string, unknown>} />}
-        {incident.attente_piece !== true && (
+        {!lectureSeule && incident.externe !== true && <PanneauAttentePiece incident={incident as Record<string, unknown>} />}
+        {!lectureSeule && incident.attente_piece !== true && (
           <PanneauIntervenantExterieur incident={incident as Record<string, unknown>} onCloture={() => navigate(-1)} />
         )}
 
@@ -774,5 +779,64 @@ export function Intervention() {
         />
       )}
     </>
+  );
+}
+
+const LIBELLES_STATUT: Record<string, string> = {
+  ouvert: 'À faire',
+  assigne: 'Assigné à un technicien',
+  en_cours: 'Intervention en cours',
+  en_pause: 'En pause',
+  resolu: 'Résolu',
+  ferme: 'Fermé',
+  annule: 'Supprimé',
+};
+
+const dateHeure = (iso: unknown) =>
+  iso ? new Date(iso as string).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : null;
+
+/** Suivi du ticket pour les managers de parc : état et avancement, sans action possible. */
+function SuiviLectureSeule({
+  incident: i,
+  intervention: iv,
+}: {
+  incident: Record<string, unknown>;
+  intervention: Record<string, unknown> | null;
+}) {
+  const lignes: [string, string | null][] = [
+    ['État', LIBELLES_STATUT[i.statut as string] ?? (i.statut as string)],
+    ['Intervention démarrée', dateHeure(iv?.debut)],
+    ['Terminée', dateHeure(iv?.fin ?? i.resolu_le)],
+    ['Motif de la pause', i.statut === 'en_pause' ? ((i.pause_motif as string | null) ?? 'non précisé') : null],
+    ['Pièce en attente', i.attente_piece === true ? ((i.attente_piece_detail as string | null) ?? 'oui') : null],
+    [
+      'Intervenant extérieur',
+      i.externe === true
+        ? [
+            (i.externe_fournisseur as { nom?: string } | null)?.nom ?? (i.externe_nom as string | null) ?? 'oui',
+            i.externe_date_prevue ? `prévu le ${new Date(`${i.externe_date_prevue as string}T12:00:00`).toLocaleDateString('fr-FR')}` : null,
+          ]
+            .filter(Boolean)
+            .join(' · ')
+        : null,
+    ],
+    ['Diagnostic', (iv?.diagnostic as string | null) ?? null],
+    ['Actions réalisées', (iv?.actions_realisees as string | null) ?? null],
+  ];
+  return (
+    <div className="bg-bg-card rounded-xl p-4 border border-white/[0.06]">
+      <div className="text-[11px] text-dim uppercase tracking-wider mb-2">Suivi du ticket</div>
+      <div className="grid gap-1.5 text-[13px]">
+        {lignes
+          .filter(([, v]) => v)
+          .map(([k, v]) => (
+            <div key={k} className="flex gap-2">
+              <span className="text-dim w-[150px] flex-shrink-0">{k}</span>
+              <span className="whitespace-pre-line">{v}</span>
+            </div>
+          ))}
+      </div>
+      <div className="text-[11px] text-faint mt-3">Consultation seulement : l'intervention est gérée par l'équipe maintenance.</div>
+    </div>
   );
 }

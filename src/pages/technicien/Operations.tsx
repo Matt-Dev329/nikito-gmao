@@ -126,6 +126,8 @@ export function Operations() {
   const [reassignerCible, setReassignerCible] = useState<{ id: string; numeroBT: string } | null>(null);
   const [suppressionCible, setSuppressionCible] = useState<{ id: string; numeroBT: string } | null>(null);
   const validerTicket = useValiderTicket();
+  // Managers de parc : suivi des tickets en lecture seule (ni démarrage, ni réassignation)
+  const lectureSeule = utilisateur?.role_code === 'manager_parc';
 
   // Valideurs : chef d'équipe, direction, admin IT, directeurs de parc, managers principaux
   const estValideur =
@@ -438,10 +440,10 @@ export function Operations() {
               <TicketCard
                 ticket={premier}
                 variant="expanded"
-                onDemarrer={() => navigate(`/tech/operations/${premier.numeroBT}`)}
+                onDemarrer={lectureSeule ? undefined : () => navigate(`/tech/operations/${premier.numeroBT}`)}
                 onClick={() => navigate(`/tech/operations/${premier.numeroBT}`)}
-                onReassigner={() => setReassignerCible({ id: premier.id, numeroBT: premier.numeroBT })}
-                onReprendre={() => reprendreTicket(premier.id)}
+                onReassigner={lectureSeule ? undefined : () => setReassignerCible({ id: premier.id, numeroBT: premier.numeroBT })}
+                onReprendre={lectureSeule ? undefined : () => reprendreTicket(premier.id)}
                 reprenant={reprendre.isPending}
                 onSupprimer={supprimerSiAutorise(premier)}
               />
