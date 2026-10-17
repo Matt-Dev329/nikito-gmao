@@ -21,6 +21,8 @@ export interface TicketSummary {
   photoUrl?: string;
   /** Le média du signalement est une vidéo */
   photoVideo?: boolean;
+  /** Parc du ticket (droits de validation / suppression) */
+  parcId?: string;
 }
 
 interface TicketCardProps {
@@ -31,6 +33,8 @@ interface TicketCardProps {
   onReprendre?: () => void;
   reprenant?: boolean;
   onClick?: () => void;
+  /** Suppression avec motif (directeur, manager principal, chef d'équipe…) */
+  onSupprimer?: () => void;
 }
 
 const borderByCrit: Record<Criticite, string> = {
@@ -45,9 +49,9 @@ const badgeToneClass = {
   amber: 'text-amber',
 };
 
-export function TicketCard({ ticket, variant, onDemarrer, onReassigner, onReprendre, reprenant, onClick }: TicketCardProps) {
+export function TicketCard({ ticket, variant, onDemarrer, onReassigner, onReprendre, reprenant, onClick, onSupprimer }: TicketCardProps) {
   if (variant === 'compact') {
-    return (
+    const carte = (
       <button
         onClick={onClick}
         className={cn(
@@ -86,6 +90,20 @@ export function TicketCard({ ticket, variant, onDemarrer, onReassigner, onRepren
         </div>
         <span className="text-nikito-cyan text-lg">›</span>
       </button>
+    );
+    if (!onSupprimer) return carte;
+    return (
+      <div className="flex items-stretch gap-1.5">
+        <div className="flex-1 min-w-0">{carte}</div>
+        <button
+          onClick={onSupprimer}
+          title="Supprimer le ticket"
+          aria-label="Supprimer le ticket"
+          className="bg-bg-card rounded-xl px-3 text-red border border-red/30 flex-shrink-0 min-w-[44px]"
+        >
+          🗑
+        </button>
+      </div>
     );
   }
 
@@ -164,6 +182,17 @@ export function TicketCard({ ticket, variant, onDemarrer, onReassigner, onRepren
             className="bg-bg-deep border border-white/10 text-text py-3.5 px-4 rounded-[10px] text-[13px] min-w-[90px]"
           >
             Réassigner
+          </button>
+        )}
+        {onSupprimer && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onSupprimer();
+            }}
+            className="bg-bg-deep border border-red/40 text-red py-3.5 px-4 rounded-[10px] text-[13px] min-w-[90px]"
+          >
+            Supprimer
           </button>
         )}
       </div>

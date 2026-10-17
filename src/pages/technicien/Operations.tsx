@@ -91,6 +91,7 @@ function incidentToTicket(inc: Record<string, unknown>): TicketSummary {
     enPause: inc.statut === 'en_pause',
     photoPath: ((inc.photos_urls as string[] | null) ?? [])[0] ?? undefined,
     photoVideo: estCheminVideo(((inc.photos_urls as string[] | null) ?? [])[0]),
+    parcId: (equip?.parc_id as string | undefined) ?? undefined,
   };
 }
 
@@ -257,6 +258,8 @@ export function Operations() {
   };
 
   const [premier, ...autres] = ticketsFiltres;
+  const supprimerSiAutorise = (t: TicketSummary) =>
+    peutValiderTicket(utilisateur, t.parcId) ? () => setSuppressionCible({ id: t.id, numeroBT: t.numeroBT }) : undefined;
 
   const initiales = utilisateur
     ? `${utilisateur.prenom.charAt(0)}${utilisateur.nom.charAt(0)}`
@@ -425,6 +428,7 @@ export function Operations() {
                 ticket={t}
                 variant="compact"
                 onClick={() => navigate(`/tech/operations/${t.numeroBT}`)}
+                onSupprimer={supprimerSiAutorise(t)}
               />
             ))}
           </>
@@ -439,6 +443,7 @@ export function Operations() {
                 onReassigner={() => setReassignerCible({ id: premier.id, numeroBT: premier.numeroBT })}
                 onReprendre={() => reprendreTicket(premier.id)}
                 reprenant={reprendre.isPending}
+                onSupprimer={supprimerSiAutorise(premier)}
               />
             )}
             {autres.map((t) => (
@@ -447,6 +452,7 @@ export function Operations() {
                 ticket={t}
                 variant="compact"
                 onClick={() => navigate(`/tech/operations/${t.numeroBT}`)}
+                onSupprimer={supprimerSiAutorise(t)}
               />
             ))}
           </>
