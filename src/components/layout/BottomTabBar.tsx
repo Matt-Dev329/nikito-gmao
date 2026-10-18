@@ -161,6 +161,7 @@ export function BottomTabBar({ roleCode, onAlertsClick, onMoreClick, alertsOpen,
 
   return (
     <nav
+      data-barre-onglets
       className="fixed bottom-0 left-0 right-0 z-[100] bg-bg-sidebar/95 backdrop-blur-xl border-t border-white/[0.08] shadow-[0_-18px_42px_rgba(0,0,0,0.28)]"
       style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
     >

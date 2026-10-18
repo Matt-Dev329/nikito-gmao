@@ -155,3 +155,9 @@
     display: none;
   }
 }
+
+/* Fenêtre ouverte (fond plein écran) : la barre d'onglets mobile est masquée,
+   sinon Safari iOS peut la dessiner par-dessus les boutons de la fenêtre. */
+body:has(.fixed.inset-0.z-\[150\]) [data-barre-onglets] {
+  display: none;
+}
