@@ -7,11 +7,14 @@ import {
   useAnnulerCommande,
   useChangerStatutCommande,
   useMarquerCommandeLivree,
+  useModifierCommande,
+  useCatalogueCommandes,
   useCommandes,
   type Commande,
   type StatutCommande,
 } from '@/hooks/queries/useCommandes';
 import { usePanier } from '@/hooks/usePanier';
+import { useAuth } from '@/hooks/useAuth';
 import { formatDateHeure, formatPrix } from './format';
 
 const TONES: Record<string, string> = {
@@ -105,6 +108,10 @@ function CarteCommande({ commande: c, gestion, onModifier }: { commande: Command
   const livrer = useMarquerCommandeLivree();
   const ajouterAuPanier = usePanier((s) => s.ajouter);
   const [confirmerModif, setConfirmerModif] = useState(false);
+  // Chef d'équipe : peut modifier la commande de n'importe qui avant qu'elle soit passée
+  const { utilisateur } = useAuth();
+  const [edition, setEdition] = useState(false);
+  const chefPeutModifier = utilisateur?.role_code === 'chef_maintenance' && ['demandee', 'validee'].includes(c.statut);
   const statut = STATUTS_COMMANDE[c.statut];
   const nbArticles = c.commande_lignes.reduce((s, l) => s + l.quantite, 0);
 
@@ -189,6 +196,9 @@ function CarteCommande({ commande: c, gestion, onModifier }: { commande: Command
 
       {ouverte && (
         <div className="px-4 pb-4 border-t border-white/[0.04]">
+          {edition ? (
+            <EditeurCommande commande={c} onFini={() => setEdition(false)} />
+          ) : (
           <table className="w-full text-[13px] mt-3">
             <tbody>
               {c.commande_lignes.map((l) => (
@@ -222,6 +232,17 @@ function CarteCommande({ commande: c, gestion, onModifier }: { commande: Command
               ))}
             </tbody>
           </table>
+          )}
+          {chefPeutModifier && !edition && (
+            <div className="flex justify-end mt-2">
+              <button
+                onClick={() => setEdition(true)}
+                className="bg-nikito-cyan/12 text-nikito-cyan border border-nikito-cyan/40 px-4 py-2 rounded-[10px] text-[13px] font-semibold min-h-[44px]"
+              >
+                ✏️ Modifier (chef d'équipe)
+              </button>
+            </div>
+          )}
           {c.commentaire && (
             <p className="text-[12px] text-dim mt-3 whitespace-pre-line">
               <span className="text-faint uppercase text-[10px] tracking-wider block mb-0.5">Commentaire</span>
@@ -325,6 +346,142 @@ function CarteCommande({ commande: c, gestion, onModifier }: { commande: Command
           )}
         </div>
       )}
+    </div>
+  );
+}
+
+/** Édition d'une commande par le chef d'équipe : quantités, retrait et ajout d'articles. */
+function EditeurCommande({ commande: c, onFini }: { commande: Commande; onFini: () => void }) {
+  const toast = useToast();
+  const modifier = useModifierCommande();
+  const { data: catalogue } = useCatalogueCommandes();
+  const [quantites, setQuantites] = useState<Record<string, number>>(() =>
+    Object.fromEntries(c.commande_lignes.map((l) => [l.id, l.quantite]))
+  );
+  const [ajouts, setAjouts] = useState<Array<{ produitId: string; nom: string; quantite: number }>>([]);
+  const [recherche, setRecherche] = useState('');
+
+  const resultats = useMemo(() => {
+    const q = recherche.trim().toLowerCase();
+    if (q.length < 2 || !catalogue) return [];
+    return catalogue.produits
+      .filter((p) => p.nom.toLowerCase().includes(q) || (p.reference ?? '').toLowerCase().includes(q))
+      .slice(0, 8);
+  }, [recherche, catalogue]);
+
+  const changer = (id: string, delta: number) =>
+    setQuantites((prev) => ({ ...prev, [id]: Math.max(0, (prev[id] ?? 0) + delta) }));
+
+  const enregistrer = async () => {
+    const lignes = [
+      ...c.commande_lignes.map((l) => ({ ligne_id: l.id, quantite: quantites[l.id] ?? 0 })),
+      ...ajouts.map((a) => ({ produit_id: a.produitId, quantite: a.quantite })),
+    ];
+    if (!lignes.some((l) => l.quantite > 0)) {
+      toast.error('La commande ne peut pas être vide : annule-la plutôt');
+      return;
+    }
+    try {
+      const res = await modifier.mutateAsync({ commandeId: c.id, lignes });
+      toast.success(`Commande modifiée : elle devient ${res.numero}`);
+      onFini();
+    } catch (e) {
+      toast.error((e as Error).message);
+    }
+  };
+
+  const bouton = 'w-11 h-11 rounded-lg bg-bg-deep border border-white/[0.08] text-text text-[16px] flex items-center justify-center';
+
+  return (
+    <div className="mt-3 flex flex-col gap-2">
+      {c.commande_lignes.map((l) => {
+        const q = quantites[l.id] ?? 0;
+        return (
+          <div key={l.id} className={cn('flex items-center gap-2 bg-bg-deep rounded-lg p-2', q === 0 && 'opacity-50')}>
+            <div className="flex-1 min-w-0 text-[13px]">
+              <div className={cn('truncate', q === 0 && 'line-through')}>{l.produit_nom}</div>
+              <div className="text-[11px] text-faint">{[l.activite_nom, l.reference].filter(Boolean).join(' · ')}</div>
+            </div>
+            <button onClick={() => changer(l.id, -1)} className={bouton} aria-label="Moins">−</button>
+            <span className="w-8 text-center text-[14px] font-semibold">{q}</span>
+            <button onClick={() => changer(l.id, 1)} className={bouton} aria-label="Plus">+</button>
+            <button
+              onClick={() => setQuantites((prev) => ({ ...prev, [l.id]: 0 }))}
+              className="w-11 h-11 rounded-lg text-red text-[15px]"
+              aria-label="Retirer"
+            >
+              🗑
+            </button>
+          </div>
+        );
+      })}
+
+      {ajouts.map((a, i) => (
+        <div key={a.produitId} className="flex items-center gap-2 bg-nikito-cyan/[0.06] rounded-lg p-2">
+          <div className="flex-1 min-w-0 text-[13px] truncate">+ {a.nom}</div>
+          <button
+            onClick={() => setAjouts((prev) => prev.map((x, j) => (j === i ? { ...x, quantite: Math.max(1, x.quantite - 1) } : x)))}
+            className={bouton}
+            aria-label="Moins"
+          >
+            −
+          </button>
+          <span className="w-8 text-center text-[14px] font-semibold">{a.quantite}</span>
+          <button
+            onClick={() => setAjouts((prev) => prev.map((x, j) => (j === i ? { ...x, quantite: x.quantite + 1 } : x)))}
+            className={bouton}
+            aria-label="Plus"
+          >
+            +
+          </button>
+          <button onClick={() => setAjouts((prev) => prev.filter((_, j) => j !== i))} className="w-11 h-11 rounded-lg text-red text-[15px]" aria-label="Retirer">
+            🗑
+          </button>
+        </div>
+      ))}
+
+      <input
+        type="text"
+        value={recherche}
+        onChange={(e) => setRecherche(e.target.value)}
+        placeholder="Ajouter un article du catalogue (nom ou référence)…"
+        className="bg-bg-deep border border-white/[0.08] rounded-[10px] p-2.5 text-text text-[13px] outline-none focus:border-nikito-cyan min-h-[44px]"
+      />
+      {resultats.length > 0 && (
+        <div className="flex flex-col gap-1">
+          {resultats.map((p) => (
+            <button
+              key={p.id}
+              onClick={() => {
+                setAjouts((prev) =>
+                  prev.some((x) => x.produitId === p.id) ? prev : [...prev, { produitId: p.id, nom: p.nom, quantite: 1 }]
+                );
+                setRecherche('');
+              }}
+              className="text-left text-[13px] bg-bg-card border border-white/[0.06] rounded-lg px-3 py-2 min-h-[44px]"
+            >
+              {p.nom}
+              {p.reference && <span className="text-[11px] text-faint ml-1.5">{p.reference}</span>}
+            </button>
+          ))}
+        </div>
+      )}
+
+      <div className="text-[11px] text-dim">
+        La commande modifiée remplace l'ancienne (nouveau numéro, même demandeur) ; le demandeur est prévenu.
+      </div>
+      <div className="flex gap-2 justify-end">
+        <button onClick={onFini} className="text-dim px-3 min-h-[44px] text-[13px]">
+          Annuler
+        </button>
+        <button
+          onClick={enregistrer}
+          disabled={modifier.isPending}
+          className="bg-gradient-cta text-text px-4 rounded-[10px] text-[13px] font-bold min-h-[44px] disabled:opacity-50"
+        >
+          {modifier.isPending ? 'Enregistrement…' : 'Enregistrer les modifications'}
+        </button>
+      </div>
     </div>
   );
 }

@@ -55,6 +55,10 @@ Deno.serve(async (req: Request) => {
     if (!body.parc_id || !body.categorie_id || !body.declare_par_id) {
       return jsonResponse({ success: false, error: "Champs requis manquants (parc_id, categorie_id, declare_par_id)" }, 400);
     }
+    // Description du problème obligatoire
+    if (!body.symptome_libre || !body.symptome_libre.trim()) {
+      return jsonResponse({ success: false, error: "Décris le problème : la description est obligatoire" }, 400);
+    }
     // Photo / vidéo facultatives
     const medias = [...(body.medias ?? []), ...(body.photo_url ? [body.photo_url] : [])].filter(
       (m, i, arr) => typeof m === "string" && m.trim() !== "" && arr.indexOf(m) === i,

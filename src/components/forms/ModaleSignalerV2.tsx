@@ -777,8 +777,8 @@ function EtapeSymptome({
             <textarea
               value={commentaire}
               onChange={(e) => setCommentaire(e.target.value)}
-              placeholder={isAutre ? 'Decrivez le probleme observe...' : 'Detail supplementaire si besoin...'}
-              rows={isAutre ? 3 : 2}
+              placeholder="Décris le problème observé (obligatoire)..."
+              rows={3}
               className="w-full bg-[#0a0e27] border border-white/[0.08] rounded-xl p-3 pr-12 text-text text-sm outline-none resize-none min-h-[72px]"
             />
             <button
@@ -802,13 +802,14 @@ function EtapeSymptome({
           </button>
           <button
             onClick={() => {
-              if (isAutre && !commentaire.trim()) return;
-              onSelect(isAutre ? null : selected, commentaire.trim() || null);
+              // Description du problème obligatoire pour tout ticket
+              if (!commentaire.trim()) return;
+              onSelect(isAutre ? null : selected, commentaire.trim());
             }}
-            disabled={isAutre && !commentaire.trim()}
+            disabled={!commentaire.trim()}
             className={cn(
               'flex-1 rounded-xl py-3.5 text-sm font-bold min-h-[56px]',
-              (isAutre && !commentaire.trim()) ? 'bg-white/5 text-dim' : 'bg-gradient-to-r from-[#E85A9B] to-[#5DE5FF] text-white'
+              !commentaire.trim() ? 'bg-white/5 text-dim' : 'bg-gradient-to-r from-[#E85A9B] to-[#5DE5FF] text-white'
             )}
           >
             Continuer

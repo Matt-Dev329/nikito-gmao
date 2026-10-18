@@ -240,6 +240,25 @@ export function usePasserCommandeSpecifique() {
   });
 }
 
+/** Chef d'équipe : modifie la commande d'un autre (la nouvelle version remplace l'ancienne). */
+export function useModifierCommande() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      commandeId,
+      lignes,
+    }: {
+      commandeId: string;
+      lignes: Array<{ ligne_id?: string; produit_id?: string; quantite: number }>;
+    }) => {
+      const { data, error } = await supabase.rpc('modifier_commande', { p_commande_id: commandeId, p_lignes: lignes });
+      if (error) throw error;
+      return data as { id: string; numero: string };
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['commandes'] }),
+  });
+}
+
 export function useAnnulerCommande() {
   const qc = useQueryClient();
   return useMutation({
