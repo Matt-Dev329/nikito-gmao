@@ -130,7 +130,8 @@ export function ControleOuverture({ typeControle = 'quotidien' }: { typeControle
   }, [startTime, validated]);
 
   const [etats, setEtats] = useState<Record<string, { etat: EtatControleItem; saisiPar: string }>>({});
-  const [photoUrls, setPhotoUrls] = useState<Record<string, string>>({});
+  // Plusieurs photos par point (anciens brouillons : une seule photo par point)
+  const [photoUrls, setPhotoUrls] = useState<Record<string, string[]>>({});
   const [commentaires, setCommentaires] = useState<Record<string, string>>({});
   const [zoneActive, setZoneActive] = useState<string>('');
   const [dirty, setDirty] = useState(false);
@@ -147,7 +148,7 @@ export function ControleOuverture({ typeControle = 'quotidien' }: { typeControle
     : null;
   const draft = useDraftPersistence<{
     etats: Record<string, { etat: EtatControleItem; saisiPar: string }>;
-    photoUrls: Record<string, string>;
+    photoUrls: Record<string, string[] | string>;
     commentaires: Record<string, string>;
   }>(draftKey);
   const [draftLoaded, setDraftLoaded] = useState(false);
@@ -156,7 +157,11 @@ export function ControleOuverture({ typeControle = 'quotidien' }: { typeControle
     const d = draft.restore();
     if (d) {
       setEtats(d.etats ?? {});
-      setPhotoUrls(d.photoUrls ?? {});
+      setPhotoUrls(
+        Object.fromEntries(
+          Object.entries(d.photoUrls ?? {}).map(([k, v]) => [k, Array.isArray(v) ? v : [v]])
+        )
+      );
       setCommentaires(d.commentaires ?? {});
       setDirty(true);
     }
@@ -211,7 +216,8 @@ export function ControleOuverture({ typeControle = 'quotidien' }: { typeControle
         photoObligatoire: p.photo_obligatoire,
         etat: etats[p.point_id]?.etat ?? null,
         saisiPar: etats[p.point_id]?.saisiPar,
-        photoUrl: photoUrls[p.point_id],
+        photoUrl: photoUrls[p.point_id]?.[0],
+        photosUrls: photoUrls[p.point_id] ?? [],
         commentaire: commentaires[p.point_id],
       }));
   }, [pointsBruts, activeZone, etats, photoUrls, commentaires]);
@@ -223,8 +229,8 @@ export function ControleOuverture({ typeControle = 'quotidien' }: { typeControle
     setDirty(true);
   };
 
-  const handlePhotoUploaded = useCallback((pointId: string, url: string) => {
-    setPhotoUrls((prev) => ({ ...prev, [pointId]: url }));
+  const handlePhotosChange = useCallback((pointId: string, chemins: string[]) => {
+    setPhotoUrls((prev) => ({ ...prev, [pointId]: chemins }));
     setDirty(true);
   }, []);
 
@@ -260,7 +266,7 @@ export function ControleOuverture({ typeControle = 'quotidien' }: { typeControle
       bloquantSiKO: p.bloquant,
       photoObligatoire: p.photo_obligatoire,
       etat: etats[p.point_id]?.etat ?? null,
-      photoUrl: photoUrls[p.point_id],
+      photoUrl: photoUrls[p.point_id]?.[0],
     })
   ).length;
 
@@ -282,7 +288,8 @@ export function ControleOuverture({ typeControle = 'quotidien' }: { typeControle
           point_id: p.point_id,
           etat: etats[p.point_id].etat,
           commentaire: commentaires[p.point_id] || null,
-          photo_url: photoUrls[p.point_id] ?? null,
+          photo_url: photoUrls[p.point_id]?.[0] ?? null,
+          photos: photoUrls[p.point_id] ?? [],
         })),
     };
     const zonesRestantes = zones.filter((z) => !z.validee && z.code !== activeZone);
@@ -412,7 +419,7 @@ export function ControleOuverture({ typeControle = 'quotidien' }: { typeControle
         agentActuel={{ initiales: trigramme, prenom: utilisateur?.prenom ?? '' }}
         onChangeZone={setZoneActive}
         onSetEtat={setEtatPoint}
-        onPhotoUploaded={handlePhotoUploaded}
+        onPhotosChange={handlePhotosChange}
         onCommentaire={handleCommentaire}
         onRetour={handleRetour}
         onChangerAgent={() => navigate('/staff/login')}

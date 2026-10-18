@@ -11,6 +11,9 @@ export interface CloturerInterventionParams {
   resoluPremierCoup: boolean | null;
   photoAvantUrl?: string | null;
   photoApresUrl?: string | null;
+  /** Toutes les photos avant / après (prioritaires sur photoAvantUrl / photoApresUrl) */
+  photosAvantUrls?: string[];
+  photosApresUrls?: string[];
   /** Pièces du stock consommées pendant la réparation (sortie de stock automatique) */
   pieces?: Array<{ pieceId: string; quantite: number }>;
 }
@@ -29,8 +32,12 @@ export async function cloturerIntervention(
   utilisateurId: string
 ): Promise<{ interventionId: string }> {
   const nowISO = new Date().toISOString();
-  const photosAvant = params.photoAvantUrl ? [params.photoAvantUrl] : [];
-  const photosApres = params.photoApresUrl ? [params.photoApresUrl] : [];
+  const photosAvant = params.photosAvantUrls?.length
+    ? params.photosAvantUrls
+    : params.photoAvantUrl ? [params.photoAvantUrl] : [];
+  const photosApres = params.photosApresUrls?.length
+    ? params.photosApresUrls
+    : params.photoApresUrl ? [params.photoApresUrl] : [];
 
   let interventionId = params.interventionId ?? null;
 

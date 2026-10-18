@@ -50,7 +50,7 @@ export async function exportControlePDF(controle: ControleHistorique) {
   const { data: itemsRaw, error: errItems } = await supabase
     .from('controle_items')
     .select(`
-      id, point_id, etat, commentaire, photo_url,
+      id, point_id, etat, commentaire, photo_url, photos_urls,
       point_libelle_snapshot, point_categorie_snapshot,
       bibliotheque_points(libelle, categories_equipement(nom))
     `)
@@ -65,6 +65,7 @@ export async function exportControlePDF(controle: ControleHistorique) {
       etat: item.etat as string,
       commentaire: item.commentaire as string | null,
       photo_url: item.photo_url as string | null,
+      photos_urls: (item.photos_urls as string[] | null) ?? [],
       point_libelle_snapshot: item.point_libelle_snapshot as string | null,
       point_categorie_snapshot: item.point_categorie_snapshot as string | null,
       point_libelle: bp?.libelle ?? null,

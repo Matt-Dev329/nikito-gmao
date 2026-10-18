@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { TabletHeader } from '@/components/layout/TabletHeader';
 import { CritTag } from '@/components/ui/CritTag';
 import { PhotoCapture } from '@/components/shared/PhotoCapture';
+import { PhotosMultiples } from '@/components/shared/PhotosMultiples';
 import { ModaleQuitterSansValider } from '@/components/ui/ModaleQuitterSansValider';
 import { ModalePauseTicket } from '@/components/tickets/ModalePauseTicket';
 import { ModaleAjouterPiece } from '@/components/shared/ModaleAjouterPiece';
@@ -116,7 +117,7 @@ export function Intervention() {
       setCopiePhoto(true);
       try {
         photo = await copierPhotoSignalement(photoSignalement);
-        setPhotoAvant(photo);
+        setPhotosAvant([photo]);
         setDirty(true);
       } catch (e) {
         toast.error((e as Error).message);
@@ -180,7 +181,9 @@ export function Intervention() {
   const [editionDiagnostic, setEditionDiagnostic] = useState(false);
   const [actions, setActions] = useState('');
   const [premierCoup, setPremierCoup] = useState<boolean | null>(null);
-  const [photoAvant, setPhotoAvant] = useState<string | null>(null);
+  // Plusieurs photos avant / après : la première est obligatoire
+  const [photosAvant, setPhotosAvant] = useState<string[]>([]);
+  const photoAvant = photosAvant[0] ?? null;
   // Rien ne peut être saisi tant que la photo AVANT n'est pas prise
   const verrouPhoto = !photoAvant && !estResolu;
   // Démarrage possible : photo AVANT prise, ou photo du signalement réutilisée
@@ -191,7 +194,8 @@ export function Intervention() {
   const aDemarrer =
     !lectureSeule && !estResolu && incident?.externe !== true && (!latestIntervention || statutIncident === 'en_pause');
   const formulaireVisible = !lectureSeule && (estResolu || (!aDemarrer && incident?.externe !== true));
-  const [photoApres, setPhotoApres] = useState<string | null>(null);
+  const [photosApres, setPhotosApres] = useState<string[]>([]);
+  const photoApres = photosApres[0] ?? null;
   const [dirty, setDirty] = useState(false);
   const [showModale, setShowModale] = useState(false);
   const [showPause, setShowPause] = useState(false);
@@ -208,20 +212,22 @@ export function Intervention() {
     premierCoup: boolean | null;
     photoAvant: string | null;
     photoApres: string | null;
+    photosAvant?: string[];
+    photosApres?: string[];
     piecesAjoutees?: PieceAjoutee[];
   }>(draftKey);
 
   if (incident && !initialized) {
     // Un brouillon local (saisie non encore envoyée) prime sur les données serveur.
     const d = draft.restore();
-    const photosAvant = (latestIntervention?.photos_avant ?? []) as string[];
-    const photosApres = (latestIntervention?.photos_apres ?? []) as string[];
+    const serveurAvant = (latestIntervention?.photos_avant ?? []) as string[];
+    const serveurApres = (latestIntervention?.photos_apres ?? []) as string[];
     setDiagnostic(d?.diagnostic ?? existingDiagnostic);
     setActions(d?.actions ?? existingActions);
     setPremierCoup(d?.premierCoup ?? existingPremierCoup);
     setEtapeActive(currentEtape);
-    setPhotoAvant(d?.photoAvant ?? photosAvant[0] ?? null);
-    setPhotoApres(d?.photoApres ?? photosApres[0] ?? null);
+    setPhotosAvant(d?.photosAvant ?? (d?.photoAvant ? [d.photoAvant] : serveurAvant));
+    setPhotosApres(d?.photosApres ?? (d?.photoApres ? [d.photoApres] : serveurApres));
     setPiecesAjoutees(d?.piecesAjoutees ?? []);
     if (d) setDirty(true);
     setInitialized(true);
@@ -230,7 +236,7 @@ export function Intervention() {
   // Sauvegarde automatique de la saisie en cours (anti-perte réseau/veille).
   useAutoSaveDraft(
     draft.save,
-    { diagnostic, actions, premierCoup, photoAvant, photoApres, piecesAjoutees },
+    { diagnostic, actions, premierCoup, photoAvant, photoApres, photosAvant, photosApres, piecesAjoutees },
     initialized && dirty
   );
 
@@ -275,6 +281,8 @@ export function Intervention() {
       resoluPremierCoup: premierCoup,
       photoAvantUrl: photoAvant,
       photoApresUrl: photoApres,
+      photosAvantUrls: photosAvant,
+      photosApresUrls: photosApres,
       pieces: piecesAjoutees.map((p) => ({ pieceId: p.pieceId, quantite: p.quantite })),
     };
 
@@ -476,7 +484,7 @@ export function Intervention() {
                   <PhotoCapture
                     bucketName="alba-interventions"
                     storagePath={`intervention/${btNumero ?? 'draft'}/avant`}
-                    onPhotoUploaded={(url) => { setPhotoAvant(url); setDirty(true); }}
+                    onPhotoUploaded={(url) => { setPhotosAvant([url]); setDirty(true); }}
                     required
                     label="📷 Photo AVANT réparation (obligatoire pour démarrer)"
                   />
@@ -574,13 +582,14 @@ export function Intervention() {
           </div>
           {/* Photo AVANT en premier : rien ne peut être saisi sans elle */}
           <div className="mb-3">
-            <PhotoCapture
+            <PhotosMultiples
               bucketName="alba-interventions"
               storagePath={`intervention/${btNumero ?? 'draft'}/avant`}
-              onPhotoUploaded={(url) => { setPhotoAvant(url); setDirty(true); }}
+              chemins={photosAvant}
+              onChange={(c) => { setPhotosAvant(c); setDirty(true); }}
+              modifiable={!estResolu}
               required
               label="Photo AVANT intervention (avant de toucher à quoi que ce soit)"
-              existingUrl={photoAvant ?? undefined}
             />
           </div>
           {existingDiagnostic && !editionDiagnostic ? (
@@ -684,13 +693,15 @@ export function Intervention() {
             className="w-full bg-bg-deep border border-white/[0.08] rounded-lg text-text p-3 text-[13px] resize-y min-h-[90px] outline-none focus:border-nikito-cyan"
           />
           <div className="mt-3.5">
-            <PhotoCapture
+            <div className="text-[12px] text-dim mb-1.5">Photos APRÈS réparation</div>
+            <PhotosMultiples
               bucketName="alba-interventions"
               storagePath={`intervention/${btNumero ?? 'draft'}/apres`}
-              onPhotoUploaded={(url) => { setPhotoApres(url); setDirty(true); }}
+              chemins={photosApres}
+              onChange={(c) => { setPhotosApres(c); setDirty(true); }}
+              modifiable={!estResolu}
               required
               label="Photo APRES reparation"
-              existingUrl={photoApres ?? undefined}
             />
           </div>
         </div>

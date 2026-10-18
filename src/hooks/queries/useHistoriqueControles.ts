@@ -34,6 +34,8 @@ export interface ControleItemDetail {
   etat: string;
   commentaire: string | null;
   photo_url: string | null;
+  /** Toutes les photos du point (plusieurs photos possibles) */
+  photos_urls: string[];
   point_libelle_snapshot: string | null;
   point_categorie_snapshot: string | null;
   point_libelle: string | null;
@@ -164,6 +166,7 @@ export function useControleDetail(controleId: string | null) {
           etat,
           commentaire,
           photo_url,
+          photos_urls,
           point_libelle_snapshot,
           point_categorie_snapshot,
           bibliotheque_points(libelle, categories_equipement(nom))
@@ -188,6 +191,9 @@ export function useControleDetail(controleId: string | null) {
           etat: item.etat as string,
           commentaire: item.commentaire as string | null,
           photo_url: item.photo_url as string | null,
+          photos_urls:
+            ((item.photos_urls as string[] | null)?.length ? (item.photos_urls as string[]) : null) ??
+            (item.photo_url ? [item.photo_url as string] : []),
           point_libelle_snapshot: item.point_libelle_snapshot as string | null,
           point_categorie_snapshot: item.point_categorie_snapshot as string | null,
           point_libelle: bp?.libelle ?? null,

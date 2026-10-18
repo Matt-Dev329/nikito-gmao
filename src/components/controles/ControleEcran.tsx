@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { cn } from '@/lib/utils';
 import { PhotoCapture } from '@/components/shared/PhotoCapture';
+import { PhotosMultiples } from '@/components/shared/PhotosMultiples';
+import type { AlbaBucket } from '@/lib/uploadPhotoControle';
 import type { EtatControleItem, TypeControle } from '@/types/database';
 
 export interface PointControleVue {
@@ -14,6 +16,8 @@ export interface PointControleVue {
   etat: EtatControleItem | null;
   saisiPar?: string;
   photoUrl?: string;
+  /** Toutes les photos du point (la première est aussi dans photoUrl) */
+  photosUrls?: string[];
   commentaire?: string;
 }
 
@@ -48,6 +52,8 @@ interface ControleEcranProps {
   onChangeZone: (code: string) => void;
   onSetEtat: (pointId: string, etat: EtatControleItem) => void;
   onPhotoUploaded?: (pointId: string, url: string) => void;
+  /** Plusieurs photos par point : remplace onPhotoUploaded */
+  onPhotosChange?: (pointId: string, chemins: string[]) => void;
   onCommentaire?: (pointId: string, commentaire: string) => void;
   bucketName?: string;
   controleId?: string;
@@ -79,6 +85,7 @@ export function ControleEcran({
   onChangeZone,
   onSetEtat,
   onPhotoUploaded,
+  onPhotosChange,
   onCommentaire,
   bucketName = 'alba-controles',
   controleId,
@@ -173,6 +180,7 @@ export function ControleEcran({
           onSetEtat={handleSetEtat}
           registerRef={registerRef}
           onPhotoUploaded={onPhotoUploaded}
+          onPhotosChange={onPhotosChange}
           onCommentaire={onCommentaire}
           bucketName={bucketName}
           parcCode={parcCode}
@@ -317,6 +325,7 @@ function ZoneCard({
   onSetEtat,
   registerRef,
   onPhotoUploaded,
+  onPhotosChange,
   onCommentaire,
   bucketName,
   parcCode,
@@ -328,6 +337,7 @@ function ZoneCard({
   onSetEtat: (id: string, etat: EtatControleItem) => void;
   registerRef: (id: string, el: HTMLDivElement | null) => void;
   onPhotoUploaded?: (pointId: string, url: string) => void;
+  onPhotosChange?: (pointId: string, chemins: string[]) => void;
   onCommentaire?: (pointId: string, commentaire: string) => void;
   bucketName: string;
   parcCode: string;
@@ -374,6 +384,7 @@ function ZoneCard({
               onSetEtat={(etat) => onSetEtat(p.id, etat)}
               registerRef={(el) => registerRef(p.id, el)}
               onPhotoUploaded={onPhotoUploaded ? (url) => onPhotoUploaded(p.id, url) : undefined}
+              onPhotosChange={onPhotosChange ? (c) => onPhotosChange(p.id, c) : undefined}
               onCommentaire={onCommentaire ? (c) => onCommentaire(p.id, c) : undefined}
               bucketName={bucketName}
               storagePath={`${parcCode}/${controleId ?? 'draft'}/${p.id}`}
@@ -392,6 +403,7 @@ function PointRow({
   onSetEtat,
   registerRef,
   onPhotoUploaded,
+  onPhotosChange,
   onCommentaire,
   bucketName,
   storagePath,
@@ -402,6 +414,7 @@ function PointRow({
   onSetEtat: (e: EtatControleItem) => void;
   registerRef: (el: HTMLDivElement | null) => void;
   onPhotoUploaded?: (url: string) => void;
+  onPhotosChange?: (chemins: string[]) => void;
   onCommentaire?: (commentaire: string) => void;
   bucketName: string;
   storagePath: string;
@@ -421,7 +434,26 @@ function PointRow({
     return () => registerRef(null);
   }, [registerRef]);
 
-  const needsPhoto = !!onPhotoUploaded && photoManquante(point);
+  const peutPhoto = !!onPhotoUploaded || !!onPhotosChange;
+  const needsPhoto = peutPhoto && photoManquante(point);
+  const champPhoto = (obligatoire: boolean) =>
+    onPhotosChange ? (
+      <PhotosMultiples
+        bucketName={bucketName as AlbaBucket}
+        storagePath={storagePath}
+        chemins={point.photosUrls ?? (point.photoUrl ? [point.photoUrl] : [])}
+        onChange={onPhotosChange}
+        required={obligatoire}
+      />
+    ) : (
+      <PhotoCapture
+        bucketName={bucketName}
+        storagePath={storagePath}
+        onPhotoUploaded={onPhotoUploaded!}
+        required={obligatoire}
+        existingUrl={point.photoUrl}
+      />
+    );
 
   return (
     <div
@@ -472,7 +504,7 @@ function PointRow({
           )}
           {isKO && point.photoUrl && (
             <div className={cn('text-[10px] mt-0.5', isDeg ? 'text-amber' : 'text-red')}>
-              Photo jointe
+              {(point.photosUrls?.length ?? 1) > 1 ? `${point.photosUrls!.length} photos jointes` : 'Photo jointe'}
             </div>
           )}
           {actif && point.bloquantSiKO && aRepondre && (
@@ -523,17 +555,7 @@ function PointRow({
         ) : null}
       </div>
 
-      {isKO && onPhotoUploaded && (
-        <div className="px-3.5 pb-3">
-          <PhotoCapture
-            bucketName={bucketName}
-            storagePath={storagePath}
-            onPhotoUploaded={onPhotoUploaded}
-            required
-            existingUrl={point.photoUrl}
-          />
-        </div>
-      )}
+      {isKO && peutPhoto && <div className="px-3.5 pb-3">{champPhoto(true)}</div>}
 
       {isKO && onCommentaire && (
         <div className="px-3.5 pb-3">
@@ -550,7 +572,7 @@ function PointRow({
         </div>
       )}
 
-      {isOK && onPhotoUploaded && !point.photoUrl && !showPhotoOK && !point.photoObligatoire && (
+      {isOK && peutPhoto && !point.photoUrl && !showPhotoOK && !point.photoObligatoire && (
         <div className="px-3.5 pb-2">
           <button
             onClick={() => setShowPhotoOK(true)}
@@ -561,16 +583,8 @@ function PointRow({
         </div>
       )}
 
-      {isOK && onPhotoUploaded && (showPhotoOK || point.photoUrl || point.photoObligatoire) && (
-        <div className="px-3.5 pb-3">
-          <PhotoCapture
-            bucketName={bucketName}
-            storagePath={storagePath}
-            onPhotoUploaded={onPhotoUploaded}
-            required={point.photoObligatoire}
-            existingUrl={point.photoUrl}
-          />
-        </div>
+      {isOK && peutPhoto && (showPhotoOK || point.photoUrl || point.photoObligatoire) && (
+        <div className="px-3.5 pb-3">{champPhoto(point.photoObligatoire)}</div>
       )}
     </div>
   );

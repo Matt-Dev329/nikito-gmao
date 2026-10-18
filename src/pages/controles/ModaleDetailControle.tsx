@@ -166,14 +166,19 @@ export function ModaleDetailControle({ controle, onClose, onExportPDF, onNavigat
                         {categorie && <div className="text-[11px] text-dim mt-0.5">{categorie}</div>}
                         {item.commentaire && <div className="text-[12px] text-amber mt-1">{item.commentaire}</div>}
                       </div>
-                      {item.photo_url && (
-                        <PrivateImage
-                          path={item.photo_url}
-                          bucket="alba-controles"
-                          alt="Photo"
-                          className="w-12 h-12 rounded-lg object-cover cursor-pointer border border-white/[0.08] transition-transform hover:scale-105"
-                          onClick={() => setLightboxPath(item.photo_url)}
-                        />
+                      {item.photos_urls.length > 0 && (
+                        <div className="flex flex-wrap justify-end gap-1.5 max-w-[45%]">
+                          {item.photos_urls.map((chemin, i) => (
+                            <PrivateImage
+                              key={chemin}
+                              path={chemin}
+                              bucket="alba-controles"
+                              alt={`Photo ${i + 1}`}
+                              className="w-12 h-12 rounded-lg object-cover cursor-pointer border border-white/[0.08] transition-transform hover:scale-105"
+                              onClick={() => setLightboxPath(chemin)}
+                            />
+                          ))}
+                        </div>
                       )}
                     </div>
                   );
