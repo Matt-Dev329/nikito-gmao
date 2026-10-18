@@ -2,8 +2,8 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.45.0";
 
 /**
- * Ticket résolu : notification dans l'appli + mail aux directeurs de parc et
- * aux managers (principaux ou non) du parc du ticket.
+ * Ticket résolu : notification dans l'appli + mail au chef d'équipe, aux
+ * directeurs de parc et aux managers (principaux ou non) du parc du ticket.
  * Appelé par le trigger trg_notifier_ticket_resolu : POST { incident_id }.
  * Un seul envoi par ticket (table notifications_tickets_envoyees).
  */
@@ -90,10 +90,16 @@ Deno.serve(async (req: Request) => {
     ]);
 
     const ids = [...new Set((liens ?? []).map((l: { utilisateur_id: string }) => l.utilisateur_id))];
-    const { data: users } = ids.length
-      ? await service.from("utilisateurs").select("id, email, roles!inner(code)").eq("actif", true)
-        .in("id", ids).in("roles.code", ["directeur_parc", "manager_parc"])
-      : { data: [] };
+    const [{ data: equipeParc }, { data: chefs }] = await Promise.all([
+      ids.length
+        ? service.from("utilisateurs").select("id, email, roles!inner(code)").eq("actif", true)
+          .in("id", ids).in("roles.code", ["directeur_parc", "manager_parc"])
+        : Promise.resolve({ data: [] }),
+      // Chef d'équipe : tous les parcs
+      service.from("utilisateurs").select("id, email, roles!inner(code)").eq("actif", true)
+        .eq("roles.code", "chef_maintenance"),
+    ]);
+    const users = [...(equipeParc ?? []), ...(chefs ?? [])];
 
     const nomParc = (parcs ?? []).map((p: { nom: string }) => p.nom).join(", ");
     const equipement = [equip?.code, equip?.libelle].filter(Boolean).join(" · ");
@@ -118,7 +124,7 @@ Deno.serve(async (req: Request) => {
     ];
 
     let envoyes = 0;
-    for (const u of (users ?? []) as { id: string; email: string | null }[]) {
+    for (const u of users as { id: string; email: string | null }[]) {
       await service.rpc("notifier_push", { p_utilisateur_id: u.id, p_titre: titre, p_corps: texte, p_url: url });
       if (resendApiKey && u.email) {
         const r = await fetch("https://api.resend.com/emails", {
