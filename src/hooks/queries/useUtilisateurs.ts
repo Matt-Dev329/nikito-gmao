@@ -63,6 +63,16 @@ export function useCompteursRoles() {
   });
 }
 
+type LienParc = { parc_id: string; est_manager: boolean; parcs: { code: string } | null };
+
+// Un directeur / manager ne voit pas les parcs qui ne sont pas les siens : ces
+// liens arrivent sans code (parcs = null) et ne sont pas affichés
+function parcsVisibles(pu: LienParc[] | null) {
+  return (pu ?? [])
+    .filter((p) => p.parcs)
+    .map((p) => ({ parc_id: p.parc_id, code: p.parcs!.code, est_manager: p.est_manager }));
+}
+
 export function useUtilisateursActifs() {
   return useQuery({
     queryKey: ['utilisateurs', 'actifs'],
@@ -82,11 +92,11 @@ export function useUtilisateursActifs() {
       return (data ?? []).map((d) => {
         const raw = d as Record<string, unknown>;
         const roles = raw.roles as { code: string };
-        const pu = raw.parcs_utilisateurs as { parc_id: string; est_manager: boolean; parcs: { code: string } }[];
+        const pu = raw.parcs_utilisateurs as LienParc[];
         return {
           ...d,
           role_code: roles.code as RoleUtilisateur,
-          parcs: pu.map((p) => ({ parc_id: p.parc_id, code: p.parcs.code, est_manager: p.est_manager })),
+          parcs: parcsVisibles(pu),
         } as UtilisateurRow;
       });
     },
@@ -111,11 +121,11 @@ export function useUtilisateursAValider() {
       return (data ?? []).map((d) => {
         const raw = d as Record<string, unknown>;
         const roles = raw.roles as { code: string };
-        const pu = raw.parcs_utilisateurs as { parc_id: string; est_manager: boolean; parcs: { code: string } }[];
+        const pu = raw.parcs_utilisateurs as LienParc[];
         return {
           ...d,
           role_code: roles.code as RoleUtilisateur,
-          parcs: pu.map((p) => ({ parc_id: p.parc_id, code: p.parcs.code, est_manager: p.est_manager })),
+          parcs: parcsVisibles(pu),
         } as UtilisateurRow;
       });
     },
@@ -140,11 +150,11 @@ export function useUtilisateursDesactives() {
       return (data ?? []).map((d) => {
         const raw = d as Record<string, unknown>;
         const roles = raw.roles as { code: string };
-        const pu = raw.parcs_utilisateurs as { parc_id: string; est_manager: boolean; parcs: { code: string } }[];
+        const pu = raw.parcs_utilisateurs as LienParc[];
         return {
           ...d,
           role_code: roles.code as RoleUtilisateur,
-          parcs: pu.map((p) => ({ parc_id: p.parc_id, code: p.parcs.code, est_manager: p.est_manager })),
+          parcs: parcsVisibles(pu),
         } as UtilisateurRow;
       });
     },
