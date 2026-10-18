@@ -31,6 +31,8 @@ export interface ZoneVue {
   label: string;
   count: number;
   fait: number;
+  /** Zone déjà validée (contrôle validé zone par zone) */
+  validee?: { par: string; le: string } | null;
 }
 
 interface ControleEcranProps {
@@ -54,6 +56,8 @@ interface ControleEcranProps {
   onRetour?: () => void;
   validationDisabled?: boolean;
   validationDisabledRaison?: string;
+  /** Libellé du bouton de validation (par défaut : tout le contrôle) */
+  validationLabel?: string;
   headerRightSlot?: React.ReactNode;
 }
 
@@ -83,8 +87,10 @@ export function ControleEcran({
   onRetour,
   validationDisabled,
   validationDisabledRaison,
+  validationLabel = 'Valider le controle · signature electronique',
   headerRightSlot,
 }: ControleEcranProps) {
+  const zoneActiveValidee = zones.find((z) => z.code === zoneActiveCode)?.validee;
   const totalPoints = zones.reduce((sum, z) => sum + z.count, 0);
   const totalFaits = zones.reduce((sum, z) => sum + z.fait, 0);
   const pctAvancement = totalPoints > 0 ? Math.round((totalFaits / totalPoints) * 100) : 0;
@@ -179,21 +185,23 @@ export function ControleEcran({
           </NotePedagogique>
         )}
 
-        <button
-          onClick={onValider}
-          disabled={validationDisabled}
-          className={cn(
-            'bg-gradient-cta text-text py-4 rounded-2xl text-[15px] font-bold mt-1 min-h-[56px]',
-            validationDisabled && 'opacity-50 cursor-not-allowed',
-          )}
-        >
-          Valider le controle · signature electronique
-          {validationDisabledRaison && (
-            <span className="block mt-0.5 text-[11px] font-normal opacity-80">
-              {validationDisabledRaison}
-            </span>
-          )}
-        </button>
+        {!zoneActiveValidee && (
+          <button
+            onClick={onValider}
+            disabled={validationDisabled}
+            className={cn(
+              'bg-gradient-cta text-text py-4 rounded-2xl text-[15px] font-bold mt-1 min-h-[56px]',
+              validationDisabled && 'opacity-50 cursor-not-allowed',
+            )}
+          >
+            {validationLabel}
+            {validationDisabledRaison && (
+              <span className="block mt-0.5 text-[11px] font-normal opacity-80">
+                {validationDisabledRaison}
+              </span>
+            )}
+          </button>
+        )}
       </main>
     </div>
   );
@@ -248,7 +256,10 @@ function ProgressBar({
         />
       </div>
       <div className="flex justify-between mt-2 text-[10px] text-dim">
-        <span>{zones.filter((z) => z.fait === z.count).length} zones terminees</span>
+        <span>
+          {zones.filter((z) => z.fait === z.count).length} zones terminees
+          {zones.some((z) => z.validee) && ` · ${zones.filter((z) => z.validee).length}/${zones.length} validees`}
+        </span>
         <span>{totalPoints - totalFaits} restants</span>
       </div>
     </div>
@@ -282,7 +293,7 @@ function ZonesTabs({
               pasCommence && 'bg-bg-card border border-white/[0.08] text-dim',
             )}
           >
-            {fait ? '✓ ' : enCours ? '⏵ ' : '○ '}
+            {z.validee ? '✔ ' : fait ? '✓ ' : enCours ? '⏵ ' : '○ '}
             {z.label}
             <span
               className={cn(
@@ -324,6 +335,23 @@ function ZoneCard({
 }) {
   if (!zoneActive) return null;
   const restants = zoneActive.count - zoneActive.fait;
+
+  if (zoneActive.validee) {
+    const heure = new Date(zoneActive.validee.le).toLocaleString('fr-FR', {
+      weekday: 'short',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+    return (
+      <div className="bg-bg-card rounded-xl p-4 border border-green/40">
+        <div className="text-sm font-semibold text-green">✔ Zone {zoneActive.label} validée</div>
+        <div className="text-[12px] text-dim mt-1">
+          Par {zoneActive.validee.par} · {heure} · {zoneActive.count} points
+        </div>
+        <div className="text-[12px] text-dim mt-2">Choisis une autre zone ci-dessus pour continuer le contrôle.</div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-bg-card rounded-xl p-3.5 px-4">

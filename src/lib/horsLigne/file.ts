@@ -14,7 +14,7 @@ import { supabase } from '@/lib/supabase';
  * file avec son message d'erreur, visible dans le bandeau, pour ne rien perdre.
  */
 
-export type TypeAction = 'cloture_intervention' | 'controle_staff' | 'signalement';
+export type TypeAction = 'cloture_intervention' | 'controle_staff' | 'controle_zone' | 'signalement';
 
 export interface PhotoEnAttente {
   id: string;

@@ -9,11 +9,13 @@ import { ModaleSignalerV2 } from '@/components/forms/ModaleSignalerV2';
 import { SelectionParc } from '@/components/controles/SelectionParc';
 import { BoutonRetourGmao } from '@/components/controles/BoutonRetourGmao';
 import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/components/ui/ToastProvider';
 import { useDraftPersistence, useAutoSaveDraft } from '@/hooks/useDraftPersistence';
 import { useParcs } from '@/hooks/queries/useReferentiel';
 import { usePointsControle } from '@/hooks/queries/useControles';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
+import { validerZoneControle, type PayloadControleZone } from '@/lib/horsLigne/executeurs';
 import type { EtatControleItem, TypeControle } from '@/types/database';
 
 function formatDuree(sec: number): string {
@@ -91,34 +93,25 @@ export function ControleOuverture({ typeControle = 'quotidien' }: { typeControle
 
   const { data: pointsBruts, isLoading } = usePointsControle(parcId, typeControle);
   const qc = useQueryClient();
-  const validerMutation = useMutation({
-    mutationFn: async (params: {
-      parc_id: string;
-      type: string;
-      date_planifiee: string;
-      realise_par_id: string;
-      realise_par_nom: string;
-      realise_par_role: string;
-      items: { point_id: string; etat: EtatControleItem; photo_url?: string | null; commentaire?: string | null }[];
-    }) => {
-      const { data, error } = await supabase.rpc('valider_controle_staff', {
-        p_parc_id: params.parc_id,
-        p_type: params.type,
-        p_date_planifiee: params.date_planifiee,
-        p_realise_par_id: params.realise_par_id,
-        p_realise_par_nom: params.realise_par_nom,
-        p_realise_par_role: params.realise_par_role,
-        p_items: params.items.map((i) => ({
-          point_id: i.point_id,
-          etat: i.etat,
-          commentaire: i.commentaire ?? null,
-          photo_url: i.photo_url ?? null,
-        })),
+  // Contrôle validé zone par zone (zone = activité) : chacun peut valider sa zone
+  const datePeriode = aujourdhuiParis();
+  const { data: zonesValidees } = useQuery({
+    queryKey: ['zones_validees', parcId, typeControle, datePeriode],
+    enabled: !!parcId,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('zones_validees_controle', {
+        p_parc_id: parcId,
+        p_type: typeControle,
+        p_date_planifiee: datePeriode,
       });
       if (error) throw error;
-      return { id: data as string };
+      return (data ?? []) as { categorie_id: string; par: string; le: string; controle_valide: boolean }[];
     },
+  });
+  const validerMutation = useMutation({
+    mutationFn: (payload: PayloadControleZone) => validerZoneControle(payload),
     onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['zones_validees'] });
       qc.invalidateQueries({ queryKey: ['controles'] });
       qc.invalidateQueries({ queryKey: ['historique_controles'] });
     },
@@ -144,6 +137,10 @@ export function ControleOuverture({ typeControle = 'quotidien' }: { typeControle
   const [showModale, setShowModale] = useState(false);
   const [showSignaler, setShowSignaler] = useState(false);
   const [erreurValidation, setErreurValidation] = useState<string | null>(null);
+  const [derniereZone, setDerniereZone] = useState<string | null>(null);
+  // Zones validées sans réseau : en file d'envoi, affichées comme validées sur cet appareil
+  const [zonesHorsLigne, setZonesHorsLigne] = useState<Record<string, string>>({});
+  const toast = useToast();
 
   const draftKey = parcId
     ? `controle-${typeControle}:${parcId}:${aujourdhuiParis()}`
@@ -184,13 +181,22 @@ export function ControleOuverture({ typeControle = 'quotidien' }: { typeControle
         map.set(p.categorie_id, { code: p.categorie_id, label: p.categorie_nom, count: 1 });
       }
     }
-    return Array.from(map.values()).map((z) => ({
-      ...z,
-      fait: pointsBruts.filter((p) => p.categorie_id === z.code && etats[p.point_id]).length,
-    }));
-  }, [pointsBruts, etats]);
+    return Array.from(map.values()).map((z) => {
+      const v =
+        zonesValidees?.find((zv) => zv.categorie_id === z.code) ??
+        (zonesHorsLigne[z.code] ? { par: 'cet appareil (envoi en attente)', le: zonesHorsLigne[z.code] } : undefined);
+      return {
+        ...z,
+        fait: v ? z.count : pointsBruts.filter((p) => p.categorie_id === z.code && etats[p.point_id]).length,
+        validee: v ? { par: v.par, le: v.le } : null,
+      };
+    });
+  }, [pointsBruts, etats, zonesValidees, zonesHorsLigne]);
 
-  const activeZone = zoneActive || zones[0]?.code || '';
+  // Par défaut : la première zone pas encore validée
+  const activeZone = zoneActive || zones.find((z) => !z.validee)?.code || zones[0]?.code || '';
+  const zoneActiveVue = zones.find((z) => z.code === activeZone);
+  const toutesZonesValidees = zones.length > 0 && zones.every((z) => z.validee);
 
   const pointsZoneActive: PointControleVue[] = useMemo(() => {
     if (!pointsBruts) return [];
@@ -242,10 +248,10 @@ export function ControleOuverture({ typeControle = 'quotidien' }: { typeControle
     navigate(retourDestination);
   };
 
-  const totalPoints = zones.reduce((sum, z) => sum + z.count, 0);
   const totalFaits = zones.reduce((sum, z) => sum + z.fait, 0);
-  const restants = totalPoints - totalFaits;
+  const restants = zoneActiveVue ? zoneActiveVue.count - zoneActiveVue.fait : 0;
   const photosManquantes = (pointsBruts ?? []).filter((p) =>
+    p.categorie_id === activeZone &&
     photoManquante({
       id: p.point_id,
       libelle: p.libelle,
@@ -259,55 +265,55 @@ export function ControleOuverture({ typeControle = 'quotidien' }: { typeControle
   ).length;
 
   const handleValider = async () => {
-    if (!parcId || !utilisateur || !utilisateur.id || !pointsBruts) return;
+    if (!parcId || !utilisateur || !utilisateur.id || !pointsBruts || !zoneActiveVue) return;
     setErreurValidation(null);
 
-    const datePlanifiee = aujourdhuiParis();
+    const payload: PayloadControleZone = {
+      p_parc_id: parcId,
+      p_type: typeControle,
+      p_date_planifiee: datePeriode,
+      p_realise_par_id: utilisateur.id,
+      p_realise_par_nom: `${utilisateur.prenom} ${utilisateur.nom}`,
+      p_realise_par_role: utilisateur.role_code,
+      p_zone: activeZone,
+      p_items: pointsBruts
+        .filter((p) => p.categorie_id === activeZone && etats[p.point_id])
+        .map((p) => ({
+          point_id: p.point_id,
+          etat: etats[p.point_id].etat,
+          commentaire: commentaires[p.point_id] || null,
+          photo_url: photoUrls[p.point_id] ?? null,
+        })),
+    };
+    const zonesRestantes = zones.filter((z) => !z.validee && z.code !== activeZone);
 
-    const items = pointsBruts
-      .filter((p) => etats[p.point_id])
-      .map((p) => ({
-        point_id: p.point_id,
-        etat: etats[p.point_id].etat,
-        photo_url: photoUrls[p.point_id] ?? null,
-        commentaire: commentaires[p.point_id] || null,
-      }));
+    const apresZone = (complet: boolean) => {
+      setDerniereZone(zoneActiveVue.label);
+      toast.success(`Zone ${zoneActiveVue.label} validée`);
+      if (complet || zonesRestantes.length === 0) {
+        draft.clear();
+        setDirty(false);
+        setValidated(true);
+      } else {
+        setZoneActive(zonesRestantes[0].code);
+      }
+    };
 
     try {
-      await validerMutation.mutateAsync({
-        parc_id: parcId,
-        type: typeControle,
-        date_planifiee: datePlanifiee,
-        realise_par_id: utilisateur.id,
-        realise_par_nom: `${utilisateur.prenom} ${utilisateur.nom}`,
-        realise_par_role: utilisateur.role_code,
-        items,
-      });
-      draft.clear();
-      setDirty(false);
-      setValidated(true);
+      const res = await validerMutation.mutateAsync(payload);
+      apresZone(res.complet);
     } catch (err: unknown) {
-      // Sans réseau : le contrôle est gardé sur l'appareil et envoyé automatiquement
+      // Sans réseau : la zone est gardée sur l'appareil et envoyée automatiquement
       if (estErreurReseau(err)) {
         try {
-          await mettreActionEnFile('controle_staff', `${L.titre} · ${parc?.code ?? ''} · ${datePlanifiee}`, {
-            p_parc_id: parcId,
-            p_type: typeControle,
-            p_date_planifiee: datePlanifiee,
-            p_realise_par_id: utilisateur.id,
-            p_realise_par_nom: `${utilisateur.prenom} ${utilisateur.nom}`,
-            p_realise_par_role: utilisateur.role_code,
-            p_items: items.map((i) => ({
-              point_id: i.point_id,
-              etat: i.etat,
-              commentaire: i.commentaire ?? null,
-              photo_url: i.photo_url ?? null,
-            })),
-          });
-          draft.clear();
-          setDirty(false);
+          await mettreActionEnFile(
+            'controle_zone',
+            `${L.titre} · ${parc?.code ?? ''} · ${zoneActiveVue.label} · ${datePeriode}`,
+            payload
+          );
           setValideHorsLigne(true);
-          setValidated(true);
+          setZonesHorsLigne((prev) => ({ ...prev, [activeZone]: new Date().toISOString() }));
+          apresZone(false);
           return;
         } catch {
           // stockage local indisponible : on affiche l'erreur réseau
@@ -367,12 +373,15 @@ export function ControleOuverture({ typeControle = 'quotidien' }: { typeControle
     );
   }
 
-  if (validated) {
+  if (validated || toutesZonesValidees) {
     return (
       <div className="p-6 text-center">
         <div className="text-4xl mb-3">OK</div>
         <div className="text-lg font-semibold mb-1">{L.valide}</div>
-        <div className="text-dim text-sm mb-4">{totalFaits} points controles - {today}</div>
+        <div className="text-dim text-sm mb-4">
+          {totalFaits} points controles - {today}
+          {derniereZone && validated && <><br />Dernière zone validée : {derniereZone}</>}
+        </div>
         {valideHorsLigne && (
           <div className="text-amber text-[13px] mb-4 max-w-[420px] mx-auto">
             Enregistré sur la tablette (hors connexion) : il sera envoyé automatiquement au retour du réseau. Laisse
@@ -408,6 +417,7 @@ export function ControleOuverture({ typeControle = 'quotidien' }: { typeControle
         onRetour={handleRetour}
         onChangerAgent={() => navigate('/staff/login')}
         onValider={handleValider}
+        validationLabel={`Valider la zone ${zoneActiveVue?.label ?? ''} · signature electronique`}
         validationDisabled={restants > 0 || photosManquantes > 0 || validerMutation.isPending}
         validationDisabledRaison={
           validerMutation.isPending
@@ -415,7 +425,7 @@ export function ControleOuverture({ typeControle = 'quotidien' }: { typeControle
             : erreurValidation
               ? erreurValidation
               : restants > 0
-                ? `Disponible quand tous les points sont saisis (${restants} restants)`
+                ? `Disponible quand tous les points de la zone sont saisis (${restants} restants)`
                 : photosManquantes > 0
                   ? `Photo obligatoire manquante (${photosManquantes} point${photosManquantes > 1 ? 's' : ''})`
                   : undefined
