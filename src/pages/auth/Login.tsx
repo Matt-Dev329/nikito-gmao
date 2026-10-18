@@ -186,7 +186,8 @@ export function Login() {
       .maybeSingle();
 
     const prenom = utilisateurData?.prenom || '';
-    const userEmail = utilisateurData?.email || email;
+    // Toujours en minuscules : le code est rattaché à l'email de la session
+    const userEmail = (utilisateurData?.email || email).trim().toLowerCase();
 
     const deviceHash = getDeviceHash();
 
