@@ -388,7 +388,7 @@ export function Intervention() {
             Signalé par <strong className="text-text">{(incident.declare_par_nom as string | null) || 'inconnu'}</strong>
             {incident.declare_le ? ` le ${new Date(incident.declare_le as string).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}` : ''}
           </span>
-          {peutValider && !estAnnule && (
+          {peutValider && !estAnnule && (!lectureSeule || enAttenteValidation) && (
             <button
               onClick={() => setSuppression(true)}
               className="ml-auto px-3 rounded-lg text-[12px] font-semibold min-h-[36px] border border-red/40 text-red"

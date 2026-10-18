@@ -260,8 +260,9 @@ export function Operations() {
   };
 
   const [premier, ...autres] = ticketsFiltres;
+  // Tickets validés : les managers les suivent sans pouvoir les supprimer
   const supprimerSiAutorise = (t: TicketSummary) =>
-    peutValiderTicket(utilisateur, t.parcId) ? () => setSuppressionCible({ id: t.id, numeroBT: t.numeroBT }) : undefined;
+    !lectureSeule && peutValiderTicket(utilisateur, t.parcId) ? () => setSuppressionCible({ id: t.id, numeroBT: t.numeroBT }) : undefined;
 
   const initiales = utilisateur
     ? `${utilisateur.prenom.charAt(0)}${utilisateur.nom.charAt(0)}`
