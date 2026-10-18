@@ -80,6 +80,10 @@ Deno.serve(async (req: Request) => {
       .maybeSingle();
 
     const roleCode = (user?.roles as any)?.code ?? "staff_operationnel";
+    // Le staff fait les contrôles mais ne crée pas de tickets
+    if (!user || roleCode === "staff_operationnel") {
+      return jsonResponse({ success: false, error: "Le staff ne peut pas créer de ticket : préviens ton manager" }, 403);
+    }
     const needsManagerApproval = roleCode === "staff_operationnel";
 
     // 3. Determine priorite_id from categorie criticite_defaut

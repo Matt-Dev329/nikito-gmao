@@ -333,6 +333,8 @@ export function ControleOuverture({ typeControle = 'quotidien' }: { typeControle
     );
   }
 
+  // Le staff fait les contrôles mais ne crée pas de tickets
+  const estStaff = utilisateur?.role_code === 'staff_operationnel';
   const signalBouton = (
     <button
       onClick={() => setShowSignaler(true)}
@@ -427,7 +429,7 @@ export function ControleOuverture({ typeControle = 'quotidien' }: { typeControle
             >
               {L.autreLabel}
             </button>
-            {signalBouton}
+            {!estStaff && signalBouton}
             <BoutonRetourGmao />
           </div>
         }
