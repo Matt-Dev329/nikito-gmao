@@ -13,6 +13,40 @@ function getCorsHeaders(req: Request) {
   };
 }
 
+const echapper = (t: string) =>
+  String(t ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
+
+/** Ancienne adresse Bolt (fermée) : le code n'y est plus enregistré. */
+const depuisAncienneAdresse = (req: Request) =>
+  /bolt\.host/i.test(`${req.headers.get("origin") ?? ""} ${req.headers.get("referer") ?? ""}`);
+
+function htmlNouvelleAdresse(prenom: string): string {
+  return `<!DOCTYPE html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background-color:#0a0e27;font-family:Arial,Helvetica,sans-serif;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#0a0e27;">
+  <tr><td align="center" style="padding:40px 16px;">
+    <table role="presentation" width="560" cellpadding="0" cellspacing="0" border="0" style="max-width:560px;width:100%;">
+      <tr><td align="center" style="padding:0 0 32px 0;font-size:24px;font-weight:700;letter-spacing:4px;color:#ffffff;">
+        <span style="color:#5DE5FF;">A</span>LBA <span style="color:#8b92b8;font-size:14px;font-weight:400;">by Nikito</span>
+      </td></tr>
+      <tr><td style="background-color:#131836;border-radius:16px;padding:36px 32px;">
+        <div style="font-size:18px;color:#ffffff;font-weight:600;padding-bottom:20px;">Bonjour ${echapper(prenom)},</div>
+        <div style="font-size:15px;color:#8b92b8;line-height:24px;padding-bottom:24px;">
+          Tu essaies de te connecter sur l'<strong style="color:#ffffff;">ancienne adresse</strong> d'ALBA (…bolt.host), qui est fermée :
+          aucun code ne peut y fonctionner.<br/><br/>
+          ALBA est maintenant sur <strong style="color:#ffffff;">nikito.tech</strong>, avec les mêmes identifiants.
+        </div>
+        <div style="text-align:center;padding-bottom:24px;">
+          <a href="https://nikito.tech" style="display:inline-block;background:#5DE5FF;color:#0a0e27;text-decoration:none;font-weight:700;font-size:16px;border-radius:12px;padding:14px 28px;">Ouvrir ALBA sur nikito.tech</a>
+        </div>
+        <div style="font-size:13px;color:#8b92b8;line-height:20px;">Pense à remplacer ton favori ou l'icône de l'écran d'accueil par nikito.tech.</div>
+      </td></tr>
+    </table>
+  </td></tr>
+</table></body></html>`;
+}
+
 interface CodePayload {
   email: string;
   code: string;
@@ -51,7 +85,7 @@ function buildHtml(p: CodePayload): string {
 
               <tr>
                 <td style="font-size:18px;color:#ffffff;font-weight:600;padding-bottom:20px;">
-                  Bonjour ${p.prenom},
+                  Bonjour ${echapper(p.prenom)},
                 </td>
               </tr>
 
@@ -67,7 +101,7 @@ function buildHtml(p: CodePayload): string {
                     <tr>
                       <td style="background-color:#0a0e27;border-radius:12px;padding:20px 40px;border:1px solid rgba(93,229,255,0.3);">
                         <span style="font-family:'SF Mono',Monaco,Consolas,monospace;font-size:32px;font-weight:700;letter-spacing:8px;color:#5DE5FF;">
-                          ${p.code}
+                          ${echapper(p.code)}
                         </span>
                       </td>
                     </tr>
@@ -124,7 +158,9 @@ Deno.serve(async (req: Request) => {
 
     const payload: CodePayload = await req.json();
 
-    const html = buildHtml(payload);
+    // Depuis l'ancienne adresse : on renvoie vers nikito.tech au lieu d'un code inutilisable
+    const ancienne = depuisAncienneAdresse(req);
+    const html = ancienne ? htmlNouvelleAdresse(payload.prenom) : buildHtml(payload);
 
     const resendRes = await fetch("https://api.resend.com/emails", {
       method: "POST",
@@ -135,7 +171,7 @@ Deno.serve(async (req: Request) => {
       body: JSON.stringify({
         from: "ALBA by Nikito <noreply@nikito.tech>",
         to: [payload.email],
-        subject: "Votre code de v\u00e9rification ALBA",
+        subject: ancienne ? "ALBA a d\u00e9m\u00e9nag\u00e9 : connecte-toi sur nikito.tech" : "Votre code de v\u00e9rification ALBA",
         html,
       }),
     });
