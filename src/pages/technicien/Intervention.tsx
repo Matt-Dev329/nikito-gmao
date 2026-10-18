@@ -186,8 +186,8 @@ export function Intervention() {
   // Démarrage possible : photo AVANT prise, ou photo du signalement réutilisée
   const photoDisponible = !!photoAvant || (!!photoSignalement && !autrePhoto);
   // Intervention pas encore démarrée (ou en pause) : seul le bloc « Démarrer » est proposé
-  // Managers de parc : suivi en lecture seule (pas de démarrage ni de saisie)
-  const lectureSeule = utilisateur?.role_code === 'manager_parc';
+  // Directeurs et managers de parc : suivi en lecture seule (pas de démarrage ni de saisie)
+  const lectureSeule = utilisateur?.role_code === 'manager_parc' || utilisateur?.role_code === 'directeur_parc';
   const aDemarrer =
     !lectureSeule && !estResolu && incident?.externe !== true && (!latestIntervention || statutIncident === 'en_pause');
   const formulaireVisible = !lectureSeule && (estResolu || (!aDemarrer && incident?.externe !== true));
@@ -388,7 +388,7 @@ export function Intervention() {
             Signalé par <strong className="text-text">{(incident.declare_par_nom as string | null) || 'inconnu'}</strong>
             {incident.declare_le ? ` le ${new Date(incident.declare_le as string).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}` : ''}
           </span>
-          {peutValider && !estAnnule && (!lectureSeule || enAttenteValidation) && (
+          {peutValider && !estAnnule && (
             <button
               onClick={() => setSuppression(true)}
               className="ml-auto px-3 rounded-lg text-[12px] font-semibold min-h-[36px] border border-red/40 text-red"

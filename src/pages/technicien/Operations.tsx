@@ -127,7 +127,8 @@ export function Operations() {
   const [suppressionCible, setSuppressionCible] = useState<{ id: string; numeroBT: string } | null>(null);
   const validerTicket = useValiderTicket();
   // Managers de parc : suivi des tickets en lecture seule (ni démarrage, ni réassignation)
-  const lectureSeule = utilisateur?.role_code === 'manager_parc';
+  // Directeurs et managers : suivi des tickets sans action d'intervention
+  const lectureSeule = utilisateur?.role_code === 'manager_parc' || utilisateur?.role_code === 'directeur_parc';
 
   // Valideurs : chef d'équipe, direction, admin IT, directeurs de parc, managers principaux
   const estValideur =
@@ -260,9 +261,9 @@ export function Operations() {
   };
 
   const [premier, ...autres] = ticketsFiltres;
-  // Tickets validés : les managers les suivent sans pouvoir les supprimer
+  // Suppression (avec motif) : directeurs et managers principaux de leur parc
   const supprimerSiAutorise = (t: TicketSummary) =>
-    !lectureSeule && peutValiderTicket(utilisateur, t.parcId) ? () => setSuppressionCible({ id: t.id, numeroBT: t.numeroBT }) : undefined;
+    peutValiderTicket(utilisateur, t.parcId) ? () => setSuppressionCible({ id: t.id, numeroBT: t.numeroBT }) : undefined;
 
   const initiales = utilisateur
     ? `${utilisateur.prenom.charAt(0)}${utilisateur.nom.charAt(0)}`
