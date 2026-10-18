@@ -224,7 +224,7 @@ export function PhotoCapture({
         </div>
         {zoomed && (
           <div
-            className="fixed inset-0 z-[100] bg-black/90 flex items-center justify-center p-4 cursor-zoom-out"
+            className="fixed inset-0 z-[200] bg-black/90 flex items-center justify-center p-4 cursor-zoom-out"
             onClick={() => setZoomed(false)}
           >
             <img src={photoUrl} alt="Photo plein ecran" className="max-w-full max-h-full object-contain" />

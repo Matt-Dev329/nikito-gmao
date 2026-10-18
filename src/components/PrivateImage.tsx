@@ -45,7 +45,7 @@ export function PrivateImage({
       <div
         role="dialog"
         aria-modal="true"
-        className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4 cursor-zoom-out"
+        className="fixed inset-0 z-[150] bg-black/90 flex items-center justify-center p-4 cursor-zoom-out"
         onClick={() => setZoomed(false)}
       >
         <img src={url} alt={alt ?? 'Photo en plein écran'} className="max-w-full max-h-full object-contain" />

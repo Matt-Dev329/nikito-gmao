@@ -145,7 +145,7 @@ export function ModaleAjouterPiece({
   const nomChoix = choix ? (choix.type === 'stock' ? choix.piece.nom : choix.produit.nom) : null;
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/60 flex items-end md:items-center justify-center md:p-4">
+    <div className="fixed inset-0 z-[150] bg-black/60 flex items-end md:items-center justify-center md:p-4">
       <div className="w-full md:max-w-[560px] bg-bg-card rounded-t-[18px] md:rounded-[18px] border border-nikito-cyan/15 p-5 max-h-[92vh] flex flex-col">
         <div className="flex justify-between items-start mb-3">
           <div>

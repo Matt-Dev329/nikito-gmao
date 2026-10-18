@@ -78,7 +78,7 @@ function ModaleActiverProduction({
   const allChecked = checks.every(Boolean);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-[150] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
       <div className="relative bg-bg-sidebar rounded-2xl border border-white/[0.08] w-full max-w-lg p-6 shadow-2xl">
         <h2 className="text-lg font-semibold mb-1">Activer la production</h2>
@@ -168,7 +168,7 @@ function ModaleDesactiverProduction({
   const motifValide = motif.trim().length >= 20;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-[150] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
       <div className="relative bg-bg-sidebar rounded-2xl border border-white/[0.08] w-full max-w-lg p-6 shadow-2xl">
         <h2 className="text-lg font-semibold mb-1">Desactiver la production</h2>

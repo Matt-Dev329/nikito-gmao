@@ -230,7 +230,7 @@ export function NotesChantierParc() {
       </div>
 
       {noteASupprimer && (
-        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[150] bg-black/60 flex items-center justify-center p-4">
           <div className="bg-bg-card rounded-[18px] border border-white/10 p-5 md:p-6 w-full max-w-sm">
             <div className="text-base font-semibold mb-2">Supprimer cette note ?</div>
             <p className="text-[13px] text-dim mb-5 leading-relaxed">
@@ -312,7 +312,7 @@ function EditeurNoteChantier({ parcId, onClose }: { parcId: string; onClose: () 
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/60 flex items-end md:items-center justify-center md:p-4">
+    <div className="fixed inset-0 z-[150] bg-black/60 flex items-end md:items-center justify-center md:p-4">
       <div className="w-full md:max-w-[720px] bg-bg-card rounded-t-[18px] md:rounded-[18px] border border-nikito-violet/20 p-5 md:p-6 md:px-[26px] max-h-[90vh] overflow-y-auto">
         <div className="flex justify-between items-start mb-5">
           <div>

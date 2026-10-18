@@ -35,7 +35,7 @@ export function ModaleAjouterAttraction({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center md:p-4">
+    <div className="fixed inset-0 z-[150] flex items-end md:items-center justify-center md:p-4">
       <div className="absolute inset-0 bg-black/60" onClick={onClose} />
       <div className="relative bg-bg-card rounded-t-2xl md:rounded-2xl w-full md:max-w-[480px] border border-white/[0.08] shadow-2xl flex flex-col max-h-[90vh] md:max-h-[80vh]">
         <div className="px-6 pt-5 pb-4 border-b border-white/[0.06]">

@@ -328,7 +328,7 @@ function ModaleJustification({ prescription, onClose, onSubmit }: { prescription
   const [notes, setNotes] = useState('');
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={onClose}>
+    <div className="fixed inset-0 z-[150] flex items-center justify-center bg-black/60 p-4" onClick={onClose}>
       <div className="bg-bg-card rounded-2xl border border-white/[0.08] shadow-2xl w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
         <h3 className="text-[16px] font-semibold mb-1">Justifier la levee</h3>
         <p className="text-[12px] text-dim mb-4">{prescription.intitule}</p>

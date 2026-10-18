@@ -295,7 +295,7 @@ function ContenuStock() {
       {importFacture && <ModaleImportFacture onClose={() => setImportFacture(false)} />}
 
       {mouvementPiece && (
-        <div className="fixed inset-0 z-50 bg-black/60 flex items-end md:items-center justify-center md:p-4">
+        <div className="fixed inset-0 z-[150] bg-black/60 flex items-end md:items-center justify-center md:p-4">
           <div className="w-full md:max-w-[400px] bg-bg-card rounded-t-[18px] md:rounded-[18px] border border-nikito-cyan/15 p-5">
             <div className="text-[11px] text-dim tracking-[1.2px] uppercase">
               {mouvementPiece.type === 'entree' ? 'Entree de stock' : 'Sortie de stock'}
@@ -378,7 +378,7 @@ function ModaleCreerPiece({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/60 flex items-end md:items-center justify-center md:p-4">
+    <div className="fixed inset-0 z-[150] bg-black/60 flex items-end md:items-center justify-center md:p-4">
       <div className="w-full md:max-w-[520px] bg-bg-card rounded-t-[18px] md:rounded-[18px] border border-nikito-cyan/15 p-5 md:p-6 max-h-[90vh] overflow-y-auto">
         <div className="flex justify-between items-start mb-5">
           <div>

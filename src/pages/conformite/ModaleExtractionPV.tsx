@@ -76,7 +76,7 @@ export function ModaleExtractionPV({ commissionId, documentId, commissionLabel, 
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={phase === 'loading' ? undefined : onClose}>
+    <div className="fixed inset-0 z-[150] flex items-center justify-center bg-black/70 p-4" onClick={phase === 'loading' ? undefined : onClose}>
       <div className="bg-bg-card rounded-2xl border border-white/[0.08] shadow-2xl w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
         {phase === 'confirm' && (
           <>

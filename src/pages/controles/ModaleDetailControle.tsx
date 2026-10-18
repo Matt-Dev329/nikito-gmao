@@ -70,7 +70,7 @@ export function ModaleDetailControle({ controle, onClose, onExportPDF, onNavigat
   const [lightboxPath, setLightboxPath] = useState<string | null>(null);
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/60 flex items-end md:items-center justify-center md:p-4">
+    <div className="fixed inset-0 z-[150] bg-black/60 flex items-end md:items-center justify-center md:p-4">
       <div className="w-full md:max-w-[820px] bg-bg-card rounded-t-[18px] md:rounded-[18px] border border-white/[0.08] max-h-[92vh] overflow-y-auto">
         <div className="sticky top-0 bg-bg-card z-10 px-5 pt-5 pb-4 border-b border-white/[0.06] flex justify-between items-start">
           <div>

@@ -317,7 +317,7 @@ function ModaleCreerCommission({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={onClose}>
+    <div className="fixed inset-0 z-[150] flex items-center justify-center bg-black/60 p-4" onClick={onClose}>
       <div className="bg-bg-card rounded-2xl border border-white/[0.08] shadow-2xl w-full max-w-lg max-h-[85vh] overflow-y-auto p-6" onClick={(e) => e.stopPropagation()}>
         <h3 className="text-[16px] font-semibold mb-4">Nouvelle commission</h3>
         <form onSubmit={handleSubmit} className="space-y-4">

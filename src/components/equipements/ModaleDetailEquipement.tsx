@@ -29,7 +29,7 @@ export function ModaleDetailEquipement({ equipement, onClose }: ModaleDetailEqui
   const [edition, setEdition] = useState(false);
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/60 flex items-end md:items-center justify-center md:p-4">
+    <div className="fixed inset-0 z-[150] bg-black/60 flex items-end md:items-center justify-center md:p-4">
       <div className="w-full md:max-w-[640px] bg-bg-card rounded-t-[18px] md:rounded-[18px] border border-nikito-violet/20 p-5 md:p-6 md:px-[26px] max-h-[90vh] overflow-y-auto">
         {edition ? (
           <FormulaireEdition
