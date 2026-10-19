@@ -60,6 +60,7 @@ type Rapport = {
     | { statut: string; resume: string | null; date_controle: string | null; points_non_conformes: PointNonConforme[] | null }
     | { statut: string; resume: string | null; date_controle: string | null; points_non_conformes: PointNonConforme[] | null }[]
     | null;
+  levees: { point_intitule: string; statut: string }[] | null;
 };
 
 const ROLES: Record<string, string> = {
@@ -93,7 +94,7 @@ Deno.serve(async (req: Request) => {
     const [{ data: docs, error }, { data: moi }] = await Promise.all([
       appelant
         .from("documents_techniques")
-        .select("id, titre, activite, prestataire, date_document, parc:parcs(code, nom), analyse:analyses_rapports_prestataires(statut, resume, date_controle, points_non_conformes)")
+        .select("id, titre, activite, prestataire, date_document, parc:parcs(code, nom), analyse:analyses_rapports_prestataires(statut, resume, date_controle, points_non_conformes), levees:levees_defauts_prestataires(point_intitule, statut)")
         .in("id", ids)
         .eq("type", "prestataire"),
       appelant.from("utilisateurs").select("prenom, nom, roles(code)").eq("auth_user_id", auth.user.id).maybeSingle(),
@@ -103,7 +104,12 @@ Deno.serve(async (req: Request) => {
     if (rapports.length < ids.length) return repondre({ success: false, error: "Rapport introuvable ou accès refusé" }, 403);
 
     const analyseDe = (r: Rapport) => (Array.isArray(r.analyse) ? r.analyse[0] ?? null : r.analyse);
-    const utiles = rapports.filter((r) => analyseDe(r)?.statut === "terminee" && (analyseDe(r)?.points_non_conformes ?? []).length > 0);
+    // Défauts déjà levés (attestation déposée) : plus à réparer
+    const ouverts = (r: Rapport) => {
+      const leves = new Set((r.levees ?? []).filter((l) => l.statut === "levee").map((l) => l.point_intitule.trim()));
+      return (analyseDe(r)?.points_non_conformes ?? []).filter((p) => !leves.has(p.intitule.trim()));
+    };
+    const utiles = rapports.filter((r) => analyseDe(r)?.statut === "terminee" && ouverts(r).length > 0);
     if (utiles.length === 0) {
       return repondre({ success: false, error: "Aucun point à corriger dans les rapports sélectionnés" }, 400);
     }
@@ -117,7 +123,7 @@ Deno.serve(async (req: Request) => {
         date_controle: a.date_controle ?? r.date_document,
         rapport: r.titre,
         resume: a.resume,
-        anomalies: (a.points_non_conformes ?? []).map((p) => ({
+        anomalies: ouverts(r).map((p) => ({
           intitule: p.intitule,
           detail: p.detail,
           gravite: p.gravite,

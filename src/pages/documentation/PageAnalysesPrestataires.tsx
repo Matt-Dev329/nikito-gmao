@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/components/ui/ToastProvider';
 import { Pill } from '@/components/ui/Pill';
-import { recollerDocument } from '@/lib/envoiGrosFichier';
+import { envoyerFichier, recollerDocument } from '@/lib/envoiGrosFichier';
 import { ROLES_PILOTAGE, aAcces } from '@/lib/acces';
 
 interface PointConforme {
@@ -29,6 +29,16 @@ interface Analyse {
   erreur: string | null;
   analyse_le: string | null;
 }
+interface Levee {
+  id: string;
+  point_intitule: string;
+  statut: 'levee' | 'annulee';
+  justification: string | null;
+  attestation_chemin: string | null;
+  attestation_nom: string | null;
+  leve_par_nom: string | null;
+  leve_le: string;
+}
 interface RapportAnalyse {
   id: string;
   titre: string;
@@ -42,6 +52,7 @@ interface RapportAnalyse {
   cree_le: string;
   parc: { code: string; nom: string } | null;
   analyse: Analyse | Analyse[] | null;
+  levees: Levee[] | null;
 }
 
 const RESULTATS: Record<string, { label: string; classe: string }> = {
@@ -57,6 +68,10 @@ type Filtre = 'tous' | 'a_corriger' | 'a_renouveler' | 'conformes';
 
 const analyseDe = (r: RapportAnalyse): Analyse | null => (Array.isArray(r.analyse) ? r.analyse[0] ?? null : r.analyse);
 const echeanceDe = (r: RapportAnalyse) => r.prochaine_echeance ?? analyseDe(r)?.prochaine_echeance ?? null;
+// Défaut levé (attestation / compte rendu déposé)
+const leveeDe = (r: RapportAnalyse, intitule: string) =>
+  (r.levees ?? []).find((l) => l.statut === 'levee' && l.point_intitule.trim() === intitule.trim()) ?? null;
+const defautsOuverts = (r: RapportAnalyse) => (analyseDe(r)?.points_non_conformes ?? []).filter((p) => !leveeDe(r, p.intitule));
 const joursAvant = (date: string) => Math.ceil((new Date(date).getTime() - Date.now()) / 86_400_000);
 
 function useAnalyses() {
@@ -67,7 +82,8 @@ function useAnalyses() {
         .from('documents_techniques')
         .select(
           `id, titre, activite, prestataire, chemin, mime, parties, date_document, prochaine_echeance, cree_le,
-          parc:parcs(code, nom), analyse:analyses_rapports_prestataires(*)`
+          parc:parcs(code, nom), analyse:analyses_rapports_prestataires(*),
+          levees:levees_defauts_prestataires(id, point_intitule, statut, justification, attestation_chemin, attestation_nom, leve_par_nom, leve_le)`
         )
         .eq('type', 'prestataire')
         .eq('actif', true)
@@ -105,7 +121,7 @@ function ContenuAnalyses() {
     });
   const categorieDe = (r: RapportAnalyse) => r.activite?.trim() || 'À classer';
 
-  const aCorriger = (r: RapportAnalyse) => (analyseDe(r)?.points_non_conformes ?? []).length > 0;
+  const aCorriger = (r: RapportAnalyse) => defautsOuverts(r).length > 0;
   const aRenouveler = (r: RapportAnalyse) => {
     const e = echeanceDe(r);
     return !!e && joursAvant(e) <= 60;
@@ -280,7 +296,9 @@ function CarteAnalyse({
   const toast = useToast();
   const [ouvert, setOuvert] = useState(false);
   const [relance, setRelance] = useState(false);
+  const [leverOuvert, setLeverOuvert] = useState(false);
   const a = analyseDe(r);
+  const ouverts = defautsOuverts(r);
   const echeance = echeanceDe(r);
   const jours = echeance ? joursAvant(echeance) : null;
   const nonConformes = [...(a?.points_non_conformes ?? [])].sort((x, y) => ORDRE_GRAVITE[x.gravite] - ORDRE_GRAVITE[y.gravite]);
@@ -300,6 +318,28 @@ function CarteAnalyse({
     qc.invalidateQueries({ queryKey: ['analyses-prestataires'] });
     if (errFn || data?.success === false) toast.error(`Analyse impossible : ${data?.error ?? errFn?.message ?? ''}`);
     else toast.success('Analyse terminée');
+  };
+
+  const ouvrirAttestation = async (chemin: string) => {
+    const fenetre = window.open('', '_blank');
+    const { data, error } = await supabase.storage.from('alba-techniques').createSignedUrl(chemin, 3600);
+    if (error || !data) {
+      fenetre?.close();
+      toast.error(error?.message ?? 'Lien indisponible');
+      return;
+    }
+    if (fenetre) fenetre.location.href = data.signedUrl;
+    else window.open(data.signedUrl, '_blank');
+  };
+
+  const annulerLevee = async (l: Levee) => {
+    if (!window.confirm(`Remettre « ${l.point_intitule} » en défaut à corriger ?`)) return;
+    const { error } = await supabase.rpc('annuler_levee_defaut', { p_levee_id: l.id });
+    if (error) toast.error(error.message);
+    else {
+      toast.info('Défaut remis à corriger');
+      qc.invalidateQueries({ queryKey: ['analyses-prestataires'] });
+    }
   };
 
   const ouvrirRapport = async () => {
@@ -359,7 +399,11 @@ function CarteAnalyse({
             ) : (
               <span className="text-[10px] px-2 py-0.5 rounded bg-white/[0.06] text-dim">Non analysé</span>
             )}
-            {nonConformes.length > 0 && <span className="text-[11px] text-red">❌ {nonConformes.length} à corriger</span>}
+            {ouverts.length > 0 ? (
+              <span className="text-[11px] text-red">❌ {ouverts.length} à corriger</span>
+            ) : (
+              nonConformes.length > 0 && <span className="text-[11px] text-green">✅ Défauts levés</span>
+            )}
             {echeance && jours !== null && (
               <span className={cn('text-[11px]', jours < 0 ? 'text-red' : jours <= 30 ? 'text-amber' : 'text-dim')}>
                 {jours < 0 ? `Renouvellement dépassé de ${-jours} j` : `Renouveler avant le ${new Date(echeance).toLocaleDateString('fr-FR')}`}
@@ -377,17 +421,47 @@ function CarteAnalyse({
               {a.resume && <div className="whitespace-pre-line">{a.resume}</div>}
               {nonConformes.length > 0 && (
                 <div>
-                  <div className="text-[11px] text-red uppercase tracking-wider mb-1.5">Points non conformes · {nonConformes.length}</div>
+                  <div className="text-[11px] text-red uppercase tracking-wider mb-1.5">
+                    Points non conformes · {nonConformes.length}
+                    {ouverts.length < nonConformes.length && <span className="text-green"> · {nonConformes.length - ouverts.length} levé(s)</span>}
+                  </div>
                   <ul className="grid gap-2">
-                    {nonConformes.map((p, i) => (
-                      <li key={i} className="bg-red/[0.06] border border-red/20 rounded-lg p-2.5">
-                        <div className="font-medium">
-                          ❌ {p.intitule} <span className={cn('text-[11px] font-normal', GRAVITES[p.gravite])}>· {p.gravite}</span>
-                        </div>
-                        {p.detail && <div className="text-[12px] text-dim mt-0.5">{p.detail}</div>}
-                        {p.action && <div className="text-[12px] text-text mt-1">➜ {p.action}</div>}
-                      </li>
-                    ))}
+                    {nonConformes.map((p, i) => {
+                      const levee = leveeDe(r, p.intitule);
+                      return (
+                        <li
+                          key={i}
+                          className={cn('rounded-lg p-2.5 border', levee ? 'bg-green/[0.06] border-green/20' : 'bg-red/[0.06] border-red/20')}
+                        >
+                          <div className={cn('font-medium', levee && 'text-dim')}>
+                            {levee ? '✅' : '❌'} {p.intitule}{' '}
+                            <span className={cn('text-[11px] font-normal', levee ? 'text-green' : GRAVITES[p.gravite])}>
+                              · {levee ? 'levé' : p.gravite}
+                            </span>
+                          </div>
+                          {p.detail && <div className="text-[12px] text-dim mt-0.5">{p.detail}</div>}
+                          {levee ? (
+                            <div className="text-[12px] mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
+                              <span className="text-green">
+                                Levé le {new Date(levee.leve_le).toLocaleDateString('fr-FR')}
+                                {levee.leve_par_nom ? ` par ${levee.leve_par_nom}` : ''}
+                                {levee.justification ? ` — ${levee.justification}` : ''}
+                              </span>
+                              {levee.attestation_chemin && (
+                                <button onClick={() => ouvrirAttestation(levee.attestation_chemin!)} className="text-nikito-cyan font-semibold min-h-[32px]">
+                                  📎 {levee.attestation_nom || 'Attestation'}
+                                </button>
+                              )}
+                              <button onClick={() => annulerLevee(levee)} className="text-dim underline min-h-[32px]">
+                                Annuler
+                              </button>
+                            </div>
+                          ) : (
+                            p.action && <div className="text-[12px] text-text mt-1">➜ {p.action}</div>
+                          )}
+                        </li>
+                      );
+                    })}
                   </ul>
                 </div>
               )}
@@ -420,6 +494,14 @@ function CarteAnalyse({
             <button onClick={ouvrirRapport} className="bg-nikito-cyan/15 text-nikito-cyan border border-nikito-cyan/40 px-4 rounded-[10px] text-[13px] font-semibold min-h-[44px]">
               Ouvrir le rapport
             </button>
+            {a?.statut === 'terminee' && ouverts.length > 0 && (
+              <button
+                onClick={() => setLeverOuvert(true)}
+                className="bg-green/15 text-green border border-green/40 px-4 rounded-[10px] text-[13px] font-semibold min-h-[44px]"
+              >
+                📎 Lever les défauts
+              </button>
+            )}
             <button
               onClick={relancer}
               disabled={relance || a?.statut === 'en_cours'}
@@ -430,6 +512,7 @@ function CarteAnalyse({
           </div>
         </div>
       )}
+      {leverOuvert && <ModaleLeverDefauts rapport={r} defauts={ouverts} onClose={() => setLeverOuvert(false)} />}
     </div>
   );
 }
@@ -552,6 +635,196 @@ function ModaleMailReparation({ ids, onClose }: { ids: string[]; onClose: () => 
               <a href={lienMail} className="bg-nikito-cyan text-bg-app px-4 rounded-[10px] text-[13px] font-bold min-h-[44px] flex items-center">
                 Ouvrir dans ma messagerie
               </a>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+const TAILLE_MAX_ATTESTATION = 22 * 1024 * 1024;
+
+/**
+ * Levée des défauts : dépôt de l'attestation / du compte rendu d'intervention,
+ * lecture automatique (défauts levés proposés), puis confirmation.
+ */
+function ModaleLeverDefauts({ rapport: r, defauts, onClose }: { rapport: RapportAnalyse; defauts: PointNonConforme[]; onClose: () => void }) {
+  const qc = useQueryClient();
+  const toast = useToast();
+  const [fichier, setFichier] = useState<File | null>(null);
+  const [envoye, setEnvoye] = useState<{ chemin: string; nom: string; mime: string } | null>(null);
+  const [etape, setEtape] = useState<'fichier' | 'lecture' | 'choix' | 'enregistrement'>('fichier');
+  const [resume, setResume] = useState<string | null>(null);
+  const [erreurLecture, setErreurLecture] = useState<string | null>(null);
+  const [propositions, setPropositions] = useState<Record<string, string>>({});
+  const [coches, setCoches] = useState<Set<string>>(new Set());
+
+  const envoyerEtLire = async () => {
+    if (!fichier) return;
+    if (fichier.size > TAILLE_MAX_ATTESTATION) {
+      toast.error('Fichier trop lourd (22 Mo maximum)');
+      return;
+    }
+    setEtape('lecture');
+    let depot = envoye;
+    try {
+      if (!depot) {
+        const nomPropre = fichier.name.normalize('NFD').replace(/[^\w.-]+/g, '_').slice(-80);
+        const chemin = `prestataire/${r.parc?.code ?? 'commun'}/attestations/${Date.now()}_${nomPropre}`;
+        await envoyerFichier('alba-techniques', chemin, fichier);
+        depot = { chemin, nom: fichier.name.slice(0, 200), mime: fichier.type || 'application/pdf' };
+        setEnvoye(depot);
+      }
+    } catch (e) {
+      toast.error((e as Error).message);
+      setEtape('fichier');
+      return;
+    }
+    const { data, error } = await supabase.functions.invoke('analyser-attestation-levee', {
+      body: { document_id: r.id, chemin: depot.chemin, mime: depot.mime },
+    });
+    if (error || data?.success === false) {
+      // La lecture a échoué : le choix reste possible à la main
+      setErreurLecture(data?.error ?? error?.message ?? 'Lecture impossible');
+    } else {
+      const pts = (data.points ?? []) as { intitule: string; levee: boolean; justification: string }[];
+      setResume(data.resume ?? null);
+      setPropositions(Object.fromEntries(pts.map((p) => [p.intitule, p.justification])));
+      setCoches(new Set(pts.filter((p) => p.levee).map((p) => p.intitule)));
+    }
+    setEtape('choix');
+  };
+
+  const basculer = (intitule: string) =>
+    setCoches((c) => {
+      const n = new Set(c);
+      if (n.has(intitule)) n.delete(intitule);
+      else n.add(intitule);
+      return n;
+    });
+
+  const confirmer = async () => {
+    if (!envoye || coches.size === 0) return;
+    setEtape('enregistrement');
+    const points = defauts
+      .filter((d) => coches.has(d.intitule))
+      .map((d) => ({
+        intitule: d.intitule,
+        justification: propositions[d.intitule] && !erreurLecture ? propositions[d.intitule] : 'Levé au vu du document déposé',
+      }));
+    const { error } = await supabase.rpc('lever_defauts_prestataire', {
+      p_document_id: r.id,
+      p_points: points,
+      p_attestation_chemin: envoye.chemin,
+      p_attestation_nom: envoye.nom,
+      p_attestation_mime: envoye.mime,
+    });
+    if (error) {
+      toast.error(error.message);
+      setEtape('choix');
+      return;
+    }
+    toast.success(`${points.length} défaut${points.length > 1 ? 's levés' : ' levé'}`);
+    qc.invalidateQueries({ queryKey: ['analyses-prestataires'] });
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 z-[150] bg-black/60 flex items-end md:items-center justify-center md:p-4" onClick={onClose}>
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="w-full md:max-w-[620px] max-h-[92dvh] overflow-y-auto bg-bg-card rounded-t-[18px] md:rounded-[18px] border border-green/30 p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] flex flex-col gap-3 text-[13px]"
+      >
+        <div>
+          <div className="text-[16px] font-semibold">Lever les défauts</div>
+          <div className="text-[12px] text-dim">
+            {[r.activite, r.prestataire, r.parc?.code].filter(Boolean).join(' · ')} — {defauts.length} défaut{defauts.length > 1 ? 's' : ''} à lever
+          </div>
+        </div>
+
+        {etape === 'fichier' || etape === 'lecture' ? (
+          <>
+            <label className="text-[12px] text-dim">
+              Attestation ou compte rendu d’intervention détaillé (PDF ou photo)
+              <input
+                type="file"
+                accept="application/pdf,image/jpeg,image/png,image/webp"
+                disabled={etape === 'lecture'}
+                onChange={(e) => {
+                  setFichier(e.target.files?.[0] ?? null);
+                  setEnvoye(null);
+                }}
+                className="mt-1 block w-full text-[13px] text-text file:mr-3 file:rounded-[10px] file:border-0 file:bg-green/15 file:text-green file:px-4 file:py-2.5 file:font-semibold"
+              />
+            </label>
+            <div className="text-[12px] text-faint">
+              Le document est lu automatiquement : les défauts qu’il corrige sont cochés, tu valides ensuite.
+            </div>
+            <div className="flex gap-2 justify-end">
+              <button onClick={onClose} className="px-4 rounded-[10px] text-[13px] min-h-[44px] bg-bg-deep border border-white/[0.08] text-dim">
+                Annuler
+              </button>
+              <button
+                onClick={envoyerEtLire}
+                disabled={!fichier || etape === 'lecture'}
+                className={cn(
+                  'bg-green text-bg-app px-4 rounded-[10px] text-[13px] font-bold min-h-[44px]',
+                  !fichier && 'opacity-40',
+                  etape === 'lecture' && 'opacity-60 animate-pulse'
+                )}
+              >
+                {etape === 'lecture' ? 'Lecture du document…' : 'Envoyer et lire'}
+              </button>
+            </div>
+          </>
+        ) : (
+          <>
+            {resume && <div className="bg-bg-deep rounded-lg p-2.5 text-[12px]">{resume}</div>}
+            {erreurLecture && (
+              <div className="text-amber text-[12px] bg-amber/10 rounded-lg p-2.5">
+                Lecture automatique impossible ({erreurLecture}). Coche à la main les défauts corrigés par ce document.
+              </div>
+            )}
+            <ul className="grid gap-2">
+              {defauts.map((d) => (
+                <li key={d.intitule}>
+                  <label
+                    className={cn(
+                      'flex gap-3 items-start rounded-lg p-2.5 border cursor-pointer',
+                      coches.has(d.intitule) ? 'bg-green/[0.06] border-green/30' : 'bg-bg-deep border-white/[0.06]'
+                    )}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={coches.has(d.intitule)}
+                      onChange={() => basculer(d.intitule)}
+                      className="w-5 h-5 mt-0.5 accent-green flex-shrink-0"
+                    />
+                    <span className="min-w-0">
+                      <span className="font-medium">{d.intitule}</span>{' '}
+                      <span className={cn('text-[11px]', GRAVITES[d.gravite])}>· {d.gravite}</span>
+                      {propositions[d.intitule] && <span className="block text-[12px] text-dim mt-0.5">{propositions[d.intitule]}</span>}
+                    </span>
+                  </label>
+                </li>
+              ))}
+            </ul>
+            <div className="text-[11px] text-faint">Lecture automatique : vérifie avant de confirmer. Une levée peut être annulée ensuite.</div>
+            <div className="flex gap-2 justify-end">
+              <button onClick={onClose} className="px-4 rounded-[10px] text-[13px] min-h-[44px] bg-bg-deep border border-white/[0.08] text-dim">
+                Annuler
+              </button>
+              <button
+                onClick={confirmer}
+                disabled={coches.size === 0 || etape === 'enregistrement'}
+                className={cn(
+                  'bg-green text-bg-app px-4 rounded-[10px] text-[13px] font-bold min-h-[44px]',
+                  (coches.size === 0 || etape === 'enregistrement') && 'opacity-40'
+                )}
+              >
+                {etape === 'enregistrement' ? 'Enregistrement…' : `Lever ${coches.size} défaut${coches.size > 1 ? 's' : ''}`}
+              </button>
             </div>
           </>
         )}
