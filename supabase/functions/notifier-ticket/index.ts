@@ -97,20 +97,21 @@ Deno.serve(async (req: Request) => {
     const managerPrincipal = new Set(liensParc.filter((l) => l.est_manager).map((l) => l.utilisateur_id));
 
     const { data: equipe } = ids.length
-      ? await service.from("utilisateurs").select("id, email, specialites, roles!inner(code)").eq("actif", true)
+      ? await service.from("utilisateurs").select("id, email, specialites, specialites_exclues, roles!inner(code)").eq("actif", true)
         .in("id", ids).in("roles.code", ["directeur_parc", "manager_parc", "technicien"])
       : { data: [] };
-    const membres = (equipe ?? []) as unknown as { id: string; email: string | null; specialites: string[] | null; roles: { code: string } }[];
+    const membres = (equipe ?? []) as unknown as { id: string; email: string | null; specialites: string[] | null; specialites_exclues: string[] | null; roles: { code: string } }[];
 
     let destinataires: Destinataire[];
     if (evenement === "a_valider") {
       destinataires = membres.filter((u) =>
         u.roles.code === "directeur_parc" || (u.roles.code === "manager_parc" && managerPrincipal.has(u.id)));
     } else {
-      // Techniciens spécialisés : seulement les tickets de leurs catégories
+      // Techniciens spécialisés : seulement les tickets de leurs catégories, sans les catégories exclues
       destinataires = membres.filter((u) =>
         u.roles.code === "technicien" &&
-        (!u.specialites?.length || (!!equip?.categorie_id && u.specialites.includes(equip.categorie_id))));
+        (!u.specialites?.length || (!!equip?.categorie_id && u.specialites.includes(equip.categorie_id))) &&
+        !(equip?.categorie_id && u.specialites_exclues?.includes(equip.categorie_id)));
     }
     const vus = new Set<string>();
     destinataires = [...destinataires, ...((chefs ?? []) as Destinataire[])].filter((u) => !vus.has(u.id) && vus.add(u.id));
