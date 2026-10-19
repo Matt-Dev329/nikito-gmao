@@ -93,6 +93,16 @@ function ContenuAnalyses() {
   const [filtre, setFiltre] = useState<Filtre>('tous');
   const [recherche, setRecherche] = useState('');
   const [categorie, setCategorie] = useState<string | null>(null);
+  // Mode « mail de réparation » : rapports cochés
+  const [selection, setSelection] = useState<Set<string> | null>(null);
+  const [mailOuvert, setMailOuvert] = useState(false);
+  const basculer = (id: string) =>
+    setSelection((s) => {
+      const n = new Set(s ?? []);
+      if (n.has(id)) n.delete(id);
+      else n.add(id);
+      return n;
+    });
   const categorieDe = (r: RapportAnalyse) => r.activite?.trim() || 'À classer';
 
   const aCorriger = (r: RapportAnalyse) => (analyseDe(r)?.points_non_conformes ?? []).length > 0;
@@ -149,10 +159,43 @@ function ContenuAnalyses() {
 
   return (
     <div className="p-4 md:p-6 md:px-7">
-      <h1 className="text-xl md:text-[22px] font-semibold m-0">Analyses prestataires</h1>
-      <p className="text-[13px] text-dim mt-1 mb-4">
-        Lecture automatique de chaque rapport déposé : ce qui est bon, ce qui ne l’est pas, et quand renouveler le contrôle
-      </p>
+      <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
+        <div>
+          <h1 className="text-xl md:text-[22px] font-semibold m-0">Analyses prestataires</h1>
+          <p className="text-[13px] text-dim mt-1">
+            Lecture automatique de chaque rapport déposé : ce qui est bon, ce qui ne l’est pas, et quand renouveler le contrôle
+          </p>
+        </div>
+        <button
+          onClick={() => setSelection((s) => (s ? null : new Set()))}
+          className={cn(
+            'px-4 rounded-[10px] text-[13px] font-semibold min-h-[44px] border',
+            selection ? 'bg-bg-deep border-white/[0.08] text-dim' : 'bg-nikito-cyan/15 text-nikito-cyan border-nikito-cyan/40'
+          )}
+        >
+          {selection ? 'Annuler la sélection' : '✉️ Mail de réparation'}
+        </button>
+      </div>
+
+      {selection && (
+        <div className="bg-nikito-cyan/[0.06] border border-nikito-cyan/30 rounded-xl p-3 mb-4 text-[13px] flex flex-wrap items-center gap-3">
+          <div className="flex-1 min-w-[200px]">Coche les rapports dont il faut faire réparer les points non conformes, puis prépare le mail.</div>
+          <button
+            onClick={() => setSelection(new Set((rapports ?? []).filter(aCorriger).map((r) => r.id)))}
+            className="text-nikito-cyan text-[12px] font-semibold min-h-[36px]"
+          >
+            Tout cocher (à corriger)
+          </button>
+          <button
+            onClick={() => setMailOuvert(true)}
+            disabled={selection.size === 0}
+            className={cn('bg-nikito-cyan text-bg-app px-4 rounded-[10px] text-[13px] font-bold min-h-[44px]', selection.size === 0 && 'opacity-40')}
+          >
+            Préparer le mail ({selection.size})
+          </button>
+        </div>
+      )}
+      {mailOuvert && selection && <ModaleMailReparation ids={[...selection]} onClose={() => setMailOuvert(false)} />}
 
       <div className="flex flex-col gap-3 mb-4">
         <div className="flex gap-1.5 overflow-x-auto pb-1">
@@ -211,7 +254,11 @@ function ContenuAnalyses() {
               </h2>
               <div className="flex flex-col gap-3">
                 {rs.map((r) => (
-                  <CarteAnalyse key={r.id} rapport={r} />
+                  <CarteAnalyse
+                    key={r.id}
+                    rapport={r}
+                    selection={selection ? { cochee: selection.has(r.id), possible: aCorriger(r), basculer: () => basculer(r.id) } : null}
+                  />
                 ))}
               </div>
             </section>
@@ -222,7 +269,13 @@ function ContenuAnalyses() {
   );
 }
 
-function CarteAnalyse({ rapport: r }: { rapport: RapportAnalyse }) {
+function CarteAnalyse({
+  rapport: r,
+  selection,
+}: {
+  rapport: RapportAnalyse;
+  selection: { cochee: boolean; possible: boolean; basculer: () => void } | null;
+}) {
   const qc = useQueryClient();
   const toast = useToast();
   const [ouvert, setOuvert] = useState(false);
@@ -269,35 +322,52 @@ function CarteAnalyse({ rapport: r }: { rapport: RapportAnalyse }) {
   };
 
   return (
-    <div className="bg-bg-card rounded-xl border border-white/[0.06]">
-      <button onClick={() => setOuvert((o) => !o)} className="w-full text-left p-3.5 px-4 flex gap-3 items-start">
-        <div className="flex-1 min-w-0">
-          <div className="text-[14px] font-semibold truncate">{[r.activite, r.prestataire].filter(Boolean).join(' · ') || r.titre}</div>
-          <div className="text-[12px] text-dim mt-0.5">
-            {[r.parc?.code ?? 'Tous parcs', r.date_document ? `contrôle du ${new Date(r.date_document).toLocaleDateString('fr-FR')}` : null]
-              .filter(Boolean)
-              .join(' · ')}
+    <div className={cn('bg-bg-card rounded-xl border', selection?.cochee ? 'border-nikito-cyan/60' : 'border-white/[0.06]')}>
+      <div className="flex">
+        {selection && (
+          <label
+            className={cn('flex items-start pt-4 pl-4 pr-1 min-w-[44px]', selection.possible ? 'cursor-pointer' : 'opacity-30')}
+            title={selection.possible ? 'Inclure dans le mail' : 'Aucun point à corriger'}
+          >
+            <input
+              type="checkbox"
+              checked={selection.cochee}
+              disabled={!selection.possible}
+              onChange={selection.basculer}
+              className="w-5 h-5 accent-nikito-cyan"
+              aria-label={`Inclure ${r.titre} dans le mail`}
+            />
+          </label>
+        )}
+        <button onClick={() => setOuvert((o) => !o)} className="flex-1 min-w-0 text-left p-3.5 px-4 flex gap-3 items-start">
+          <div className="flex-1 min-w-0">
+            <div className="text-[14px] font-semibold truncate">{[r.activite, r.prestataire].filter(Boolean).join(' · ') || r.titre}</div>
+            <div className="text-[12px] text-dim mt-0.5">
+              {[r.parc?.code ?? 'Tous parcs', r.date_document ? `contrôle du ${new Date(r.date_document).toLocaleDateString('fr-FR')}` : null]
+                .filter(Boolean)
+                .join(' · ')}
+            </div>
+            {a?.statut === 'terminee' && a.resume && <div className="text-[12px] text-faint mt-1 line-clamp-2">{a.resume}</div>}
           </div>
-          {a?.statut === 'terminee' && a.resume && <div className="text-[12px] text-faint mt-1 line-clamp-2">{a.resume}</div>}
-        </div>
-        <div className="flex flex-col items-end gap-1 flex-shrink-0">
-          {a?.statut === 'terminee' && resultat ? (
-            <span className={cn('text-[10px] px-2 py-0.5 rounded', resultat.classe)}>{resultat.label}</span>
-          ) : a?.statut === 'echec' ? (
-            <span className="text-[10px] px-2 py-0.5 rounded bg-red/15 text-red">Analyse échouée</span>
-          ) : a ? (
-            <span className="text-[10px] px-2 py-0.5 rounded bg-nikito-cyan/15 text-nikito-cyan animate-pulse">Analyse en cours…</span>
-          ) : (
-            <span className="text-[10px] px-2 py-0.5 rounded bg-white/[0.06] text-dim">Non analysé</span>
-          )}
-          {nonConformes.length > 0 && <span className="text-[11px] text-red">❌ {nonConformes.length} à corriger</span>}
-          {echeance && jours !== null && (
-            <span className={cn('text-[11px]', jours < 0 ? 'text-red' : jours <= 30 ? 'text-amber' : 'text-dim')}>
-              {jours < 0 ? `Renouvellement dépassé de ${-jours} j` : `Renouveler avant le ${new Date(echeance).toLocaleDateString('fr-FR')}`}
-            </span>
-          )}
-        </div>
-      </button>
+          <div className="flex flex-col items-end gap-1 flex-shrink-0">
+            {a?.statut === 'terminee' && resultat ? (
+              <span className={cn('text-[10px] px-2 py-0.5 rounded', resultat.classe)}>{resultat.label}</span>
+            ) : a?.statut === 'echec' ? (
+              <span className="text-[10px] px-2 py-0.5 rounded bg-red/15 text-red">Analyse échouée</span>
+            ) : a ? (
+              <span className="text-[10px] px-2 py-0.5 rounded bg-nikito-cyan/15 text-nikito-cyan animate-pulse">Analyse en cours…</span>
+            ) : (
+              <span className="text-[10px] px-2 py-0.5 rounded bg-white/[0.06] text-dim">Non analysé</span>
+            )}
+            {nonConformes.length > 0 && <span className="text-[11px] text-red">❌ {nonConformes.length} à corriger</span>}
+            {echeance && jours !== null && (
+              <span className={cn('text-[11px]', jours < 0 ? 'text-red' : jours <= 30 ? 'text-amber' : 'text-dim')}>
+                {jours < 0 ? `Renouvellement dépassé de ${-jours} j` : `Renouveler avant le ${new Date(echeance).toLocaleDateString('fr-FR')}`}
+              </span>
+            )}
+          </div>
+        </button>
+      </div>
 
       {ouvert && (
         <div className="px-4 pb-4 border-t border-white/[0.06] pt-3 grid gap-3 text-[13px]">
@@ -360,6 +430,132 @@ function CarteAnalyse({ rapport: r }: { rapport: RapportAnalyse }) {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+/** Demande d'intervention rédigée à partir des points non conformes des rapports cochés. */
+function ModaleMailReparation({ ids, onClose }: { ids: string[]; onClose: () => void }) {
+  const toast = useToast();
+  const [precision, setPrecision] = useState('');
+  const [destinataire, setDestinataire] = useState('');
+  const [objet, setObjet] = useState('');
+  const [corps, setCorps] = useState('');
+  const [enCours, setEnCours] = useState(false);
+  const [erreur, setErreur] = useState<string | null>(null);
+
+  const rediger = async () => {
+    setEnCours(true);
+    setErreur(null);
+    const { data, error } = await supabase.functions.invoke('rediger-mail-reparation', {
+      body: { document_ids: ids, precision: precision.trim() || undefined },
+    });
+    setEnCours(false);
+    if (error || data?.success === false) {
+      setErreur(data?.error ?? error?.message ?? 'Rédaction impossible');
+      return;
+    }
+    setObjet(data.objet ?? '');
+    setCorps(data.corps ?? '');
+  };
+
+  const copier = async () => {
+    try {
+      await navigator.clipboard.writeText(`Objet : ${objet}\n\n${corps}`);
+      toast.success('Mail copié');
+    } catch {
+      toast.error('Copie impossible : sélectionne le texte à la main');
+    }
+  };
+
+  const lienMail = `mailto:${encodeURIComponent(destinataire.trim())}?subject=${encodeURIComponent(objet)}&body=${encodeURIComponent(corps)}`;
+  const champ = 'mt-1 w-full bg-bg-deep border border-white/[0.08] rounded-[10px] text-[13px] text-text placeholder:text-faint outline-none focus:border-nikito-cyan/50';
+
+  return (
+    <div className="fixed inset-0 z-[150] bg-black/60 flex items-end md:items-center justify-center md:p-4" onClick={onClose}>
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="w-full md:max-w-[680px] max-h-[92dvh] overflow-y-auto bg-bg-card rounded-t-[18px] md:rounded-[18px] border border-nikito-cyan/30 p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] flex flex-col gap-3"
+      >
+        <div>
+          <div className="text-[16px] font-semibold">Mail de réparation</div>
+          <div className="text-[12px] text-dim">
+            {ids.length} rapport{ids.length > 1 ? 's' : ''} sélectionné{ids.length > 1 ? 's' : ''} : les points non conformes sont regroupés
+            (doublons fusionnés) dans une demande d’intervention.
+          </div>
+        </div>
+
+        {!corps ? (
+          <>
+            <label className="text-[12px] text-dim">
+              Précision pour la rédaction (facultatif)
+              <textarea
+                value={precision}
+                onChange={(e) => setPrecision(e.target.value)}
+                rows={3}
+                maxLength={1000}
+                placeholder="Ex. : adressé à l’électricien Dupont, intervention souhaitée avant le 15/11, accès au parc avant 10 h…"
+                className={cn(champ, 'p-3')}
+              />
+            </label>
+            {erreur && <div className="text-red text-[12px] bg-red/10 rounded-lg p-2.5">{erreur}</div>}
+            <div className="flex gap-2 justify-end">
+              <button onClick={onClose} className="px-4 rounded-[10px] text-[13px] min-h-[44px] bg-bg-deep border border-white/[0.08] text-dim">
+                Annuler
+              </button>
+              <button
+                onClick={rediger}
+                disabled={enCours}
+                className={cn('bg-nikito-cyan text-bg-app px-4 rounded-[10px] text-[13px] font-bold min-h-[44px]', enCours && 'opacity-60 animate-pulse')}
+              >
+                {enCours ? 'Rédaction en cours…' : 'Rédiger le mail'}
+              </button>
+            </div>
+          </>
+        ) : (
+          <>
+            <label className="text-[12px] text-dim">
+              Destinataire (facultatif)
+              <input
+                type="email"
+                value={destinataire}
+                onChange={(e) => setDestinataire(e.target.value)}
+                placeholder="adresse@entreprise.fr"
+                className={cn(champ, 'px-3 py-2.5 min-h-[44px]')}
+              />
+            </label>
+            <label className="text-[12px] text-dim">
+              Objet
+              <input value={objet} onChange={(e) => setObjet(e.target.value)} className={cn(champ, 'px-3 py-2.5 min-h-[44px]')} />
+            </label>
+            <label className="text-[12px] text-dim">
+              Message (modifiable)
+              <textarea value={corps} onChange={(e) => setCorps(e.target.value)} rows={16} className={cn(champ, 'p-3 leading-relaxed')} />
+            </label>
+            <div className="text-[11px] text-faint">Rédaction automatique : relis le mail avant de l’envoyer.</div>
+            <div className="flex flex-wrap gap-2 justify-end">
+              <button
+                onClick={() => {
+                  setCorps('');
+                  setObjet('');
+                }}
+                className="px-4 rounded-[10px] text-[13px] min-h-[44px] bg-bg-deep border border-white/[0.08] text-dim"
+              >
+                Refaire
+              </button>
+              <button
+                onClick={copier}
+                className="px-4 rounded-[10px] text-[13px] min-h-[44px] bg-nikito-cyan/15 text-nikito-cyan border border-nikito-cyan/40 font-semibold"
+              >
+                Copier
+              </button>
+              <a href={lienMail} className="bg-nikito-cyan text-bg-app px-4 rounded-[10px] text-[13px] font-bold min-h-[44px] flex items-center">
+                Ouvrir dans ma messagerie
+              </a>
+            </div>
+          </>
+        )}
+      </div>
     </div>
   );
 }
