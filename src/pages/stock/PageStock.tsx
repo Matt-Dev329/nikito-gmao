@@ -6,7 +6,7 @@ import { peutEntrerStock, peutVoirStock } from '@/lib/acces';
 import { ModaleImportFacture } from './ModaleImportFacture';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
-import { useFournisseurs } from '@/hooks/queries/useReferentiel';
+import { useFournisseurs, useParcs } from '@/hooks/queries/useReferentiel';
 import { useFormationFilter } from '@/hooks/useFormation';
 import { Pill } from '@/components/ui/Pill';
 import { cn } from '@/lib/utils';
@@ -26,13 +26,54 @@ function usePiecesDetachees() {
       chargerToutesLesPages<PieceDetacheeAvecJoins>((debut, fin) =>
         supabase
           .from('pieces_detachees')
-          .select('*, fournisseurs(nom, contact_tel)')
+          .select('*, fournisseurs(nom, contact_tel), parc:parcs(code, nom), activite:commande_activites(nom)')
           .eq('est_formation', estFormation)
           .order('nom')
           .order('id')
           .range(debut, fin)
       ),
   });
+}
+
+/** Domaines de rangement : activités du catalogue de commandes. */
+function useDomaines() {
+  return useQuery({
+    queryKey: ['commande_activites', 'domaines'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('commande_activites').select('id, nom').eq('actif', true).order('ordre').order('nom');
+      if (error) throw error;
+      return (data ?? []) as { id: string; nom: string }[];
+    },
+    staleTime: 5 * 60_000,
+  });
+}
+
+function useRangerPiece() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, ...champs }: { id: string; parc_id: string | null; activite_id: string | null; emplacement: string | null }) => {
+      const { error } = await supabase.from('pieces_detachees').update(champs).eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['pieces_detachees'] });
+    },
+  });
+}
+
+const TOUS_PARCS = 'Stock commun (tous parcs)';
+const A_CLASSER = 'À classer';
+const parcDe = (p: PieceDetacheeAvecJoins) => (p.parc ? `${p.parc.code} · ${p.parc.nom}` : TOUS_PARCS);
+const domaineDe = (p: PieceDetacheeAvecJoins) => p.activite?.nom ?? A_CLASSER;
+// Parcs dans l'ordre des codes, stock commun en dernier ; domaines alphabétiques, « À classer » en dernier
+const trierParcs = (a: string, b: string) => (a === TOUS_PARCS ? 1 : b === TOUS_PARCS ? -1 : a.localeCompare(b, 'fr'));
+const trierDomaines = (a: string, b: string) => (a === A_CLASSER ? 1 : b === A_CLASSER ? -1 : a.localeCompare(b, 'fr'));
+
+/** Groupes distincts (avec leur nombre d'éléments), triés. */
+function compter<T>(elements: T[], cle: (e: T) => string, trier: (a: string, b: string) => number): [string, number][] {
+  const m = new Map<string, number>();
+  elements.forEach((e) => m.set(cle(e), (m.get(cle(e)) ?? 0) + 1));
+  return [...m.entries()].sort((a, b) => trier(a[0], b[0]));
 }
 
 function useModifierStock() {
@@ -63,6 +104,8 @@ function useCreerPiece() {
       stock_min?: number;
       prix_unitaire_ht?: number | null;
       emplacement?: string | null;
+      parc_id?: string | null;
+      activite_id?: string | null;
     }) => {
       const { data, error } = await supabase
         .from('pieces_detachees')
@@ -104,12 +147,17 @@ function ContenuStock() {
   const [modaleCreer, setModaleCreer] = useState(false);
   const [mouvementPiece, setMouvementPiece] = useState<{ id: string; nom: string; type: 'entree' | 'sortie' } | null>(null);
   const [mouvementQty, setMouvementQty] = useState(1);
+  const [parcFiltre, setParcFiltre] = useState<string | null>(null);
+  const [domaineFiltre, setDomaineFiltre] = useState<string | null>(null);
+  const [pieceARanger, setPieceARanger] = useState<PieceDetacheeAvecJoins | null>(null);
 
   const filtrees = useMemo(() => {
     let result = pieces ?? [];
     if (filtreCrit === 'critique') result = result.filter((p) => p.stock_actuel < p.stock_min);
     if (filtreCrit === 'ok') result = result.filter((p) => p.stock_actuel >= p.stock_min);
     if (fournisseurFilter) result = result.filter((p) => p.fournisseur_id === fournisseurFilter);
+    if (parcFiltre) result = result.filter((p) => parcDe(p) === parcFiltre);
+    if (domaineFiltre) result = result.filter((p) => domaineDe(p) === domaineFiltre);
     if (recherche.trim()) {
       const q = recherche.toLowerCase();
       result = result.filter((p) =>
@@ -117,7 +165,26 @@ function ContenuStock() {
       );
     }
     return result;
-  }, [pieces, filtreCrit, fournisseurFilter, recherche]);
+  }, [pieces, filtreCrit, fournisseurFilter, recherche, parcFiltre, domaineFiltre]);
+
+  // Rangement : parc, puis domaine
+  const parcsDispo = useMemo(() => compter(pieces ?? [], parcDe, trierParcs), [pieces]);
+  const domainesDispo = useMemo(
+    () => compter((pieces ?? []).filter((p) => !parcFiltre || parcDe(p) === parcFiltre), domaineDe, trierDomaines),
+    [pieces, parcFiltre]
+  );
+  const groupes = useMemo(
+    () =>
+      compter(filtrees, parcDe, trierParcs).map(([parc, total]) => {
+        const duParc = filtrees.filter((p) => parcDe(p) === parc);
+        const domaines: [string, PieceDetacheeAvecJoins[]][] = compter(duParc, domaineDe, trierDomaines).map(([d]) => [
+          d,
+          duParc.filter((p) => domaineDe(p) === d),
+        ]);
+        return { parc, total, domaines };
+      }),
+    [filtrees]
+  );
 
   const kpis = useMemo(() => {
     const all = pieces ?? [];
@@ -206,6 +273,30 @@ function ContenuStock() {
             </Pill>
           ))}
         </div>
+        {parcsDispo.length > 1 && (
+          <div className="flex gap-1.5 overflow-x-auto pb-1">
+            <Pill variant="cyan" active={!parcFiltre} onClick={() => setParcFiltre(null)} className="min-h-[36px]">
+              Tous les parcs
+            </Pill>
+            {parcsDispo.map(([g, n]) => (
+              <Pill key={g} variant="cyan" active={parcFiltre === g} onClick={() => setParcFiltre(g)} className="min-h-[36px]">
+                {g} <span className="opacity-60">· {n}</span>
+              </Pill>
+            ))}
+          </div>
+        )}
+        {domainesDispo.length > 1 && (
+          <div className="flex gap-1.5 overflow-x-auto pb-1">
+            <Pill active={!domaineFiltre} onClick={() => setDomaineFiltre(null)} className="min-h-[36px]">
+              Tous domaines
+            </Pill>
+            {domainesDispo.map(([g, n]) => (
+              <Pill key={g} active={domaineFiltre === g} onClick={() => setDomaineFiltre(g)} className="min-h-[36px]">
+                {g} <span className="opacity-60">· {n}</span>
+              </Pill>
+            ))}
+          </div>
+        )}
       </div>
 
       {isLoading ? (
@@ -219,76 +310,102 @@ function ContenuStock() {
           <p className="text-dim text-sm">Aucune piece trouvee.</p>
         </div>
       ) : (
-        <div className="overflow-x-auto -mx-4 md:mx-0">
-          <table className="w-full min-w-[700px] text-[13px]">
-            <thead>
-              <tr className="text-[10px] text-dim uppercase tracking-wider border-b border-white/[0.06]">
-                <th className="text-left py-2.5 px-4 font-medium">Reference</th>
-                <th className="text-left py-2.5 px-3 font-medium">Nom</th>
-                <th className="text-left py-2.5 px-3 font-medium">Fournisseur</th>
-                <th className="text-right py-2.5 px-3 font-medium">Stock</th>
-                <th className="text-right py-2.5 px-3 font-medium">Seuil</th>
-                <th className="text-right py-2.5 px-3 font-medium">Prix HT</th>
-                <th className="text-left py-2.5 px-3 font-medium">Emplacement</th>
-                <th className="text-right py-2.5 px-4 font-medium">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtrees.map((p) => {
-                const critique = p.stock_actuel < p.stock_min;
-                return (
-                  <tr key={p.id} className="border-b border-white/[0.04] hover:bg-white/[0.02]">
-                    <td className="py-3 px-4 font-mono text-nikito-cyan">{p.reference}</td>
-                    <td className="py-3 px-3">{p.nom}</td>
-                    <td className="py-3 px-3 text-dim">{p.fournisseurs?.nom ?? '—'}</td>
-                    <td className="py-3 px-3 text-right">
-                      <span className={cn('font-semibold', critique ? 'text-red' : 'text-text')}>
-                        {p.stock_actuel}
-                      </span>
-                      {critique && (
-                        <span className="ml-1.5 text-[10px] bg-red/15 text-red px-1.5 py-0.5 rounded">
-                          Critique
-                        </span>
-                      )}
-                    </td>
-                    <td className="py-3 px-3 text-right text-dim">{p.stock_min}</td>
-                    <td className="py-3 px-3 text-right text-dim">
-                      {p.prix_unitaire_ht != null ? `${Number(p.prix_unitaire_ht).toFixed(2)} EUR` : '—'}
-                    </td>
-                    <td className="py-3 px-3 text-dim">{p.emplacement ?? '—'}</td>
-                    <td className="py-3 px-4 text-right whitespace-nowrap">
-                      {peutSortir ? (
-                        <>
-                          {peutEntrer && (
-                            <button
-                              onClick={() => {
-                                modStock.reset();
-                                setMouvementPiece({ id: p.id, nom: p.nom, type: 'entree' });
-                              }}
-                              className="text-green text-[11px] font-medium mr-3 hover:underline"
-                            >
-                              +Entree
-                            </button>
-                          )}
-                          <button
-                            onClick={() => {
-                              modStock.reset();
-                              setMouvementPiece({ id: p.id, nom: p.nom, type: 'sortie' });
-                            }}
-                            className="text-red text-[11px] font-medium hover:underline"
-                          >
-                            -Sortie
-                          </button>
-                        </>
-                      ) : (
-                        <span className="text-faint text-[11px]">Lecture seule</span>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+        <div className="flex flex-col gap-6">
+          {groupes.map(({ parc, total, domaines }) => (
+            <section key={parc}>
+              <h2 className="text-[13px] text-dim uppercase tracking-wider mb-2">
+                {parc} <span className="text-faint">· {total}</span>
+              </h2>
+              <div className="flex flex-col gap-4 md:pl-3 md:border-l border-white/[0.06]">
+                {domaines.map(([domaine, liste]) => (
+                  <div key={domaine}>
+                    <h3 className="text-[12px] text-nikito-cyan font-semibold mb-1">
+                      {domaine} <span className="text-faint font-normal">· {liste.length}</span>
+                    </h3>
+                  <div className="overflow-x-auto -mx-4 md:mx-0">
+                    <table className="w-full min-w-[700px] text-[13px]">
+                      <thead>
+                        <tr className="text-[10px] text-dim uppercase tracking-wider border-b border-white/[0.06]">
+                          <th className="text-left py-2.5 px-4 font-medium">Reference</th>
+                          <th className="text-left py-2.5 px-3 font-medium">Nom</th>
+                          <th className="text-left py-2.5 px-3 font-medium">Fournisseur</th>
+                          <th className="text-right py-2.5 px-3 font-medium">Stock</th>
+                          <th className="text-right py-2.5 px-3 font-medium">Seuil</th>
+                          <th className="text-right py-2.5 px-3 font-medium">Prix HT</th>
+                          <th className="text-left py-2.5 px-3 font-medium">Emplacement</th>
+                          <th className="text-right py-2.5 px-4 font-medium">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {liste.map((p) => {
+                          const critique = p.stock_actuel < p.stock_min;
+                          return (
+                            <tr key={p.id} className="border-b border-white/[0.04] hover:bg-white/[0.02]">
+                              <td className="py-3 px-4 font-mono text-nikito-cyan">{p.reference}</td>
+                              <td className="py-3 px-3">{p.nom}</td>
+                              <td className="py-3 px-3 text-dim">{p.fournisseurs?.nom ?? '—'}</td>
+                              <td className="py-3 px-3 text-right">
+                                <span className={cn('font-semibold', critique ? 'text-red' : 'text-text')}>
+                                  {p.stock_actuel}
+                                </span>
+                                {critique && (
+                                  <span className="ml-1.5 text-[10px] bg-red/15 text-red px-1.5 py-0.5 rounded">
+                                    Critique
+                                  </span>
+                                )}
+                              </td>
+                              <td className="py-3 px-3 text-right text-dim">{p.stock_min}</td>
+                              <td className="py-3 px-3 text-right text-dim">
+                                {p.prix_unitaire_ht != null ? `${Number(p.prix_unitaire_ht).toFixed(2)} EUR` : '—'}
+                              </td>
+                              <td className="py-3 px-3 text-dim">{p.emplacement ?? '—'}</td>
+                              <td className="py-3 px-4 text-right whitespace-nowrap">
+                                {peutSortir ? (
+                                  <>
+                                    {peutEntrer && (
+                                      <button
+                                        onClick={() => setPieceARanger(p)}
+                                        className="text-nikito-cyan text-[11px] font-medium mr-3 hover:underline"
+                                      >
+                                        Ranger
+                                      </button>
+                                    )}
+                                    {peutEntrer && (
+                                      <button
+                                        onClick={() => {
+                                          modStock.reset();
+                                          setMouvementPiece({ id: p.id, nom: p.nom, type: 'entree' });
+                                        }}
+                                        className="text-green text-[11px] font-medium mr-3 hover:underline"
+                                      >
+                                        +Entree
+                                      </button>
+                                    )}
+                                    <button
+                                      onClick={() => {
+                                        modStock.reset();
+                                        setMouvementPiece({ id: p.id, nom: p.nom, type: 'sortie' });
+                                      }}
+                                      className="text-red text-[11px] font-medium hover:underline"
+                                    >
+                                      -Sortie
+                                    </button>
+                                  </>
+                                ) : (
+                                  <span className="text-faint text-[11px]">Lecture seule</span>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          ))}
         </div>
       )}
 
@@ -334,6 +451,8 @@ function ContenuStock() {
         </div>
       )}
 
+      {pieceARanger && <ModaleRangerPiece piece={pieceARanger} onClose={() => setPieceARanger(null)} />}
+
       {modaleCreer && (
         <ModaleCreerPiece
           fournisseurs={fournisseurs ?? []}
@@ -358,6 +477,8 @@ function ModaleCreerPiece({
   const [stockMin, setStockMin] = useState(1);
   const [prixHt, setPrixHt] = useState('');
   const [emplacement, setEmplacement] = useState('');
+  const [parcId, setParcId] = useState('');
+  const [activiteId, setActiviteId] = useState('');
 
   const submit = async () => {
     if (!reference.trim() || !nom.trim()) return;
@@ -370,6 +491,8 @@ function ModaleCreerPiece({
         stock_min: stockMin,
         prix_unitaire_ht: prixHt ? parseFloat(prixHt) : null,
         emplacement: emplacement.trim() || null,
+        parc_id: parcId || null,
+        activite_id: activiteId || null,
       });
       onClose();
     } catch {
@@ -412,6 +535,7 @@ function ModaleCreerPiece({
               <input type="text" value={prixHt} onChange={(e) => setPrixHt(e.target.value)} placeholder="0.00" className="w-full bg-bg-deep border border-white/[0.08] rounded-[10px] p-3 text-text text-[13px] outline-none focus:border-nikito-cyan min-h-[44px]" />
             </Field>
           </div>
+          <ChampsRangement parcId={parcId} setParcId={setParcId} activiteId={activiteId} setActiviteId={setActiviteId} />
           <Field label="Emplacement">
             <input type="text" value={emplacement} onChange={(e) => setEmplacement(e.target.value)} placeholder="Ex: Etagere A3" className="w-full bg-bg-deep border border-white/[0.08] rounded-[10px] p-3 text-text text-[13px] outline-none focus:border-nikito-cyan min-h-[44px]" />
           </Field>
@@ -429,6 +553,99 @@ function ModaleCreerPiece({
             className={cn('bg-gradient-cta text-text px-6 py-2.5 rounded-[10px] text-[13px] font-bold min-h-[44px]', (!reference.trim() || !nom.trim() || creer.isPending) && 'opacity-40 cursor-not-allowed')}
           >
             {creer.isPending ? 'Creation...' : 'Creer'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const CLASSE_CHAMP = 'w-full bg-bg-deep border border-white/[0.08] rounded-[10px] p-3 text-text text-[13px] outline-none focus:border-nikito-cyan min-h-[44px]';
+
+/** Parc (vide = stock commun) et domaine d'une pièce. */
+function ChampsRangement({
+  parcId,
+  setParcId,
+  activiteId,
+  setActiviteId,
+}: {
+  parcId: string;
+  setParcId: (v: string) => void;
+  activiteId: string;
+  setActiviteId: (v: string) => void;
+}) {
+  const { data: parcs } = useParcs();
+  const { data: domaines } = useDomaines();
+  return (
+    <div className="grid grid-cols-2 gap-2.5">
+      <Field label="Parc">
+        <select value={parcId} onChange={(e) => setParcId(e.target.value)} className={CLASSE_CHAMP}>
+          <option value="">Stock commun</option>
+          {((parcs ?? []) as { id: string; code: string; nom: string }[]).map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.code} · {p.nom}
+            </option>
+          ))}
+        </select>
+      </Field>
+      <Field label="Domaine">
+        <select value={activiteId} onChange={(e) => setActiviteId(e.target.value)} className={CLASSE_CHAMP}>
+          <option value="">À classer</option>
+          {(domaines ?? []).map((d) => (
+            <option key={d.id} value={d.id}>
+              {d.nom}
+            </option>
+          ))}
+        </select>
+      </Field>
+    </div>
+  );
+}
+
+function ModaleRangerPiece({ piece, onClose }: { piece: PieceDetacheeAvecJoins; onClose: () => void }) {
+  const toast = useToast();
+  const ranger = useRangerPiece();
+  const [parcId, setParcId] = useState(piece.parc_id ?? '');
+  const [activiteId, setActiviteId] = useState(piece.activite_id ?? '');
+  const [emplacement, setEmplacement] = useState(piece.emplacement ?? '');
+
+  const submit = async () => {
+    try {
+      await ranger.mutateAsync({ id: piece.id, parc_id: parcId || null, activite_id: activiteId || null, emplacement: emplacement.trim() || null });
+      toast.success(`${piece.nom} rangée`);
+      onClose();
+    } catch {
+      // erreur affichée dans la modale (ranger.isError)
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[150] bg-black/60 flex items-end md:items-center justify-center md:p-4" onClick={onClose}>
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="w-full md:max-w-[460px] bg-bg-card rounded-t-[18px] md:rounded-[18px] border border-nikito-cyan/15 p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))]"
+      >
+        <div className="text-[11px] text-dim tracking-[1.2px] uppercase">Ranger la pièce</div>
+        <div className="text-[17px] font-semibold mt-1 mb-4">
+          {piece.nom} <span className="text-[12px] font-mono text-nikito-cyan">{piece.reference}</span>
+        </div>
+        <div className="grid gap-3.5 mb-4">
+          <ChampsRangement parcId={parcId} setParcId={setParcId} activiteId={activiteId} setActiviteId={setActiviteId} />
+          <Field label="Emplacement">
+            <input type="text" value={emplacement} onChange={(e) => setEmplacement(e.target.value)} placeholder="Ex: Etagere A3" className={CLASSE_CHAMP} />
+          </Field>
+        </div>
+        {ranger.isError && <div className="text-red text-[12px] mb-3 bg-red/10 rounded-lg p-3">Erreur : {(ranger.error as Error).message}</div>}
+        <div className="flex gap-2.5 justify-end">
+          <button onClick={onClose} className="text-dim text-[12px] px-3 py-2 min-h-[44px]">
+            Annuler
+          </button>
+          <button
+            onClick={submit}
+            disabled={ranger.isPending}
+            className={cn('bg-gradient-cta text-text px-6 py-2.5 rounded-[10px] text-[13px] font-bold min-h-[44px]', ranger.isPending && 'opacity-40')}
+          >
+            {ranger.isPending ? 'Enregistrement…' : 'Enregistrer'}
           </button>
         </div>
       </div>

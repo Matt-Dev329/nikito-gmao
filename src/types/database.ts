@@ -242,12 +242,18 @@ export interface PieceDetachee {
   prix_unitaire_ht: number | null;
   delai_reappro_jours: number | null;
   emplacement: string | null;
+  /** Parc qui détient la pièce (null = stock commun) */
+  parc_id: string | null;
+  /** Domaine : activité du catalogue de commandes */
+  activite_id: string | null;
   cree_le: string;
   modifie_le: string;
 }
 
 export interface PieceDetacheeAvecJoins extends PieceDetachee {
   fournisseurs: { nom: string; contact_tel: string | null } | null;
+  parc?: { code: string; nom: string } | null;
+  activite?: { nom: string } | null;
 }
 
 export interface MaintenancePreventive {
