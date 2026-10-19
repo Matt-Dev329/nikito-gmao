@@ -48,6 +48,8 @@ export interface ItemSaisi {
   etat: EtatControleItem;
   commentaire?: string | null;
   photo_url?: string | null;
+  /** Toutes les photos du point (la première est aussi dans photo_url) */
+  photos_urls?: string[];
 }
 
 export interface ItemSaisiMensuel extends ItemSaisi {
@@ -171,7 +173,8 @@ export function useValiderControle() {
         point_id: item.point_id,
         etat: item.etat,
         commentaire: item.commentaire ?? null,
-        photo_url: item.photo_url ?? null,
+        photo_url: item.photo_url ?? item.photos_urls?.[0] ?? null,
+        photos_urls: item.photos_urls ?? (item.photo_url ? [item.photo_url] : []),
         saisi_par_id: params.realise_par_id,
       }));
 
@@ -262,7 +265,8 @@ export function useValiderControleMensuel() {
         point_id: item.point_id,
         etat: item.etat,
         commentaire: item.commentaire ?? null,
-        photo_url: item.photo_url ?? null,
+        photo_url: item.photo_url ?? item.photos_urls?.[0] ?? null,
+        photos_urls: item.photos_urls ?? (item.photo_url ? [item.photo_url] : []),
         saisi_par_id: params.realise_par_id,
         point_libelle_snapshot: item.point_libelle_snapshot,
         point_categorie_snapshot: item.point_categorie_snapshot,

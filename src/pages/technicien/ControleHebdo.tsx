@@ -1,6 +1,6 @@
 import { useState, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ControleEcran, type PointControleVue, type ZoneVue } from '@/components/controles/ControleEcran';
+import { ControleEcran, photoManquante, type PointControleVue, type ZoneVue } from '@/components/controles/ControleEcran';
 import { ModaleQuitterSansValider } from '@/components/ui/ModaleQuitterSansValider';
 import { SelectionParc } from '@/components/controles/SelectionParc';
 import { BoutonRetourGmao } from '@/components/controles/BoutonRetourGmao';
@@ -30,6 +30,8 @@ export function ControleHebdo() {
   const toast = useToast();
 
   const [etats, setEtats] = useState<Record<string, { etat: EtatControleItem; saisiPar: string }>>({});
+  // Plusieurs photos par point (obligatoire si DEG / HS)
+  const [photos, setPhotos] = useState<Record<string, string[]>>({});
   const [zoneActive, setZoneActive] = useState<string>('');
   const [dirty, setDirty] = useState(false);
   const [showModale, setShowModale] = useState(false);
@@ -67,8 +69,10 @@ export function ControleHebdo() {
         photoObligatoire: p.photo_obligatoire,
         etat: etats[p.point_id]?.etat ?? null,
         saisiPar: etats[p.point_id]?.saisiPar,
+        photoUrl: photos[p.point_id]?.[0],
+        photosUrls: photos[p.point_id] ?? [],
       }));
-  }, [pointsBruts, activeZone, etats]);
+  }, [pointsBruts, activeZone, etats, photos]);
 
   const trigramme = utilisateur?.trigramme ?? utilisateur?.prenom?.slice(0, 2).toUpperCase() ?? '??';
 
@@ -95,6 +99,18 @@ export function ControleHebdo() {
   const totalPoints = zones.reduce((sum, z) => sum + z.count, 0);
   const totalFaits = zones.reduce((sum, z) => sum + z.fait, 0);
   const restants = totalPoints - totalFaits;
+  const photosManquantes = (pointsBruts ?? []).filter((p) =>
+    photoManquante({
+      id: p.point_id,
+      libelle: p.libelle,
+      ordre: p.ordre,
+      zone: p.categorie_id,
+      bloquantSiKO: p.bloquant,
+      photoObligatoire: p.photo_obligatoire,
+      etat: etats[p.point_id]?.etat ?? null,
+      photoUrl: photos[p.point_id]?.[0],
+    })
+  ).length;
 
   const handleValider = async () => {
     if (!parcId || !utilisateur || !pointsBruts) return;
@@ -110,6 +126,8 @@ export function ControleHebdo() {
       .map((p) => ({
         point_id: p.point_id,
         etat: etats[p.point_id].etat,
+        photo_url: photos[p.point_id]?.[0] ?? null,
+        photos_urls: photos[p.point_id] ?? [],
       }));
 
     try {
@@ -195,15 +213,18 @@ export function ControleHebdo() {
         agentActuel={{ initiales: trigramme, prenom: utilisateur?.prenom ?? '' }}
         onChangeZone={setZoneActive}
         onSetEtat={setEtatPoint}
+        onPhotosChange={(id, c) => { setPhotos((prev) => ({ ...prev, [id]: c })); setDirty(true); }}
         onRetour={handleRetour}
         onValider={handleValider}
-        validationDisabled={restants > 0 || validerMutation.isPending}
+        validationDisabled={restants > 0 || photosManquantes > 0 || validerMutation.isPending}
         validationDisabledRaison={
           validerMutation.isPending
             ? 'Enregistrement en cours...'
             : restants > 0
               ? `Disponible quand le pack est complet (${restants} restants)`
-              : undefined
+              : photosManquantes > 0
+                ? `Photo obligatoire manquante (${photosManquantes} point${photosManquantes > 1 ? 's' : ''})`
+                : undefined
         }
         headerRightSlot={<BoutonRetourGmao />}
       />

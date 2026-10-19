@@ -10,12 +10,15 @@ import { aujourdhuiParis } from '@/lib/dates';
 import { useParcs } from '@/hooks/queries/useReferentiel';
 import { usePointsControle, useValiderControleMensuel } from '@/hooks/queries/useControles';
 import { useUtilisateursActifs } from '@/hooks/queries/useUtilisateurs';
+import { PhotosMultiples } from '@/components/shared/PhotosMultiples';
 import type { EtatControleItem } from '@/types/database';
 
 interface EtatPointMensuel {
   etat: EtatControleItem;
   commentaire: string;
   saisiPar: string;
+  /** Photos du point (obligatoire si DEG / HS) */
+  photos?: string[];
 }
 
 function SignatureCanvas({
@@ -187,7 +190,7 @@ export function ControleMensuel() {
   const setEtatPoint = (id: string, etat: EtatControleItem) => {
     setEtats((prev) => ({
       ...prev,
-      [id]: { etat, commentaire: prev[id]?.commentaire ?? '', saisiPar: trigramme },
+      [id]: { etat, commentaire: prev[id]?.commentaire ?? '', photos: prev[id]?.photos ?? [], saisiPar: trigramme },
     }));
     setDirty(true);
     const currentIdx = pointsZoneActive.findIndex((p) => p.point_id === id);
@@ -206,6 +209,15 @@ export function ControleMensuel() {
       if (!existing) return prev;
       return { ...prev, [id]: { ...existing, commentaire } };
     });
+  };
+
+  const setPhotos = (id: string, photos: string[]) => {
+    setEtats((prev) => {
+      const existing = prev[id];
+      if (!existing) return prev;
+      return { ...prev, [id]: { ...existing, photos } };
+    });
+    setDirty(true);
   };
 
   const retourDestination = utilisateur?.role_code === 'technicien' ? '/tech/operations' : '/gmao';
@@ -234,8 +246,14 @@ export function ControleMensuel() {
     });
   }, [pointsBruts, etats]);
 
+  // Photo obligatoire pour un point dégradé ou HS
+  const photosManquantes = (pointsBruts ?? []).filter((p) => {
+    const e = etats[p.point_id];
+    return !!e && (e.etat === 'degrade' || e.etat === 'hs') && !(e.photos?.length);
+  }).length;
+
   const binomeOk = binomeNom.trim().length > 0 && signatureControleur1.length > 0 && signatureControleur2.length > 0;
-  const canValidate = allPointsRemplis && allCommentsOk && binomeOk && !validerMutation.isPending;
+  const canValidate = allPointsRemplis && allCommentsOk && photosManquantes === 0 && binomeOk && !validerMutation.isPending;
 
   const validationRaison = validerMutation.isPending
     ? 'Enregistrement en cours...'
@@ -243,6 +261,8 @@ export function ControleMensuel() {
       ? `${totalPoints - totalFaits} points restants`
       : !allCommentsOk
         ? 'Commentaire requis pour chaque point'
+        : photosManquantes > 0
+          ? `Photo obligatoire manquante (${photosManquantes} point${photosManquantes > 1 ? 's' : ''} DEG / HS)`
         : !binomeNom.trim()
           ? 'Nom du binome requis'
           : !signatureControleur1
@@ -262,6 +282,8 @@ export function ControleMensuel() {
         point_id: p.point_id,
         etat: etats[p.point_id].etat,
         commentaire: etats[p.point_id].commentaire || null,
+        photo_url: etats[p.point_id].photos?.[0] ?? null,
+        photos_urls: etats[p.point_id].photos ?? [],
         point_libelle_snapshot: p.libelle,
         point_categorie_snapshot: p.categorie_nom,
         point_type_controle_snapshot: 'mensuel',
@@ -498,6 +520,16 @@ export function ControleMensuel() {
                             e.commentaire.trim() ? 'border-white/[0.08]' : 'border-red/40',
                           )}
                         />
+                        <div className="mt-2">
+                          <PhotosMultiples
+                            bucketName="alba-controles"
+                            storagePath={`${parc?.code ?? 'parc'}/mensuel/${p.point_id}`}
+                            chemins={e.photos ?? []}
+                            onChange={(c) => setPhotos(p.point_id, c)}
+                            required={isHS || isDeg}
+                            label={isHS || isDeg ? '📷 Photo obligatoire' : '📷 Ajouter une photo (facultatif)'}
+                          />
+                        </div>
                       </div>
                     )}
                   </div>
