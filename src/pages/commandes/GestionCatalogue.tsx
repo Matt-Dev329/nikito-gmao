@@ -10,6 +10,7 @@ import {
   type ProduitCommande,
 } from '@/hooks/queries/useCommandes';
 import { usePiecesStockOptions } from '@/hooks/queries/useStockOptions';
+import { useParcs } from '@/hooks/queries/useReferentiel';
 import { formatPrix } from './format';
 
 const champ =
@@ -70,6 +71,7 @@ export function GestionCatalogue() {
                     <div className="text-[15px] font-semibold flex items-center gap-2">
                       {a.nom}
                       {!a.actif && <span className="text-[10px] bg-white/[0.06] text-dim px-1.5 py-0.5 rounded">Masquée</span>}
+                      <BadgeParcs ids={a.parc_ids} />
                     </div>
                     {a.description && <div className="text-[12px] text-dim">{a.description}</div>}
                   </div>
@@ -96,7 +98,10 @@ export function GestionCatalogue() {
                     {siens.map((p) => (
                       <div key={p.id} className="flex items-center gap-3 px-4 py-3">
                         <div className="flex-1 min-w-0">
-                          <div className={cn('text-[13px]', !p.actif && 'text-faint line-through')}>{p.nom}</div>
+                          <div className={cn('text-[13px] flex items-center gap-2', !p.actif && 'text-faint line-through')}>
+                            {p.nom}
+                            <BadgeParcs ids={p.parc_ids} />
+                          </div>
                           <div className="text-[11px] text-dim">
                             {[p.reference, `${formatPrix(p.prix_unitaire)} / ${p.unite}`].filter(Boolean).join(' · ')}
                           </div>
@@ -125,6 +130,59 @@ export function GestionCatalogue() {
         <ModaleProduit initial={produitEdite} activites={activites} onClose={() => setProduitEdite(null)} />
       )}
     </div>
+  );
+}
+
+type ParcCourt = { id: string; code: string; nom: string };
+
+/** Codes des parcs qui voient l'élément (rien si tous les parcs). */
+function BadgeParcs({ ids }: { ids: string[] | undefined }) {
+  const { data } = useParcs();
+  if (!ids?.length) return null;
+  const codes = ((data ?? []) as ParcCourt[]).filter((p) => ids.includes(p.id)).map((p) => p.code);
+  return (
+    <span className="text-[10px] bg-nikito-cyan/10 text-nikito-cyan px-1.5 py-0.5 rounded font-normal no-underline">
+      {codes.length ? codes.join(' · ') : `${ids.length} parc(s)`}
+    </span>
+  );
+}
+
+/** Visibilité par parc : aucun parc coché = tous les parcs. */
+function ChoixParcs({ valeur, onChange, quoi }: { valeur: string[]; onChange: (ids: string[]) => void; quoi: string }) {
+  const { data } = useParcs();
+  const parcs = (data ?? []) as ParcCourt[];
+  const basculer = (id: string) => onChange(valeur.includes(id) ? valeur.filter((x) => x !== id) : [...valeur, id]);
+  return (
+    <Field label="Parcs qui voient">
+      <div className="flex flex-wrap gap-1.5">
+        <button
+          type="button"
+          onClick={() => onChange([])}
+          className={cn(
+            'px-3 rounded-full text-[12px] min-h-[36px] border',
+            valeur.length === 0 ? 'bg-nikito-cyan/15 border-nikito-cyan/50 text-nikito-cyan' : 'bg-bg-deep border-white/[0.08] text-dim'
+          )}
+        >
+          Tous les parcs
+        </button>
+        {parcs.map((p) => (
+          <button
+            key={p.id}
+            type="button"
+            onClick={() => basculer(p.id)}
+            className={cn(
+              'px-3 rounded-full text-[12px] min-h-[36px] border',
+              valeur.includes(p.id) ? 'bg-nikito-cyan/15 border-nikito-cyan/50 text-nikito-cyan' : 'bg-bg-deep border-white/[0.08] text-dim'
+            )}
+          >
+            {p.code} · {p.nom}
+          </button>
+        ))}
+      </div>
+      <div className="text-[11px] text-faint mt-1">
+        {valeur.length === 0 ? `Tous les parcs voient ${quoi}.` : `Seuls les parcs cochés voient ${quoi}.`}
+      </div>
+    </Field>
   );
 }
 
@@ -185,6 +243,7 @@ function ModaleActivite({ initiale, onClose }: { initiale: Partial<ActiviteComma
   const [nom, setNom] = useState(initiale.nom ?? '');
   const [description, setDescription] = useState(initiale.description ?? '');
   const [actif, setActif] = useState(initiale.actif ?? true);
+  const [parcIds, setParcIds] = useState<string[]>(initiale.parc_ids ?? []);
 
   const save = async () => {
     try {
@@ -194,6 +253,7 @@ function ModaleActivite({ initiale, onClose }: { initiale: Partial<ActiviteComma
         description: description.trim() || null,
         ordre: initiale.ordre ?? 0,
         actif,
+        parc_ids: parcIds,
       });
       toast.success('Activité enregistrée');
       onClose();
@@ -215,6 +275,7 @@ function ModaleActivite({ initiale, onClose }: { initiale: Partial<ActiviteComma
           <input type="checkbox" checked={actif} onChange={(e) => setActif(e.target.checked)} />
           Visible dans le catalogue
         </label>
+        <ChoixParcs valeur={parcIds} onChange={setParcIds} quoi="cette activité et ses produits" />
       </div>
       <BoutonsModale onClose={onClose} onSave={save} disabled={!nom.trim()} pending={enregistrer.isPending} />
     </Modale>
@@ -256,6 +317,7 @@ function ModaleProduit({
   }, [catalogue, activiteId, categorie]);
   const { data: pieces } = usePiecesStockOptions();
   const [actif, setActif] = useState(initial.actif ?? true);
+  const [parcIds, setParcIds] = useState<string[]>(initial.parc_ids ?? []);
 
   const prixNum = prix.trim() ? Number(prix.replace(',', '.')) : null;
   const prixInvalide = prixNum !== null && (Number.isNaN(prixNum) || prixNum < 0);
@@ -276,6 +338,7 @@ function ModaleProduit({
         sous_categorie: (categorie.trim() && sousCategorie.trim()) || null,
         ordre: initial.ordre ?? 0,
         actif,
+        parc_ids: parcIds,
       });
       toast.success('Produit enregistré');
       onClose();
@@ -368,6 +431,7 @@ function ModaleProduit({
           <input type="checkbox" checked={actif} onChange={(e) => setActif(e.target.checked)} />
           Disponible à la commande
         </label>
+        <ChoixParcs valeur={parcIds} onChange={setParcIds} quoi="ce produit" />
       </div>
       <BoutonsModale
         onClose={onClose}

@@ -23,6 +23,8 @@ export interface ActiviteCommande {
   description: string | null;
   ordre: number;
   actif: boolean;
+  /** Parcs qui voient l'activité (vide = tous les parcs) */
+  parc_ids: string[];
 }
 
 export interface ProduitCommande {
@@ -41,6 +43,14 @@ export interface ProduitCommande {
   sous_categorie: string | null;
   ordre: number;
   actif: boolean;
+  /** Parcs qui voient le produit (vide = tous les parcs) */
+  parc_ids: string[];
+}
+
+/** Produit commandable pour ce parc (produit et activité ouverts à ce parc). */
+export function disponiblePourParc(produit: ProduitCommande, activite: ActiviteCommande | undefined, parcId: string): boolean {
+  const ouvert = (ids: string[] | undefined) => !ids?.length || ids.includes(parcId);
+  return ouvert(produit.parc_ids) && ouvert(activite?.parc_ids);
 }
 
 export interface LigneCommande {
@@ -330,8 +340,8 @@ export function useChangerStatutCommande() {
 // Gestion du catalogue (gestionnaires)
 // ---------------------------------------------------------------------------
 
-export type ActiviteInput = Pick<ActiviteCommande, 'nom' | 'description' | 'ordre' | 'actif'>;
-export type ProduitInput = Omit<ProduitCommande, 'id'>;
+export type ActiviteInput = Pick<ActiviteCommande, 'nom' | 'description' | 'ordre' | 'actif'> & { parc_ids?: string[] };
+export type ProduitInput = Omit<ProduitCommande, 'id' | 'parc_ids'> & { parc_ids?: string[] };
 
 export function useEnregistrerActivite() {
   const qc = useQueryClient();

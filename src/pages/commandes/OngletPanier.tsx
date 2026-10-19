@@ -5,7 +5,7 @@ import { useParcCourant } from '@/hooks/useParcCourant';
 import { useParcs } from '@/hooks/queries/useReferentiel';
 import { useToast } from '@/components/ui/ToastProvider';
 import { usePanier } from '@/hooks/usePanier';
-import { useCatalogueCommandes, usePasserCommande } from '@/hooks/queries/useCommandes';
+import { disponiblePourParc, useCatalogueCommandes, usePasserCommande } from '@/hooks/queries/useCommandes';
 import { Quantite } from './OngletCatalogue';
 import { formatPrix } from './format';
 
@@ -38,20 +38,27 @@ export function OngletPanier({
 
   const items = useMemo(() => {
     const produits = new Map((catalogue?.produits ?? []).map((p) => [p.id, p]));
-    const activites = new Map((catalogue?.activites ?? []).map((a) => [a.id, a.nom]));
+    const activites = new Map((catalogue?.activites ?? []).map((a) => [a.id, a]));
     return Object.entries(lignes).map(([id, quantite]) => {
       const produit = produits.get(id);
-      return { id, quantite, produit, activite: produit ? activites.get(produit.activite_id) : undefined };
+      const act = produit ? activites.get(produit.activite_id) : undefined;
+      return { id, quantite, produit, activite: act?.nom, horsParc: !!produit && !!parcId && !disponiblePourParc(produit, act, parcId) };
     });
-  }, [lignes, catalogue]);
+  }, [lignes, catalogue, parcId]);
 
   const indisponibles = items.filter((i) => !i.produit);
+  // Produits réservés à d'autres parcs que celui de la commande
+  const horsParc = items.filter((i) => i.horsParc);
   const total = items.reduce((s, i) => s + (i.produit?.prix_unitaire ?? 0) * i.quantite, 0);
   const prixManquant = items.some((i) => i.produit && i.produit.prix_unitaire == null);
 
   const envoyer = async () => {
     if (!parcId) {
       toast.error('Choisis le parc concerné par la commande.');
+      return;
+    }
+    if (horsParc.length > 0) {
+      toast.error(`${horsParc.length} produit(s) ne sont pas proposés pour ce parc : retire-les ou change de parc.`);
       return;
     }
     try {
@@ -158,6 +165,11 @@ export function OngletPanier({
           <span className="text-[18px] font-semibold">{formatPrix(total)}</span>
         </div>
         {prixManquant && <p className="text-faint text-[11px] mb-2">Certains produits n'ont pas encore de prix.</p>}
+        {horsParc.length > 0 && (
+          <p className="text-red text-[11px] mb-2">
+            Pas proposé(s) pour ce parc : {horsParc.map((i) => i.produit?.nom).join(', ')}. Retire-les ou change de parc.
+          </p>
+        )}
         {indisponibles.length > 0 && (
           <p className="text-amber text-[11px] mb-2">
             {indisponibles.length} produit(s) ne sont plus au catalogue et ne seront pas commandés.
