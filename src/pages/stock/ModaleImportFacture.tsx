@@ -4,6 +4,7 @@ import { supabase } from '@/lib/supabase';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
 import { useCatalogueCommandes } from '@/hooks/queries/useCommandes';
+import { useParcs } from '@/hooks/queries/useReferentiel';
 import { useToast } from '@/components/ui/ToastProvider';
 
 interface LigneFacture {
@@ -42,6 +43,10 @@ export function ModaleImportFacture({ onClose }: { onClose: () => void }) {
   const { utilisateur } = useAuth();
   const { data: catalogue } = useCatalogueCommandes();
   const activites = catalogue?.activites ?? [];
+  const { data: parcsData } = useParcs();
+  const parcs = (parcsData ?? []) as { id: string; code: string; nom: string }[];
+  // Parc qui reçoit les pièces (vide = stock commun) ; un seul parc : choisi d'office
+  const [parcId, setParcId] = useState(() => (utilisateur?.parc_ids?.length === 1 ? utilisateur.parc_ids[0] : ''));
 
   const [etape, setEtape] = useState<'fichier' | 'lecture' | 'relecture'>('fichier');
   const [factureId, setFactureId] = useState<string | null>(null);
@@ -99,6 +104,21 @@ export function ModaleImportFacture({ onClose }: { onClose: () => void }) {
     setLignes((ls) => ls.map((l) => ({ ...l, ajouter_stock: oui })));
   };
 
+  const ajouterArticle = () =>
+    setLignes((ls) => [
+      ...ls,
+      {
+        reference: '',
+        designation: '',
+        quantite: 1,
+        prix_unitaire_ht: null,
+        activite_id: '',
+        categorie: '',
+        ajouter_catalogue: true,
+        ajouter_stock: choixStock ?? false,
+      },
+    ]);
+
   const sansActivite = lignes.filter((l) => l.ajouter_catalogue && !l.activite_id).length;
 
   const integrer = async () => {
@@ -108,6 +128,12 @@ export function ModaleImportFacture({ onClose }: { onClose: () => void }) {
       return;
     }
     setEnCours(true);
+    const { error: errParc } = await supabase.from('factures_stock').update({ parc_id: parcId || null }).eq('id', factureId);
+    if (errParc) {
+      setEnCours(false);
+      toast.error(errParc.message);
+      return;
+    }
     const { data, error } = await supabase.rpc('integrer_facture', {
       p_facture_id: factureId,
       p_lignes: lignes.map((l) => ({ ...l, prix_unitaire_ht: l.prix_unitaire_ht ?? '' })),
@@ -191,6 +217,18 @@ export function ModaleImportFacture({ onClose }: { onClose: () => void }) {
               </div>
             </div>
 
+            <label className="grid gap-1 mb-3 text-[13px]">
+              <span className="text-[11px] text-dim">Parc qui reçoit les pièces</span>
+              <select value={parcId} onChange={(e) => setParcId(e.target.value)} className={cn(champ, 'sm:max-w-[320px]')}>
+                <option value="">Stock commun (tous parcs)</option>
+                {parcs.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.code} · {p.nom}
+                  </option>
+                ))}
+              </select>
+            </label>
+
             {/* La question : stock ou pas */}
             <div className={cn('rounded-xl p-3 mb-3 border', choixStock === null ? 'border-amber/40 bg-amber/[0.06]' : 'border-white/[0.06]')}>
               <div className="text-[13px] font-semibold mb-2">Veux-tu ajouter ces pièces au stock ?</div>
@@ -222,7 +260,13 @@ export function ModaleImportFacture({ onClose }: { onClose: () => void }) {
               {lignes.map((l, i) => (
                 <div key={i} className="bg-bg-deep/60 border border-white/[0.06] rounded-xl p-3 grid gap-2">
                   <div className="grid sm:grid-cols-[1fr_140px] gap-2">
-                    <input value={l.designation} onChange={(e) => modifier(i, { designation: e.target.value })} className={champ} aria-label="Désignation" />
+                    <input
+                      value={l.designation}
+                      onChange={(e) => modifier(i, { designation: e.target.value })}
+                      placeholder="Désignation de l’article"
+                      className={cn(champ, !l.designation.trim() && 'border-amber/60')}
+                      aria-label="Désignation"
+                    />
                     <input value={l.reference} onChange={(e) => modifier(i, { reference: e.target.value })} placeholder="Référence" className={cn(champ, 'font-mono')} />
                   </div>
                   <div className="grid grid-cols-2 sm:grid-cols-[90px_120px_1fr_1fr] gap-2">
@@ -283,6 +327,12 @@ export function ModaleImportFacture({ onClose }: { onClose: () => void }) {
                   </div>
                 </div>
               ))}
+              <button
+                onClick={ajouterArticle}
+                className="border border-dashed border-nikito-cyan/40 text-nikito-cyan rounded-xl text-[13px] font-semibold min-h-[44px]"
+              >
+                + Ajouter un article
+              </button>
             </div>
 
             <div className="flex gap-2 justify-end">
