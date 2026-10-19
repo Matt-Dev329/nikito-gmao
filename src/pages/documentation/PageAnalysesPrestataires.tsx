@@ -64,6 +64,18 @@ const RESULTATS: Record<string, { label: string; classe: string }> = {
 const GRAVITES: Record<string, string> = { bloquante: 'text-red', majeure: 'text-amber', mineure: 'text-dim' };
 const ORDRE_GRAVITE: Record<string, number> = { bloquante: 0, majeure: 1, mineure: 2 };
 
+const TOUS_PARCS = 'Tous les parcs';
+// Parcs dans l'ordre des codes, « Tous les parcs » en dernier ; domaines alphabétiques, « À classer » en dernier
+const trierParcs = (a: string, b: string) => (a === TOUS_PARCS ? 1 : b === TOUS_PARCS ? -1 : a.localeCompare(b, 'fr'));
+const trierCategories = (a: string, b: string) => (a === 'À classer' ? 1 : b === 'À classer' ? -1 : a.localeCompare(b, 'fr'));
+
+/** Groupes distincts (avec leur nombre d'éléments), triés. */
+function compter<T>(elements: T[], cle: (e: T) => string, trier: (a: string, b: string) => number): [string, number][] {
+  const m = new Map<string, number>();
+  elements.forEach((e) => m.set(cle(e), (m.get(cle(e)) ?? 0) + 1));
+  return [...m.entries()].sort((a, b) => trier(a[0], b[0]));
+}
+
 type Filtre = 'tous' | 'a_corriger' | 'a_renouveler' | 'conformes';
 
 const analyseDe = (r: RapportAnalyse): Analyse | null => (Array.isArray(r.analyse) ? r.analyse[0] ?? null : r.analyse);
@@ -109,6 +121,7 @@ function ContenuAnalyses() {
   const [filtre, setFiltre] = useState<Filtre>('tous');
   const [recherche, setRecherche] = useState('');
   const [categorie, setCategorie] = useState<string | null>(null);
+  const [parc, setParc] = useState<string | null>(null);
   // Mode « mail de réparation » : rapports cochés
   const [selection, setSelection] = useState<Set<string> | null>(null);
   const [mailOuvert, setMailOuvert] = useState(false);
@@ -120,6 +133,7 @@ function ContenuAnalyses() {
       return n;
     });
   const categorieDe = (r: RapportAnalyse) => r.activite?.trim() || 'À classer';
+  const parcDe = (r: RapportAnalyse) => (r.parc ? `${r.parc.code} · ${r.parc.nom}` : TOUS_PARCS);
 
   const aCorriger = (r: RapportAnalyse) => defautsOuverts(r).length > 0;
   const aRenouveler = (r: RapportAnalyse) => {
@@ -139,6 +153,7 @@ function ContenuAnalyses() {
               ? analyseDe(r)?.resultat_global === 'conforme'
               : true
       )
+      .filter((r) => !parc || parcDe(r) === parc)
       .filter((r) => !categorie || categorieDe(r) === categorie)
       .filter(
         (r) =>
@@ -154,19 +169,27 @@ function ContenuAnalyses() {
         if (rang(a) !== rang(b)) return rang(a) - rang(b);
         return (echeanceDe(a) ?? '9999').localeCompare(echeanceDe(b) ?? '9999');
       });
-  }, [rapports, filtre, recherche, categorie]);
+  }, [rapports, filtre, recherche, categorie, parc]);
 
-  // Catégories créées au fil des analyses (rangement automatique)
-  const categories = useMemo(() => {
-    const m = new Map<string, number>();
-    (rapports ?? []).forEach((r) => m.set(categorieDe(r), (m.get(categorieDe(r)) ?? 0) + 1));
-    return [...m.entries()].sort((a, b) => (a[0] === 'À classer' ? 1 : b[0] === 'À classer' ? -1 : a[0].localeCompare(b[0], 'fr')));
-  }, [rapports]);
-  const groupes = useMemo(() => {
-    const m = new Map<string, RapportAnalyse[]>();
-    liste.forEach((r) => m.set(categorieDe(r), [...(m.get(categorieDe(r)) ?? []), r]));
-    return [...m.entries()].sort((a, b) => (a[0] === 'À classer' ? 1 : b[0] === 'À classer' ? -1 : a[0].localeCompare(b[0], 'fr')));
-  }, [liste]);
+  const parcs = useMemo(() => compter(rapports ?? [], parcDe, trierParcs), [rapports]);
+  // Catégories (domaines) créées au fil des analyses, dans le parc choisi
+  const categories = useMemo(
+    () => compter((rapports ?? []).filter((r) => !parc || parcDe(r) === parc), categorieDe, trierCategories),
+    [rapports, parc]
+  );
+  // Rangement : parc, puis domaine
+  const groupes = useMemo(
+    () =>
+      compter(liste, parcDe, trierParcs).map(([p, total]) => {
+        const duParc = liste.filter((r) => parcDe(r) === p);
+        const domaines: [string, RapportAnalyse[]][] = compter(duParc, categorieDe, trierCategories).map(([c]) => [
+          c,
+          duParc.filter((r) => categorieDe(r) === c),
+        ]);
+        return { p, total, domaines };
+      }),
+    [liste]
+  );
 
   const compte = (f: Filtre) =>
     (rapports ?? []).filter((r) =>
@@ -228,10 +251,22 @@ function ContenuAnalyses() {
             </Pill>
           ))}
         </div>
+        {parcs.length > 1 && (
+          <div className="flex gap-1.5 overflow-x-auto pb-1">
+            <Pill variant="cyan" active={!parc} onClick={() => setParc(null)}>
+              Tous les parcs
+            </Pill>
+            {parcs.map(([p, n]) => (
+              <Pill key={p} variant="cyan" active={parc === p} onClick={() => setParc(p)}>
+                {p} <span className="opacity-60">· {n}</span>
+              </Pill>
+            ))}
+          </div>
+        )}
         {categories.length > 1 && (
           <div className="flex gap-1.5 overflow-x-auto pb-1">
             <Pill variant="cyan" active={!categorie} onClick={() => setCategorie(null)}>
-              Toutes catégories
+              Tous domaines
             </Pill>
             {categories.map(([c, n]) => (
               <Pill key={c} variant="cyan" active={categorie === c} onClick={() => setCategorie(c)}>
@@ -263,18 +298,27 @@ function ContenuAnalyses() {
         </div>
       ) : (
         <div className="flex flex-col gap-6">
-          {groupes.map(([c, rs]) => (
-            <section key={c}>
+          {groupes.map(({ p, total, domaines }) => (
+            <section key={p}>
               <h2 className="text-[13px] text-dim uppercase tracking-wider mb-2">
-                {c} <span className="text-faint">· {rs.length}</span>
+                {p} <span className="text-faint">· {total}</span>
               </h2>
-              <div className="flex flex-col gap-3">
-                {rs.map((r) => (
-                  <CarteAnalyse
-                    key={r.id}
-                    rapport={r}
-                    selection={selection ? { cochee: selection.has(r.id), possible: aCorriger(r), basculer: () => basculer(r.id) } : null}
-                  />
+              <div className="flex flex-col gap-4 pl-3 border-l border-white/[0.06]">
+                {domaines.map(([c, rs]) => (
+                  <div key={c}>
+                    <h3 className="text-[12px] text-nikito-cyan font-semibold mb-2">
+                      {c} <span className="text-faint font-normal">· {rs.length}</span>
+                    </h3>
+                    <div className="flex flex-col gap-3">
+                      {rs.map((r) => (
+                        <CarteAnalyse
+                          key={r.id}
+                          rapport={r}
+                          selection={selection ? { cochee: selection.has(r.id), possible: aCorriger(r), basculer: () => basculer(r.id) } : null}
+                        />
+                      ))}
+                    </div>
+                  </div>
                 ))}
               </div>
             </section>

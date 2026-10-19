@@ -105,6 +105,19 @@ function useDocuments(type: TypeDocument) {
   });
 }
 
+const TOUS_PARCS = 'Tous les parcs';
+const A_CLASSER = /^À classer/;
+// Parcs dans l'ordre des codes, « Tous les parcs » en dernier
+const trierGroupes = (a: string, b: string) => (a === TOUS_PARCS ? 1 : b === TOUS_PARCS ? -1 : a.localeCompare(b, 'fr'));
+// Domaines par ordre alphabétique, « À classer » en dernier
+const trierDomaines = (a: string, b: string) => (A_CLASSER.test(a) ? 1 : A_CLASSER.test(b) ? -1 : a.localeCompare(b, 'fr'));
+
+function parDomaine<T>(docs: T[], domaineDe: (d: T) => string): [string, T[]][] {
+  const m = new Map<string, T[]>();
+  docs.forEach((d) => m.set(domaineDe(d), [...(m.get(domaineDe(d)) ?? []), d]));
+  return [...m.entries()].sort((a, b) => trierDomaines(a[0], b[0]));
+}
+
 /** Plans (par parc) ou manuels (par activité) : consultation et ajout de documents PDF / images. */
 export function PageDocumentsTechniques({ type }: { type: TypeDocument }) {
   const { utilisateur } = useAuth();
@@ -119,16 +132,18 @@ function ContenuDocuments({ type }: { type: TypeDocument }) {
   const t = TEXTES[type];
   const { data: documents, isLoading, isError, error } = useDocuments(type);
   const [filtre, setFiltre] = useState<string | null>(null);
+  const [filtreDomaine, setFiltreDomaine] = useState<string | null>(null);
   const [recherche, setRecherche] = useState('');
   const [ajout, setAjout] = useState(false);
 
-  // Plans rangés par parc, manuels par activité
+  // Plans et rapports prestataires rangés par parc (puis domaine), manuels par activité
+  const domaineDe = (d: DocumentTechnique) => d.activite?.trim() || 'À classer (analyse en cours)';
   const groupeDe = (d: DocumentTechnique) =>
-    type === 'plan'
+    type === 'plan' || type === 'prestataire'
       ? d.parc
         ? `${d.parc.code} · ${d.parc.nom}`
-        : 'Tous les parcs'
-      : d.activite || (type === 'prestataire' ? 'À classer (analyse en cours)' : 'Autres');
+        : TOUS_PARCS
+      : d.activite || 'Autres';
 
   const categoriesExistantes = useMemo(
     () => [...new Set((documents ?? []).map((d) => (d.activite ?? '').trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'fr')),
@@ -138,21 +153,34 @@ function ContenuDocuments({ type }: { type: TypeDocument }) {
   const groupesDispo = useMemo(() => {
     const m = new Map<string, number>();
     (documents ?? []).forEach((d) => m.set(groupeDe(d), (m.get(groupeDe(d)) ?? 0) + 1));
-    return [...m.entries()].sort((a, b) => a[0].localeCompare(b[0], 'fr'));
+    return [...m.entries()].sort((a, b) => trierGroupes(a[0], b[0]));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [documents, type]);
   const filtreActif = filtre && groupesDispo.some(([g]) => g === filtre) ? filtre : null;
+
+  // Rapports prestataires : second filtre par domaine (dans le parc choisi)
+  const domainesDispo = useMemo(() => {
+    if (type !== 'prestataire') return [];
+    const m = new Map<string, number>();
+    (documents ?? [])
+      .filter((d) => !filtreActif || groupeDe(d) === filtreActif)
+      .forEach((d) => m.set(domaineDe(d), (m.get(domaineDe(d)) ?? 0) + 1));
+    return [...m.entries()].sort((a, b) => trierDomaines(a[0], b[0]));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [documents, type, filtreActif]);
+  const domaineActif = filtreDomaine && domainesDispo.some(([g]) => g === filtreDomaine) ? filtreDomaine : null;
 
   const groupes = useMemo(() => {
     const q = recherche.trim().toLowerCase();
     const m = new Map<string, DocumentTechnique[]>();
     (documents ?? [])
       .filter((d) => !filtreActif || groupeDe(d) === filtreActif)
+      .filter((d) => !domaineActif || domaineDe(d) === domaineActif)
       .filter((d) => !q || [d.titre, d.description, d.activite, d.parc?.nom, d.prestataire].filter(Boolean).join(' ').toLowerCase().includes(q))
       .forEach((d) => m.set(groupeDe(d), [...(m.get(groupeDe(d)) ?? []), d]));
-    return [...m.entries()].sort((a, b) => a[0].localeCompare(b[0], 'fr'));
+    return [...m.entries()].sort((a, b) => trierGroupes(a[0], b[0]));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [documents, filtreActif, recherche, type]);
+  }, [documents, filtreActif, domaineActif, recherche, type]);
 
   return (
     <div className="p-4 md:p-6 md:px-7">
@@ -184,10 +212,22 @@ function ContenuDocuments({ type }: { type: TypeDocument }) {
         {groupesDispo.length > 0 && (
           <div className="flex gap-1.5 overflow-x-auto pb-1">
             <Pill variant="cyan" active={!filtreActif} onClick={() => setFiltre(null)}>
-              Tous <span className="opacity-60">· {(documents ?? []).length}</span>
+              {type === 'prestataire' ? 'Tous les parcs' : 'Tous'} <span className="opacity-60">· {(documents ?? []).length}</span>
             </Pill>
             {groupesDispo.map(([g, n]) => (
               <Pill key={g} variant="cyan" active={filtreActif === g} onClick={() => setFiltre(g)}>
+                {g} <span className="opacity-60">· {n}</span>
+              </Pill>
+            ))}
+          </div>
+        )}
+        {domainesDispo.length > 1 && (
+          <div className="flex gap-1.5 overflow-x-auto pb-1">
+            <Pill active={!domaineActif} onClick={() => setFiltreDomaine(null)}>
+              Tous domaines
+            </Pill>
+            {domainesDispo.map(([g, n]) => (
+              <Pill key={g} active={domaineActif === g} onClick={() => setFiltreDomaine(g)}>
                 {g} <span className="opacity-60">· {n}</span>
               </Pill>
             ))}
@@ -212,7 +252,20 @@ function ContenuDocuments({ type }: { type: TypeDocument }) {
               <h2 className="text-[13px] text-dim uppercase tracking-wider mb-2">
                 {g} <span className="text-faint">· {docs.length}</span>
               </h2>
-              <GrilleDocuments documents={docs} peutEditer={peutEditer} type={type} categories={categoriesExistantes} />
+              {type === 'prestataire' ? (
+                <div className="flex flex-col gap-4 pl-3 border-l border-white/[0.06]">
+                  {parDomaine(docs, domaineDe).map(([dom, ds]) => (
+                    <div key={dom}>
+                      <h3 className="text-[12px] text-nikito-cyan font-semibold mb-2">
+                        {dom} <span className="text-faint font-normal">· {ds.length}</span>
+                      </h3>
+                      <GrilleDocuments documents={ds} peutEditer={peutEditer} type={type} categories={categoriesExistantes} />
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <GrilleDocuments documents={docs} peutEditer={peutEditer} type={type} categories={categoriesExistantes} />
+              )}
             </section>
           ))}
         </div>
