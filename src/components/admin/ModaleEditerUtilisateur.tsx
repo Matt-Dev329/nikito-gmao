@@ -6,6 +6,7 @@ import {
   useRoles,
   useModifierUtilisateur,
   useDefinirProfilTechnicien,
+  useUtilisateursActifs,
   PROFILS_TECHNICIEN,
   type ProfilTechnicien,
   type UtilisateurRow,
@@ -29,6 +30,13 @@ export function ModaleEditerUtilisateur({ open, onClose, utilisateur }: Props) {
   // Profil technicien (Arcade / Nikito) : réglé par le chef d'équipe, la direction ou l'admin IT
   const peutReglerProfil = ['chef_maintenance', 'direction', 'admin_it'].includes(moi?.role_code ?? '');
   const [profil, setProfil] = useState<ProfilTechnicien>(utilisateur.profil_technicien ?? 'polyvalent');
+  // Texte indicatif : techniciens déjà dans chaque type (ex. Baptiste, Samy pour Nikito)
+  const { data: actifs } = useUtilisateursActifs();
+  const membresDuProfil = (code: ProfilTechnicien) =>
+    (actifs ?? [])
+      .filter((u) => u.role_code === 'technicien' && (u.profil_technicien ?? 'polyvalent') === code && u.id !== utilisateur.id)
+      .map((u) => (u.prenom ? u.prenom.charAt(0).toUpperCase() + u.prenom.slice(1) : u.nom))
+      .sort((a, b) => a.localeCompare(b, 'fr'));
   // Rôles et parcs proposés à la hauteur de celui qui modifie (même règle qu'en base)
   const attribuables = rolesAttribuables(moi?.role_code);
   const rolesProposes = (roles ?? []).filter((r) => attribuables.includes(r.code));
@@ -157,6 +165,9 @@ export function ModaleEditerUtilisateur({ open, onClose, utilisateur }: Props) {
                 >
                   <div className="text-[12px] font-semibold">{p.label}</div>
                   <div className="text-[10px] opacity-70">{p.detail}</div>
+                  {membresDuProfil(p.code).length > 0 && (
+                    <div className="text-[10px] opacity-70 mt-0.5">Actuellement : {membresDuProfil(p.code).join(', ')}</div>
+                  )}
                 </button>
               ))}
             </div>
