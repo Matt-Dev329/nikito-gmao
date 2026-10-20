@@ -17,6 +17,12 @@ import { ZoneSignature } from '@/components/ui/ZoneSignature';
 import { BoutonTelecharger } from '@/components/ui/BoutonTelecharger';
 import { ROLES_BONS } from '@/lib/acces';
 import { BUCKET_BONS, exportBonPDF, formatDuree, type BonIntervention } from './exportBonPDF';
+import { CarteRapport } from './PageRapportsReparation';
+import { useRapports, type Rapport } from '@/hooks/queries/useRapportsReparation';
+
+// Bons hors ticket et interventions clôturées sur ticket, dans une même liste
+type Element = { type: 'bon'; date: string; bon: BonIntervention } | { type: 'ticket'; date: string; rapport: Rapport };
+type Source = 'tous' | 'bon' | 'ticket';
 
 const PERIODES = [
   { code: '30', label: '30 jours', jours: 30 },
@@ -61,36 +67,54 @@ function ContenuBons() {
   const [periode, setPeriode] = useState('90');
   const [activite, setActivite] = useState<string | null>(null);
   const [recherche, setRecherche] = useState('');
+  const [source, setSource] = useState<Source>('tous');
   const jours = PERIODES.find((p) => p.code === periode)?.jours ?? 90;
-  const { data: bons, isLoading, isError, error } = useBons(jours);
+  const bonsQ = useBons(jours);
+  const rapportsQ = useRapports(jours);
+  const isLoading = bonsQ.isLoading || rapportsQ.isLoading;
+  const isError = bonsQ.isError || rapportsQ.isError;
+  const error = bonsQ.error ?? rapportsQ.error;
 
+  const elements = useMemo<Element[]>(
+    () =>
+      [
+        ...(bonsQ.data ?? []).map((bon) => ({ type: 'bon' as const, date: bon.date_intervention, bon })),
+        ...(rapportsQ.data ?? []).map((rapport) => ({ type: 'ticket' as const, date: rapport.fin, rapport })),
+      ].sort((a, b) => (b.date ?? '').localeCompare(a.date ?? '')),
+    [bonsQ.data, rapportsQ.data]
+  );
+  const activiteDe = (e: Element) => (e.type === 'bon' ? e.bon.activite : e.rapport.activite) || 'Autres';
+  const texteDe = (e: Element) =>
+    (e.type === 'bon'
+      ? [e.bon.numero, e.bon.activite, e.bon.equipement, e.bon.probleme, e.bon.travaux, e.bon.technicien_nom, e.bon.responsable_nom, e.bon.parc?.code, e.bon.parc?.nom]
+      : [e.rapport.numero_bt, e.rapport.activite, e.rapport.equipement, e.rapport.equipement_code, e.rapport.diagnostic, e.rapport.actions, e.rapport.intervenant, e.rapport.parc_code, e.rapport.parc_nom]
+    )
+      .filter(Boolean)
+      .join(' ')
+      .toLowerCase();
+
+  const deLaSource = useMemo(() => elements.filter((e) => source === 'tous' || e.type === source), [elements, source]);
   const activites = useMemo(() => {
     const m = new Map<string, number>();
-    (bons ?? []).forEach((b) => m.set(b.activite || 'Autres', (m.get(b.activite || 'Autres') ?? 0) + 1));
+    deLaSource.forEach((e) => m.set(activiteDe(e), (m.get(activiteDe(e)) ?? 0) + 1));
     return [...m.entries()].sort((a, b) => (a[0] === 'Autres' ? 1 : b[0] === 'Autres' ? -1 : a[0].localeCompare(b[0], 'fr')));
-  }, [bons]);
+  }, [deLaSource]);
   const activiteActive = activite && activites.some(([a]) => a === activite) ? activite : null;
 
   const filtres = useMemo(() => {
     const q = recherche.trim().toLowerCase();
-    return (bons ?? []).filter(
-      (b) =>
-        (!activiteActive || (b.activite || 'Autres') === activiteActive) &&
-        (!q ||
-          [b.numero, b.activite, b.equipement, b.probleme, b.travaux, b.technicien_nom, b.responsable_nom, b.parc?.code, b.parc?.nom]
-            .filter(Boolean)
-            .join(' ')
-            .toLowerCase()
-            .includes(q))
-    );
-  }, [bons, activiteActive, recherche]);
+    return deLaSource.filter((e) => (!activiteActive || activiteDe(e) === activiteActive) && (!q || texteDe(e).includes(q)));
+  }, [deLaSource, activiteActive, recherche]);
+  const nbBons = elements.filter((e) => e.type === 'bon').length;
 
   return (
     <div className="p-4 md:p-6 md:px-7">
       <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-start mb-4">
         <div>
           <h1 className="text-xl md:text-[22px] font-semibold m-0">Bons d'intervention</h1>
-          <p className="text-[13px] text-dim mt-1">Réparations réalisées hors ticket, signées par le technicien et le responsable</p>
+          <p className="text-[13px] text-dim mt-1">
+            Toutes les interventions : bons hors ticket (signés sur place) et interventions clôturées sur ticket
+          </p>
         </div>
         {!nouveau && (
           <button
@@ -112,6 +136,19 @@ function ContenuBons() {
             </Pill>
           ))}
         </div>
+        <div className="flex gap-1.5 overflow-x-auto pb-1">
+          {(
+            [
+              ['tous', 'Tous', elements.length],
+              ['bon', 'Hors ticket', nbBons],
+              ['ticket', 'Sur ticket', elements.length - nbBons],
+            ] as [Source, string, number][]
+          ).map(([s, l, n]) => (
+            <Pill key={s} active={source === s} onClick={() => setSource(s)}>
+              {l} <span className="opacity-60">· {n}</span>
+            </Pill>
+          ))}
+        </div>
         <input
           type="text"
           value={recherche}
@@ -122,7 +159,7 @@ function ContenuBons() {
         {activites.length > 0 && (
           <div className="flex gap-1.5 overflow-x-auto pb-1">
             <Pill variant="cyan" active={!activiteActive} onClick={() => setActivite(null)}>
-              Toutes <span className="opacity-60">· {(bons ?? []).length}</span>
+              Toutes <span className="opacity-60">· {deLaSource.length}</span>
             </Pill>
             {activites.map(([a, n]) => (
               <Pill key={a} variant="cyan" active={activiteActive === a} onClick={() => setActivite(a)}>
@@ -142,12 +179,12 @@ function ContenuBons() {
       ) : isError ? (
         <div className="text-red text-[13px] bg-red/10 rounded-lg p-3">Erreur : {(error as Error).message}</div>
       ) : filtres.length === 0 ? (
-        <div className="text-center py-16 text-dim text-sm">Aucun bon d'intervention sur cette période.</div>
+        <div className="text-center py-16 text-dim text-sm">Aucune intervention sur cette période.</div>
       ) : (
         <div className="flex flex-col gap-2.5">
-          {filtres.map((b) => (
-            <CarteBon key={b.id} bon={b} />
-          ))}
+          {filtres.map((e) =>
+            e.type === 'bon' ? <CarteBon key={`b:${e.bon.id}`} bon={e.bon} /> : <CarteRapport key={`t:${e.rapport.cle}`} rapport={e.rapport} />
+          )}
         </div>
       )}
     </div>

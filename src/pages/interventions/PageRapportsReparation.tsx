@@ -1,42 +1,16 @@
 import { useMemo, useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/lib/supabase';
 import { cn } from '@/lib/utils';
-import { dateParis } from '@/lib/dates';
 import { useAuth } from '@/hooks/useAuth';
-import { useFormationFilter } from '@/hooks/useFormation';
 import { useSignedUrls } from '@/hooks/useSignedUrl';
 import { useToast } from '@/components/ui/ToastProvider';
 import { Pill } from '@/components/ui/Pill';
 import { BoutonTelecharger } from '@/components/ui/BoutonTelecharger';
 import { nomDepuisChemin } from '@/lib/telecharger';
+import { useRapports, type Rapport } from '@/hooks/queries/useRapportsReparation';
 
 export const ROLES_RAPPORTS = ['direction', 'chef_maintenance', 'directeur_parc', 'manager_parc', 'technicien', 'admin_it'];
 
-interface Rapport {
-  cle: string;
-  incident_id: string;
-  numero_bt: string;
-  activite: string;
-  categorie: string | null;
-  equipement: string | null;
-  equipement_code: string | null;
-  parc_code: string | null;
-  parc_nom: string | null;
-  zone: string | null;
-  criticite: string | null;
-  intervenant: string | null;
-  externe: boolean;
-  debut: string | null;
-  fin: string;
-  diagnostic: string | null;
-  actions: string | null;
-  resolu_premier_coup: boolean | null;
-  photos_avant: string[];
-  photos_apres: string[];
-  pieces: { nom: string; reference: string; quantite: number }[];
-}
 
 const PERIODES = [
   { code: '7', label: '7 jours', jours: 7 },
@@ -54,18 +28,6 @@ function duree(debut: string | null, fin: string): string {
   return `${Math.round(h / 24)} j`;
 }
 
-function useRapports(jours: number) {
-  const { estFormation } = useFormationFilter();
-  return useQuery({
-    queryKey: ['rapports-reparation', jours, estFormation],
-    queryFn: async () => {
-      const depuis = dateParis(Date.now() - jours * 86_400_000);
-      const { data, error } = await supabase.rpc('rapports_reparation', { p_depuis: depuis, p_formation: estFormation });
-      if (error) throw error;
-      return (data ?? []) as Rapport[];
-    },
-  });
-}
 
 /** Tous les rapports de réparation (équipe + intervenants extérieurs), rangés par activité. */
 export function PageRapportsReparation() {
@@ -179,7 +141,7 @@ function ContenuRapports() {
   );
 }
 
-function CarteRapport({ rapport: r }: { rapport: Rapport }) {
+export function CarteRapport({ rapport: r }: { rapport: Rapport }) {
   const [ouvert, setOuvert] = useState(false);
   // Ticket supprimé (avec motif) : intervenant = auteur de la suppression, actions = motif
   const supprime = r.cle.startsWith('s:');
