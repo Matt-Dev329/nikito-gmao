@@ -197,10 +197,9 @@ export function Intervention() {
   const aDemarrer =
     !lectureSeule && !estResolu && incident?.externe !== true && (!latestIntervention || statutIncident === 'en_pause');
   const formulaireVisible = !lectureSeule && (estResolu || (!aDemarrer && incident?.externe !== true));
-  // Détail du problème : le chef d'équipe le voit tout de suite, le directeur pour valider,
-  // les autres une fois l'intervention démarrée (ou le ticket clôturé)
-  const voirProbleme =
-    utilisateur?.role_code === 'chef_maintenance' || (enAttenteValidation && peutValider) || estResolu || interventions.length > 0;
+  // Détail du problème : le chef d'équipe et les directeurs (sur leurs parcs) le voient tout de suite,
+  // les techniciens une fois l'intervention démarrée (ou le ticket clôturé)
+  const voirProbleme = utilisateur?.role_code === 'chef_maintenance' || peutValider || estResolu || interventions.length > 0;
   const [photosApres, setPhotosApres] = useState<string[]>([]);
   const photoApres = photosApres[0] ?? null;
   const [dirty, setDirty] = useState(false);
