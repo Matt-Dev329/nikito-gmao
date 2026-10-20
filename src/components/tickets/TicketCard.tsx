@@ -35,6 +35,8 @@ interface TicketCardProps {
   onClick?: () => void;
   /** Suppression avec motif (directeur, manager principal, chef d'équipe…) */
   onSupprimer?: () => void;
+  /** Clôture rapide avec justification (chef d'équipe, directeurs de parc) */
+  onCloturer?: () => void;
 }
 
 const borderByCrit: Record<Criticite, string> = {
@@ -49,7 +51,7 @@ const badgeToneClass = {
   amber: 'text-amber',
 };
 
-export function TicketCard({ ticket, variant, onDemarrer, onReassigner, onReprendre, reprenant, onClick, onSupprimer }: TicketCardProps) {
+export function TicketCard({ ticket, variant, onDemarrer, onReassigner, onReprendre, reprenant, onClick, onSupprimer, onCloturer }: TicketCardProps) {
   if (variant === 'compact') {
     const carte = (
       <button
@@ -91,18 +93,30 @@ export function TicketCard({ ticket, variant, onDemarrer, onReassigner, onRepren
         <span className="text-nikito-cyan text-lg">›</span>
       </button>
     );
-    if (!onSupprimer) return carte;
+    if (!onSupprimer && !onCloturer) return carte;
     return (
       <div className="flex items-stretch gap-1.5">
         <div className="flex-1 min-w-0">{carte}</div>
-        <button
-          onClick={onSupprimer}
-          title="Supprimer le ticket"
-          aria-label="Supprimer le ticket"
-          className="bg-bg-card rounded-xl px-3 text-red border border-red/30 flex-shrink-0 min-w-[44px]"
-        >
-          🗑
-        </button>
+        {onCloturer && (
+          <button
+            onClick={onCloturer}
+            title="Clôturer le ticket (justification obligatoire)"
+            aria-label="Clôturer le ticket"
+            className="bg-bg-card rounded-xl px-3 text-green border border-green/30 flex-shrink-0 min-w-[44px] text-[16px] font-bold"
+          >
+            ✓
+          </button>
+        )}
+        {onSupprimer && (
+          <button
+            onClick={onSupprimer}
+            title="Supprimer le ticket"
+            aria-label="Supprimer le ticket"
+            className="bg-bg-card rounded-xl px-3 text-red border border-red/30 flex-shrink-0 min-w-[44px]"
+          >
+            🗑
+          </button>
+        )}
       </div>
     );
   }
@@ -192,6 +206,17 @@ export function TicketCard({ ticket, variant, onDemarrer, onReassigner, onRepren
             className="bg-bg-deep border border-white/10 text-text py-3.5 px-4 rounded-[10px] text-[13px] min-w-[90px]"
           >
             Réassigner
+          </button>
+        )}
+        {onCloturer && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onCloturer();
+            }}
+            className="bg-bg-deep border border-green/40 text-green py-3.5 px-4 rounded-[10px] text-[13px] min-w-[90px]"
+          >
+            ✓ Clôturer
           </button>
         )}
         {onSupprimer && (

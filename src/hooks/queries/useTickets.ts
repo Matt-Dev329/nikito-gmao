@@ -228,6 +228,18 @@ export function useSupprimerTicket() {
   });
 }
 
+/** Clôture rapide (chef d'équipe, directeurs de parc) : justification obligatoire, RPC cloturer_ticket_rapide */
+export function useCloturerTicketRapide() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ incidentId, justification }: { incidentId: string; justification: string }) => {
+      const { error } = await supabase.rpc('cloturer_ticket_rapide', { p_incident_id: incidentId, p_justification: justification });
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['incidents'] }),
+  });
+}
+
 export function useValiderBrouillonIncident() {
   const qc = useQueryClient();
   return useMutation({

@@ -7,6 +7,7 @@ import { Pill } from '@/components/ui/Pill';
 import { cn, estCheminVideo, formatDateCourt, formatDuree } from '@/lib/utils';
 import { useIncidents, useReprendreIncident, useTicketsAValider, useValiderTicket } from '@/hooks/queries/useTickets';
 import { ModaleSupprimerTicket } from '@/components/tickets/ModaleSupprimerTicket';
+import { ModaleClotureRapide } from '@/components/tickets/ModaleClotureRapide';
 import { estManagerPrincipal, peutValiderTicket } from '@/lib/acces';
 import { useAuth } from '@/hooks/useAuth';
 import { useParcs } from '@/hooks/queries/useReferentiel';
@@ -125,6 +126,7 @@ export function Operations() {
   const [parcActif, setParcActif] = useState<string | null>(null);
   const [reassignerCible, setReassignerCible] = useState<{ id: string; numeroBT: string } | null>(null);
   const [suppressionCible, setSuppressionCible] = useState<{ id: string; numeroBT: string } | null>(null);
+  const [clotureCible, setClotureCible] = useState<{ id: string; numeroBT: string } | null>(null);
   const validerTicket = useValiderTicket();
   // Managers de parc : suivi des tickets en lecture seule (ni démarrage, ni réassignation)
   // Directeurs et managers : suivi des tickets sans action d'intervention
@@ -172,6 +174,10 @@ export function Operations() {
 
   // Tickets à valider (staff, managers non principaux) des parcs que l'utilisateur peut valider
   const aValiderQ = useTicketsAValider(estValideur);
+  const brutsAValider = useMemo(
+    () => new Map(((aValiderQ.data ?? []) as Record<string, unknown>[]).map((i) => [i.id as string, i])),
+    [aValiderQ.data]
+  );
   const ticketsAValider = useMemo(
     () =>
       ((aValiderQ.data ?? []) as Record<string, unknown>[])
@@ -262,6 +268,13 @@ export function Operations() {
 
   const [premier, ...autres] = ticketsFiltres;
   // Suppression (avec motif) : directeurs et managers principaux de leur parc
+  // Clôture rapide (justification obligatoire) : chef d'équipe, direction, admin IT, directeurs sur leurs parcs
+  const cloturerSiAutorise = (t: TicketSummary) =>
+    ['chef_maintenance', 'direction', 'admin_it'].includes(utilisateur?.role_code ?? '') ||
+    (utilisateur?.role_code === 'directeur_parc' && !!t.parcId && utilisateur.parc_ids.includes(t.parcId))
+      ? () => setClotureCible({ id: t.id, numeroBT: t.numeroBT })
+      : undefined;
+
   const supprimerSiAutorise = (t: TicketSummary) =>
     peutValiderTicket(utilisateur, t.parcId) ? () => setSuppressionCible({ id: t.id, numeroBT: t.numeroBT }) : undefined;
 
@@ -398,7 +411,16 @@ export function Operations() {
             ticketsAValider.map((t) => (
               <div key={t.numeroBT} className="flex flex-col gap-1.5">
                 <TicketCard ticket={t} variant="compact" onClick={() => navigate(`/tech/operations/${t.numeroBT}`)} />
-                <div className="flex gap-2 justify-end">
+                <DetailAValider incident={brutsAValider.get(t.id)} />
+                <div className="flex flex-wrap gap-2 justify-end">
+                  {cloturerSiAutorise(t) && (
+                    <button
+                      onClick={cloturerSiAutorise(t)}
+                      className="px-4 rounded-[10px] text-[12px] font-semibold min-h-[40px] bg-bg-card border border-green/40 text-green"
+                    >
+                      ✓ Clôturer (rien à faire)
+                    </button>
+                  )}
                   <button
                     onClick={() => setSuppressionCible({ id: t.id, numeroBT: t.numeroBT })}
                     className="px-4 rounded-[10px] text-[12px] font-semibold min-h-[40px] bg-bg-card border border-red/40 text-red"
@@ -433,6 +455,7 @@ export function Operations() {
                 variant="compact"
                 onClick={() => navigate(`/tech/operations/${t.numeroBT}`)}
                 onSupprimer={supprimerSiAutorise(t)}
+                onCloturer={onglet === 'resolus' ? undefined : cloturerSiAutorise(t)}
               />
             ))}
           </>
@@ -448,6 +471,7 @@ export function Operations() {
                 onReprendre={lectureSeule ? undefined : () => reprendreTicket(premier.id)}
                 reprenant={reprendre.isPending}
                 onSupprimer={supprimerSiAutorise(premier)}
+                onCloturer={cloturerSiAutorise(premier)}
               />
             )}
             {autres.map((t) => (
@@ -457,11 +481,16 @@ export function Operations() {
                 variant="compact"
                 onClick={() => navigate(`/tech/operations/${t.numeroBT}`)}
                 onSupprimer={supprimerSiAutorise(t)}
+                onCloturer={cloturerSiAutorise(t)}
               />
             ))}
           </>
         )}
       </div>
+
+      {clotureCible && (
+        <ModaleClotureRapide incidentId={clotureCible.id} numeroBT={clotureCible.numeroBT} onClose={() => setClotureCible(null)} />
+      )}
 
       {suppressionCible && (
         <ModaleSupprimerTicket
@@ -479,5 +508,45 @@ export function Operations() {
         />
       )}
     </>
+  );
+}
+
+/** Détail d'un ticket à valider : ce qui a été signalé, par qui, avec les photos. */
+function DetailAValider({ incident: i }: { incident: Record<string, unknown> | undefined }) {
+  const photos = ((i?.photos_urls as string[] | null) ?? []).filter((p) => !estCheminVideo(p));
+  const { data: urls } = useSignedUrls(photos, 'alba-incidents');
+  if (!i) return null;
+  const equip = i.equipements as { code?: string; libelle?: string } | null;
+  const equipement = equip ? [equip.code, equip.libelle].filter(Boolean).join(' · ') : null;
+  return (
+    <div className="bg-bg-card/60 border border-white/[0.06] rounded-xl p-3 text-[13px] grid gap-1.5">
+      {i.description ? (
+        <div className="whitespace-pre-line">{i.description as string}</div>
+      ) : (
+        <div className="text-faint">Pas de description</div>
+      )}
+      <div className="text-[12px] text-dim">
+        {[
+          equipement ? `Équipement : ${equipement}` : 'Équipement saisi à la main (non rattaché)',
+          i.declare_par_nom ? `Signalé par ${i.declare_par_nom as string}` : null,
+          i.declare_le ? `le ${formatDateCourt(i.declare_le as string)}` : null,
+        ]
+          .filter(Boolean)
+          .join(' · ')}
+      </div>
+      {photos.length > 0 && (
+        <div className="flex gap-2 overflow-x-auto pt-1">
+          {photos.map((p) =>
+            urls?.[p] ? (
+              <a key={p} href={urls[p]} target="_blank" rel="noreferrer" className="flex-shrink-0">
+                <img src={urls[p]} alt="Photo du signalement" loading="lazy" className="w-20 h-20 object-cover rounded-lg" />
+              </a>
+            ) : (
+              <div key={p} className="w-20 h-20 rounded-lg bg-bg-deep animate-pulse flex-shrink-0" />
+            )
+          )}
+        </div>
+      )}
+    </div>
   );
 }
