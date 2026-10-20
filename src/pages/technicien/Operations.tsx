@@ -411,7 +411,8 @@ export function Operations() {
             ticketsAValider.map((t) => (
               <div key={t.numeroBT} className="flex flex-col gap-1.5">
                 <TicketCard ticket={t} variant="compact" onClick={() => navigate(`/tech/operations/${t.numeroBT}`)} />
-                <DetailAValider incident={brutsAValider.get(t.id)} />
+                {/* Détail avant validation : réservé au chef d'équipe */}
+                {utilisateur?.role_code === 'chef_maintenance' && <DetailAValider incident={brutsAValider.get(t.id)} />}
                 <div className="flex flex-wrap gap-2 justify-end">
                   {cloturerSiAutorise(t) && (
                     <button

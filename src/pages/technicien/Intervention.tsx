@@ -197,6 +197,9 @@ export function Intervention() {
   const aDemarrer =
     !lectureSeule && !estResolu && incident?.externe !== true && (!latestIntervention || statutIncident === 'en_pause');
   const formulaireVisible = !lectureSeule && (estResolu || (!aDemarrer && incident?.externe !== true));
+  // Détail du problème : le chef d'équipe le voit tout de suite (avant de valider ou de démarrer),
+  // les autres une fois l'intervention démarrée (ou le ticket clôturé)
+  const voirProbleme = utilisateur?.role_code === 'chef_maintenance' || estResolu || interventions.length > 0;
   const [photosApres, setPhotosApres] = useState<string[]>([]);
   const photoApres = photosApres[0] ?? null;
   const [dirty, setDirty] = useState(false);
@@ -408,6 +411,17 @@ export function Intervention() {
             </button>
           )}
         </div>
+
+        {voirProbleme && (
+          <ProblemeSignale
+            titre={incident.titre as string | null}
+            description={incident.description as string | null}
+            priorite={(priorite?.nom as string | undefined) ?? null}
+            equipement={[equip?.code, equip?.libelle].filter(Boolean).join(' · ') || null}
+            categorie={((equip?.categories_equipement as Record<string, unknown> | null)?.nom as string | undefined) ?? null}
+            lieu={[zone?.nom, parc?.nom ?? incident.parc_ticket_code].filter(Boolean).join(' · ') || null}
+          />
+        )}
 
         {estAnnule && (
           <div className="bg-red/10 border border-red/30 rounded-xl px-4 py-3 text-[13px]">
@@ -817,6 +831,47 @@ const dateHeure = (iso: unknown) =>
   iso ? new Date(iso as string).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : null;
 
 /** Suivi du ticket pour les managers de parc : état et avancement, sans action possible. */
+/** Ce qui a été signalé : titre, description, gravité, équipement et lieu. */
+function ProblemeSignale({
+  titre,
+  description,
+  priorite,
+  equipement,
+  categorie,
+  lieu,
+}: {
+  titre: string | null;
+  description: string | null;
+  priorite: string | null;
+  equipement: string | null;
+  categorie: string | null;
+  lieu: string | null;
+}) {
+  const lignes: [string, string | null][] = [
+    ['Gravité', priorite],
+    ['Équipement', equipement ?? 'Saisi à la main (non rattaché)'],
+    ['Catégorie', categorie],
+    ['Lieu', lieu],
+  ];
+  return (
+    <div className="bg-bg-card rounded-xl px-4 py-3.5 border border-amber/30">
+      <div className="text-[11px] text-amber uppercase tracking-wider mb-1.5">Problème signalé</div>
+      {titre && <div className="text-[15px] font-semibold">{titre}</div>}
+      <div className={cn('text-[14px] mt-1 whitespace-pre-line', !description && 'text-faint')}>{description || 'Pas de description'}</div>
+      <div className="mt-2.5 grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 text-[12px]">
+        {lignes
+          .filter(([, v]) => !!v)
+          .map(([l, v]) => (
+            <div key={l} className="contents">
+              <span className="text-dim">{l}</span>
+              <span>{v}</span>
+            </div>
+          ))}
+      </div>
+    </div>
+  );
+}
+
 function SuiviLectureSeule({
   incident: i,
   intervention: iv,
