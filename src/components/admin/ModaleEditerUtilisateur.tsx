@@ -5,6 +5,9 @@ import { useParcs } from '@/hooks/queries/useReferentiel';
 import {
   useRoles,
   useModifierUtilisateur,
+  useDefinirProfilTechnicien,
+  PROFILS_TECHNICIEN,
+  type ProfilTechnicien,
   type UtilisateurRow,
 } from '@/hooks/queries/useUtilisateurs';
 import { roleLabels } from '@/lib/tokens';
@@ -22,6 +25,10 @@ export function ModaleEditerUtilisateur({ open, onClose, utilisateur }: Props) {
   const { data: roles } = useRoles();
   const modifierMutation = useModifierUtilisateur();
   const { utilisateur: moi } = useAuth();
+  const profilMutation = useDefinirProfilTechnicien();
+  // Profil technicien (Arcade / Nikito) : réglé par le chef d'équipe, la direction ou l'admin IT
+  const peutReglerProfil = ['chef_maintenance', 'direction', 'admin_it'].includes(moi?.role_code ?? '');
+  const [profil, setProfil] = useState<ProfilTechnicien>(utilisateur.profil_technicien ?? 'polyvalent');
   // Rôles et parcs proposés à la hauteur de celui qui modifie (même règle qu'en base)
   const attribuables = rolesAttribuables(moi?.role_code);
   const rolesProposes = (roles ?? []).filter((r) => attribuables.includes(r.code));
@@ -45,6 +52,7 @@ export function ModaleEditerUtilisateur({ open, onClose, utilisateur }: Props) {
     setParcsChoisis(utilisateur.parcs.map((p) => p.parc_id));
     setEstManager(utilisateur.parcs.some((p) => p.est_manager));
     setActif(utilisateur.actif);
+    setProfil(utilisateur.profil_technicien ?? 'polyvalent');
     setErreur(null);
     setResetSent(false);
   }, [utilisateur]);
@@ -65,6 +73,9 @@ export function ModaleEditerUtilisateur({ open, onClose, utilisateur }: Props) {
         est_manager: estManager,
         actif,
       });
+      if (roleCode === 'technicien' && peutReglerProfil && profil !== (utilisateur.profil_technicien ?? 'polyvalent')) {
+        await profilMutation.mutateAsync({ utilisateur_id: utilisateur.id, profil });
+      }
       onClose();
     } catch (e) {
       setErreur((e as Error).message ?? 'Erreur inconnue');
@@ -128,6 +139,32 @@ export function ModaleEditerUtilisateur({ open, onClose, utilisateur }: Props) {
             </label>
           )}
         </div>
+
+        {roleCode === 'technicien' && peutReglerProfil && (
+          <div className="mb-4">
+            <label className="block text-[11px] text-dim uppercase tracking-wider mb-2">Type de technicien</label>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-1.5">
+              {PROFILS_TECHNICIEN.map((p) => (
+                <button
+                  key={p.code}
+                  onClick={() => setProfil(p.code)}
+                  className={cn(
+                    'py-2.5 px-2 rounded-lg text-left transition-colors min-h-[44px]',
+                    profil === p.code
+                      ? 'bg-nikito-cyan/15 border border-nikito-cyan text-text'
+                      : 'bg-bg-deep border border-white/[0.08] text-dim hover:border-white/20'
+                  )}
+                >
+                  <div className="text-[12px] font-semibold">{p.label}</div>
+                  <div className="text-[10px] opacity-70">{p.detail}</div>
+                </button>
+              ))}
+            </div>
+            <div className="text-[10px] text-faint mt-1.5">
+              Tickets, notifications, équipements et rapports de réparation suivent ce choix, sur tous ses parcs cochés.
+            </div>
+          </div>
+        )}
 
         <div className="mb-4">
           <label className="block text-[11px] text-dim uppercase tracking-wider mb-2">
@@ -258,7 +295,7 @@ export function ModaleEditerUtilisateur({ open, onClose, utilisateur }: Props) {
           </button>
           <button
             onClick={enregistrer}
-            disabled={!peutValider || modifierMutation.isPending}
+            disabled={!peutValider || modifierMutation.isPending || profilMutation.isPending}
             className={cn(
               'bg-gradient-cta text-text px-6 py-2.5 rounded-[10px] text-[13px] font-bold min-h-[44px]',
               (!peutValider || modifierMutation.isPending) && 'opacity-40 cursor-not-allowed'

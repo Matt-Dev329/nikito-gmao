@@ -17,7 +17,17 @@ export interface UtilisateurRow {
   parcs: { parc_id: string; code: string; est_manager: boolean }[];
   /** Date du dernier code PIN généré (staff) ; null = jamais */
   code_pin_genere_le?: string | null;
+  /** Techniciens : Arcade (arcades seulement), Nikito (sans arcade) ou polyvalent */
+  profil_technicien?: ProfilTechnicien;
 }
+
+export type ProfilTechnicien = 'polyvalent' | 'arcade' | 'nikito';
+
+export const PROFILS_TECHNICIEN: { code: ProfilTechnicien; label: string; detail: string }[] = [
+  { code: 'polyvalent', label: 'Polyvalent', detail: 'Tout, sur ses parcs' },
+  { code: 'arcade', label: 'Technicien Arcade', detail: 'Uniquement les arcades' },
+  { code: 'nikito', label: 'Technicien Nikito', detail: 'Tout sauf les arcades' },
+];
 
 export interface InvitationRow {
   id: string;
@@ -80,7 +90,7 @@ export function useUtilisateursActifs() {
       const { data, error } = await supabase
         .from('utilisateurs')
         .select(
-          `id, email, prenom, nom, trigramme, actif, statut_validation, auth_mode, cree_le, role_id, code_pin_genere_le,
+          `id, email, prenom, nom, trigramme, actif, statut_validation, auth_mode, cree_le, role_id, profil_technicien, code_pin_genere_le,
            roles!inner(code),
            parcs_utilisateurs(parc_id, est_manager, parcs(code))`
         )
@@ -110,7 +120,7 @@ export function useUtilisateursAValider() {
       const { data, error } = await supabase
         .from('utilisateurs')
         .select(
-          `id, email, prenom, nom, trigramme, actif, statut_validation, auth_mode, cree_le, role_id,
+          `id, email, prenom, nom, trigramme, actif, statut_validation, auth_mode, cree_le, role_id, profil_technicien,
            roles!inner(code),
            parcs_utilisateurs(parc_id, est_manager, parcs(code))`
         )
@@ -139,7 +149,7 @@ export function useUtilisateursDesactives() {
       const { data, error } = await supabase
         .from('utilisateurs')
         .select(
-          `id, email, prenom, nom, trigramme, actif, statut_validation, auth_mode, cree_le, role_id,
+          `id, email, prenom, nom, trigramme, actif, statut_validation, auth_mode, cree_le, role_id, profil_technicien,
            roles!inner(code),
            parcs_utilisateurs(parc_id, est_manager, parcs(code))`
         )
@@ -224,6 +234,19 @@ export function useRoles() {
         .order('nom');
       if (error) throw error;
       return data as { id: string; code: RoleUtilisateur; nom: string }[];
+    },
+  });
+}
+
+export function useDefinirProfilTechnicien() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ utilisateur_id, profil }: { utilisateur_id: string; profil: ProfilTechnicien }) => {
+      const { error } = await supabase.rpc('definir_profil_technicien', { p_utilisateur_id: utilisateur_id, p_profil: profil });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['utilisateurs'] });
     },
   });
 }
