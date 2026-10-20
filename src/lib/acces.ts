@@ -120,7 +120,7 @@ export function peutValiderTicket(
   if (!u) return false;
   if (['direction', 'chef_maintenance', 'admin_it'].includes(u.role_code)) return true;
   if (!parcId) return false;
+  // Directeurs de parc seulement (plus les managers principaux) : même règle qu'en base
   if (u.role_code === 'directeur_parc') return u.parc_ids.includes(parcId);
-  if (u.role_code === 'manager_parc') return (u.parcs_manager_principal ?? []).includes(parcId);
   return false;
 }

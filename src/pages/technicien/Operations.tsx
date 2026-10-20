@@ -8,7 +8,7 @@ import { cn, estCheminVideo, formatDateCourt, formatDuree } from '@/lib/utils';
 import { useIncidents, useReprendreIncident, useTicketsAValider, useValiderTicket } from '@/hooks/queries/useTickets';
 import { ModaleSupprimerTicket } from '@/components/tickets/ModaleSupprimerTicket';
 import { ModaleClotureRapide } from '@/components/tickets/ModaleClotureRapide';
-import { estManagerPrincipal, peutValiderTicket } from '@/lib/acces';
+import { peutValiderTicket } from '@/lib/acces';
 import { useAuth } from '@/hooks/useAuth';
 import { useParcs } from '@/hooks/queries/useReferentiel';
 import { useToast } from '@/components/ui/ToastProvider';
@@ -130,12 +130,12 @@ export function Operations() {
   const validerTicket = useValiderTicket();
   // Managers de parc : suivi des tickets en lecture seule (ni démarrage, ni réassignation)
   // Directeurs et managers : suivi des tickets sans action d'intervention
-  const lectureSeule = utilisateur?.role_code === 'manager_parc' || utilisateur?.role_code === 'directeur_parc';
+  // (sauf autorisation « peut intervenir » sur leurs parcs)
+  const lectureSeule =
+    (utilisateur?.role_code === 'manager_parc' || utilisateur?.role_code === 'directeur_parc') && !utilisateur?.peut_intervenir;
 
-  // Valideurs : chef d'équipe, direction, admin IT, directeurs de parc, managers principaux
-  const estValideur =
-    ['direction', 'chef_maintenance', 'admin_it', 'directeur_parc'].includes(utilisateur?.role_code ?? '') ||
-    estManagerPrincipal(utilisateur);
+  // Valideurs (et suppression) : chef d'équipe, direction, admin IT, directeurs de parc
+  const estValideur = ['direction', 'chef_maintenance', 'admin_it', 'directeur_parc'].includes(utilisateur?.role_code ?? '');
 
   const { parcsVisibles, peutVoirTous } = useParcsVisibles();
 
@@ -411,8 +411,7 @@ export function Operations() {
             ticketsAValider.map((t) => (
               <div key={t.numeroBT} className="flex flex-col gap-1.5">
                 <TicketCard ticket={t} variant="compact" onClick={() => navigate(`/tech/operations/${t.numeroBT}`)} />
-                {/* Détail avant validation : réservé au chef d'équipe */}
-                {utilisateur?.role_code === 'chef_maintenance' && <DetailAValider incident={brutsAValider.get(t.id)} />}
+                <DetailAValider incident={brutsAValider.get(t.id)} />
                 <div className="flex flex-wrap gap-2 justify-end">
                   {cloturerSiAutorise(t) && (
                     <button

@@ -5,7 +5,7 @@ import { createClient } from "npm:@supabase/supabase-js@2.45.0";
  * Notifications à la création d'un ticket (appelé par trg_notifier_ticket_cree,
  * POST { incident_id }) :
  *  - ticket en attente de validation : notification appli + mail au chef
- *    d'équipe, aux directeurs et aux managers principaux du parc ;
+ *    d'équipe et aux directeurs du parc (seuls à pouvoir valider) ;
  *  - ticket arrivé dans Opérations (créé directement ou validé) : notification
  *    appli aux techniciens du parc (selon leurs spécialités) et au chef d'équipe.
  * Un seul envoi par ticket et par événement (notifications_tickets_envoyees).
@@ -94,7 +94,6 @@ Deno.serve(async (req: Request) => {
     ]);
     const liensParc = (liens ?? []) as { utilisateur_id: string; est_manager: boolean | null }[];
     const ids = [...new Set(liensParc.map((l) => l.utilisateur_id))];
-    const managerPrincipal = new Set(liensParc.filter((l) => l.est_manager).map((l) => l.utilisateur_id));
 
     const { data: equipe } = ids.length
       ? await service.from("utilisateurs").select("id, email, specialites, specialites_exclues, roles!inner(code)").eq("actif", true)
@@ -104,8 +103,7 @@ Deno.serve(async (req: Request) => {
 
     let destinataires: Destinataire[];
     if (evenement === "a_valider") {
-      destinataires = membres.filter((u) =>
-        u.roles.code === "directeur_parc" || (u.roles.code === "manager_parc" && managerPrincipal.has(u.id)));
+      destinataires = membres.filter((u) => u.roles.code === "directeur_parc");
     } else {
       // Techniciens spécialisés : seulement les tickets de leurs catégories, sans les catégories exclues
       destinataires = membres.filter((u) =>

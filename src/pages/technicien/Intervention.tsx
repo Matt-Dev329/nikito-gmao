@@ -197,9 +197,10 @@ export function Intervention() {
   const aDemarrer =
     !lectureSeule && !estResolu && incident?.externe !== true && (!latestIntervention || statutIncident === 'en_pause');
   const formulaireVisible = !lectureSeule && (estResolu || (!aDemarrer && incident?.externe !== true));
-  // Détail du problème : le chef d'équipe le voit tout de suite (avant de valider ou de démarrer),
+  // Détail du problème : le chef d'équipe le voit tout de suite, le directeur pour valider,
   // les autres une fois l'intervention démarrée (ou le ticket clôturé)
-  const voirProbleme = utilisateur?.role_code === 'chef_maintenance' || estResolu || interventions.length > 0;
+  const voirProbleme =
+    utilisateur?.role_code === 'chef_maintenance' || (enAttenteValidation && peutValider) || estResolu || interventions.length > 0;
   const [photosApres, setPhotosApres] = useState<string[]>([]);
   const photoApres = photosApres[0] ?? null;
   const [dirty, setDirty] = useState(false);
@@ -435,7 +436,7 @@ export function Intervention() {
           <div className="bg-amber/10 border border-amber/40 rounded-xl px-4 py-3 flex flex-wrap items-center gap-3">
             <div className="text-[13px] flex-1 min-w-[200px]">
               <strong className="text-amber">En attente de validation</strong>
-              <div className="text-dim">Le ticket arrivera dans Opérations une fois validé par le directeur, un manager principal ou le chef d'équipe.</div>
+              <div className="text-dim">Le ticket arrivera dans Opérations une fois validé par le directeur du parc ou le chef d'équipe.</div>
             </div>
             {peutValider && (
               <button
