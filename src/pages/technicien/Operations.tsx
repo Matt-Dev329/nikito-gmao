@@ -93,6 +93,7 @@ function incidentToTicket(inc: Record<string, unknown>): TicketSummary {
     photoPath: ((inc.photos_urls as string[] | null) ?? [])[0] ?? undefined,
     photoVideo: estCheminVideo(((inc.photos_urls as string[] | null) ?? [])[0]),
     parcId: ((equip?.parc_id ?? inc.parc_ticket) as string | undefined) ?? undefined,
+    probleme: ((inc.description as string | null) ?? '').trim() || undefined,
   };
 }
 
@@ -133,6 +134,10 @@ export function Operations() {
   // (sauf autorisation « peut intervenir » sur leurs parcs)
   const lectureSeule =
     (utilisateur?.role_code === 'manager_parc' || utilisateur?.role_code === 'directeur_parc') && !utilisateur?.peut_intervenir;
+
+  // Problème signalé affiché sur les cartes : uniquement pour les directeurs de parc
+  const sansProblemeSiNonDirecteur = (t: TicketSummary): TicketSummary =>
+    utilisateur?.role_code === 'directeur_parc' ? t : { ...t, probleme: undefined };
 
   // Valideurs (et suppression) : chef d'équipe, direction, admin IT, directeurs de parc
   const estValideur = ['direction', 'chef_maintenance', 'admin_it', 'directeur_parc'].includes(utilisateur?.role_code ?? '');
@@ -185,7 +190,9 @@ export function Operations() {
           const parcId = (i.equipements as { parc_id?: string } | null)?.parc_id ?? (i.parc_ticket as string | undefined);
           return (!parcIdEffectif || parcId === parcIdEffectif) && peutValiderTicket(utilisateur, parcId);
         })
-        .map(incidentToTicket),
+        .map(incidentToTicket)
+        .map(sansProblemeSiNonDirecteur),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [aValiderQ.data, parcIdEffectif, utilisateur]
   );
 
@@ -208,8 +215,10 @@ export function Operations() {
           ? i.attente_piece === true
           : i.externe !== true && i.attente_piece !== true
       )
-      .map(incidentToTicket);
-  }, [incidentsQ.data, onglet]);
+      .map(incidentToTicket)
+      .map(sansProblemeSiNonDirecteur);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [incidentsQ.data, onglet, utilisateur?.role_code]);
 
   // Activités présentes dans l'onglet, avec leur nombre de tickets (« Autres » en dernier)
   const activites = useMemo(() => {

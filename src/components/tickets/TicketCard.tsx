@@ -23,6 +23,8 @@ export interface TicketSummary {
   photoVideo?: boolean;
   /** Parc du ticket (droits de validation / suppression) */
   parcId?: string;
+  /** Problème signalé (description), affiché sur la carte pour les directeurs de parc */
+  probleme?: string;
 }
 
 interface TicketCardProps {
@@ -89,6 +91,7 @@ export function TicketCard({ ticket, variant, onDemarrer, onReassigner, onRepren
             ))}
           </div>
           {ticket.meta && <div className="text-[11px] text-dim">{ticket.meta}</div>}
+          {ticket.probleme && <div className="text-[12px] text-text/80 mt-0.5 line-clamp-2">{ticket.probleme}</div>}
         </div>
         <span className="text-nikito-cyan text-lg">›</span>
       </button>
@@ -137,6 +140,7 @@ export function TicketCard({ ticket, variant, onDemarrer, onReassigner, onRepren
       <div>
         <div className="text-[17px] font-semibold mb-1">{ticket.titre}</div>
         {ticket.description && <div className="text-[13px] text-dim leading-relaxed">{ticket.description}</div>}
+        {ticket.probleme && <div className="text-[13px] leading-relaxed line-clamp-3">{ticket.probleme}</div>}
       </div>
       {ticket.photoUrl && ticket.photoVideo ? (
         <video
