@@ -71,7 +71,8 @@ export function Intervention() {
   // Validation (tickets du staff / managers non principaux) et suppression avec motif
   const enAttenteValidation = incident?.validation_manager === 'en_attente' && statutIncident !== 'annule';
   const estAnnule = statutIncident === 'annule';
-  const peutValider = peutValiderTicket(utilisateur, equip?.parc_id as string | undefined);
+  // Ticket sans équipement (saisi à la main) : parc du déclarant
+  const peutValider = peutValiderTicket(utilisateur, (equip?.parc_id ?? incident?.parc_ticket) as string | undefined);
   const validerTicket = useValiderTicket();
   const [suppression, setSuppression] = useState(false);
   const estResolu = statutIncident === 'resolu' || statutIncident === 'ferme';

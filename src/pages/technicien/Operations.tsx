@@ -84,14 +84,14 @@ function incidentToTicket(inc: Record<string, unknown>): TicketSummary {
       : undefined,
     badges: badges.length > 0 ? badges : undefined,
     slaAlert: heuresDepuis > slaH ? `SLA dépassé · ${formatDuree(declareLe)}` : undefined,
-    meta: [parc?.code as string | undefined, inc.numero_bt as string, formatDuree(declareLe), inc.declare_par_nom ? `par ${inc.declare_par_nom as string}` : null]
+    meta: [(parc?.code ?? inc.parc_ticket_code) as string | undefined, inc.numero_bt as string, formatDuree(declareLe), inc.declare_par_nom ? `par ${inc.declare_par_nom as string}` : null]
       .filter(Boolean)
       .join(' · '),
     enAttente: inc.statut === 'assigne',
     enPause: inc.statut === 'en_pause',
     photoPath: ((inc.photos_urls as string[] | null) ?? [])[0] ?? undefined,
     photoVideo: estCheminVideo(((inc.photos_urls as string[] | null) ?? [])[0]),
-    parcId: (equip?.parc_id as string | undefined) ?? undefined,
+    parcId: ((equip?.parc_id ?? inc.parc_ticket) as string | undefined) ?? undefined,
   };
 }
 
@@ -176,7 +176,7 @@ export function Operations() {
     () =>
       ((aValiderQ.data ?? []) as Record<string, unknown>[])
         .filter((i) => {
-          const parcId = (i.equipements as { parc_id?: string } | null)?.parc_id;
+          const parcId = (i.equipements as { parc_id?: string } | null)?.parc_id ?? (i.parc_ticket as string | undefined);
           return (!parcIdEffectif || parcId === parcIdEffectif) && peutValiderTicket(utilisateur, parcId);
         })
         .map(incidentToTicket),

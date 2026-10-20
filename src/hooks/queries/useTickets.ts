@@ -3,8 +3,10 @@ import { supabase } from '@/lib/supabase';
 import { useFormationFilter } from '@/hooks/useFormation';
 import type { StatutIncident } from '@/types/database';
 
-const SELECT_INCIDENTS = `*,
-          equipements!inner(code, libelle, parc_id, parcs(code, nom), zones(nom), categories_equipement(nom, activite)),
+// Jointure souple : un ticket signalé avec un équipement saisi à la main n'a pas
+// d'équipement ; son parc vient alors du déclarant (champs calculés parc_ticket*)
+const SELECT_INCIDENTS = `*, parc_ticket, parc_ticket_code,
+          equipements(code, libelle, parc_id, parcs(code, nom), zones(nom), categories_equipement(nom, activite)),
           niveaux_priorite(code, nom, sla_h, couleur_hex),
           externe_fournisseur:fournisseurs!incidents_externe_fournisseur_id_fkey(nom, contact_tel, contact_nom),
           attente_commande:commandes!incidents_attente_piece_commande_id_fkey(numero, statut)`;
@@ -27,7 +29,7 @@ export function useIncidents(filtres?: {
         .order('declare_le', { ascending: false });
 
       if (filtres?.parcId) {
-        q = q.eq('equipements.parc_id', filtres.parcId);
+        q = q.eq('parc_ticket', filtres.parcId);
       }
       if (filtres?.statuts && filtres.statuts.length > 0) {
         q = q.in('statut', filtres.statuts);
@@ -49,7 +51,7 @@ export function useIncident(numeroBT: string | undefined) {
       const { data, error } = await supabase
         .from('incidents')
         .select(
-          `*,
+          `*, parc_ticket, parc_ticket_code,
           equipements(*, parcs(code, nom), zones(nom), categories_equipement(nom, activite)),
           niveaux_priorite(*),
           interventions(*, pieces_utilisees(*, pieces_detachees(*))),
