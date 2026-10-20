@@ -7,6 +7,7 @@ import { dateParis } from '@/lib/dates';
 import { envoyerFichier } from '@/lib/envoiGrosFichier';
 import { nomDepuisChemin } from '@/lib/telecharger';
 import { useAuth } from '@/hooks/useAuth';
+import { useDraftPersistence, useAutoSaveDraft } from '@/hooks/useDraftPersistence';
 import { useFormationFilter } from '@/hooks/useFormation';
 import { useParcs } from '@/hooks/queries/useReferentiel';
 import { useCatalogueCommandes } from '@/hooks/queries/useCommandes';
@@ -104,6 +105,12 @@ export function PageBonsIntervention() {
 
 function ContenuBons() {
   const [nouveau, setNouveau] = useState(false);
+  // Bon commencé puis page quittée : on rouvre le formulaire avec la saisie conservée
+  const { utilisateur } = useAuth();
+  const { hasDraft } = useDraftPersistence(utilisateur ? cleBrouillonBon(utilisateur.id) : null);
+  useEffect(() => {
+    if (hasDraft) setNouveau(true);
+  }, [hasDraft]);
   const [periode, setPeriode] = useState('90');
   const [activite, setActivite] = useState<string | null>(null);
   const [recherche, setRecherche] = useState('');
@@ -377,6 +384,22 @@ function CarteBon({ bon: b }: { bon: BonIntervention }) {
   );
 }
 
+const cleBrouillonBon = (utilisateurId: string) => `bon-intervention:${utilisateurId}`;
+
+type BrouillonBon = {
+  parcId: string;
+  activite: string;
+  activiteLibre: boolean;
+  equipement: string;
+  date: string;
+  duree: string;
+  probleme: string;
+  travaux: string;
+  pieces: string;
+  technicien: string;
+  responsable: string;
+};
+
 function maintenantLocal(): string {
   const d = new Date();
   d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
@@ -390,10 +413,13 @@ function FormulaireBon({ onFini }: { onFini: () => void }) {
   const { estFormation } = useFormationFilter();
   const { data: parcs } = useParcs();
   const { data: catalogue } = useCatalogueCommandes();
+  // Saisie conservée si on quitte la page sans le vouloir (photos et signatures à refaire)
+  const brouillon = useDraftPersistence<BrouillonBon>(utilisateur ? cleBrouillonBon(utilisateur.id) : null);
+  const [repris] = useState(() => brouillon.restore());
 
-  const [parcId, setParcId] = useState(utilisateur?.parc_ids?.length === 1 ? utilisateur.parc_ids[0] : '');
-  const [activite, setActivite] = useState('');
-  const [activiteLibre, setActiviteLibre] = useState(false);
+  const [parcId, setParcId] = useState(repris?.parcId ?? (utilisateur?.parc_ids?.length === 1 ? utilisateur.parc_ids[0] : ''));
+  const [activite, setActivite] = useState(repris?.activite ?? '');
+  const [activiteLibre, setActiviteLibre] = useState(repris?.activiteLibre ?? false);
   const { data: activitesEquipements } = useQuery({
     queryKey: ['activites-equipements'],
     queryFn: async () => {
@@ -410,18 +436,31 @@ function FormulaireBon({ onFini }: { onFini: () => void }) {
       ),
     [catalogue, activitesEquipements]
   );
-  const [equipement, setEquipement] = useState('');
-  const [date, setDate] = useState(maintenantLocal);
-  const [duree, setDuree] = useState('');
-  const [probleme, setProbleme] = useState('');
-  const [travaux, setTravaux] = useState('');
-  const [pieces, setPieces] = useState('');
+  const [equipement, setEquipement] = useState(repris?.equipement ?? '');
+  const [date, setDate] = useState(repris?.date ?? maintenantLocal);
+  const [duree, setDuree] = useState(repris?.duree ?? '');
+  const [probleme, setProbleme] = useState(repris?.probleme ?? '');
+  const [travaux, setTravaux] = useState(repris?.travaux ?? '');
+  const [pieces, setPieces] = useState(repris?.pieces ?? '');
   const [medias, setMedias] = useState<File[]>([]);
-  const [technicien, setTechnicien] = useState(utilisateur ? `${utilisateur.prenom} ${utilisateur.nom}`.trim() : '');
+  const [technicien, setTechnicien] = useState(repris?.technicien ?? (utilisateur ? `${utilisateur.prenom} ${utilisateur.nom}`.trim() : ''));
   const [signatureTech, setSignatureTech] = useState<Blob | null>(null);
-  const [responsable, setResponsable] = useState('');
+  const [responsable, setResponsable] = useState(repris?.responsable ?? '');
   const [signatureResp, setSignatureResp] = useState<Blob | null>(null);
   const [progression, setProgression] = useState<string | null>(null);
+
+  const valeursBrouillon = useMemo<BrouillonBon>(
+    () => ({ parcId, activite, activiteLibre, equipement, date, duree, probleme, travaux, pieces, technicien, responsable }),
+    [parcId, activite, activiteLibre, equipement, date, duree, probleme, travaux, pieces, technicien, responsable]
+  );
+  const commence = [activite, equipement, duree, probleme, travaux, pieces, responsable].some((v) => v.trim() !== '');
+  useAutoSaveDraft(brouillon.save, valeursBrouillon, commence);
+
+  const annuler = () => {
+    if (commence && !window.confirm('Abandonner ce bon ? La saisie sera effacée.')) return;
+    brouillon.clear();
+    onFini();
+  };
 
   const apercus = useMemo(() => medias.map((f) => URL.createObjectURL(f)), [medias]);
   useEffect(() => () => apercus.forEach((u) => URL.revokeObjectURL(u)), [apercus]);
@@ -488,6 +527,7 @@ function FormulaireBon({ onFini }: { onFini: () => void }) {
       return data as BonIntervention;
     },
     onSuccess: async (bon) => {
+      brouillon.clear();
       toast.success(`Bon ${bon.numero ?? ''} enregistré`);
       qc.invalidateQueries({ queryKey: ['bons-intervention'] });
       onFini();
@@ -504,6 +544,11 @@ function FormulaireBon({ onFini }: { onFini: () => void }) {
   return (
     <div className="bg-bg-card rounded-xl border border-nikito-cyan/30 p-4 mb-5 grid gap-3 max-w-[720px]">
       <div className="text-[15px] font-semibold">Nouveau bon d'intervention</div>
+      {repris && (
+        <div className="text-[12px] text-amber bg-amber/10 rounded-lg p-2.5">
+          Bon repris là où tu l’avais laissé. Les photos et les signatures sont à refaire.
+        </div>
+      )}
 
       <div className="grid sm:grid-cols-2 gap-2.5">
         <select value={parcId} onChange={(e) => setParcId(e.target.value)} className={champ}>
@@ -616,7 +661,7 @@ function FormulaireBon({ onFini }: { onFini: () => void }) {
 
       {progression && <div className="text-[12px] text-dim">{progression} — garde la page ouverte</div>}
       <div className="flex gap-2 justify-end">
-        <button onClick={onFini} disabled={enregistrer.isPending} className="text-dim text-[13px] px-3 min-h-[44px]">
+        <button onClick={annuler} disabled={enregistrer.isPending} className="text-dim text-[13px] px-3 min-h-[44px]">
           Annuler
         </button>
         <button
