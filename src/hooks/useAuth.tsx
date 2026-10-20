@@ -12,6 +12,8 @@ export interface UtilisateurMetier {
   parc_ids: string[];
   /** Parcs où l'utilisateur est manager principal (badge MGR) */
   parcs_manager_principal: string[];
+  /** Autorisé à démarrer / clôturer les tickets de ses parcs sans être technicien */
+  peut_intervenir: boolean;
   consentement_gps: boolean;
   tour_vu: boolean;
 }
@@ -93,7 +95,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     supabase
       .from('utilisateurs')
       .select(
-        `id, email, nom, prenom, trigramme, consentement_gps, tour_vu,
+        `id, email, nom, prenom, trigramme, consentement_gps, tour_vu, peut_intervenir,
          roles!inner(code),
          parcs_utilisateurs(parc_id, est_manager)`
       )
@@ -118,6 +120,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             role_code: roles.code as UtilisateurMetier['role_code'],
             parc_ids: pu.map((p) => p.parc_id),
             parcs_manager_principal: pu.filter((p) => p.est_manager).map((p) => p.parc_id),
+            peut_intervenir: (d.peut_intervenir as boolean) ?? false,
           });
         }
         setLoading(false);

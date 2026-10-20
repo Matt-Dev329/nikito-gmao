@@ -189,8 +189,10 @@ export function Intervention() {
   // Démarrage possible : photo AVANT prise, ou photo du signalement réutilisée
   const photoDisponible = !!photoAvant || (!!photoSignalement && !autrePhoto);
   // Intervention pas encore démarrée (ou en pause) : seul le bloc « Démarrer » est proposé
-  // Directeurs et managers de parc : suivi en lecture seule (pas de démarrage ni de saisie)
-  const lectureSeule = utilisateur?.role_code === 'manager_parc' || utilisateur?.role_code === 'directeur_parc';
+  // Directeurs et managers de parc : suivi en lecture seule (pas de démarrage ni de saisie),
+  // sauf autorisation « peut intervenir » (tickets de leurs parcs, contrôlé en base)
+  const lectureSeule =
+    (utilisateur?.role_code === 'manager_parc' || utilisateur?.role_code === 'directeur_parc') && !utilisateur?.peut_intervenir;
   const aDemarrer =
     !lectureSeule && !estResolu && incident?.externe !== true && (!latestIntervention || statutIncident === 'en_pause');
   const formulaireVisible = !lectureSeule && (estResolu || (!aDemarrer && incident?.externe !== true));

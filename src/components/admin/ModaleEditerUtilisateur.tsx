@@ -6,6 +6,7 @@ import {
   useRoles,
   useModifierUtilisateur,
   useDefinirProfilTechnicien,
+  useDefinirPeutIntervenir,
   useUtilisateursActifs,
   PROFILS_TECHNICIEN,
   type ProfilTechnicien,
@@ -30,6 +31,8 @@ export function ModaleEditerUtilisateur({ open, onClose, utilisateur }: Props) {
   // Profil technicien (Arcade / Nikito) : réglé par le chef d'équipe, la direction ou l'admin IT
   const peutReglerProfil = ['chef_maintenance', 'direction', 'admin_it'].includes(moi?.role_code ?? '');
   const [profil, setProfil] = useState<ProfilTechnicien>(utilisateur.profil_technicien ?? 'polyvalent');
+  const intervenirMutation = useDefinirPeutIntervenir();
+  const [peutIntervenir, setPeutIntervenir] = useState(utilisateur.peut_intervenir ?? false);
   // Texte indicatif : techniciens déjà dans chaque type (ex. Baptiste, Samy pour Nikito)
   const { data: actifs } = useUtilisateursActifs();
   const membresDuProfil = (code: ProfilTechnicien) =>
@@ -61,6 +64,7 @@ export function ModaleEditerUtilisateur({ open, onClose, utilisateur }: Props) {
     setEstManager(utilisateur.parcs.some((p) => p.est_manager));
     setActif(utilisateur.actif);
     setProfil(utilisateur.profil_technicien ?? 'polyvalent');
+    setPeutIntervenir(utilisateur.peut_intervenir ?? false);
     setErreur(null);
     setResetSent(false);
   }, [utilisateur]);
@@ -83,6 +87,9 @@ export function ModaleEditerUtilisateur({ open, onClose, utilisateur }: Props) {
       });
       if (roleCode === 'technicien' && peutReglerProfil && profil !== (utilisateur.profil_technicien ?? 'polyvalent')) {
         await profilMutation.mutateAsync({ utilisateur_id: utilisateur.id, profil });
+      }
+      if (peutReglerProfil && peutIntervenir !== (utilisateur.peut_intervenir ?? false)) {
+        await intervenirMutation.mutateAsync({ utilisateur_id: utilisateur.id, autorise: peutIntervenir });
       }
       onClose();
     } catch (e) {
@@ -175,6 +182,21 @@ export function ModaleEditerUtilisateur({ open, onClose, utilisateur }: Props) {
               Tickets, notifications, équipements et rapports de réparation suivent ce choix, sur tous ses parcs cochés.
             </div>
           </div>
+        )}
+
+        {peutReglerProfil && (roleCode === 'directeur_parc' || roleCode === 'manager_parc') && (
+          <label className="flex items-start gap-2 mb-4 text-xs cursor-pointer">
+            <input
+              type="checkbox"
+              checked={peutIntervenir}
+              onChange={(e) => setPeutIntervenir(e.target.checked)}
+              className="accent-nikito-pink mt-0.5"
+            />
+            <span>
+              Peut intervenir sur les tickets
+              <span className="block text-[10px] text-faint">Démarrer, mettre en attente de pièce et clôturer les tickets de ses parcs</span>
+            </span>
+          </label>
         )}
 
         <div className="mb-4">
@@ -306,7 +328,7 @@ export function ModaleEditerUtilisateur({ open, onClose, utilisateur }: Props) {
           </button>
           <button
             onClick={enregistrer}
-            disabled={!peutValider || modifierMutation.isPending || profilMutation.isPending}
+            disabled={!peutValider || modifierMutation.isPending || profilMutation.isPending || intervenirMutation.isPending}
             className={cn(
               'bg-gradient-cta text-text px-6 py-2.5 rounded-[10px] text-[13px] font-bold min-h-[44px]',
               (!peutValider || modifierMutation.isPending) && 'opacity-40 cursor-not-allowed'

@@ -19,6 +19,8 @@ export interface UtilisateurRow {
   code_pin_genere_le?: string | null;
   /** Techniciens : Arcade (arcades seulement), Nikito (sans arcade) ou polyvalent */
   profil_technicien?: ProfilTechnicien;
+  /** Non-technicien autorisé à intervenir sur les tickets de ses parcs */
+  peut_intervenir?: boolean;
 }
 
 export type ProfilTechnicien = 'polyvalent' | 'arcade' | 'nikito';
@@ -90,7 +92,7 @@ export function useUtilisateursActifs() {
       const { data, error } = await supabase
         .from('utilisateurs')
         .select(
-          `id, email, prenom, nom, trigramme, actif, statut_validation, auth_mode, cree_le, role_id, profil_technicien, code_pin_genere_le,
+          `id, email, prenom, nom, trigramme, actif, statut_validation, auth_mode, cree_le, role_id, profil_technicien, peut_intervenir, code_pin_genere_le,
            roles!inner(code),
            parcs_utilisateurs(parc_id, est_manager, parcs(code))`
         )
@@ -120,7 +122,7 @@ export function useUtilisateursAValider() {
       const { data, error } = await supabase
         .from('utilisateurs')
         .select(
-          `id, email, prenom, nom, trigramme, actif, statut_validation, auth_mode, cree_le, role_id, profil_technicien,
+          `id, email, prenom, nom, trigramme, actif, statut_validation, auth_mode, cree_le, role_id, profil_technicien, peut_intervenir,
            roles!inner(code),
            parcs_utilisateurs(parc_id, est_manager, parcs(code))`
         )
@@ -149,7 +151,7 @@ export function useUtilisateursDesactives() {
       const { data, error } = await supabase
         .from('utilisateurs')
         .select(
-          `id, email, prenom, nom, trigramme, actif, statut_validation, auth_mode, cree_le, role_id, profil_technicien,
+          `id, email, prenom, nom, trigramme, actif, statut_validation, auth_mode, cree_le, role_id, profil_technicien, peut_intervenir,
            roles!inner(code),
            parcs_utilisateurs(parc_id, est_manager, parcs(code))`
         )
@@ -234,6 +236,19 @@ export function useRoles() {
         .order('nom');
       if (error) throw error;
       return data as { id: string; code: RoleUtilisateur; nom: string }[];
+    },
+  });
+}
+
+export function useDefinirPeutIntervenir() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ utilisateur_id, autorise }: { utilisateur_id: string; autorise: boolean }) => {
+      const { error } = await supabase.rpc('definir_peut_intervenir', { p_utilisateur_id: utilisateur_id, p_autorise: autorise });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['utilisateurs'] });
     },
   });
 }
