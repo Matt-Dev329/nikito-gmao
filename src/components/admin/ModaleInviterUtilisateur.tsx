@@ -7,6 +7,7 @@ import { supabase } from '@/lib/supabase';
 import { roleLabels } from '@/lib/tokens';
 import { rolesAttribuables } from '@/lib/acces';
 import type { RoleUtilisateur } from '@/types/database';
+import { PROFILS_TECHNICIEN, type ProfilTechnicien } from '@/hooks/queries/useUtilisateurs';
 
 interface ModaleInviterProps {
   open: boolean;
@@ -48,6 +49,8 @@ export function ModaleInviterUtilisateur({
   );
   const [parcsChoisis, setParcsChoisis] = useState<string[]>([]);
   const [estManager, setEstManager] = useState(false);
+  // Technicien : type (Arcade / Nikito), appliqué quand il accepte l'invitation
+  const [profil, setProfil] = useState<ProfilTechnicien>('polyvalent');
   const [methodeEnvoi, setMethodeEnvoi] = useState<'email' | 'lien'>('email');
   const [submitting, setSubmitting] = useState(false);
   const [lienGenere, setLienGenere] = useState<string | null>(null);
@@ -147,6 +150,7 @@ export function ModaleInviterUtilisateur({
       role_id: role.id,
       parcs_assignes: parcsChoisis,
       est_manager: estManager && peutNommerMgr,
+      profil_technicien: roleChoisi === 'technicien' ? profil : 'polyvalent',
       auth_mode: authMode,
       invite_par_id: utilisateur.id,
     });
@@ -175,7 +179,10 @@ export function ModaleInviterUtilisateur({
 
       const payload = {
         destinataire_email: email,
-        role_label: roleLabels[roleChoisi],
+        role_label:
+          roleChoisi === 'technicien' && profil !== 'polyvalent'
+            ? PROFILS_TECHNICIEN.find((p) => p.code === profil)?.label ?? roleLabels[roleChoisi]
+            : roleLabels[roleChoisi],
         invitant_prenom: utilisateur.prenom,
         invitant_nom: utilisateur.nom,
         lien_invitation: lien,
@@ -376,6 +383,26 @@ export function ModaleInviterUtilisateur({
                   />
                   Sera manager principal de son parc
                 </label>
+              )}
+              {roleChoisi === 'technicien' && (
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-1.5 mt-3">
+                  {PROFILS_TECHNICIEN.map((p) => (
+                    <button
+                      key={p.code}
+                      type="button"
+                      onClick={() => setProfil(p.code)}
+                      className={cn(
+                        'py-2 px-2 rounded-lg text-left min-h-[44px] transition-colors',
+                        profil === p.code
+                          ? 'bg-nikito-cyan/15 border border-nikito-cyan text-text'
+                          : 'bg-bg-deep border border-white/[0.08] text-dim hover:border-white/20'
+                      )}
+                    >
+                      <div className="text-[12px] font-semibold">{p.label}</div>
+                      <div className="text-[10px] opacity-70">{p.detail}</div>
+                    </button>
+                  ))}
+                </div>
               )}
             </div>
 
