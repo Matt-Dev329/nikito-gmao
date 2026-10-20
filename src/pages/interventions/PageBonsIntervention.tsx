@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { cn, estCheminVideo } from '@/lib/utils';
@@ -21,8 +21,52 @@ import { CarteRapport } from './PageRapportsReparation';
 import { useRapports, type Rapport } from '@/hooks/queries/useRapportsReparation';
 
 // Bons hors ticket et interventions clôturées sur ticket, dans une même liste
-type Element = { type: 'bon'; date: string; bon: BonIntervention } | { type: 'ticket'; date: string; rapport: Rapport };
-type Source = 'tous' | 'bon' | 'ticket';
+type Element =
+  | { type: 'bon'; date: string; bon: BonIntervention }
+  | { type: 'ticket'; date: string; rapport: Rapport }
+  | { type: 'encours'; date: string; ticket: TicketEnCours };
+type Source = 'tous' | 'encours' | 'bon' | 'ticket';
+
+/** Ticket pas encore clôturé : intervention en cours, en pause ou en attente de pièce. */
+interface TicketEnCours {
+  id: string;
+  numero_bt: string;
+  titre: string;
+  statut: string;
+  attente_piece: boolean;
+  attente_piece_detail: string | null;
+  attente_piece_depuis: string | null;
+  pause_motif: string | null;
+  declare_le: string;
+  equipements: { code: string | null; libelle: string | null; parc: { code: string; nom: string } | null; categorie: { activite: string | null } | null } | null;
+  assigne: { prenom: string | null; nom: string | null } | null;
+  interventions: { debut: string | null; fin: string | null; diagnostic: string | null }[] | null;
+}
+
+function useTicketsEnCours() {
+  const { estFormation } = useFormationFilter();
+  return useQuery({
+    queryKey: ['bons-intervention', 'en-cours', estFormation],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('incidents')
+        .select(
+          `id, numero_bt, titre, statut, attente_piece, attente_piece_detail, attente_piece_depuis, pause_motif, declare_le,
+          equipements(code, libelle, parc:parcs(code, nom), categorie:categories_equipement(activite)),
+          assigne:utilisateurs!incidents_assigne_a_id_fkey(prenom, nom),
+          interventions(debut, fin, diagnostic)`
+        )
+        .eq('est_formation', estFormation)
+        .not('statut', 'in', '(resolu,ferme,annule)')
+        .or('statut.in.(en_cours,en_pause),attente_piece.eq.true');
+      if (error) throw error;
+      return (data ?? []) as unknown as TicketEnCours[];
+    },
+  });
+}
+
+const debutTicket = (t: TicketEnCours) =>
+  (t.interventions ?? []).filter((iv) => !iv.fin && iv.debut).map((iv) => iv.debut as string).sort().pop() ?? t.declare_le;
 
 const PERIODES = [
   { code: '30', label: '30 jours', jours: 30 },
@@ -71,23 +115,44 @@ function ContenuBons() {
   const jours = PERIODES.find((p) => p.code === periode)?.jours ?? 90;
   const bonsQ = useBons(jours);
   const rapportsQ = useRapports(jours);
-  const isLoading = bonsQ.isLoading || rapportsQ.isLoading;
-  const isError = bonsQ.isError || rapportsQ.isError;
-  const error = bonsQ.error ?? rapportsQ.error;
+  const enCoursQ = useTicketsEnCours();
+  const isLoading = bonsQ.isLoading || rapportsQ.isLoading || enCoursQ.isLoading;
+  const isError = bonsQ.isError || rapportsQ.isError || enCoursQ.isError;
+  const error = bonsQ.error ?? rapportsQ.error ?? enCoursQ.error;
 
   const elements = useMemo<Element[]>(
     () =>
       [
-        ...(bonsQ.data ?? []).map((bon) => ({ type: 'bon' as const, date: bon.date_intervention, bon })),
-        ...(rapportsQ.data ?? []).map((rapport) => ({ type: 'ticket' as const, date: rapport.fin, rapport })),
-      ].sort((a, b) => (b.date ?? '').localeCompare(a.date ?? '')),
-    [bonsQ.data, rapportsQ.data]
+        // Tickets pas encore clôturés en tête, quelle que soit la période
+        ...(enCoursQ.data ?? [])
+          .map((ticket) => ({ type: 'encours' as const, date: debutTicket(ticket), ticket }))
+          .sort((a, b) => b.date.localeCompare(a.date)),
+        ...[
+          ...(bonsQ.data ?? []).map((bon) => ({ type: 'bon' as const, date: bon.date_intervention, bon })),
+          ...(rapportsQ.data ?? []).map((rapport) => ({ type: 'ticket' as const, date: rapport.fin, rapport })),
+        ].sort((a, b) => (b.date ?? '').localeCompare(a.date ?? '')),
+      ],
+    [bonsQ.data, rapportsQ.data, enCoursQ.data]
   );
-  const activiteDe = (e: Element) => (e.type === 'bon' ? e.bon.activite : e.rapport.activite) || 'Autres';
+  const activiteDe = (e: Element) =>
+    (e.type === 'bon' ? e.bon.activite : e.type === 'ticket' ? e.rapport.activite : e.ticket.equipements?.categorie?.activite) || 'Autres';
   const texteDe = (e: Element) =>
     (e.type === 'bon'
       ? [e.bon.numero, e.bon.activite, e.bon.equipement, e.bon.probleme, e.bon.travaux, e.bon.technicien_nom, e.bon.responsable_nom, e.bon.parc?.code, e.bon.parc?.nom]
-      : [e.rapport.numero_bt, e.rapport.activite, e.rapport.equipement, e.rapport.equipement_code, e.rapport.diagnostic, e.rapport.actions, e.rapport.intervenant, e.rapport.parc_code, e.rapport.parc_nom]
+      : e.type === 'ticket'
+        ? [e.rapport.numero_bt, e.rapport.activite, e.rapport.equipement, e.rapport.equipement_code, e.rapport.diagnostic, e.rapport.actions, e.rapport.intervenant, e.rapport.parc_code, e.rapport.parc_nom]
+        : [
+            e.ticket.numero_bt,
+            e.ticket.titre,
+            e.ticket.equipements?.code,
+            e.ticket.equipements?.libelle,
+            e.ticket.equipements?.categorie?.activite,
+            e.ticket.equipements?.parc?.code,
+            e.ticket.equipements?.parc?.nom,
+            e.ticket.attente_piece_detail,
+            e.ticket.assigne?.prenom,
+            e.ticket.assigne?.nom,
+          ]
     )
       .filter(Boolean)
       .join(' ')
@@ -105,7 +170,7 @@ function ContenuBons() {
     const q = recherche.trim().toLowerCase();
     return deLaSource.filter((e) => (!activiteActive || activiteDe(e) === activiteActive) && (!q || texteDe(e).includes(q)));
   }, [deLaSource, activiteActive, recherche]);
-  const nbBons = elements.filter((e) => e.type === 'bon').length;
+  const nb = (t: Element['type']) => elements.filter((e) => e.type === t).length;
 
   return (
     <div className="p-4 md:p-6 md:px-7">
@@ -140,8 +205,9 @@ function ContenuBons() {
           {(
             [
               ['tous', 'Tous', elements.length],
-              ['bon', 'Hors ticket', nbBons],
-              ['ticket', 'Sur ticket', elements.length - nbBons],
+              ['encours', 'En cours / attente de pièce', nb('encours')],
+              ['bon', 'Hors ticket', nb('bon')],
+              ['ticket', 'Clôturées sur ticket', nb('ticket')],
             ] as [Source, string, number][]
           ).map(([s, l, n]) => (
             <Pill key={s} active={source === s} onClick={() => setSource(s)}>
@@ -183,11 +249,52 @@ function ContenuBons() {
       ) : (
         <div className="flex flex-col gap-2.5">
           {filtres.map((e) =>
-            e.type === 'bon' ? <CarteBon key={`b:${e.bon.id}`} bon={e.bon} /> : <CarteRapport key={`t:${e.rapport.cle}`} rapport={e.rapport} />
+            e.type === 'bon' ? (
+              <CarteBon key={`b:${e.bon.id}`} bon={e.bon} />
+            ) : e.type === 'ticket' ? (
+              <CarteRapport key={`t:${e.rapport.cle}`} rapport={e.rapport} />
+            ) : (
+              <CarteEnCours key={`c:${e.ticket.id}`} ticket={e.ticket} />
+            )
           )}
         </div>
       )}
     </div>
+  );
+}
+
+function CarteEnCours({ ticket: t }: { ticket: TicketEnCours }) {
+  const navigate = useNavigate();
+  const ivOuverte = (t.interventions ?? []).filter((iv) => !iv.fin).sort((a, b) => (b.debut ?? '').localeCompare(a.debut ?? ''))[0];
+  const etat = t.attente_piece
+    ? { label: 'En attente de pièce', classe: 'bg-amber/15 text-amber' }
+    : t.statut === 'en_pause'
+      ? { label: 'En pause', classe: 'bg-white/[0.06] text-dim' }
+      : { label: 'En cours', classe: 'bg-nikito-cyan/15 text-nikito-cyan' };
+  const equipement = [t.equipements?.code, t.equipements?.libelle].filter(Boolean).join(' · ');
+  const depuis = t.attente_piece ? t.attente_piece_depuis : ivOuverte?.debut;
+  const technicien = [t.assigne?.prenom, t.assigne?.nom].filter(Boolean).join(' ');
+  return (
+    <button
+      onClick={() => navigate(`/gmao/operations/${t.numero_bt}`)}
+      className="w-full text-left bg-bg-card rounded-xl border border-amber/20 p-3.5 px-4 flex gap-3 items-start"
+    >
+      <div className="flex-1 min-w-0">
+        <div className="text-[14px] font-semibold truncate">
+          {t.numero_bt} · {t.titre}
+        </div>
+        <div className="text-[12px] text-dim mt-0.5">
+          {[t.equipements?.parc?.code, equipement, technicien ? `par ${technicien}` : null].filter(Boolean).join(' · ')}
+        </div>
+        {t.attente_piece && t.attente_piece_detail && <div className="text-[12px] text-amber mt-1">Pièce : {t.attente_piece_detail}</div>}
+        {!t.attente_piece && t.statut === 'en_pause' && t.pause_motif && <div className="text-[12px] text-dim mt-1">{t.pause_motif}</div>}
+        {ivOuverte?.diagnostic && <div className="text-[12px] text-faint mt-1 line-clamp-2">{ivOuverte.diagnostic}</div>}
+      </div>
+      <div className="flex flex-col items-end gap-1 flex-shrink-0">
+        <span className={cn('text-[10px] px-2 py-0.5 rounded', etat.classe)}>{etat.label}</span>
+        {depuis && <span className="text-[11px] text-dim">depuis le {new Date(depuis).toLocaleDateString('fr-FR')}</span>}
+      </div>
+    </button>
   );
 }
 
