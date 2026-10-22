@@ -478,6 +478,14 @@ export function Intervention() {
                       : 'La photo prise à la création du ticket sert de photo AVANT. Démarre quand tu es prêt.'
                     : 'Étape 1 : photo AVANT du problème. Étape 2 : démarrer (chrono, ticket « en cours »).'}
               </div>
+              {/* Problème à traiter : toujours sous les yeux du technicien au moment de démarrer */}
+              <div className="mt-3 bg-amber/10 border border-amber/40 rounded-xl px-3.5 py-3">
+                <div className="text-[11px] text-amber uppercase tracking-wider mb-1">Problème à traiter</div>
+                {incident.titre ? <div className="text-[15px] font-semibold">{incident.titre as string}</div> : null}
+                <div className={cn('text-[14px] mt-0.5 whitespace-pre-line', !incident.description && 'text-faint')}>
+                  {(incident.description as string | null) || 'Pas de description'}
+                </div>
+              </div>
               {photoAvant && <div className="text-green text-[14px] font-semibold mt-3">✓ Photo AVANT prise</div>}
               {!photoAvant && photoSignalement && !autrePhoto && (
                 <div className="mt-3 flex items-center gap-3">
