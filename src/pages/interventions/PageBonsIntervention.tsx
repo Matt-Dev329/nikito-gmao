@@ -8,6 +8,7 @@ import { envoyerFichier } from '@/lib/envoiGrosFichier';
 import { nomDepuisChemin } from '@/lib/telecharger';
 import { useAuth } from '@/hooks/useAuth';
 import { useDraftPersistence, useAutoSaveDraft } from '@/hooks/useDraftPersistence';
+import { ChoixTestActivite } from '@/components/tickets/ChoixTestActivite';
 import { useFormationFilter } from '@/hooks/useFormation';
 import { useParcs } from '@/hooks/queries/useReferentiel';
 import { useCatalogueCommandes } from '@/hooks/queries/useCommandes';
@@ -347,6 +348,7 @@ function CarteBon({ bon: b }: { bon: BonIntervention }) {
           )}
           <div className="text-[12px] text-dim">
             Durée : {formatDuree(b.duree_minutes)} · Technicien : {b.technicien_nom} · Responsable : {b.responsable_nom}
+            {b.test_activite != null && ` · Test de l’activité : ${b.test_activite ? 'oui' : 'non'}`}
           </div>
           {b.medias.length > 0 && (
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
@@ -398,6 +400,7 @@ type BrouillonBon = {
   pieces: string;
   technicien: string;
   responsable: string;
+  testActivite?: boolean | null;
 };
 
 function maintenantLocal(): string {
@@ -446,12 +449,13 @@ function FormulaireBon({ onFini }: { onFini: () => void }) {
   const [technicien, setTechnicien] = useState(repris?.technicien ?? (utilisateur ? `${utilisateur.prenom} ${utilisateur.nom}`.trim() : ''));
   const [signatureTech, setSignatureTech] = useState<Blob | null>(null);
   const [responsable, setResponsable] = useState(repris?.responsable ?? '');
+  const [testActivite, setTestActivite] = useState<boolean | null>(repris?.testActivite ?? null);
   const [signatureResp, setSignatureResp] = useState<Blob | null>(null);
   const [progression, setProgression] = useState<string | null>(null);
 
   const valeursBrouillon = useMemo<BrouillonBon>(
-    () => ({ parcId, activite, activiteLibre, equipement, date, duree, probleme, travaux, pieces, technicien, responsable }),
-    [parcId, activite, activiteLibre, equipement, date, duree, probleme, travaux, pieces, technicien, responsable]
+    () => ({ parcId, activite, activiteLibre, equipement, date, duree, probleme, travaux, pieces, technicien, responsable, testActivite }),
+    [parcId, activite, activiteLibre, equipement, date, duree, probleme, travaux, pieces, technicien, responsable, testActivite]
   );
   const commence = [activite, equipement, duree, probleme, travaux, pieces, responsable].some((v) => v.trim() !== '');
   useAutoSaveDraft(brouillon.save, valeursBrouillon, commence);
@@ -475,6 +479,7 @@ function FormulaireBon({ onFini }: { onFini: () => void }) {
   const enregistrer = useMutation({
     mutationFn: async () => {
       if (!travaux.trim()) throw new Error('Décris les travaux réalisés');
+      if (testActivite === null) throw new Error('Indique si le test de l’activité a été fait (oui ou non)');
       if (!technicien.trim() || !signatureTech) throw new Error('Nom et signature du technicien obligatoires');
       if (!responsable.trim() || !signatureResp) throw new Error('Nom et signature du responsable obligatoires');
 
@@ -512,6 +517,7 @@ function FormulaireBon({ onFini }: { onFini: () => void }) {
           duree_minutes: duree ? Math.max(0, Math.round(Number(duree))) : null,
           probleme: probleme.trim() || null,
           travaux: travaux.trim(),
+          test_activite: testActivite,
           pieces: pieces.trim() || null,
           medias: chemins,
           technicien_nom: technicien.trim(),
@@ -646,6 +652,8 @@ function FormulaireBon({ onFini }: { onFini: () => void }) {
           </div>
         )}
       </div>
+
+      <ChoixTestActivite valeur={testActivite} onChange={setTestActivite} />
 
       {/* Signatures */}
       <div className="grid sm:grid-cols-2 gap-4">

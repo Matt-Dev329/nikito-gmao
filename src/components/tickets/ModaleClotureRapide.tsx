@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/components/ui/ToastProvider';
 import { useCloturerTicketRapide } from '@/hooks/queries/useTickets';
+import { ChoixTestActivite } from '@/components/tickets/ChoixTestActivite';
 
 /** Clôture rapide d'un ticket (rien à faire, déjà réglé…) : la justification est obligatoire. */
 export function ModaleClotureRapide({
@@ -16,12 +17,13 @@ export function ModaleClotureRapide({
   const toast = useToast();
   const cloturer = useCloturerTicketRapide();
   const [justification, setJustification] = useState('');
-  const valide = justification.trim().length >= 5;
+  const [testActivite, setTestActivite] = useState<boolean | null>(null);
+  const valide = justification.trim().length >= 5 && testActivite !== null;
 
   const confirmer = () => {
-    if (!valide) return;
+    if (!valide || testActivite === null) return;
     cloturer.mutate(
-      { incidentId, justification: justification.trim() },
+      { incidentId, justification: justification.trim(), testActivite },
       {
         onSuccess: () => {
           toast.success(`Ticket ${numeroBT} clôturé`);
@@ -51,6 +53,9 @@ export function ModaleClotureRapide({
           placeholder="Justification (déjà réparé, rien à faire, réglé par l'équipe du parc…)"
           className="w-full bg-bg-deep border border-white/[0.08] rounded-[10px] p-3 text-[13px] text-text outline-none focus:border-green/50"
         />
+        <div className="mt-3">
+          <ChoixTestActivite valeur={testActivite} onChange={setTestActivite} />
+        </div>
         <div className="flex gap-2 justify-end mt-3">
           <button onClick={onClose} className="px-4 rounded-[10px] text-[13px] min-h-[44px] bg-bg-deep border border-white/[0.08] text-dim">
             Annuler

@@ -13,6 +13,7 @@ import { useIncident, useDemarrerIntervention, useValiderTicket } from '@/hooks/
 import { ModaleSupprimerTicket } from '@/components/tickets/ModaleSupprimerTicket';
 import { peutValiderTicket } from '@/lib/acces';
 import { useCloturerIntervention } from '@/hooks/mutations';
+import { ChoixTestActivite } from '@/components/tickets/ChoixTestActivite';
 import { useAuth } from '@/hooks/useAuth';
 import { useDraftPersistence, useAutoSaveDraft } from '@/hooks/useDraftPersistence';
 import { useToast } from '@/components/ui/ToastProvider';
@@ -182,6 +183,7 @@ export function Intervention() {
   const [editionDiagnostic, setEditionDiagnostic] = useState(false);
   const [actions, setActions] = useState('');
   const [premierCoup, setPremierCoup] = useState<boolean | null>(null);
+  const [testActivite, setTestActivite] = useState<boolean | null>(null);
   // Plusieurs photos avant / après : la première est obligatoire
   const [photosAvant, setPhotosAvant] = useState<string[]>([]);
   const photoAvant = photosAvant[0] ?? null;
@@ -216,6 +218,7 @@ export function Intervention() {
     diagnostic: string;
     actions: string;
     premierCoup: boolean | null;
+    testActivite?: boolean | null;
     photoAvant: string | null;
     photoApres: string | null;
     photosAvant?: string[];
@@ -231,6 +234,7 @@ export function Intervention() {
     setDiagnostic(d?.diagnostic ?? existingDiagnostic);
     setActions(d?.actions ?? existingActions);
     setPremierCoup(d?.premierCoup ?? existingPremierCoup);
+    setTestActivite(d?.testActivite ?? ((latestIntervention?.test_activite as boolean | null | undefined) ?? null));
     setEtapeActive(currentEtape);
     setPhotosAvant(d?.photosAvant ?? (d?.photoAvant ? [d.photoAvant] : serveurAvant));
     setPhotosApres(d?.photosApres ?? (d?.photoApres ? [d.photoApres] : serveurApres));
@@ -242,7 +246,7 @@ export function Intervention() {
   // Sauvegarde automatique de la saisie en cours (anti-perte réseau/veille).
   useAutoSaveDraft(
     draft.save,
-    { diagnostic, actions, premierCoup, photoAvant, photoApres, photosAvant, photosApres, piecesAjoutees },
+    { diagnostic, actions, premierCoup, testActivite, photoAvant, photoApres, photosAvant, photosApres, piecesAjoutees },
     initialized && dirty
   );
 
@@ -277,6 +281,7 @@ export function Intervention() {
     if (!actions.trim()) return setErreur('Les actions réalisées sont obligatoires.');
     if (!photoApres) return setErreur('La photo APRES réparation est obligatoire.');
     if (premierCoup === null) return setErreur('Indique si le problème a été résolu du 1er coup.');
+    if (testActivite === null) return setErreur('Indique si le test de l’activité a été fait (oui ou non).');
     if (!incident?.id) return setErreur('Incident introuvable.');
 
     const paramsCloture = {
@@ -285,6 +290,7 @@ export function Intervention() {
       diagnostic,
       actions,
       resoluPremierCoup: premierCoup,
+      testActivite,
       photoAvantUrl: photoAvant,
       photoApresUrl: photoApres,
       photosAvantUrls: photosAvant,
@@ -759,6 +765,12 @@ export function Intervention() {
             </button>
           </div>
         </div>
+
+        <ChoixTestActivite
+          valeur={testActivite}
+          onChange={(v) => { setTestActivite(v); setDirty(true); }}
+          desactive={estResolu}
+        />
 
         {erreur && (
           <div className="bg-red/10 border border-red/30 text-red text-[13px] rounded-xl p-3 text-center">

@@ -20,6 +20,8 @@ export interface BonIntervention {
   signature_technicien: string;
   responsable_nom: string;
   signature_responsable: string;
+  /** Test de l'activité fait après l'intervention (null : bon antérieur à la question) */
+  test_activite?: boolean | null;
   cree_le: string;
   parc?: { code: string; nom: string } | null;
 }
@@ -125,6 +127,7 @@ export async function exportBonPDF(bon: BonIntervention): Promise<void> {
   section('Probleme constate', bon.probleme);
   section('Travaux realises', bon.travaux);
   section('Pieces utilisees', bon.pieces);
+  if (bon.test_activite != null) section("Test de l'activite", bon.test_activite ? 'Oui' : 'Non');
 
   // Photos (les vidéos sont seulement mentionnées)
   const photos = bon.medias.filter((m) => !estCheminVideo(m));

@@ -232,8 +232,12 @@ export function useSupprimerTicket() {
 export function useCloturerTicketRapide() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ incidentId, justification }: { incidentId: string; justification: string }) => {
-      const { error } = await supabase.rpc('cloturer_ticket_rapide', { p_incident_id: incidentId, p_justification: justification });
+    mutationFn: async ({ incidentId, justification, testActivite }: { incidentId: string; justification: string; testActivite: boolean }) => {
+      const { error } = await supabase.rpc('cloturer_ticket_rapide', {
+        p_incident_id: incidentId,
+        p_justification: justification,
+        p_test_activite: testActivite,
+      });
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['incidents'] }),
@@ -318,10 +322,11 @@ export function useReprendreTicketEnInterne() {
 export function useCloturerTicketExterieur() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (p: { incidentId: string; compteRendu: string }) => {
+    mutationFn: async (p: { incidentId: string; compteRendu: string; testActivite: boolean }) => {
       const { error } = await supabase.rpc('cloturer_ticket_exterieur', {
         p_incident_id: p.incidentId,
         p_compte_rendu: p.compteRendu,
+        p_test_activite: p.testActivite,
       });
       if (error) throw error;
     },

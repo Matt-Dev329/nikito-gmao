@@ -7,6 +7,7 @@ import {
   useConfierIntervenantExterieur,
   useReprendreTicketEnInterne,
 } from '@/hooks/queries/useTickets';
+import { ChoixTestActivite } from '@/components/tickets/ChoixTestActivite';
 
 const champ =
   'w-full bg-bg-deep border border-white/[0.08] rounded-[10px] p-3 text-text text-[13px] outline-none focus:border-nikito-cyan min-h-[44px]';
@@ -43,6 +44,7 @@ export function PanneauIntervenantExterieur({
   const [datePrevue, setDatePrevue] = useState('');
   const [commentaire, setCommentaire] = useState('');
   const [cr, setCr] = useState('');
+  const [testActivite, setTestActivite] = useState<boolean | null>(null);
 
   if (resolu && !compteRendu) return null;
 
@@ -81,8 +83,12 @@ export function PanneauIntervenantExterieur({
       toast.error("Indique ce qu'a fait l'intervenant");
       return;
     }
+    if (testActivite === null) {
+      toast.error('Indique si le test de l’activité a été fait (oui ou non)');
+      return;
+    }
     try {
-      await cloturer.mutateAsync({ incidentId: incident.id as string, compteRendu: cr.trim() });
+      await cloturer.mutateAsync({ incidentId: incident.id as string, compteRendu: cr.trim(), testActivite });
       toast.success('Ticket clôturé (travaux de l’intervenant extérieur)');
       setFormulaire(null);
       onCloture?.();
@@ -206,16 +212,17 @@ export function PanneauIntervenantExterieur({
             placeholder="Compte-rendu : ce qu'a fait l'intervenant, pièces changées, n° de bon…"
             className={cn(champ, 'resize-none')}
           />
+          <ChoixTestActivite valeur={testActivite} onChange={setTestActivite} />
           <div className="flex gap-2 justify-end">
             <button onClick={() => setFormulaire(null)} className="text-dim text-[13px] px-3 min-h-[44px]">
               Annuler
             </button>
             <button
               onClick={envoyerCloture}
-              disabled={cloturer.isPending}
+              disabled={cloturer.isPending || testActivite === null}
               className={cn(
                 'bg-green/15 text-green border border-green/40 px-4 rounded-[10px] text-[13px] font-semibold min-h-[44px]',
-                cloturer.isPending && 'opacity-40'
+                (cloturer.isPending || testActivite === null) && 'opacity-40'
               )}
             >
               {cloturer.isPending ? '…' : 'Clôturer le ticket'}

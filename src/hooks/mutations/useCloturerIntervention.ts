@@ -16,6 +16,8 @@ export interface CloturerInterventionParams {
   photosApresUrls?: string[];
   /** Pièces du stock consommées pendant la réparation (sortie de stock automatique) */
   pieces?: Array<{ pieceId: string; quantite: number }>;
+  /** Test de l'activité après intervention (obligatoire pour fermer le ticket) */
+  testActivite?: boolean | null;
 }
 
 /**
@@ -51,6 +53,7 @@ export async function cloturerIntervention(
         resolu_premier_coup: params.resoluPremierCoup,
         photos_avant: photosAvant,
         photos_apres: photosApres,
+        test_activite: params.testActivite ?? null,
       })
       .eq('id', interventionId);
     if (error) throw new Error(error.message);
@@ -67,6 +70,7 @@ export async function cloturerIntervention(
         resolu_premier_coup: params.resoluPremierCoup,
         photos_avant: photosAvant,
         photos_apres: photosApres,
+        test_activite: params.testActivite ?? null,
       })
       .select('id')
       .single();
@@ -94,7 +98,7 @@ export async function cloturerIntervention(
 
   const { error: incErr } = await supabase
     .from('incidents')
-    .update({ statut: 'resolu', resolu_le: nowISO, resolu_par_id: utilisateurId })
+    .update({ statut: 'resolu', resolu_le: nowISO, resolu_par_id: utilisateurId, test_activite: params.testActivite ?? null })
     .eq('id', params.incidentId);
   if (incErr) throw new Error(incErr.message);
 
