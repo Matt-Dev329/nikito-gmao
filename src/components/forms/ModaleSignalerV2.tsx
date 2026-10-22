@@ -217,8 +217,8 @@ export function ModaleSignalerV2({ open, onClose, via, parcId: propParcId, modeE
   const totalSteps = STEPS.length;
 
   const handleSubmit = useCallback(async () => {
-    // Photo / vidéo facultatives
-    if (!parcId || !state.categorie || !userCtx) return;
+    // Photo / vidéo obligatoire (contrôlé aussi côté serveur)
+    if (!parcId || !state.categorie || !userCtx || !state.photoUrl) return;
     setSubmitting(true);
     setSubmitError(null);
 
@@ -947,7 +947,7 @@ function EtapePhoto({
       {!preview ? (
         <div className="flex-1 flex flex-col items-center justify-center py-8 w-full">
           <div className="text-sm text-dim text-center mb-6 max-w-[300px]">
-            Ajoute une photo ou une courte vidéo du problème (facultatif, mais ça aide le technicien)
+            Prends une photo ou une courte vidéo du problème (obligatoire : le technicien voit tout de suite de quoi il s’agit)
           </div>
           <div className="flex flex-col gap-3 w-full max-w-[320px]">
             <button
@@ -961,12 +961,6 @@ function EtapePhoto({
               className="bg-[#131836] border border-[#5DE5FF]/40 text-[#5DE5FF] px-6 py-4 rounded-2xl text-base font-bold active:scale-95 transition-transform min-h-[64px]"
             >
               {'\u{1F3A5}'} Filmer une vidéo
-            </button>
-            <button
-              onClick={() => onDone(null, '', false)}
-              className="text-dim text-sm underline min-h-[48px]"
-            >
-              Continuer sans photo ni vidéo
             </button>
           </div>
           {error && <div className="text-[#FF4D6D] text-xs mt-4 text-center max-w-[300px]">{error}</div>}
@@ -1076,7 +1070,9 @@ function EtapeRecap({
         </div>
       )}
       {!state.photoUrl && (
-        <div className="text-[12px] text-dim mb-3 text-center">Aucune photo ni vidéo jointe</div>
+        <div className="text-[12px] text-[#FF4D6D] bg-[#FF4D6D]/10 border border-[#FF4D6D]/25 rounded-xl p-3 mb-3 text-center">
+          Photo ou vidéo obligatoire : appuie sur « Modifier » pour l’ajouter
+        </div>
       )}
 
       <div className="bg-[#131836] rounded-xl p-4 mb-3 border border-white/[0.06]">
@@ -1210,10 +1206,10 @@ function EtapeRecap({
         </button>
         <button
           onClick={onEnvoyer}
-          disabled={submitting}
+          disabled={submitting || !state.photoUrl}
           className={cn(
             'flex-[2] rounded-xl py-3.5 text-sm font-bold min-h-[56px]',
-            submitting ? 'bg-white/10 text-dim' : 'bg-gradient-to-r from-[#E85A9B] to-[#5DE5FF] text-white active:scale-[0.98]'
+            submitting || !state.photoUrl ? 'bg-white/10 text-dim' : 'bg-gradient-to-r from-[#E85A9B] to-[#5DE5FF] text-white active:scale-[0.98]'
           )}
         >
           {submitting ? 'Envoi en cours...' : 'Envoyer le signalement'}

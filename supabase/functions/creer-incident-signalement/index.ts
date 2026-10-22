@@ -27,9 +27,9 @@ interface Payload {
   categorie_id: string;
   symptome_id: string | null;
   symptome_libre: string | null;
-  /** Photo ou vidéo du problème (facultative) */
+  /** Photo ou vidéo du problème (au moins un média obligatoire, ici ou dans medias) */
   photo_url?: string | null;
-  /** Plusieurs médias (photos / vidéos), facultatif */
+  /** Plusieurs médias (photos / vidéos) */
   medias?: string[] | null;
   priorite_escaladee: boolean;
   equipement_manquant_label: string | null;
@@ -59,10 +59,13 @@ Deno.serve(async (req: Request) => {
     if (!body.symptome_libre || !body.symptome_libre.trim()) {
       return jsonResponse({ success: false, error: "Décris le problème : la description est obligatoire" }, 400);
     }
-    // Photo / vidéo facultatives
+    // Photo / vidéo obligatoire
     const medias = [...(body.medias ?? []), ...(body.photo_url ? [body.photo_url] : [])].filter(
       (m, i, arr) => typeof m === "string" && m.trim() !== "" && arr.indexOf(m) === i,
     );
+    if (medias.length === 0) {
+      return jsonResponse({ success: false, error: "Photo obligatoire : prends une photo ou une vidéo du problème" }, 400);
+    }
 
     // 1. Verify user has access to this parc
     const { data: access } = await supabase
