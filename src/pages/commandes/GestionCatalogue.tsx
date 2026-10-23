@@ -1,4 +1,6 @@
 import { useMemo, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/lib/supabase';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/components/ui/ToastProvider';
 import {
@@ -72,6 +74,9 @@ export function GestionCatalogue() {
                       {a.nom}
                       {!a.actif && <span className="text-[10px] bg-white/[0.06] text-dim px-1.5 py-0.5 rounded">Masquée</span>}
                       <BadgeParcs ids={a.parc_ids} />
+                      {a.sans_validation && (
+                        <span className="text-[10px] bg-amber/15 text-amber px-1.5 py-0.5 rounded">Sans validation</span>
+                      )}
                     </div>
                     {a.description && <div className="text-[12px] text-dim">{a.description}</div>}
                   </div>
@@ -237,6 +242,38 @@ function BoutonsModale({ onClose, onSave, disabled, pending }: { onClose: () => 
   );
 }
 
+/** Personnes qui reçoivent les commandes directes d'une activité. */
+function ChoixDestinataires({ valeur, onChange }: { valeur: string[]; onChange: (ids: string[]) => void }) {
+  const { data: equipe } = useQuery({
+    queryKey: ['destinataires-commandes'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('utilisateurs')
+        .select('id, prenom, nom, email, roles!inner(code)')
+        .eq('actif', true)
+        .not('email', 'is', null)
+        .neq('roles.code', 'staff_operationnel')
+        .order('prenom');
+      if (error) throw error;
+      return (data ?? []) as unknown as { id: string; prenom: string; nom: string; email: string }[];
+    },
+  });
+  const basculer = (id: string) => onChange(valeur.includes(id) ? valeur.filter((v) => v !== id) : [...valeur, id]);
+  return (
+    <Field label="Destinataires des commandes">
+      <div className="max-h-[200px] overflow-y-auto flex flex-col gap-0.5 bg-bg-deep rounded-[10px] p-2">
+        {(equipe ?? []).map((u) => (
+          <label key={u.id} className="flex items-center gap-2 px-1.5 py-1 text-[13px] cursor-pointer min-h-[36px]">
+            <input type="checkbox" checked={valeur.includes(u.id)} onChange={() => basculer(u.id)} />
+            {u.prenom} {u.nom}
+            <span className="text-faint text-[11px]">· {u.email}</span>
+          </label>
+        ))}
+      </div>
+    </Field>
+  );
+}
+
 function ModaleActivite({ initiale, onClose }: { initiale: Partial<ActiviteCommande>; onClose: () => void }) {
   const enregistrer = useEnregistrerActivite();
   const toast = useToast();
@@ -244,6 +281,9 @@ function ModaleActivite({ initiale, onClose }: { initiale: Partial<ActiviteComma
   const [description, setDescription] = useState(initiale.description ?? '');
   const [actif, setActif] = useState(initiale.actif ?? true);
   const [parcIds, setParcIds] = useState<string[]>(initiale.parc_ids ?? []);
+  const [sansValidation, setSansValidation] = useState(initiale.sans_validation ?? false);
+  const [destinataires, setDestinataires] = useState<string[]>(initiale.destinataire_ids ?? []);
+  const destinatairesManquants = sansValidation && destinataires.length === 0;
 
   const save = async () => {
     try {
@@ -254,6 +294,8 @@ function ModaleActivite({ initiale, onClose }: { initiale: Partial<ActiviteComma
         ordre: initiale.ordre ?? 0,
         actif,
         parc_ids: parcIds,
+        sans_validation: sansValidation,
+        destinataire_ids: sansValidation ? destinataires : [],
       });
       toast.success('Activité enregistrée');
       onClose();
@@ -276,8 +318,19 @@ function ModaleActivite({ initiale, onClose }: { initiale: Partial<ActiviteComma
           Visible dans le catalogue
         </label>
         <ChoixParcs valeur={parcIds} onChange={setParcIds} quoi="cette activité et ses produits" />
+        <label className="flex items-start gap-2 text-[13px]">
+          <input type="checkbox" checked={sansValidation} onChange={(e) => setSansValidation(e.target.checked)} className="mt-0.5" />
+          <span>
+            Sans validation
+            <span className="block text-[11px] text-dim">
+              Les commandes de cette activité partent directement (sans ton accord) aux destinataires ci-dessous, toi en copie.
+            </span>
+          </span>
+        </label>
+        {sansValidation && <ChoixDestinataires valeur={destinataires} onChange={setDestinataires} />}
+        {destinatairesManquants && <div className="text-[12px] text-amber">Choisis au moins un destinataire.</div>}
       </div>
-      <BoutonsModale onClose={onClose} onSave={save} disabled={!nom.trim()} pending={enregistrer.isPending} />
+      <BoutonsModale onClose={onClose} onSave={save} disabled={!nom.trim() || destinatairesManquants} pending={enregistrer.isPending} />
     </Modale>
   );
 }

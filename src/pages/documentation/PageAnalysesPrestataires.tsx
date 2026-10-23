@@ -125,6 +125,10 @@ function ContenuAnalyses() {
   // Mode « mail de réparation » : rapports cochés
   const [selection, setSelection] = useState<Set<string> | null>(null);
   const [mailOuvert, setMailOuvert] = useState(false);
+  const [envoiOuvert, setEnvoiOuvert] = useState(false);
+  // Envoi du rapport par mail à l'équipe : chef d'équipe, direction, admin IT (cf envois_rapports_analyses)
+  const { utilisateur } = useAuth();
+  const peutEnvoyer = ['chef_maintenance', 'direction', 'admin_it'].includes(utilisateur?.role_code ?? '');
   const basculer = (id: string) =>
     setSelection((s) => {
       const n = new Set(s ?? []);
@@ -225,6 +229,18 @@ function ContenuAnalyses() {
           >
             Tout cocher (à corriger)
           </button>
+          {peutEnvoyer && (
+            <button
+              onClick={() => setEnvoiOuvert(true)}
+              disabled={selection.size === 0}
+              className={cn(
+                'bg-bg-deep border border-nikito-cyan/40 text-nikito-cyan px-4 rounded-[10px] text-[13px] font-semibold min-h-[44px]',
+                selection.size === 0 && 'opacity-40'
+              )}
+            >
+              📨 Envoyer le rapport ({selection.size})
+            </button>
+          )}
           <button
             onClick={() => setMailOuvert(true)}
             disabled={selection.size === 0}
@@ -235,6 +251,7 @@ function ContenuAnalyses() {
         </div>
       )}
       {mailOuvert && selection && <ModaleMailReparation ids={[...selection]} onClose={() => setMailOuvert(false)} />}
+      {envoiOuvert && selection && <ModaleEnvoyerRapport ids={[...selection]} onClose={() => setEnvoiOuvert(false)} />}
 
       <div className="flex flex-col gap-3 mb-4">
         <div className="flex gap-1.5 overflow-x-auto pb-1">
@@ -557,6 +574,118 @@ function CarteAnalyse({
         </div>
       )}
       {leverOuvert && <ModaleLeverDefauts rapport={r} defauts={ouverts} onClose={() => setLeverOuvert(false)} />}
+    </div>
+  );
+}
+
+/** Envoi par mail du rapport des analyses cochées (défauts + PDF joints) à des membres de l'équipe. */
+function ModaleEnvoyerRapport({ ids, onClose }: { ids: string[]; onClose: () => void }) {
+  const toast = useToast();
+  const [destinataires, setDestinataires] = useState<Set<string>>(new Set());
+  const [urgent, setUrgent] = useState(false);
+  const [message, setMessage] = useState('');
+  const [recherche, setRecherche] = useState('');
+  const [envoi, setEnvoi] = useState(false);
+
+  const { data: equipe } = useQuery({
+    queryKey: ['destinataires-rapport'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('utilisateurs')
+        .select('id, prenom, nom, email, roles!inner(code)')
+        .eq('actif', true)
+        .not('email', 'is', null)
+        .neq('roles.code', 'staff_operationnel')
+        .order('prenom');
+      if (error) throw error;
+      return (data ?? []) as unknown as { id: string; prenom: string; nom: string; email: string; roles: { code: string } }[];
+    },
+  });
+  const q = recherche.trim().toLowerCase();
+  const visibles = (equipe ?? []).filter((u) => !q || `${u.prenom} ${u.nom} ${u.email}`.toLowerCase().includes(q));
+  const basculer = (id: string) =>
+    setDestinataires((s) => {
+      const n = new Set(s);
+      if (n.has(id)) n.delete(id);
+      else n.add(id);
+      return n;
+    });
+
+  const envoyer = async () => {
+    setEnvoi(true);
+    const { error } = await supabase.from('envois_rapports_analyses').insert({
+      document_ids: ids,
+      destinataire_ids: [...destinataires],
+      urgent,
+      message: message.trim() || null,
+    });
+    setEnvoi(false);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success(`Rapport envoyé à ${destinataires.size} personne${destinataires.size > 1 ? 's' : ''}`);
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 z-[150] bg-black/60 flex items-end md:items-center justify-center md:p-4" onClick={onClose}>
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="w-full md:max-w-[560px] max-h-[92dvh] overflow-y-auto bg-bg-card rounded-t-[18px] md:rounded-[18px] border border-nikito-cyan/30 p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] flex flex-col gap-3"
+      >
+        <div>
+          <div className="text-[16px] font-semibold">Envoyer le rapport par mail</div>
+          <div className="text-[12px] text-dim">
+            {ids.length} rapport{ids.length > 1 ? 's' : ''} : synthèse, tous les défauts (bloquants en tête) et les PDF en pièces jointes.
+          </div>
+        </div>
+        <input
+          value={recherche}
+          onChange={(e) => setRecherche(e.target.value)}
+          placeholder="Rechercher un destinataire…"
+          className="bg-bg-deep border border-white/[0.08] rounded-[10px] px-3 py-2.5 text-[13px] text-text placeholder:text-faint outline-none focus:border-nikito-cyan/50 min-h-[44px]"
+        />
+        <div className="max-h-[260px] overflow-y-auto flex flex-col gap-1 bg-bg-deep rounded-[10px] p-2">
+          {visibles.map((u) => (
+            <label key={u.id} className="flex items-center gap-2.5 px-2 py-1.5 rounded-lg hover:bg-white/[0.04] cursor-pointer min-h-[40px]">
+              <input type="checkbox" checked={destinataires.has(u.id)} onChange={() => basculer(u.id)} className="w-4 h-4 accent-nikito-cyan" />
+              <span className="text-[13px] flex-1">
+                {u.prenom} {u.nom}
+                <span className="text-faint text-[11px]"> · {u.email}</span>
+              </span>
+            </label>
+          ))}
+          {visibles.length === 0 && <div className="text-[12px] text-dim p-2">Personne trouvé.</div>}
+        </div>
+        <textarea
+          value={message}
+          onChange={(e) => setMessage(e.target.value)}
+          rows={2}
+          maxLength={2000}
+          placeholder="Message (facultatif)"
+          className="bg-bg-deep border border-white/[0.08] rounded-[10px] p-3 text-[13px] text-text placeholder:text-faint outline-none focus:border-nikito-cyan/50"
+        />
+        <label className="flex items-center gap-2 text-[13px] min-h-[40px] cursor-pointer">
+          <input type="checkbox" checked={urgent} onChange={(e) => setUrgent(e.target.checked)} className="w-5 h-5 accent-red" />
+          Urgent (bandeau rouge et mail prioritaire)
+        </label>
+        <div className="flex gap-2 justify-end">
+          <button onClick={onClose} className="px-4 rounded-[10px] text-[13px] min-h-[44px] bg-bg-deep border border-white/[0.08] text-dim">
+            Annuler
+          </button>
+          <button
+            onClick={envoyer}
+            disabled={destinataires.size === 0 || envoi}
+            className={cn(
+              'bg-nikito-cyan text-bg-app px-4 rounded-[10px] text-[13px] font-bold min-h-[44px]',
+              (destinataires.size === 0 || envoi) && 'opacity-40'
+            )}
+          >
+            {envoi ? 'Envoi…' : `Envoyer (${destinataires.size})`}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

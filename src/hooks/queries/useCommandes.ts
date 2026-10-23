@@ -25,6 +25,10 @@ export interface ActiviteCommande {
   actif: boolean;
   /** Parcs qui voient l'activité (vide = tous les parcs) */
   parc_ids: string[];
+  /** Commandes de cette activité envoyées directement, sans validation (ex. Arcade) */
+  sans_validation?: boolean;
+  /** Personnes qui reçoivent ces commandes directes (chef d'équipe en copie) */
+  destinataire_ids?: string[];
 }
 
 export interface ProduitCommande {
@@ -341,7 +345,11 @@ export function useChangerStatutCommande() {
 // Gestion du catalogue (gestionnaires)
 // ---------------------------------------------------------------------------
 
-export type ActiviteInput = Pick<ActiviteCommande, 'nom' | 'description' | 'ordre' | 'actif'> & { parc_ids?: string[] };
+export type ActiviteInput = Pick<ActiviteCommande, 'nom' | 'description' | 'ordre' | 'actif'> & {
+  parc_ids?: string[];
+  sans_validation?: boolean;
+  destinataire_ids?: string[];
+};
 export type ProduitInput = Omit<ProduitCommande, 'id' | 'parc_ids'> & { parc_ids?: string[] };
 
 export function useEnregistrerActivite() {
