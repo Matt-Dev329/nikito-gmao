@@ -81,6 +81,8 @@ export interface Commande {
   cree_le: string;
   traitee_le: string | null;
   demandeur_id: string;
+  /** Commande directe (activité sans validation, ex. Arcade) */
+  directe?: boolean;
   demandeur: { prenom: string; nom: string } | null;
   parc: { code: string; nom: string } | null;
   commande_lignes: LigneCommande[];
@@ -181,19 +183,20 @@ export function useCatalogueCommandes(inclureInactifs = false) {
   });
 }
 
-const SELECT_COMMANDE = `id, numero, statut, commentaire, motif_refus, total_estime, cree_le, traitee_le, demandeur_id,
+const SELECT_COMMANDE = `id, numero, statut, commentaire, motif_refus, total_estime, cree_le, traitee_le, demandeur_id, directe,
   demandeur:utilisateurs!commandes_demandeur_id_fkey(prenom, nom),
   parc:parcs(code, nom),
   commande_lignes(id, produit_id, activite_nom, produit_nom, reference, unite, quantite, prix_unitaire, specifique, lien)`;
 
-/** Mes commandes (demandeur) ou toutes les commandes (gestionnaire). */
-export function useCommandes(portee: 'miennes' | 'toutes') {
+/** Mes commandes (demandeur), toutes (gestionnaire) ou commandes directes à préparer (destinataires). */
+export function useCommandes(portee: 'miennes' | 'toutes' | 'a_preparer') {
   const { utilisateur } = useAuth();
   return useQuery({
     queryKey: ['commandes', 'liste', portee, utilisateur?.id],
     queryFn: async () => {
       let q = supabase.from('commandes').select(SELECT_COMMANDE).order('cree_le', { ascending: false }).limit(200);
       if (portee === 'miennes' && utilisateur) q = q.eq('demandeur_id', utilisateur.id);
+      if (portee === 'a_preparer') q = q.eq('directe', true);
       const { data, error } = await q;
       if (error) throw error;
       return (data ?? []) as unknown as Commande[];
@@ -286,6 +289,36 @@ export function useAnnulerCommande() {
 }
 
 /** Le demandeur confirme la réception de sa commande (entrée en stock automatique). */
+/** Destinataire des commandes directes d'au moins une activité (ex. techniciens Arcade) */
+export function useEstDestinataireCommandes() {
+  const { utilisateur } = useAuth();
+  return useQuery({
+    queryKey: ['commandes', 'est-destinataire', utilisateur?.id],
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from('commande_activites')
+        .select('id', { count: 'exact', head: true })
+        .contains('destinataire_ids', [utilisateur!.id]);
+      if (error) return false;
+      return (count ?? 0) > 0;
+    },
+    enabled: !!utilisateur,
+    staleTime: 5 * 60_000,
+  });
+}
+
+/** Commande directe : « commandée » puis « livrée » par ses destinataires (RPC avancer_commande_directe) */
+export function useAvancerCommandeDirecte() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, statut }: { id: string; statut: 'commandee' | 'livree' }) => {
+      const { error } = await supabase.rpc('avancer_commande_directe', { p_commande_id: id, p_statut: statut });
+      if (error) throw error;
+    },
+    onSettled: () => qc.invalidateQueries({ queryKey: ['commandes'] }),
+  });
+}
+
 export function useMarquerCommandeLivree() {
   const qc = useQueryClient();
   return useMutation({

@@ -5,6 +5,7 @@ import { useToast } from '@/components/ui/ToastProvider';
 import {
   STATUTS_COMMANDE,
   useAnnulerCommande,
+  useAvancerCommandeDirecte,
   useChangerStatutCommande,
   useMarquerCommandeLivree,
   useModifierCommande,
@@ -41,9 +42,9 @@ const LIBELLES_ACTION: Partial<Record<StatutCommande, string>> = {
 
 type Filtre = 'en_cours' | 'toutes' | StatutCommande;
 
-export function ListeCommandes({ portee, onModifier }: { portee: 'miennes' | 'toutes'; onModifier?: () => void }) {
+export function ListeCommandes({ portee, onModifier }: { portee: 'miennes' | 'toutes' | 'a_preparer'; onModifier?: () => void }) {
   const { data, isLoading, isError, error } = useCommandes(portee);
-  const [filtre, setFiltre] = useState<Filtre>(portee === 'toutes' ? 'demandee' : 'toutes');
+  const [filtre, setFiltre] = useState<Filtre>(portee === 'toutes' ? 'demandee' : portee === 'a_preparer' ? 'en_cours' : 'toutes');
 
   const commandes = useMemo(() => {
     const all = data ?? [];
@@ -57,6 +58,12 @@ export function ListeCommandes({ portee, onModifier }: { portee: 'miennes' | 'to
       ? [
           { code: 'demandee', label: 'À traiter' },
           { code: 'en_cours', label: 'En cours' },
+          { code: 'livree', label: 'Livrées' },
+          { code: 'toutes', label: 'Toutes' },
+        ]
+      : portee === 'a_preparer'
+      ? [
+          { code: 'en_cours', label: 'À préparer' },
           { code: 'livree', label: 'Livrées' },
           { code: 'toutes', label: 'Toutes' },
         ]
@@ -91,7 +98,13 @@ export function ListeCommandes({ portee, onModifier }: { portee: 'miennes' | 'to
       ) : (
         <div className="space-y-2.5">
           {commandes.map((c) => (
-            <CarteCommande key={c.id} commande={c} gestion={portee === 'toutes'} onModifier={onModifier} />
+            <CarteCommande
+              key={c.id}
+              commande={c}
+              gestion={portee === 'toutes'}
+              preparation={portee === 'a_preparer'}
+              onModifier={onModifier}
+            />
           ))}
         </div>
       )}
@@ -99,8 +112,28 @@ export function ListeCommandes({ portee, onModifier }: { portee: 'miennes' | 'to
   );
 }
 
-function CarteCommande({ commande: c, gestion, onModifier }: { commande: Commande; gestion: boolean; onModifier?: () => void }) {
+function CarteCommande({
+  commande: c,
+  gestion,
+  preparation = false,
+  onModifier,
+}: {
+  commande: Commande;
+  gestion: boolean;
+  /** Destinataire d'une commande directe (ex. technicien Arcade) : la marque commandée puis livrée */
+  preparation?: boolean;
+  onModifier?: () => void;
+}) {
   const toast = useToast();
+  const avancer = useAvancerCommandeDirecte();
+  const avancerDirecte = async (statut: 'commandee' | 'livree') => {
+    try {
+      await avancer.mutateAsync({ id: c.id, statut });
+      toast.success(`Commande ${c.numero} : ${statut === 'commandee' ? 'commandée' : 'livrée'} — le parc est prévenu`);
+    } catch (e) {
+      toast.error((e as Error).message);
+    }
+  };
   const [ouverte, setOuverte] = useState(false);
   const [refus, setRefus] = useState<string | null>(null);
   const changer = useChangerStatutCommande();
@@ -254,7 +287,25 @@ function CarteCommande({ commande: c, gestion, onModifier }: { commande: Command
           )}
 
           <div className="flex flex-wrap gap-2 mt-4 justify-end">
-            {!gestion && (c.statut === 'validee' || c.statut === 'commandee') && (
+            {preparation && c.statut === 'validee' && (
+              <button
+                onClick={() => avancerDirecte('commandee')}
+                disabled={avancer.isPending}
+                className="bg-nikito-cyan/12 text-nikito-cyan border border-nikito-cyan/40 px-4 py-2 rounded-[10px] text-[13px] font-semibold min-h-[44px]"
+              >
+                📦 Marquer commandée
+              </button>
+            )}
+            {preparation && (c.statut === 'validee' || c.statut === 'commandee') && (
+              <button
+                onClick={() => avancerDirecte('livree')}
+                disabled={avancer.isPending}
+                className="bg-green/15 text-green border border-green/40 px-4 py-2 rounded-[10px] text-[13px] font-semibold min-h-[44px]"
+              >
+                ✓ Marquer livrée au parc
+              </button>
+            )}
+            {!gestion && !preparation && (c.statut === 'validee' || c.statut === 'commandee') && (
               <button
                 onClick={confirmerLivraison}
                 disabled={livrer.isPending}
@@ -263,7 +314,7 @@ function CarteCommande({ commande: c, gestion, onModifier }: { commande: Command
                 {livrer.isPending ? '…' : '✓ Marquer comme livrée (reçue)'}
               </button>
             )}
-            {!gestion && c.statut === 'demandee' && onModifier && !confirmerModif && (
+            {!gestion && !preparation && c.statut === 'demandee' && onModifier && !confirmerModif && (
               <button
                 onClick={() => setConfirmerModif(true)}
                 className="bg-nikito-cyan/12 text-nikito-cyan border border-nikito-cyan/40 px-4 py-2 rounded-[10px] text-[13px] font-semibold min-h-[44px]"
@@ -295,7 +346,7 @@ function CarteCommande({ commande: c, gestion, onModifier }: { commande: Command
                 </div>
               </div>
             )}
-            {!gestion && c.statut === 'demandee' && !confirmerModif && (
+            {!gestion && !preparation && c.statut === 'demandee' && !confirmerModif && (
               <button
                 onClick={annulerCommande}
                 disabled={annuler.isPending}

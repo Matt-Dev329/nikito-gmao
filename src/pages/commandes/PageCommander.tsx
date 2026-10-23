@@ -3,14 +3,14 @@ import { Navigate, useSearchParams } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
 import { usePanier, nombreArticles } from '@/hooks/usePanier';
-import { useAccesCommandes, useCommandes } from '@/hooks/queries/useCommandes';
+import { useAccesCommandes, useCommandes, useEstDestinataireCommandes } from '@/hooks/queries/useCommandes';
 import { OngletCatalogue } from './OngletCatalogue';
 import { OngletPanier } from './OngletPanier';
 import { ListeCommandes } from './ListeCommandes';
 import { GestionCatalogue } from './GestionCatalogue';
 import { OngletCommandeSpecifique } from './OngletCommandeSpecifique';
 
-type Onglet = 'catalogue' | 'panier' | 'specifique' | 'mes_commandes' | 'a_traiter' | 'gestion';
+type Onglet = 'catalogue' | 'panier' | 'specifique' | 'mes_commandes' | 'a_preparer' | 'a_traiter' | 'gestion';
 
 export function PageCommander() {
   const { utilisateur } = useAuth();
@@ -21,6 +21,9 @@ export function PageCommander() {
   // Lien direct vers un onglet (ex. notification « Commandes à traiter » → ?onglet=a_traiter)
   const [onglet, setOnglet] = useState<Onglet>(() => (params.get('onglet') as Onglet | null) ?? 'catalogue');
   const toutes = useCommandes('toutes');
+  // Destinataires des commandes directes (ex. techniciens Arcade) : onglet « À préparer »
+  const { data: estDestinataire = false } = useEstDestinataireCommandes();
+  const aPreparer = useCommandes('a_preparer');
 
   useEffect(() => {
     if (utilisateur) rattacher(utilisateur.id);
@@ -35,18 +38,20 @@ export function PageCommander() {
       </div>
     );
   }
-  if (!peutCommander && !peutGererCatalogue) return <Navigate to="/gmao" replace />;
+  if (!peutCommander && !peutGererCatalogue && !estDestinataire) return <Navigate to="/gmao" replace />;
 
   const nbPanier = nombreArticles(lignes);
   const nbATraiter = estGestionnaire
     ? (toutes.data ?? []).filter((c) => c.statut === 'demandee').length
     : 0;
+  const nbAPreparer = estDestinataire ? (aPreparer.data ?? []).filter((c) => c.statut === 'validee').length : 0;
 
   const onglets: { code: Onglet; label: string; badge?: number; visible: boolean }[] = [
     { code: 'catalogue', label: 'Catalogue', visible: peutCommander },
     { code: 'panier', label: 'Panier', badge: nbPanier, visible: peutCommander },
     { code: 'specifique', label: 'Commande spécifique', visible: peutCommander },
     { code: 'mes_commandes', label: 'Mes commandes', visible: peutCommander },
+    { code: 'a_preparer', label: 'À préparer', badge: nbAPreparer, visible: estDestinataire },
     { code: 'a_traiter', label: 'Commandes reçues', badge: nbATraiter, visible: estGestionnaire },
     { code: 'gestion', label: 'Gérer le catalogue', visible: peutGererCatalogue },
   ];
@@ -100,6 +105,7 @@ export function PageCommander() {
       )}
       {ongletActif === 'specifique' && <OngletCommandeSpecifique onEnvoyee={() => setOnglet('mes_commandes')} />}
       {ongletActif === 'mes_commandes' && <ListeCommandes portee="miennes" onModifier={() => setOnglet('panier')} />}
+      {ongletActif === 'a_preparer' && <ListeCommandes portee="a_preparer" />}
       {ongletActif === 'a_traiter' && <ListeCommandes portee="toutes" />}
       {ongletActif === 'gestion' && <GestionCatalogue />}
     </div>
