@@ -14,6 +14,7 @@ import { envoyerDocument, recollerDocument } from '@/lib/envoiGrosFichier';
 import { enregistrerBlob, nomDepuisChemin, telechargerUrl } from '@/lib/telecharger';
 import { ROLES_DIRECTION_PARC, ROLES_PILOTAGE, aAcces } from '@/lib/acces';
 import { DOMAINES_PRESTATAIRES } from '@/lib/domainesPrestataires';
+import { AnalyseContrat, type AnalyseContratDonnees } from './AnalyseContrat';
 
 export type TypeDocument = 'plan' | 'manuel' | 'prestataire' | 'contrat';
 
@@ -49,7 +50,12 @@ interface DocumentTechnique {
   prochaine_echeance?: string | null;
   cree_le: string;
   parc: { code: string; nom: string } | null;
+  /** Contrats : analyse automatique (à quoi sert le contrat, durée, préavis…) */
+  analyse_contrat?: AnalyseContratDonnees | AnalyseContratDonnees[] | null;
 }
+
+const analyseContratDe = (d: DocumentTechnique) =>
+  (Array.isArray(d.analyse_contrat) ? d.analyse_contrat[0] : d.analyse_contrat) ?? null;
 
 const TEXTES: Record<TypeDocument, { titre: string; sousTitre: string; vide: string; ajouter: string }> = {
   plan: {
@@ -89,13 +95,24 @@ function useDocuments(type: TypeDocument) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('documents_techniques')
-        .select(estPrestataire(type) ? `${COLONNES}, prestataire, date_document, prochaine_echeance` : COLONNES)
+        .select(
+          type === 'contrat'
+            ? `${COLONNES}, prestataire, date_document, prochaine_echeance, analyse_contrat:analyses_contrats(*)`
+            : estPrestataire(type)
+              ? `${COLONNES}, prestataire, date_document, prochaine_echeance`
+              : COLONNES
+        )
         .eq('type', type)
         .eq('actif', true)
         .order(estPrestataire(type) ? 'date_document' : 'titre', { ascending: !estPrestataire(type) });
       if (error) throw error;
       return (data ?? []) as unknown as DocumentTechnique[];
     },
+    // Contrats : rafraîchit tant qu'une analyse tourne
+    refetchInterval: (q) =>
+      type === 'contrat' && (q.state.data ?? []).some((d) => ['en_attente', 'en_cours'].includes(analyseContratDe(d)?.statut ?? ''))
+        ? 5000
+        : false,
   });
 }
 
@@ -444,6 +461,7 @@ function CarteDocument({
           )
         )}
         {doc.description && <div className="text-[12px] text-faint mt-1 line-clamp-2">{doc.description}</div>}
+        {type === 'contrat' && <AnalyseContrat documentId={doc.id} analyse={analyseContratDe(doc)} />}
         <div className="mt-auto pt-3 flex items-center justify-between gap-2">
           <a
             href={lienOuvrir}
@@ -549,13 +567,19 @@ function FormulaireAjout({ type, onFini }: { type: TypeDocument; onFini: () => v
             qc.invalidateQueries({ queryKey: ['analyses-prestataires'] });
           });
       }
+      // Contrat : analyse automatique (à quoi il sert, durée, préavis, prix…)
+      if (type === 'contrat' && cree?.id) {
+        void supabase.functions
+          .invoke('analyser-contrat', { body: { document_id: cree.id } })
+          .finally(() => qc.invalidateQueries({ queryKey: ['documents-techniques', 'contrat'] }));
+      }
     },
     onSuccess: () => {
       toast.success(
         type === 'prestataire'
           ? 'Rapport ajouté — analyse en cours (onglet « Analyses prestataires »)'
           : type === 'contrat'
-            ? 'Contrat ajouté'
+            ? 'Contrat ajouté — analyse en cours'
             : 'Document ajouté'
       );
       qc.invalidateQueries({ queryKey: ['documents-techniques', type] });

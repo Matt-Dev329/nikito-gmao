@@ -1,0 +1,303 @@
+import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { createClient } from "npm:@supabase/supabase-js@2.45.0";
+import Anthropic from "npm:@anthropic-ai/sdk@0.135.0";
+
+/**
+ * Analyse d'un contrat prestataire déposé dans « Contrats prestataires » :
+ * à quoi il sert, prestations couvertes, durée, reconduction, préavis, prix,
+ * délais d'intervention, obligations et points d'attention.
+ * Résultat dans `analyses_contrats` (directeurs de parc, chef d'équipe,
+ * direction, admin IT) ; le contrat est rangé (domaine, prestataire, dates).
+ *
+ * Appel : POST { document_id } avec le jeton de l'utilisateur connecté.
+ */
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey",
+};
+
+const MODELE = "claude-opus-5-5";
+const BUCKET = "alba-techniques";
+// Limite de requête de l'API (32 Mo) moins la surcharge base64 (+33 %)
+const TAILLE_MAX_OCTETS = 22 * 1024 * 1024;
+
+const CONSIGNES = `Tu analyses un contrat signé entre Nikito (parcs de loisirs indoor en France : trampolines, bowling, laser game, arcades, escape game…) et un prestataire extérieur (maintenance, contrôles réglementaires, nettoyage, sécurité incendie, location de matériel…).
+
+Le chef d'équipe maintenance et les directeurs de parc liront ta synthèse pour comprendre, sans lire le contrat, à quoi il sert, ce qu'il couvre, ce qu'il coûte et quand il faut agir (renouvellement, résiliation). Écris en français simple et concret, sans jargon juridique inutile.
+
+À extraire :
+- titre : un titre court et parlant (ex. « Maintenance des extincteurs — Sicli »), 3 à 8 mots.
+- resume : 2 à 4 phrases qui expliquent À QUOI SERT ce contrat pour le parc : ce que fait le prestataire, pour quel équipement ou quelle obligation, et l'essentiel à retenir.
+- objet : l'objet du contrat en une phrase (tel que le contrat le définit).
+- prestations : chaque prestation incluse, avec un détail court (fréquence, périmètre, quantité) si présent.
+- frequence_interventions : ex. « 2 visites préventives par an », null si non précisée.
+- delais_intervention : délai d'intervention ou de dépannage garanti (ex. « sous 4 h ouvrées »), null si absent.
+- date_debut, date_fin : dates AAAA-MM-JJ si elles figurent (date de fin calculée à partir du début et de la durée si c'est sans ambiguïté), sinon null.
+- duree : ex. « 1 an », « 3 ans ferme », null si inconnue.
+- reconduction : ex. « tacite reconduction par périodes d'un an », « sans reconduction », null si non précisé.
+- preavis : préavis de résiliation (ex. « 3 mois avant l'échéance, par lettre recommandée »), null si absent.
+- date_limite_resiliation : dernière date (AAAA-MM-JJ) pour résilier avant reconduction, si elle se calcule à partir de date_fin et du préavis ; sinon null.
+- montant : prix ou redevance (HT/TTC, par an/mois/visite), révision de prix éventuelle ; null si absent.
+- conditions_paiement : ex. « à 30 jours fin de mois », null si absent.
+- obligations_nikito : ce que Nikito doit faire ou fournir (accès, registre, signalement, etc.).
+- exclusions : ce qui n'est PAS couvert (pièces, interventions hors horaires, dégradations…).
+- penalites : pénalités ou garanties en cas de manquement, null si absent.
+- contacts : interlocuteurs et coordonnées utiles (dépannage, commercial), null si absent.
+- points_attention : 1 à 5 points à surveiller (renouvellement automatique, préavis court, hausse de prix, exclusions importantes, obligations réglementaires…).
+- prestataire : nom de la société prestataire.
+- categorie : domaine de rangement. Reprends EXACTEMENT une des catégories existantes fournies si l'une correspond ; sinon crée une catégorie courte de 1 à 4 mots avec une majuscule initiale (ex. « Extincteurs », « Alarme incendie / SSI », « Aires de jeux », « Nettoyage »).
+
+N'invente rien : si une information n'est pas dans le document, mets null ou une liste vide. Si le document n'est pas un contrat ou est illisible, dis-le dans le résumé.`;
+
+const texteOuNull = { type: ["string", "null"] };
+const listeTextes = { type: "array", items: { type: "string" } };
+
+const SCHEMA = {
+  type: "object",
+  additionalProperties: false,
+  required: [
+    "titre", "resume", "objet", "prestations", "frequence_interventions", "delais_intervention", "date_debut", "date_fin",
+    "duree", "reconduction", "preavis", "date_limite_resiliation", "montant", "conditions_paiement", "obligations_nikito",
+    "exclusions", "penalites", "contacts", "points_attention", "prestataire", "categorie",
+  ],
+  properties: {
+    titre: { type: "string" },
+    resume: { type: "string" },
+    objet: texteOuNull,
+    prestations: {
+      type: "array",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: ["intitule", "detail"],
+        properties: { intitule: { type: "string" }, detail: texteOuNull },
+      },
+    },
+    frequence_interventions: texteOuNull,
+    delais_intervention: texteOuNull,
+    date_debut: texteOuNull,
+    date_fin: texteOuNull,
+    duree: texteOuNull,
+    reconduction: texteOuNull,
+    preavis: texteOuNull,
+    date_limite_resiliation: texteOuNull,
+    montant: texteOuNull,
+    conditions_paiement: texteOuNull,
+    obligations_nikito: listeTextes,
+    exclusions: listeTextes,
+    penalites: texteOuNull,
+    contacts: texteOuNull,
+    points_attention: listeTextes,
+    prestataire: texteOuNull,
+    categorie: { type: "string" },
+  },
+};
+
+interface Analyse {
+  titre: string;
+  resume: string;
+  objet: string | null;
+  prestations: { intitule: string; detail: string | null }[];
+  frequence_interventions: string | null;
+  delais_intervention: string | null;
+  date_debut: string | null;
+  date_fin: string | null;
+  duree: string | null;
+  reconduction: string | null;
+  preavis: string | null;
+  date_limite_resiliation: string | null;
+  montant: string | null;
+  conditions_paiement: string | null;
+  obligations_nikito: string[];
+  exclusions: string[];
+  penalites: string | null;
+  contacts: string | null;
+  points_attention: string[];
+  prestataire: string | null;
+  categorie: string;
+}
+
+const repondre = (corps: unknown, status = 200) =>
+  new Response(JSON.stringify(corps), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+
+const dateValide = (d: string | null) => (d && /^\d{4}-\d{2}-\d{2}$/.test(d) && !isNaN(Date.parse(d)) ? d : null);
+
+function enBase64(octets: Uint8Array): string {
+  let binaire = "";
+  for (let i = 0; i < octets.length; i += 0x8000) {
+    binaire += String.fromCharCode(...octets.subarray(i, i + 0x8000));
+  }
+  return btoa(binaire);
+}
+
+Deno.serve(async (req: Request) => {
+  if (req.method === "OPTIONS") return new Response(null, { status: 200, headers: corsHeaders });
+
+  const service = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+  let documentId: string | null = null;
+
+  try {
+    const jeton = (req.headers.get("Authorization") ?? "").replace(/^Bearer\s+/i, "");
+    const { data: auth } = await service.auth.getUser(jeton);
+    if (!auth?.user) return repondre({ success: false, error: "Non authentifié" }, 401);
+
+    const corps = await req.json().catch(() => ({}));
+    documentId = typeof corps.document_id === "string" ? corps.document_id : null;
+    if (!documentId) return repondre({ success: false, error: "document_id requis" }, 400);
+
+    const { data: doc } = await service
+      .from("documents_techniques")
+      .select("id, parc_id, titre, activite, prestataire, chemin, mime, taille, parties, date_document, prochaine_echeance, cree_le")
+      .eq("id", documentId)
+      .eq("type", "contrat")
+      .maybeSingle();
+    if (!doc) return repondre({ success: false, error: "Contrat introuvable" }, 404);
+
+    // Mêmes droits que la lecture du contrat
+    const appelant = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!, {
+      global: { headers: { Authorization: `Bearer ${jeton}` } },
+    });
+    const { data: autorise } = await appelant.rpc("acces_direction_parc", { p_parc: doc.parc_id });
+    if (autorise !== true) return repondre({ success: false, error: "Accès refusé" }, 403);
+
+    await service
+      .from("analyses_contrats")
+      .upsert({ document_id: documentId, statut: "en_cours", erreur: null }, { onConflict: "document_id" });
+
+    const apiKey = Deno.env.get("ANTHROPIC_API_KEY");
+    if (!apiKey) throw new Error("Clé ANTHROPIC_API_KEY non configurée");
+    if ((doc.taille ?? 0) > TAILLE_MAX_OCTETS) {
+      throw new Error("Document trop lourd pour l'analyse automatique (22 Mo maximum)");
+    }
+
+    // Téléchargement (recollage des parties pour les fichiers découpés)
+    const chemins = doc.parties
+      ? Array.from({ length: doc.parties }, (_, i) => `${doc.chemin}.part${String(i + 1).padStart(3, "0")}`)
+      : [doc.chemin];
+    const morceaux: Uint8Array[] = [];
+    for (const c of chemins) {
+      const { data: fichier, error } = await service.storage.from(BUCKET).download(c);
+      if (error || !fichier) throw new Error(`Téléchargement impossible : ${error?.message ?? c}`);
+      morceaux.push(new Uint8Array(await fichier.arrayBuffer()));
+    }
+    const octets = new Uint8Array(morceaux.reduce((n, m) => n + m.length, 0));
+    let pos = 0;
+    for (const m of morceaux) {
+      octets.set(m, pos);
+      pos += m.length;
+    }
+    const donnees = enBase64(octets);
+    const mime = (doc.mime ?? "application/pdf").toLowerCase();
+
+    let piece: Anthropic.Beta.BetaContentBlockParam;
+    if (mime === "application/pdf") {
+      piece = { type: "document", source: { type: "base64", media_type: "application/pdf", data: donnees } };
+    } else if (["image/jpeg", "image/png", "image/webp", "image/gif"].includes(mime)) {
+      piece = {
+        type: "image",
+        source: { type: "base64", media_type: mime as "image/jpeg" | "image/png" | "image/webp" | "image/gif", data: donnees },
+      };
+    } else {
+      throw new Error(`Format non pris en charge pour l'analyse (${mime}) : déposer un PDF, JPEG ou PNG`);
+    }
+
+    // Domaines déjà utilisés (contrats et rapports prestataires) : réutilisés si possible
+    const { data: existantes } = await service
+      .from("documents_techniques")
+      .select("activite")
+      .in("type", ["contrat", "prestataire"])
+      .eq("actif", true)
+      .not("activite", "is", null);
+    const categories = [...new Set((existantes ?? []).map((e: { activite: string | null }) => (e.activite ?? "").trim()).filter(Boolean))].sort();
+
+    const contexte = [
+      `Catégories existantes : ${categories.length ? categories.join(" ; ") : "aucune pour l'instant"}`,
+      doc.activite ? `Domaine indiqué par l'utilisateur : ${doc.activite}` : null,
+      doc.prestataire ? `Prestataire indiqué : ${doc.prestataire}` : null,
+      `Titre saisi : ${doc.titre}`,
+      `Date du jour : ${new Date().toISOString().slice(0, 10)}`,
+    ]
+      .filter(Boolean)
+      .join("\n");
+
+    const client = new Anthropic({ apiKey });
+    const reponse = await client.beta.messages.create({
+      model: MODELE,
+      max_tokens: 16000,
+      betas: ["server-side-fallback-2026-07-01"],
+      fallbacks: "default",
+      output_config: { effort: "medium", format: { type: "json_schema", schema: SCHEMA } },
+      system: CONSIGNES,
+      messages: [{ role: "user", content: [piece, { type: "text", text: `${contexte}\n\nAnalyse ce contrat.` }] }],
+    });
+
+    if (reponse.stop_reason === "refusal") throw new Error("Analyse refusée par le modèle");
+    if (reponse.stop_reason === "max_tokens") throw new Error("Analyse incomplète (contrat trop long)");
+    const texte = reponse.content.find((b) => b.type === "text");
+    if (!texte || texte.type !== "text") throw new Error("Réponse vide");
+    const a = JSON.parse(texte.text) as Analyse;
+
+    const debut = dateValide(a.date_debut);
+    const fin = dateValide(a.date_fin);
+    await service
+      .from("analyses_contrats")
+      .update({
+        statut: "terminee",
+        resume: a.resume,
+        objet: a.objet,
+        prestations: a.prestations ?? [],
+        frequence_interventions: a.frequence_interventions,
+        delais_intervention: a.delais_intervention,
+        date_debut: debut,
+        date_fin: fin,
+        duree: a.duree,
+        reconduction: a.reconduction,
+        preavis: a.preavis,
+        date_limite_resiliation: dateValide(a.date_limite_resiliation),
+        montant: a.montant,
+        conditions_paiement: a.conditions_paiement,
+        obligations_nikito: a.obligations_nikito ?? [],
+        exclusions: a.exclusions ?? [],
+        penalites: a.penalites,
+        contacts: a.contacts,
+        points_attention: a.points_attention ?? [],
+        prestataire_detecte: a.prestataire,
+        modele: reponse.model,
+        erreur: null,
+        analyse_le: new Date().toISOString(),
+      })
+      .eq("document_id", documentId);
+
+    // Rangement : titre générique, domaine, prestataire et dates non saisis repris de l'analyse
+    const majDoc: Record<string, unknown> = {};
+    const titreGenerique = /^\s*contrat\s*$/i.test(doc.titre ?? "") || !(doc.titre ?? "").trim();
+    if (titreGenerique && a.titre?.trim()) majDoc.titre = a.titre.trim().slice(0, 120);
+    const categorie = (a.categorie ?? "").trim().slice(0, 60);
+    if (categorie && !(doc.activite ?? "").trim()) majDoc.activite = categorie;
+    if (a.prestataire && !(doc.prestataire ?? "").trim()) majDoc.prestataire = a.prestataire.slice(0, 120);
+    // Date de début laissée par défaut (jour du dépôt) : remplacée par celle du contrat
+    if (debut && (!doc.date_document || doc.date_document === String(doc.cree_le).slice(0, 10))) majDoc.date_document = debut;
+    if (fin && !doc.prochaine_echeance) majDoc.prochaine_echeance = fin;
+    if (Object.keys(majDoc).length) {
+      await service.from("documents_techniques").update(majDoc).eq("id", documentId);
+    }
+
+    return repondre({ success: true, titre: majDoc.titre ?? doc.titre, categorie: majDoc.activite ?? doc.activite });
+  } catch (err) {
+    const message =
+      err instanceof Anthropic.RateLimitError
+        ? "Service d'analyse saturé, réessaie dans quelques minutes"
+        : err instanceof Anthropic.APIError
+          ? `Erreur du service d'analyse (${err.status ?? "?"})`
+          : err instanceof Error
+            ? err.message
+            : String(err);
+    console.error("analyser-contrat:", err);
+    if (documentId) {
+      await service.from("analyses_contrats").update({ statut: "echec", erreur: message }).eq("document_id", documentId);
+    }
+    return repondre({ success: false, error: message }, 200);
+  }
+});
