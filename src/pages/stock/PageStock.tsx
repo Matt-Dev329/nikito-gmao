@@ -1,8 +1,8 @@
-import { useState, useMemo } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useAccesCommandes } from '@/hooks/queries/useCommandes';
-import { peutEntrerStock, peutVoirStock } from '@/lib/acces';
+import { estTechnicienArcade, peutEntrerStock, peutVoirStock } from '@/lib/acces';
 import { ModaleImportFacture } from './ModaleImportFacture';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
@@ -137,9 +137,11 @@ function ContenuStock() {
   const { utilisateur } = useAuth();
   const toast = useToast();
   const { estGestionnaire } = useAccesCommandes();
-  // Sorties : tout le monde ; entrées et nouvelles pièces : chef d'équipe / gestionnaires
+  // Sorties : tout le monde ; entrées et nouvelles pièces : chef d'équipe / gestionnaires,
+  // et techniciens Arcade pour le stock Arcade (le seul qu'ils voient)
   const peutSortir = peutVoirStock(utilisateur?.role_code, estGestionnaire);
-  const peutEntrer = peutEntrerStock(utilisateur?.role_code, estGestionnaire);
+  const gestionnaireStock = peutEntrerStock(utilisateur?.role_code, estGestionnaire);
+  const peutEntrer = gestionnaireStock || estTechnicienArcade(utilisateur);
   const { data: pieces, isLoading } = usePiecesDetachees();
   const { data: fournisseurs } = useFournisseurs();
   const modStock = useModifierStock();
@@ -238,7 +240,7 @@ function ContenuStock() {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          {peutEntrer && (
+          {gestionnaireStock && (
             <button
               onClick={() => setImportFacture(true)}
               className="bg-bg-deep border border-nikito-cyan/40 text-nikito-cyan px-4 py-2.5 rounded-[10px] text-[13px] font-semibold min-h-[44px] w-full sm:w-auto"
@@ -615,7 +617,15 @@ function ChampsRangement({
   setActiviteId: (v: string) => void;
 }) {
   const { data: parcs } = useParcs();
-  const { data: domaines } = useDomaines();
+  const { data: tousDomaines } = useDomaines();
+  // Technicien Arcade : domaine imposé (Arcade)
+  const { utilisateur } = useAuth();
+  const arcadeSeul = estTechnicienArcade(utilisateur);
+  const domaines = arcadeSeul ? (tousDomaines ?? []).filter((d) => d.nom === 'Arcade') : tousDomaines;
+  const idArcade = arcadeSeul ? domaines?.[0]?.id : undefined;
+  useEffect(() => {
+    if (idArcade && activiteId !== idArcade) setActiviteId(idArcade);
+  }, [idArcade, activiteId, setActiviteId]);
   return (
     <div className="grid grid-cols-2 gap-2.5">
       <Field label="Parc">
@@ -630,7 +640,7 @@ function ChampsRangement({
       </Field>
       <Field label="Domaine">
         <select value={activiteId} onChange={(e) => setActiviteId(e.target.value)} className={CLASSE_CHAMP}>
-          <option value="">À classer</option>
+          {!arcadeSeul && <option value="">À classer</option>}
           {(domaines ?? []).map((d) => (
             <option key={d.id} value={d.id}>
               {d.nom}

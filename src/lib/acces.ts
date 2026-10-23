@@ -10,6 +10,11 @@ export const ROLES_STOCK: RoleUtilisateur[] = ['direction', 'chef_maintenance', 
 /** Entrées de stock et création de pièces : chef d'équipe, direction, admin IT et gestionnaires des commandes */
 export const ROLES_ENTREE_STOCK: RoleUtilisateur[] = ['direction', 'chef_maintenance', 'admin_it'];
 
+/** Technicien Arcade : gère le stock du domaine « Arcade » (cf peut_gerer_piece en base) */
+export function estTechnicienArcade(u: { role_code: string; profil_technicien?: string | null } | null | undefined): boolean {
+  return u?.role_code === 'technicien' && u.profil_technicien === 'arcade';
+}
+
 export function peutEntrerStock(role: RoleUtilisateur | undefined, estGestionnaireCommandes: boolean): boolean {
   return estGestionnaireCommandes || (!!role && ROLES_ENTREE_STOCK.includes(role));
 }

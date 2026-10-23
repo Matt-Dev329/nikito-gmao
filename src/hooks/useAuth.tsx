@@ -14,6 +14,8 @@ export interface UtilisateurMetier {
   parcs_manager_principal: string[];
   /** Autorisé à démarrer / clôturer les tickets de ses parcs sans être technicien */
   peut_intervenir: boolean;
+  /** Techniciens : arcade, nikito ou polyvalent */
+  profil_technicien?: string | null;
   consentement_gps: boolean;
   tour_vu: boolean;
 }
@@ -95,7 +97,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     supabase
       .from('utilisateurs')
       .select(
-        `id, email, nom, prenom, trigramme, consentement_gps, tour_vu, peut_intervenir,
+        `id, email, nom, prenom, trigramme, consentement_gps, tour_vu, peut_intervenir, profil_technicien,
          roles!inner(code),
          parcs_utilisateurs(parc_id, est_manager)`
       )
@@ -121,6 +123,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             parc_ids: pu.map((p) => p.parc_id),
             parcs_manager_principal: pu.filter((p) => p.est_manager).map((p) => p.parc_id),
             peut_intervenir: (d.peut_intervenir as boolean) ?? false,
+            profil_technicien: (d.profil_technicien as string | null) ?? null,
           });
         }
         setLoading(false);
