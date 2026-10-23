@@ -1,4 +1,27 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { createClient } from "npm:@supabase/supabase-js@2.45.0";
+
+/**
+ * Mail d'invitation à ALBA. Réservé aux comptes qui peuvent inviter
+ * (direction, admin IT, chef d'équipe, directeurs et managers de parc) ou au
+ * service. Le contenu (lien, rôle, parcs) est reconstruit depuis l'invitation
+ * en attente en base : seul l'email du destinataire est repris de la requête.
+ */
+
+const ROLES_INVITANTS = ["direction", "admin_it", "chef_maintenance", "directeur_parc", "manager_parc"];
+const LIBELLES_ROLES: Record<string, string> = {
+  direction: "Direction",
+  chef_maintenance: "Chef d'équipe",
+  directeur_parc: "Directeur de parc",
+  manager_parc: "Manager parc",
+  technicien: "Technicien",
+  staff_operationnel: "Staff opérationnel",
+  admin_it: "Admin IT",
+};
+const LIBELLES_PROFILS: Record<string, string> = { arcade: "Technicien Arcade", nikito: "Technicien Nikito" };
+
+const esc = (t: string | null | undefined) =>
+  (t ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
 
 const allowedOrigins = ["https://nikito.tech", "https://nikito.tech:443"];
 
@@ -25,9 +48,9 @@ interface InvitationPayload {
 }
 
 function buildHtml(p: InvitationPayload): string {
-  const parcsText = p.parcs_labels.join(", ");
+  const parcsText = esc(p.parcs_labels.join(", "));
   const greeting = p.destinataire_prenom
-    ? `Bonjour ${p.destinataire_prenom},`
+    ? `Bonjour ${esc(p.destinataire_prenom)},`
     : "Bonjour,";
 
   return `<!DOCTYPE html>
@@ -69,7 +92,7 @@ function buildHtml(p: InvitationPayload): string {
 
               <tr>
                 <td style="font-size:15px;color:#8b92b8;line-height:24px;padding-bottom:12px;">
-                  <strong style="color:#ffffff;">${p.invitant_prenom} ${p.invitant_nom}</strong> vous invite &agrave; rejoindre ALBA by Nikito en tant que <strong style="color:#5DE5FF;">${p.role_label}</strong>.
+                  <strong style="color:#ffffff;">${esc(p.invitant_prenom)} ${esc(p.invitant_nom)}</strong> vous invite &agrave; rejoindre ALBA by Nikito en tant que <strong style="color:#5DE5FF;">${esc(p.role_label)}</strong>.
                 </td>
               </tr>
 
@@ -85,7 +108,7 @@ function buildHtml(p: InvitationPayload): string {
                   <table role="presentation" cellpadding="0" cellspacing="0" border="0">
                     <tr>
                       <td align="center" style="border-radius:10px;background:linear-gradient(135deg,#ff4d8b,#5DE5FF);">
-                        <a href="${p.lien_invitation}" target="_blank" style="display:inline-block;padding:14px 40px;font-size:15px;font-weight:700;color:#ffffff;text-decoration:none;border-radius:10px;">
+                        <a href="${esc(p.lien_invitation)}" target="_blank" style="display:inline-block;padding:14px 40px;font-size:15px;font-weight:700;color:#ffffff;text-decoration:none;border-radius:10px;">
                           Cr\u00e9er mon compte
                         </a>
                       </td>
@@ -151,7 +174,65 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const payload: InvitationPayload = await req.json();
+    const repondre = (corps: unknown, status = 200) =>
+      new Response(JSON.stringify(corps), { status, headers: { ...cors, "Content-Type": "application/json" } });
+
+    // Appelant : service, ou utilisateur connecté qui peut inviter
+    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const service = createClient(Deno.env.get("SUPABASE_URL")!, serviceKey);
+    const jeton = (req.headers.get("Authorization") ?? "").replace(/^Bearer\s+/i, "");
+    let invitant: { prenom: string; nom: string } | null = null;
+    if (jeton !== serviceKey) {
+      const { data: auth } = await service.auth.getUser(jeton);
+      if (!auth?.user) return repondre({ success: false, error: "Non authentifié" }, 401);
+      const { data: moi } = await service
+        .from("utilisateurs")
+        .select("prenom, nom, actif, roles!inner(code)")
+        .eq("auth_user_id", auth.user.id)
+        .maybeSingle();
+      const role = (moi?.roles as unknown as { code: string } | null)?.code ?? "";
+      if (!moi?.actif || !ROLES_INVITANTS.includes(role)) {
+        return repondre({ success: false, error: "Accès refusé" }, 403);
+      }
+      invitant = { prenom: moi.prenom, nom: moi.nom };
+    }
+
+    const demande = await req.json().catch(() => ({}));
+    const email = typeof demande.destinataire_email === "string" ? demande.destinataire_email.trim().toLowerCase() : "";
+    if (!email) return repondre({ success: false, error: "destinataire_email requis" }, 400);
+
+    // Invitation en attente pour cet email : le contenu du mail vient de la base
+    const { data: invitation } = await service
+      .from("invitations")
+      .select("token, email, prenom, nom, parcs_assignes, profil_technicien, roles(code), invite_par:utilisateurs!invitations_invite_par_id_fkey(prenom, nom)")
+      .ilike("email", email.replace(/[%_\\]/g, "\\$&"))
+      .is("utilise_le", null)
+      .gt("expire_le", new Date().toISOString())
+      .order("invite_le", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (!invitation) return repondre({ success: false, error: "Aucune invitation en attente pour cet email" }, 404);
+
+    const roleInvite = (invitation.roles as unknown as { code: string } | null)?.code ?? "";
+    const parcsIds = (invitation.parcs_assignes as string[] | null) ?? [];
+    const { data: parcs } = parcsIds.length
+      ? await service.from("parcs").select("code").in("id", parcsIds).order("code")
+      : { data: [] };
+    const auteur = invitant ?? (invitation.invite_par as unknown as { prenom: string; nom: string } | null) ?? { prenom: "Ryad", nom: "Neki" };
+
+    const payload: InvitationPayload = {
+      destinataire_email: invitation.email as string,
+      destinataire_prenom: invitation.prenom as string | null,
+      destinataire_nom: invitation.nom as string | null,
+      role_label:
+        roleInvite === "technicien" && LIBELLES_PROFILS[invitation.profil_technicien as string]
+          ? LIBELLES_PROFILS[invitation.profil_technicien as string]
+          : LIBELLES_ROLES[roleInvite] ?? roleInvite,
+      invitant_prenom: auteur.prenom,
+      invitant_nom: auteur.nom,
+      lien_invitation: `https://nikito.tech/invitation/${invitation.token}`,
+      parcs_labels: ((parcs ?? []) as { code: string }[]).map((p) => p.code),
+    };
 
     const html = buildHtml(payload);
 
