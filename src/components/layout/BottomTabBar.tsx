@@ -1,3 +1,5 @@
+import { useAuth } from '@/hooks/useAuth';
+import { voitTableauDeBord } from '@/lib/acces';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useSidebarBadges } from '@/hooks/queries/useSidebarBadges';
@@ -21,7 +23,7 @@ interface TabDef {
   route?: string;
 }
 
-function getTabsForRole(roleCode: RoleUtilisateur, isTablet: boolean): TabDef[] {
+function getTabsForRole(roleCode: RoleUtilisateur, isTablet: boolean, voitDashboard: boolean): TabDef[] {
   const showSignaler = canSignaler(roleCode);
   const isStaffOrTech = roleCode === 'staff_operationnel' || roleCode === 'technicien';
 
@@ -65,7 +67,7 @@ function getTabsForRole(roleCode: RoleUtilisateur, isTablet: boolean): TabDef[] 
   // Même accueil que l'index de /gmao (cf. AccueilParRole dans App.tsx)
   const accueil: TabDef[] = roleCode === 'manager_parc'
     ? [{ id: 'dashboard', label: 'Mon parc', matchPaths: ['/gmao/mon-parc'], action: 'navigate', route: '/gmao/mon-parc' }]
-    : roleCode === 'technicien'
+    : roleCode === 'technicien' || !voitDashboard
       ? []
       : [{ id: 'dashboard', label: 'Dashboard', matchPaths: ['/gmao'], action: 'navigate', route: '/gmao' }];
 
@@ -132,7 +134,9 @@ export function BottomTabBar({ roleCode, onAlertsClick, onMoreClick, alertsOpen,
   const { pathname } = useLocation();
   const { data: badges } = useSidebarBadges();
   const isTablet = typeof window !== 'undefined' && localStorage.getItem('alba:device_kind') === 'tablet-fixed';
-  const tabs = getTabsForRole(roleCode, isTablet);
+  // Tableau de bord : Ryad uniquement
+  const { utilisateur } = useAuth();
+  const tabs = getTabsForRole(roleCode, isTablet, voitTableauDeBord(utilisateur));
   const hasSignaler = tabs.some((t) => t.id === 'signaler');
 
   const totalAlerts = badges

@@ -14,7 +14,7 @@ import { useViewAs } from '@/hooks/useViewAs';
 import { useParcCourant } from '@/hooks/useParcCourant';
 import { useFeatureFlags } from '@/hooks/useFeatureFlags';
 import { useAccesCommandes } from '@/hooks/queries/useCommandes';
-import { ROLES_STOCK, ROLES_PILOTAGE, ROLES_DIRECTION_PARC, ROLES_ANALYSE_CAUSES, ROLES_BONS, estManagerPrincipal, rolesAttribuables } from '@/lib/acces';
+import { ROLES_STOCK, ROLES_PILOTAGE, ROLES_DIRECTION_PARC, ROLES_ANALYSE_CAUSES, ROLES_BONS, estManagerPrincipal, rolesAttribuables, voitTableauDeBord } from '@/lib/acces';
 import type { RoleUtilisateur } from '@/types/database';
 
 const TOUR_KEYS: Record<string, string> = {
@@ -57,6 +57,8 @@ interface NavItem {
   gestionnaireCommandes?: boolean;
   /** Visibilité pilotée par le module Commandes (gestionnaire ou flag `commandes`). */
   accesCommandes?: boolean;
+  /** Réservé au propriétaire du tableau de bord (Ryad), cf voitTableauDeBord */
+  proprietaireSeul?: boolean;
   end?: boolean;
 }
 
@@ -64,7 +66,7 @@ const sections: { titre: string; items: NavItem[] }[] = [
   {
     titre: 'Pilotage',
     items: [
-      { to: '/gmao', label: 'Tableau de bord', featureCode: 'tableau_bord', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'admin_it'], end: true },
+      { to: '/gmao', label: 'Tableau de bord', featureCode: 'tableau_bord', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'admin_it'], proprietaireSeul: true, end: true },
       { to: '/gmao/mon-parc', label: 'Mon parc', roles: ['manager_parc'] },
       { to: '/gmao/operations', label: 'Opérations', featureCode: 'interventions', badgeKey: 'operations', badgeTone: 'red', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'technicien', 'manager_parc', 'admin_it'] },
       { to: '/gmao/rapports', label: 'Rapports de réparation', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'technicien', 'manager_parc', 'admin_it'] },
@@ -241,7 +243,8 @@ export function Sidebar({ user, roleAffiche, roleCode, realRoleCode, compact = f
               : it.roles.includes(roleCode) ||
                 (roleCode === 'manager_parc' && it.roles.includes('manager_principal') && (vuePrincipal || estManagerPrincipal(utilisateur))) ||
                 (!!it.gestionnaireCommandes && estGestionnaire)) &&
-            (!it.featureCode || hasAccess(it.featureCode) || (!!it.gestionnaireCommandes && estGestionnaire))
+            (!it.featureCode || hasAccess(it.featureCode) || (!!it.gestionnaireCommandes && estGestionnaire)) &&
+            (!it.proprietaireSeul || voitTableauDeBord(utilisateur))
           );
           if (itemsVisibles.length === 0) return null;
           return (

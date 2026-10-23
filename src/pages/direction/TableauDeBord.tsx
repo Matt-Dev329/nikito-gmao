@@ -1,5 +1,7 @@
 import { useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
+import { useAuth } from '@/hooks/useAuth';
+import { voitTableauDeBord } from '@/lib/acces';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer,
   ReferenceLine, Cell, PieChart, Pie, Cell as PieCell, Tooltip,
@@ -102,7 +104,14 @@ function mapCriticite(priorite: Record<string, unknown> | null): Criticite {
   return 'mineur';
 }
 
+/** Tableau de bord : Ryad uniquement (même règle en base, acces_tableau_de_bord). */
 export function TableauDeBord() {
+  const { utilisateur } = useAuth();
+  if (!voitTableauDeBord(utilisateur)) return <Navigate to="/gmao/operations" replace />;
+  return <ContenuTableauDeBord />;
+}
+
+function ContenuTableauDeBord() {
   const navigate = useNavigate();
   const [parcActif, setParcActif] = useState<string | null>(null);
 

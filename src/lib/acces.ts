@@ -38,6 +38,15 @@ export const ROLES_PILOTAGE: string[] = ['direction', 'chef_maintenance', 'direc
  */
 export const ROLES_DIRECTION_PARC: RoleUtilisateur[] = ['direction', 'chef_maintenance', 'directeur_parc', 'admin_it'];
 
+/**
+ * Tableau de bord (indicateurs de performance) : réservé à Ryad, et à lui seul
+ * (même règle en base : acces_tableau_de_bord).
+ */
+export const EMAIL_TABLEAU_DE_BORD = 'ryad.neki@nikito.com';
+export function voitTableauDeBord(u: { email?: string | null } | null | undefined): boolean {
+  return (u?.email ?? '').trim().toLowerCase() === EMAIL_TABLEAU_DE_BORD;
+}
+
 /** Bons d'intervention : techniciens et chef d'équipe (direction et admin IT compris) */
 export const ROLES_BONS: RoleUtilisateur[] = ['direction', 'chef_maintenance', 'technicien', 'admin_it'];
 

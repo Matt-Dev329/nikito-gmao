@@ -8,7 +8,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { rattacherAbonnementPush } from '@/lib/push';
 import { useEffectiveRole } from '@/hooks/useViewAs';
 import { GardeAcces } from '@/components/auth/GardeAcces';
-import { ROLES_ANALYSE_CAUSES, ROLES_PILOTAGE } from '@/lib/acces';
+import { ROLES_ANALYSE_CAUSES, ROLES_PILOTAGE, voitTableauDeBord } from '@/lib/acces';
 
 // Helper : lazy-load d'un export nommé
 function page<T extends Record<string, unknown>>(factory: () => Promise<T>, name: keyof T) {
@@ -78,6 +78,8 @@ function AccueilParRole() {
   if (role === 'manager_parc') return <Navigate to="/gmao/mon-parc" replace />;
   if (role === 'technicien') return <Navigate to="/gmao/operations" replace />;
   if (role === 'staff_operationnel') return <Navigate to="/staff/controle-ouverture" replace />;
+  // Tableau de bord : Ryad uniquement ; les autres arrivent sur Opérations
+  if (!voitTableauDeBord(utilisateur)) return <Navigate to="/gmao/operations" replace />;
   return <TableauDeBord />;
 }
 

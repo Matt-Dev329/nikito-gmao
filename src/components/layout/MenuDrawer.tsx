@@ -3,15 +3,15 @@ import { actualiserApplication } from '@/lib/miseAJour';
 import { cn } from '@/lib/utils';
 import { Logo } from '@/components/ui/Logo';
 import { useAuth } from '@/hooks/useAuth';
-import { ROLES_PILOTAGE, ROLES_BONS, ROLES_DIRECTION_PARC, aAcces } from '@/lib/acces';
+import { ROLES_PILOTAGE, ROLES_BONS, ROLES_DIRECTION_PARC, aAcces, voitTableauDeBord } from '@/lib/acces';
 
 interface MenuDrawerProps {
   open: boolean;
   onClose: () => void;
 }
 
-const menuItems: { to: string; label: string; icon: string; roles?: string[] }[] = [
-  { to: '/gmao', label: 'Tableau de bord', icon: '📊' },
+const menuItems: { to: string; label: string; icon: string; roles?: string[]; proprietaireSeul?: boolean }[] = [
+  { to: '/gmao', label: 'Tableau de bord', icon: '📊', proprietaireSeul: true },
   { to: '/tech/controles', label: 'Contrôles', icon: '✅' },
   { to: '/tech/rapports', label: 'Rapports de réparation', icon: '📋' },
   { to: '/tech/bons', label: "Bons d'intervention", icon: '🧾', roles: ROLES_BONS },
@@ -83,7 +83,9 @@ export function MenuDrawer({ open, onClose }: MenuDrawerProps) {
         </div>
 
         <nav className="flex-1 p-3 flex flex-col gap-1">
-          {menuItems.filter((item) => !item.roles || aAcces(utilisateur, item.roles)).map((item) => (
+          {menuItems
+            .filter((item) => (!item.roles || aAcces(utilisateur, item.roles)) && (!item.proprietaireSeul || voitTableauDeBord(utilisateur)))
+            .map((item) => (
             <button
               key={item.to}
               onClick={() => handleNav(item.to)}
