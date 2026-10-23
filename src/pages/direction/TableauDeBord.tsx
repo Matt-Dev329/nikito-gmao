@@ -53,6 +53,11 @@ function fmtNum(n: number, decimals = 1): string {
   return n.toFixed(decimals).replace('.', ',');
 }
 
+/** Valeurs numériques présentes (les parcs sans donnée ne comptent pas comme 0) */
+function valeurs(rows: Record<string, unknown>[], cle: string): number[] {
+  return rows.map((r) => r[cle]).filter((v) => v !== null && v !== undefined).map(Number);
+}
+
 const CRIT_COLORS: Record<string, string> = {
   bloquant: '#FF4D6D',
   majeur: '#FFB547',
@@ -107,7 +112,7 @@ export function TableauDeBord() {
   const premierCoupQ = useKpiPremierCoup();
   const plaintesQ = useKpiPlaintes();
   const parcsQ = useParcs();
-  const incidentsQ = useIncidents({ statuts: ['ouvert', 'assigne', 'en_cours'] });
+  const incidentsQ = useIncidents({ statuts: ['ouvert', 'assigne', 'en_pause', 'en_cours'] });
   const { data: controlesManquants } = useControlesOuvertureManquants();
 
   const kpiLoading = perfQ.isLoading || mtbfQ.isLoading || mttrQ.isLoading
@@ -139,12 +144,14 @@ export function TableauDeBord() {
     const pc = filterByParc(premierCoupQ.data as Record<string, unknown>[] | undefined);
     const plaintes = filterByParc(plaintesQ.data as Record<string, unknown>[] | undefined);
 
+    // Pas de donnée (aucune panne répétée, aucune intervention…) : « — » plutôt que 0
+    const moyenne = (vals: number[], f: (n: number) => string) => (vals.length ? f(avg(vals)) : '—');
     return {
-      performance: fmtNum(avg(perf.map((r) => clampPct((r.performance_pct as number) ?? 0)))),
-      mtbf: fmtNum(avg(mtbf.map((r) => (r.mtbf_jours as number) ?? 0))),
-      mttr: Math.round(avg(mttr.map((r) => (r.mttr_minutes as number) ?? 0))).toString(),
-      premierCoup: Math.round(avg(pc.map((r) => (r.premier_coup_pct as number) ?? 0))).toString(),
-      plaintes: sum(plaintes.map((r) => (r.plaintes_7j as number) ?? 0)).toString(),
+      performance: moyenne(valeurs(perf, 'performance_pct').map(clampPct), (n) => fmtNum(n)),
+      mtbf: moyenne(valeurs(mtbf, 'mtbf_jours'), (n) => fmtNum(n)),
+      mttr: moyenne(valeurs(mttr, 'mttr_minutes'), (n) => Math.round(n).toString()),
+      premierCoup: moyenne(valeurs(pc, 'premier_coup_pct'), (n) => Math.round(n).toString()),
+      plaintes: sum(plaintes.map((r) => Number(r.plaintes_7j ?? 0))).toString(),
     };
   }, [perfQ.data, mtbfQ.data, mttrQ.data, premierCoupQ.data, plaintesQ.data, parcActif]);
 
@@ -152,7 +159,7 @@ export function TableauDeBord() {
     if (!incidentsQ.data) return 0;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const all = incidentsQ.data as any[];
-    return parcActif ? all.filter((i) => i.equipements?.parc_id === parcActif).length : all.length;
+    return parcActif ? all.filter((i) => (i.equipements?.parc_id ?? i.parc_ticket) === parcActif).length : all.length;
   }, [incidentsQ.data, parcActif]);
 
   const alertes = useMemo(() => {
@@ -160,7 +167,7 @@ export function TableauDeBord() {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let filtered = incidentsQ.data as any[];
     if (parcActif) {
-      filtered = filtered.filter((i) => i.equipements?.parc_id === parcActif);
+      filtered = filtered.filter((i) => (i.equipements?.parc_id ?? i.parc_ticket) === parcActif);
     }
     const prioriteOrder = ['bloquant', 'majeur', 'mineur'];
     const rang = (i: { niveaux_priorite?: Record<string, unknown> | null }) =>
@@ -175,7 +182,7 @@ export function TableauDeBord() {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let filtered = incidentsQ.data as any[];
     if (parcActif) {
-      filtered = filtered.filter((i) => i.equipements?.parc_id === parcActif);
+      filtered = filtered.filter((i) => (i.equipements?.parc_id ?? i.parc_ticket) === parcActif);
     }
     const counts: Record<string, number> = { bloquant: 0, majeur: 0, mineur: 0 };
     filtered.forEach((i) => {
@@ -333,7 +340,7 @@ export function TableauDeBord() {
               label={kpiLabels.performance}
               valeur={kpiAgreg.performance}
               unite="%"
-              delta={{ texte: 'aujourd\'hui · moy. des parcs', tone: 'neutre' }}
+              delta={{ texte: 'tickets traités dans les délais · 30 derniers jours', tone: 'neutre' }}
               couleur="lime"
             />
             <KpiCard
@@ -348,7 +355,7 @@ export function TableauDeBord() {
               label={kpiLabels.mtbf}
               valeur={kpiAgreg.mtbf}
               unite=" j"
-              delta={{ texte: '30 derniers jours', tone: 'neutre' }}
+              delta={{ texte: 'entre 2 pannes d\'une machine · 90 jours', tone: 'neutre' }}
               couleur="cyan"
               compact
             />
@@ -374,7 +381,7 @@ export function TableauDeBord() {
 
       <div className="grid grid-cols-1 lg:grid-cols-[1.5fr_1fr] gap-3.5 mb-[18px]">
         <Card>
-          <CardHead titre={'Performance par parc · aujourd\'hui'} meta="% disponibilité bloquants" />
+          <CardHead titre="Performance par parc · 30 derniers jours" meta="% de tickets traités dans les délais" />
           <div className="h-[200px]">
             {perfQ.isLoading ? (
               <div className="flex items-center justify-center h-full">
@@ -389,11 +396,11 @@ export function TableauDeBord() {
                 <BarChart data={perfFiltered} margin={{ top: 5, right: 8, left: -10, bottom: 0 }}>
                   <CartesianGrid stroke="rgba(255,255,255,.06)" vertical={false} />
                   <XAxis dataKey="parc" axisLine={false} tickLine={false} tick={{ fill: '#A8A8C8', fontSize: 11 }} />
-                  <YAxis domain={[80, 100]} axisLine={false} tickLine={false} tick={{ fill: '#A8A8C8', fontSize: 11 }} tickFormatter={(v) => `${v}%`} />
+                  <YAxis domain={[0, 100]} axisLine={false} tickLine={false} tick={{ fill: '#A8A8C8', fontSize: 11 }} tickFormatter={(v) => `${v}%`} />
                   <ReferenceLine y={95} stroke="#45D7F5" strokeDasharray="6 4" />
                   <Bar dataKey="perf" radius={[6, 6, 0, 0]}>
                     {perfFiltered.map((d) => (
-                      <Cell key={d.parc} fill={d.perf >= 95 ? '#D4F542' : '#FFB547'} />
+                      <Cell key={d.parc} fill={d.perf >= 95 ? '#D4F542' : d.perf >= 60 ? '#FFB547' : '#FF4D6D'} />
                     ))}
                   </Bar>
                   <Tooltip

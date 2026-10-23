@@ -41,7 +41,7 @@ export function KpiCard({ label, valeur, unite, delta, couleur, compact = false 
       <div className={cn('text-dim uppercase tracking-wider', compact ? 'text-[10px] mb-1.5' : 'text-[11px] mb-2')}>{label}</div>
       <div className={cn('font-semibold leading-none', c.text, compact ? 'text-[22px]' : 'text-[28px]')}>
         {valeur}
-        {unite && <span className={cn('text-dim font-normal ml-0.5', compact ? 'text-xs' : 'text-sm')}>{unite}</span>}
+        {unite && valeur !== '—' && <span className={cn('text-dim font-normal ml-0.5', compact ? 'text-xs' : 'text-sm')}>{unite}</span>}
       </div>
       {delta && (
         <div className={cn('text-[11px] mt-1', deltaTone[delta.tone])}>{delta.texte}</div>
