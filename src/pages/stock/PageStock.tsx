@@ -81,8 +81,12 @@ function useModifierStock() {
   return useMutation({
     // Mouvement appliqué en une requête côté base (pas de lecture puis réécriture
     // qui écraserait une livraison ou une clôture d'intervention simultanée)
-    mutationFn: async ({ id, delta }: { id: string; delta: number }) => {
-      const { error } = await supabase.rpc('mouvement_stock', { p_piece_id: id, p_delta: delta });
+    // Entrée avec parc choisi (parcId défini, vide = stock commun) : entree_stock_parc
+    mutationFn: async ({ id, delta, parcId }: { id: string; delta: number; parcId?: string }) => {
+      const { error } =
+        delta > 0 && parcId !== undefined
+          ? await supabase.rpc('entree_stock_parc', { p_piece_id: id, p_parc_id: parcId || null, p_quantite: delta })
+          : await supabase.rpc('mouvement_stock', { p_piece_id: id, p_delta: delta });
       if (error) throw error;
     },
     onSuccess: () => {
@@ -146,6 +150,8 @@ function ContenuStock() {
   const [filtreCrit, setFiltreCrit] = useState<FiltreCritique>('tous');
   const [modaleCreer, setModaleCreer] = useState(false);
   const [mouvementPiece, setMouvementPiece] = useState<{ id: string; nom: string; type: 'entree' | 'sortie' } | null>(null);
+  // Entrée de stock : parc qui reçoit les pièces (vide = stock commun)
+  const [parcEntree, setParcEntree] = useState('');
   const [mouvementQty, setMouvementQty] = useState(1);
   const [parcFiltre, setParcFiltre] = useState<string | null>(null);
   const [domaineFiltre, setDomaineFiltre] = useState<string | null>(null);
@@ -169,6 +175,17 @@ function ContenuStock() {
 
   // Rangement : parc, puis domaine
   const parcsDispo = useMemo(() => compter(pieces ?? [], parcDe, trierParcs), [pieces]);
+  // Choix du parc toujours proposé : tous les parcs de l'utilisateur + stock commun
+  const { data: parcsListe } = useParcs();
+  const parcsChoix = useMemo(() => {
+    const nb = new Map(parcsDispo);
+    const liste = ((parcsListe ?? []) as { id: string; code: string; nom: string }[]).map((p) => {
+      const label = `${p.code} · ${p.nom}`;
+      return { id: p.id, label, n: nb.get(label) ?? 0 };
+    });
+    return [...liste, { id: '', label: TOUS_PARCS, n: nb.get(TOUS_PARCS) ?? 0 }];
+  }, [parcsListe, parcsDispo]);
+  const parcIdChoisi = parcsChoix.find((p) => p.label === parcFiltre)?.id ?? '';
   const domainesDispo = useMemo(
     () => compter((pieces ?? []).filter((p) => !parcFiltre || parcDe(p) === parcFiltre), domaineDe, trierDomaines),
     [pieces, parcFiltre]
@@ -197,8 +214,12 @@ function ContenuStock() {
     if (!mouvementPiece) return;
     const delta = mouvementPiece.type === 'entree' ? mouvementQty : -mouvementQty;
     try {
-      await modStock.mutateAsync({ id: mouvementPiece.id, delta });
-      toast.success(`${mouvementPiece.nom} : ${delta > 0 ? '+' : ''}${delta}`);
+      await modStock.mutateAsync({ id: mouvementPiece.id, delta, parcId: mouvementPiece.type === 'entree' ? parcEntree : undefined });
+      const parcLabel =
+        mouvementPiece.type === 'entree'
+          ? ` · ${parcsChoix.find((c) => c.id === parcEntree)?.label ?? 'stock commun'}`
+          : '';
+      toast.success(`${mouvementPiece.nom} : ${delta > 0 ? '+' : ''}${delta}${parcLabel}`);
       setMouvementPiece(null);
       setMouvementQty(1);
     } catch {
@@ -273,18 +294,16 @@ function ContenuStock() {
             </Pill>
           ))}
         </div>
-        {parcsDispo.length > 1 && (
-          <div className="flex gap-1.5 overflow-x-auto pb-1">
-            <Pill variant="cyan" active={!parcFiltre} onClick={() => setParcFiltre(null)} className="min-h-[36px]">
-              Tous les parcs
+        <div className="flex gap-1.5 overflow-x-auto pb-1">
+          <Pill variant="cyan" active={!parcFiltre} onClick={() => setParcFiltre(null)} className="min-h-[36px]">
+            Tous les parcs <span className="opacity-60">· {(pieces ?? []).length}</span>
+          </Pill>
+          {parcsChoix.map((p) => (
+            <Pill key={p.label} variant="cyan" active={parcFiltre === p.label} onClick={() => setParcFiltre(p.label)} className="min-h-[36px]">
+              {p.label} <span className="opacity-60">· {p.n}</span>
             </Pill>
-            {parcsDispo.map(([g, n]) => (
-              <Pill key={g} variant="cyan" active={parcFiltre === g} onClick={() => setParcFiltre(g)} className="min-h-[36px]">
-                {g} <span className="opacity-60">· {n}</span>
-              </Pill>
-            ))}
-          </div>
-        )}
+          ))}
+        </div>
         {domainesDispo.length > 1 && (
           <div className="flex gap-1.5 overflow-x-auto pb-1">
             <Pill active={!domaineFiltre} onClick={() => setDomaineFiltre(null)} className="min-h-[36px]">
@@ -375,6 +394,7 @@ function ContenuStock() {
                                         onClick={() => {
                                           modStock.reset();
                                           setMouvementPiece({ id: p.id, nom: p.nom, type: 'entree' });
+                                          setParcEntree(p.parc_id ?? '');
                                         }}
                                         className="text-green text-[11px] font-medium mr-3 hover:underline"
                                       >
@@ -418,6 +438,22 @@ function ContenuStock() {
               {mouvementPiece.type === 'entree' ? 'Entree de stock' : 'Sortie de stock'}
             </div>
             <div className="text-[17px] font-semibold mt-1 mb-4">{mouvementPiece.nom}</div>
+            {mouvementPiece.type === 'entree' && (
+              <>
+                <label className="block text-[11px] text-dim uppercase tracking-wider mb-2">Parc qui reçoit les pièces</label>
+                <select
+                  value={parcEntree}
+                  onChange={(e) => setParcEntree(e.target.value)}
+                  className="w-full bg-bg-deep border border-white/[0.08] rounded-[10px] p-3 text-text text-[13px] outline-none focus:border-nikito-cyan min-h-[44px] mb-4"
+                >
+                  {parcsChoix.map((c) => (
+                    <option key={c.label} value={c.id}>
+                      {c.id ? c.label : 'Stock commun'}
+                    </option>
+                  ))}
+                </select>
+              </>
+            )}
             <label className="block text-[11px] text-dim uppercase tracking-wider mb-2">Quantite</label>
             <ChampQuantite
               valeur={mouvementQty}
@@ -456,6 +492,7 @@ function ContenuStock() {
       {modaleCreer && (
         <ModaleCreerPiece
           fournisseurs={fournisseurs ?? []}
+          parcIdDefaut={parcIdChoisi}
           onClose={() => setModaleCreer(false)}
         />
       )}
@@ -465,9 +502,12 @@ function ContenuStock() {
 
 function ModaleCreerPiece({
   fournisseurs,
+  parcIdDefaut,
   onClose,
 }: {
   fournisseurs: Array<{ id: string; nom: string }>;
+  /** Parc choisi dans la page (vide = stock commun) */
+  parcIdDefaut: string;
   onClose: () => void;
 }) {
   const creer = useCreerPiece();
@@ -477,7 +517,7 @@ function ModaleCreerPiece({
   const [stockMin, setStockMin] = useState(1);
   const [prixHt, setPrixHt] = useState('');
   const [emplacement, setEmplacement] = useState('');
-  const [parcId, setParcId] = useState('');
+  const [parcId, setParcId] = useState(parcIdDefaut);
   const [activiteId, setActiviteId] = useState('');
 
   const submit = async () => {
