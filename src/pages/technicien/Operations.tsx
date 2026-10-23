@@ -5,7 +5,7 @@ import { TicketCard, type TicketSummary } from '@/components/tickets/TicketCard'
 import { ModaleReassignerTicket } from '@/components/tickets/ModaleReassignerTicket';
 import { Pill } from '@/components/ui/Pill';
 import { cn, estCheminVideo, formatDateCourt, formatDuree } from '@/lib/utils';
-import { useIncidents, useReprendreIncident, useTicketsAValider, useValiderTicket } from '@/hooks/queries/useTickets';
+import { useIncidents, useNombreTicketsParParc, useReprendreIncident, useTicketsAValider, useValiderTicket } from '@/hooks/queries/useTickets';
 import { ModaleSupprimerTicket } from '@/components/tickets/ModaleSupprimerTicket';
 import { ModaleClotureRapide } from '@/components/tickets/ModaleClotureRapide';
 import { peutValiderTicket } from '@/lib/acces';
@@ -177,6 +177,9 @@ export function Operations() {
     parcId: parcIdEffectif,
   });
 
+  // Tickets ouverts : total et nombre par parc (affichés sur les boutons de parc)
+  const { data: nombreTickets } = useNombreTicketsParParc();
+
   // Tickets à valider (staff, managers non principaux) des parcs que l'utilisateur peut valider
   const aValiderQ = useTicketsAValider(estValideur);
   const brutsAValider = useMemo(
@@ -307,7 +310,7 @@ export function Operations() {
         <div className="px-3 md:px-[18px] pt-3 bg-bg-deep flex gap-2 overflow-x-auto pb-1">
           {peutVoirTous && (
             <Pill active={parcActif === null} onClick={() => setParcActif(null)}>
-              Tous les parcs
+              Tous les parcs{nombreTickets && <span className="opacity-70"> · {nombreTickets.total}</span>}
             </Pill>
           )}
           {parcsVisibles.map((p) => (
@@ -317,6 +320,7 @@ export function Operations() {
               onClick={() => setParcActif(p.id)}
             >
               {p.code} · {p.nom}
+              {nombreTickets && <span className="opacity-70"> · {nombreTickets.parParc.get(p.id) ?? 0}</span>}
             </Pill>
           ))}
         </div>

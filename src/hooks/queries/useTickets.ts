@@ -42,6 +42,28 @@ export function useIncidents(filtres?: {
   });
 }
 
+/** Nombre de tickets ouverts (à faire, en cours, attente de pièce, extérieur) par parc */
+export function useNombreTicketsParParc() {
+  const { estFormation } = useFormationFilter();
+  return useQuery({
+    queryKey: ['incidents', 'nombre-par-parc', estFormation],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('incidents')
+        .select('parc_ticket')
+        .eq('est_formation', estFormation)
+        .or('validation_manager.is.null,validation_manager.neq.en_attente')
+        .in('statut', ['ouvert', 'assigne', 'en_pause', 'en_cours']);
+      if (error) throw error;
+      const parParc = new Map<string, number>();
+      ((data ?? []) as { parc_ticket: string | null }[]).forEach((i) => {
+        if (i.parc_ticket) parParc.set(i.parc_ticket, (parParc.get(i.parc_ticket) ?? 0) + 1);
+      });
+      return { total: (data ?? []).length, parParc };
+    },
+  });
+}
+
 export function useIncident(numeroBT: string | undefined) {
   const { estFormation } = useFormationFilter();
   return useQuery({
