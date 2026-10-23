@@ -2,7 +2,7 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.45.0";
 
 /**
- * Bilan de la semaine au chef d'équipe (7 derniers jours) : tickets,
+ * Bilan de la semaine, pour Ryad uniquement (7 derniers jours) : tickets,
  * interventions, contrôles, commandes, stock, prestataires, contrats, équipe.
  * Appelé chaque lundi par pg_cron (gmao_resume_hebdo_tickets) ; un seul envoi
  * par semaine (bilans_hebdo).
@@ -21,6 +21,7 @@ const esc = (t: string | number | null | undefined) =>
   String(t ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
 
 const OUVERTS = ["ouvert", "assigne", "en_pause", "en_cours"];
+const DESTINATAIRE = "ryad.neki@nikito.com";
 const dateFr = (d: string) => new Date(d.length === 10 ? `${d}T12:00:00` : d).toLocaleDateString("fr-FR", { timeZone: "Europe/Paris" });
 
 function age(iso: string): string {
@@ -106,7 +107,8 @@ Deno.serve(async (req: Request) => {
       service.from("documents_techniques").select("titre, prochaine_echeance, parc:parcs(code)").eq("type", "contrat").eq("actif", true).not("prochaine_echeance", "is", null).lte("prochaine_echeance", dans90j).order("prochaine_echeance"),
       service.from("utilisateurs").select("prenom, nom, roles!inner(code)").eq("actif", true).gte("cree_le", depuis),
       service.from("invitations").select("email").is("utilise_le", null).gt("expire_le", new Date().toISOString()),
-      service.from("utilisateurs").select("email, roles!inner(code)").eq("actif", true).eq("roles.code", "chef_maintenance"),
+      // Destinataire unique : Ryad (demande du 23/10), même si d'autres chefs d'équipe arrivent
+      service.from("utilisateurs").select("email").eq("actif", true).eq("email", DESTINATAIRE),
       service.from("incidents").select("meta").eq("est_formation", false).not("meta->reouvertures", "is", null),
     ]);
     if (error) throw error;
