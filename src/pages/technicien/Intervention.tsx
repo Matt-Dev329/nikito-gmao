@@ -78,8 +78,8 @@ export function Intervention() {
   const validerTicket = useValiderTicket();
   const [suppression, setSuppression] = useState(false);
   const estResolu = statutIncident === 'resolu' || statutIncident === 'ferme';
-  // Réouverture : chef d'équipe, direction, admin IT (cf RPC rouvrir_ticket)
-  const peutRouvrir = ['chef_maintenance', 'direction', 'admin_it'].includes(utilisateur?.role_code ?? '');
+  // Réouverture : chef d'équipe uniquement (cf RPC rouvrir_ticket)
+  const peutRouvrir = utilisateur?.role_code === 'chef_maintenance';
   const [reouverture, setReouverture] = useState(false);
   const reouvertures = ((incident?.meta as { reouvertures?: { le: string; par_nom?: string; motif: string }[] } | null)?.reouvertures ?? []);
   // Intervention en cours (fin vide) ; pour un ticket résolu, la dernière intervention.
@@ -465,7 +465,7 @@ export function Intervention() {
           </div>
         )}
 
-        {/* Ticket résolu / fermé : réouverture (chef d'équipe, direction, admin IT) et historique */}
+        {/* Ticket résolu / fermé : réouverture (chef d'équipe) et historique */}
         {(estResolu || reouvertures.length > 0) && (peutRouvrir || reouvertures.length > 0) && (
           <div className="bg-bg-card border border-white/[0.06] rounded-xl px-4 py-3 flex flex-col gap-2">
             {estResolu && peutRouvrir && (

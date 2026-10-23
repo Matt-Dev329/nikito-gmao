@@ -266,7 +266,7 @@ export function useCloturerTicketRapide() {
   });
 }
 
-/** Réouverture d'un ticket résolu / fermé (chef d'équipe, direction, admin IT) : motif obligatoire, RPC rouvrir_ticket */
+/** Réouverture d'un ticket résolu / fermé (chef d'équipe uniquement) : motif obligatoire, RPC rouvrir_ticket */
 export function useRouvrirTicket() {
   const qc = useQueryClient();
   return useMutation({
