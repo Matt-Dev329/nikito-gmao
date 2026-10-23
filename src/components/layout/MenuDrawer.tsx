@@ -3,7 +3,7 @@ import { actualiserApplication } from '@/lib/miseAJour';
 import { cn } from '@/lib/utils';
 import { Logo } from '@/components/ui/Logo';
 import { useAuth } from '@/hooks/useAuth';
-import { ROLES_PILOTAGE, ROLES_BONS, aAcces } from '@/lib/acces';
+import { ROLES_PILOTAGE, ROLES_BONS, ROLES_DIRECTION_PARC, aAcces } from '@/lib/acces';
 
 interface MenuDrawerProps {
   open: boolean;
@@ -19,6 +19,8 @@ const menuItems: { to: string; label: string; icon: string; roles?: string[] }[]
   { to: '/tech/manuels', label: 'Manuels', icon: '📘' },
   { to: '/tech/prestataires', label: 'Rapports prestataires', icon: '🧯', roles: ROLES_PILOTAGE },
   { to: '/tech/analyses-prestataires', label: 'Analyses prestataires', icon: '🔎', roles: ROLES_PILOTAGE },
+  { to: '/tech/contrats', label: 'Contrats prestataires', icon: '📑', roles: ROLES_DIRECTION_PARC },
+  { to: '/tech/demandes-prestataires', label: 'Demandes prestataires', icon: '📨', roles: ROLES_DIRECTION_PARC },
   { to: '/tech/formations-personnel', label: 'Formations du personnel', icon: '🎓', roles: ROLES_PILOTAGE },
   { to: '/gmao/commander', label: 'Commander', icon: '🛒', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'manager_parc', 'technicien', 'admin_it'] },
   { to: '/gmao/profil', label: 'Mon profil', icon: '👤' },

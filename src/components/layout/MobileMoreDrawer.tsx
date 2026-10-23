@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils';
 import { getNavIcon } from './NavIcons';
 import type { RoleUtilisateur } from '@/types/database';
 import { useAccesCommandes } from '@/hooks/queries/useCommandes';
-import { ROLES_STOCK, ROLES_PILOTAGE, ROLES_ANALYSE_CAUSES, ROLES_BONS, estManagerPrincipal } from '@/lib/acces';
+import { ROLES_STOCK, ROLES_PILOTAGE, ROLES_DIRECTION_PARC, ROLES_ANALYSE_CAUSES, ROLES_BONS, estManagerPrincipal } from '@/lib/acces';
 import { useAuth } from '@/hooks/useAuth';
 import { useViewAs } from '@/hooks/useViewAs';
 
@@ -35,6 +35,8 @@ const pilotageItems: DrawerItem[] = [
   { to: '/gmao/manuels', label: 'Manuels', iconLabel: 'Manuels', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'technicien', 'manager_parc', 'admin_it'] },
   { to: '/gmao/prestataires', label: 'Rapports prestataires', iconLabel: 'Rapports prestataires', roles: ROLES_PILOTAGE },
   { to: '/gmao/analyses-prestataires', label: 'Analyses prestataires', iconLabel: 'Analyses prestataires', roles: ROLES_PILOTAGE },
+  { to: '/gmao/contrats', label: 'Contrats prestataires', iconLabel: 'Contrats prestataires', roles: ROLES_DIRECTION_PARC },
+  { to: '/gmao/demandes-prestataires', label: 'Demandes prestataires', iconLabel: 'Demandes prestataires', roles: ROLES_DIRECTION_PARC },
   { to: '/gmao/formations-personnel', label: 'Formations du personnel', iconLabel: 'Formations du personnel', roles: ROLES_PILOTAGE },
   { to: '/gmao/equipements', label: 'Equipements', iconLabel: 'Équipements', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'technicien', 'manager_parc', 'admin_it'] },
   { to: '/gmao/recurrences', label: 'Recurrences', iconLabel: 'Récurrences', roles: ROLES_ANALYSE_CAUSES },

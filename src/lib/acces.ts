@@ -26,6 +26,13 @@ export function peutVoirStock(role: RoleUtilisateur | undefined, estGestionnaire
  */
 export const ROLES_PILOTAGE: string[] = ['direction', 'chef_maintenance', 'directeur_parc', 'admin_it', 'manager_principal'];
 
+/**
+ * Contrats et demandes prestataires : directeurs de parc (sur leurs parcs),
+ * chef d'équipe, direction et admin IT — pas les managers, même principaux.
+ * Même règle en base (acces_direction_parc).
+ */
+export const ROLES_DIRECTION_PARC: RoleUtilisateur[] = ['direction', 'chef_maintenance', 'directeur_parc', 'admin_it'];
+
 /** Bons d'intervention : techniciens et chef d'équipe (direction et admin IT compris) */
 export const ROLES_BONS: RoleUtilisateur[] = ['direction', 'chef_maintenance', 'technicien', 'admin_it'];
 

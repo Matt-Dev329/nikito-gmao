@@ -26,6 +26,8 @@ const PageManuels = page(() => import('@/pages/documentation/PageDocumentsTechni
 const PageAnalysesPrestataires = page(() => import('@/pages/documentation/PageAnalysesPrestataires'), 'PageAnalysesPrestataires');
 const PageFormationsPersonnel = page(() => import('@/pages/formations/PageFormationsPersonnel'), 'PageFormationsPersonnel');
 const PageRapportsPrestataires = page(() => import('@/pages/documentation/PageDocumentsTechniques'), 'PageRapportsPrestataires');
+const PageContrats = page(() => import('@/pages/documentation/PageDocumentsTechniques'), 'PageContrats');
+const PageDemandesPrestataires = page(() => import('@/pages/documentation/PageDemandesPrestataires'), 'PageDemandesPrestataires');
 const PageBonsIntervention = page(() => import('@/pages/interventions/PageBonsIntervention'), 'PageBonsIntervention');
 const PageControles = page(() => import('@/pages/controles/PageControles'), 'PageControles');
 const PageRapportsReparation = page(() => import('@/pages/interventions/PageRapportsReparation'), 'PageRapportsReparation');
@@ -134,6 +136,8 @@ export function App() {
           <Route path="manuels" element={<PageManuels />} />
           <Route path="prestataires" element={<PageRapportsPrestataires />} />
           <Route path="analyses-prestataires" element={<PageAnalysesPrestataires />} />
+          <Route path="contrats" element={<PageContrats />} />
+          <Route path="demandes-prestataires" element={<PageDemandesPrestataires />} />
           <Route path="formations-personnel" element={<PageFormationsPersonnel />} />
           <Route path="equipements" element={<PageEquipements />} />
           <Route path="recurrences" element={<GardeAcces roles={ROLES_ANALYSE_CAUSES}><Recurrences /></GardeAcces>} />
@@ -190,6 +194,8 @@ export function App() {
           <Route path="manuels" element={<PageManuels />} />
           <Route path="prestataires" element={<PageRapportsPrestataires />} />
           <Route path="analyses-prestataires" element={<PageAnalysesPrestataires />} />
+          <Route path="contrats" element={<PageContrats />} />
+          <Route path="demandes-prestataires" element={<PageDemandesPrestataires />} />
           <Route path="formations-personnel" element={<PageFormationsPersonnel />} />
           <Route path="controle-hebdo" element={<ControleHebdo />} />
           <Route path="controle-mensuel" element={<ControleMensuel />} />

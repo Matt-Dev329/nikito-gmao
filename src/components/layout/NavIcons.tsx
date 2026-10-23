@@ -253,6 +253,8 @@ const iconMap: Record<string, (props: { className?: string }) => JSX.Element> = 
   'Manuels': IconManuels,
   'Rapports prestataires': IconManuels,
   'Analyses prestataires': IconRapports,
+  'Contrats prestataires': IconManuels,
+  'Demandes prestataires': IconCommander,
   'Formations du personnel': IconManuels,
   'Équipements': IconEquipements,
   'Récurrences': IconRecurrences,

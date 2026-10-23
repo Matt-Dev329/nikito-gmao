@@ -12,9 +12,15 @@ import { Pill } from '@/components/ui/Pill';
 import type { AlbaBucket } from '@/lib/uploadPhotoControle';
 import { envoyerDocument, recollerDocument } from '@/lib/envoiGrosFichier';
 import { enregistrerBlob, nomDepuisChemin, telechargerUrl } from '@/lib/telecharger';
-import { ROLES_PILOTAGE, aAcces } from '@/lib/acces';
+import { ROLES_DIRECTION_PARC, ROLES_PILOTAGE, aAcces } from '@/lib/acces';
+import { DOMAINES_PRESTATAIRES } from '@/lib/domainesPrestataires';
 
-export type TypeDocument = 'plan' | 'manuel' | 'prestataire';
+export type TypeDocument = 'plan' | 'manuel' | 'prestataire' | 'contrat';
+
+/** Rapports et contrats prestataires : société, dates, rangement par parc puis domaine */
+const estPrestataire = (type: TypeDocument) => type === 'prestataire' || type === 'contrat';
+/** Rôles qui voient (et alimentent) les rapports et contrats prestataires */
+const rolesPrestataire = (type: TypeDocument) => (type === 'contrat' ? ROLES_DIRECTION_PARC : ROLES_PILOTAGE);
 
 export const ROLES_DOCUMENTATION = ['direction', 'chef_maintenance', 'directeur_parc', 'manager_parc', 'technicien', 'admin_it'];
 const ROLES_EDITION = ['direction', 'chef_maintenance', 'directeur_parc', 'admin_it'];
@@ -24,24 +30,6 @@ const BUCKET: AlbaBucket = 'alba-techniques';
 const PLAN_GENERAL = 'Plan général du parc';
 const TAILLE_MAX = 500 * 1024 * 1024;
 
-/** Domaines courants des prestataires extérieurs (saisie libre possible) */
-const DOMAINES_PRESTATAIRES = [
-  'Extincteurs',
-  'Électricité',
-  'Alarme incendie / SSI',
-  'Désenfumage',
-  'Portes coupe-feu',
-  'Éclairage de sécurité',
-  'Ascenseur / monte-charge',
-  'Chauffage / climatisation (CVC)',
-  'Gaz',
-  'Plomberie',
-  'Trampolines / structures',
-  'Aires de jeux',
-  'Dératisation / désinsectisation',
-  'Nettoyage',
-  'Bureau de contrôle',
-];
 
 interface DocumentTechnique {
   id: string;
@@ -82,6 +70,12 @@ const TEXTES: Record<TypeDocument, { titre: string; sousTitre: string; vide: str
     vide: 'Aucun rapport de prestataire pour l’instant.',
     ajouter: '+ Ajouter un rapport',
   },
+  contrat: {
+    titre: 'Contrats prestataires',
+    sousTitre: 'Contrats signés avec nos prestataires, rangés par parc puis par domaine — réservé aux directeurs de parc',
+    vide: 'Aucun contrat pour l’instant.',
+    ajouter: '+ Ajouter un contrat',
+  },
 };
 
 const COLONNES = 'id, type, parc_id, activite, titre, description, chemin, mime, taille, parties, cree_le, parc:parcs(code, nom)';
@@ -95,10 +89,10 @@ function useDocuments(type: TypeDocument) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('documents_techniques')
-        .select(type === 'prestataire' ? `${COLONNES}, prestataire, date_document, prochaine_echeance` : COLONNES)
+        .select(estPrestataire(type) ? `${COLONNES}, prestataire, date_document, prochaine_echeance` : COLONNES)
         .eq('type', type)
         .eq('actif', true)
-        .order(type === 'prestataire' ? 'date_document' : 'titre', { ascending: type !== 'prestataire' });
+        .order(estPrestataire(type) ? 'date_document' : 'titre', { ascending: !estPrestataire(type) });
       if (error) throw error;
       return (data ?? []) as unknown as DocumentTechnique[];
     },
@@ -121,14 +115,14 @@ function parDomaine<T>(docs: T[], domaineDe: (d: T) => string): [string, T[]][] 
 /** Plans (par parc) ou manuels (par activité) : consultation et ajout de documents PDF / images. */
 export function PageDocumentsTechniques({ type }: { type: TypeDocument }) {
   const { utilisateur } = useAuth();
-  const roles = type === 'prestataire' ? ROLES_PILOTAGE : ROLES_DOCUMENTATION;
+  const roles = estPrestataire(type) ? rolesPrestataire(type) : ROLES_DOCUMENTATION;
   if (utilisateur && !aAcces(utilisateur, roles)) return <Navigate to="/" replace />;
   return <ContenuDocuments key={type} type={type} />;
 }
 
 function ContenuDocuments({ type }: { type: TypeDocument }) {
   const { utilisateur } = useAuth();
-  const peutEditer = aAcces(utilisateur, type === 'prestataire' ? ROLES_PILOTAGE : ROLES_EDITION);
+  const peutEditer = aAcces(utilisateur, estPrestataire(type) ? rolesPrestataire(type) : ROLES_EDITION);
   const t = TEXTES[type];
   const { data: documents, isLoading, isError, error } = useDocuments(type);
   const [filtre, setFiltre] = useState<string | null>(null);
@@ -136,10 +130,10 @@ function ContenuDocuments({ type }: { type: TypeDocument }) {
   const [recherche, setRecherche] = useState('');
   const [ajout, setAjout] = useState(false);
 
-  // Plans et rapports prestataires rangés par parc (puis domaine), manuels par activité
-  const domaineDe = (d: DocumentTechnique) => d.activite?.trim() || 'À classer (analyse en cours)';
+  // Plans, rapports et contrats prestataires rangés par parc (puis domaine), manuels par activité
+  const domaineDe = (d: DocumentTechnique) => d.activite?.trim() || (type === 'contrat' ? 'À classer' : 'À classer (analyse en cours)');
   const groupeDe = (d: DocumentTechnique) =>
-    type === 'plan' || type === 'prestataire'
+    type === 'plan' || estPrestataire(type)
       ? d.parc
         ? `${d.parc.code} · ${d.parc.nom}`
         : TOUS_PARCS
@@ -158,9 +152,9 @@ function ContenuDocuments({ type }: { type: TypeDocument }) {
   }, [documents, type]);
   const filtreActif = filtre && groupesDispo.some(([g]) => g === filtre) ? filtre : null;
 
-  // Rapports prestataires : second filtre par domaine (dans le parc choisi)
+  // Rapports et contrats prestataires : second filtre par domaine (dans le parc choisi)
   const domainesDispo = useMemo(() => {
-    if (type !== 'prestataire') return [];
+    if (!estPrestataire(type)) return [];
     const m = new Map<string, number>();
     (documents ?? [])
       .filter((d) => !filtreActif || groupeDe(d) === filtreActif)
@@ -212,7 +206,7 @@ function ContenuDocuments({ type }: { type: TypeDocument }) {
         {groupesDispo.length > 0 && (
           <div className="flex gap-1.5 overflow-x-auto pb-1">
             <Pill variant="cyan" active={!filtreActif} onClick={() => setFiltre(null)}>
-              {type === 'prestataire' ? 'Tous les parcs' : 'Tous'} <span className="opacity-60">· {(documents ?? []).length}</span>
+              {estPrestataire(type) ? 'Tous les parcs' : 'Tous'} <span className="opacity-60">· {(documents ?? []).length}</span>
             </Pill>
             {groupesDispo.map(([g, n]) => (
               <Pill key={g} variant="cyan" active={filtreActif === g} onClick={() => setFiltre(g)}>
@@ -252,7 +246,7 @@ function ContenuDocuments({ type }: { type: TypeDocument }) {
               <h2 className="text-[13px] text-dim uppercase tracking-wider mb-2">
                 {g} <span className="text-faint">· {docs.length}</span>
               </h2>
-              {type === 'prestataire' ? (
+              {estPrestataire(type) ? (
                 <div className="flex flex-col gap-4 pl-3 border-l border-white/[0.06]">
                   {parDomaine(docs, domaineDe).map(([dom, ds]) => (
                     <div key={dom}>
@@ -406,11 +400,13 @@ function CarteDocument({
       <div className="p-3.5 flex-1 flex flex-col">
         <div className="text-[14px] font-semibold leading-tight">{doc.titre}</div>
         <div className="text-[11px] text-dim mt-0.5">
-          {(type === 'prestataire'
+          {(estPrestataire(type)
             ? [
                 doc.prestataire,
                 doc.parc?.code,
-                doc.date_document ? `le ${new Date(doc.date_document).toLocaleDateString('fr-FR')}` : null,
+                doc.date_document
+                  ? `${type === 'contrat' ? 'depuis le' : 'le'} ${new Date(doc.date_document).toLocaleDateString('fr-FR')}`
+                  : null,
               ]
             : [
                 type === 'plan' ? doc.activite : doc.parc?.code,
@@ -421,8 +417,8 @@ function CarteDocument({
             .filter(Boolean)
             .join(' · ')}
         </div>
-        {type === 'prestataire' && doc.prochaine_echeance && <BadgeEcheance date={doc.prochaine_echeance} />}
-        {type === 'prestataire' && peutEditer && (
+        {estPrestataire(type) && doc.prochaine_echeance && <BadgeEcheance date={doc.prochaine_echeance} contrat={type === 'contrat'} />}
+        {estPrestataire(type) && peutEditer && (
           reclasser ? (
             <div className="mt-2 flex gap-1.5">
               <input
@@ -494,7 +490,7 @@ function FormulaireAjout({ type, onFini }: { type: TypeDocument; onFini: () => v
   const { data: parcs } = useParcs();
   const { data: catalogue } = useCatalogueCommandes();
   const [titre, setTitre] = useState('');
-  const [parcId, setParcId] = useState(type === 'prestataire' && utilisateur?.parc_ids?.length === 1 ? utilisateur.parc_ids[0] : '');
+  const [parcId, setParcId] = useState(estPrestataire(type) && utilisateur?.parc_ids?.length === 1 ? utilisateur.parc_ids[0] : '');
   const [activite, setActivite] = useState(type === 'plan' ? PLAN_GENERAL : '');
   const [prestataire, setPrestataire] = useState('');
   const [dateDocument, setDateDocument] = useState(() => new Date().toISOString().slice(0, 10));
@@ -505,7 +501,7 @@ function FormulaireAjout({ type, onFini }: { type: TypeDocument; onFini: () => v
 
   const suggestions = useMemo(() => {
     const noms = (catalogue?.activites ?? []).map((a) => a.nom);
-    if (type === 'prestataire') return DOMAINES_PRESTATAIRES;
+    if (estPrestataire(type)) return DOMAINES_PRESTATAIRES;
     return type === 'plan' ? [PLAN_GENERAL, ...noms] : noms;
   }, [catalogue, type]);
 
@@ -516,8 +512,8 @@ function FormulaireAjout({ type, onFini }: { type: TypeDocument; onFini: () => v
       // automatique range le rapport dans une catégorie (existante ou créée)
       const titreFinal =
         titre.trim() ||
-        (type === 'prestataire'
-          ? [activite.trim(), prestataire.trim()].filter(Boolean).join(' — ') || fichier.name.replace(/\.[^.]+$/, '')
+        (estPrestataire(type)
+          ? [type === 'contrat' ? 'Contrat' : '', activite.trim(), prestataire.trim()].filter(Boolean).join(' — ') || fichier.name.replace(/\.[^.]+$/, '')
           : '');
       if (!titreFinal) throw new Error('Donne un titre au document');
       if (type === 'manuel' && !activite.trim()) throw new Error('Indique l’activité du manuel');
@@ -533,7 +529,7 @@ function FormulaireAjout({ type, onFini }: { type: TypeDocument; onFini: () => v
         activite: activite.trim() || null,
         titre: titreFinal,
         description: description.trim() || null,
-        ...(type === 'prestataire'
+        ...(estPrestataire(type)
           ? { prestataire: prestataire.trim(), date_document: dateDocument || null, prochaine_echeance: echeance || null }
           : {}),
         chemin,
@@ -555,7 +551,13 @@ function FormulaireAjout({ type, onFini }: { type: TypeDocument; onFini: () => v
       }
     },
     onSuccess: () => {
-      toast.success(type === 'prestataire' ? 'Rapport ajouté — analyse en cours (onglet « Analyses prestataires »)' : 'Document ajouté');
+      toast.success(
+        type === 'prestataire'
+          ? 'Rapport ajouté — analyse en cours (onglet « Analyses prestataires »)'
+          : type === 'contrat'
+            ? 'Contrat ajouté'
+            : 'Document ajouté'
+      );
       qc.invalidateQueries({ queryKey: ['documents-techniques', type] });
       onFini();
     },
@@ -566,13 +568,24 @@ function FormulaireAjout({ type, onFini }: { type: TypeDocument; onFini: () => v
   return (
     <div className="bg-bg-card rounded-xl border border-nikito-cyan/30 p-4 mb-4 grid gap-2.5 max-w-[640px]">
       <div className="text-[14px] font-semibold">
-        {type === 'plan' ? 'Nouveau plan' : type === 'manuel' ? 'Nouveau manuel' : 'Nouveau rapport de prestataire'}
+        {type === 'plan'
+          ? 'Nouveau plan'
+          : type === 'manuel'
+            ? 'Nouveau manuel'
+            : type === 'contrat'
+              ? 'Nouveau contrat'
+              : 'Nouveau rapport de prestataire'}
       </div>
-      {type === 'prestataire' && (
+      {estPrestataire(type) && (
         <div className="grid sm:grid-cols-2 gap-2.5">
-          <input value={prestataire} onChange={(e) => setPrestataire(e.target.value)} placeholder="Prestataire (facultatif, lu sur le rapport)" className={champ} />
+          <input
+            value={prestataire}
+            onChange={(e) => setPrestataire(e.target.value)}
+            placeholder={type === 'contrat' ? 'Prestataire (ex. Bataille & Renard)' : 'Prestataire (facultatif, lu sur le rapport)'}
+            className={champ}
+          />
           <label className="grid gap-1">
-            <span className="text-[11px] text-dim">Date d’intervention</span>
+            <span className="text-[11px] text-dim">{type === 'contrat' ? 'Début du contrat' : 'Date d’intervention'}</span>
             <input type="date" value={dateDocument} onChange={(e) => setDateDocument(e.target.value)} className={champ} />
           </label>
         </div>
@@ -580,7 +593,13 @@ function FormulaireAjout({ type, onFini }: { type: TypeDocument; onFini: () => v
       <input
         value={titre}
         onChange={(e) => setTitre(e.target.value)}
-        placeholder={type === 'prestataire' ? 'Titre (facultatif, ex. Vérification annuelle)' : 'Titre (ex. Plan trampoline zone A)'}
+        placeholder={
+          type === 'prestataire'
+            ? 'Titre (facultatif, ex. Vérification annuelle)'
+            : type === 'contrat'
+              ? 'Titre (facultatif, ex. Contrat de maintenance annuel)'
+              : 'Titre (ex. Plan trampoline zone A)'
+        }
         className={champ}
       />
       <div className="grid sm:grid-cols-2 gap-2.5">
@@ -597,7 +616,13 @@ function FormulaireAjout({ type, onFini }: { type: TypeDocument; onFini: () => v
           onChange={(e) => setActivite(e.target.value)}
           list={`activites-${type}`}
           placeholder={
-            type === 'plan' ? 'Type de plan (ex. Trampoline)' : type === 'prestataire' ? 'Catégorie (automatique si vide)' : 'Activité (ex. Bowling)'
+            type === 'plan'
+              ? 'Type de plan (ex. Trampoline)'
+              : type === 'prestataire'
+                ? 'Catégorie (automatique si vide)'
+                : type === 'contrat'
+                  ? 'Domaine (ex. Extincteurs)'
+                  : 'Activité (ex. Bowling)'
           }
           className={champ}
         />
@@ -607,9 +632,9 @@ function FormulaireAjout({ type, onFini }: { type: TypeDocument; onFini: () => v
           ))}
         </datalist>
       </div>
-      {type === 'prestataire' && (
+      {estPrestataire(type) && (
         <label className="grid gap-1 max-w-[280px]">
-          <span className="text-[11px] text-dim">Prochaine visite (facultatif)</span>
+          <span className="text-[11px] text-dim">{type === 'contrat' ? 'Fin / renouvellement du contrat (facultatif)' : 'Prochaine visite (facultatif)'}</span>
           <input type="date" value={echeance} onChange={(e) => setEcheance(e.target.value)} className={champ} />
         </label>
       )}
@@ -665,8 +690,12 @@ export function PageRapportsPrestataires() {
   return <PageDocumentsTechniques type="prestataire" />;
 }
 
-/** Prochaine visite du prestataire : rouge si dépassée, orange sous 30 jours. */
-function BadgeEcheance({ date }: { date: string }) {
+export function PageContrats() {
+  return <PageDocumentsTechniques type="contrat" />;
+}
+
+/** Prochaine visite du prestataire (ou fin du contrat) : rouge si dépassée, orange sous 30 jours. */
+function BadgeEcheance({ date, contrat = false }: { date: string; contrat?: boolean }) {
   const jours = Math.ceil((new Date(date).getTime() - Date.now()) / 86_400_000);
   const libelle = new Date(date).toLocaleDateString('fr-FR');
   return (
@@ -676,7 +705,13 @@ function BadgeEcheance({ date }: { date: string }) {
         jours < 0 ? 'bg-red/15 text-red' : jours <= 30 ? 'bg-amber/15 text-amber' : 'bg-green/15 text-green'
       )}
     >
-      {jours < 0 ? `Visite dépassée (${libelle})` : `Prochaine visite : ${libelle}`}
+      {contrat
+        ? jours < 0
+          ? `Contrat échu (${libelle})`
+          : `Fin du contrat : ${libelle}`
+        : jours < 0
+          ? `Visite dépassée (${libelle})`
+          : `Prochaine visite : ${libelle}`}
     </div>
   );
 }
