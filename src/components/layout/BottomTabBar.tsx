@@ -141,7 +141,7 @@ export function BottomTabBar({ roleCode, onAlertsClick, onMoreClick, alertsOpen,
       badges.recurrences +
       badges.cinqPourquoi +
       badges.invitationsPending +
-      badges.interventionsEnCours +
+      // (interventions en cours déjà comptées dans les tickets ouverts)
       badges.commandesATraiter
     : 0;
 

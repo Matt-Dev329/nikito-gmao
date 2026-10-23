@@ -47,14 +47,13 @@ export function useSidebarBadges() {
           // Même périmètre que la page Récurrences (« fiches ouvertes » = ouvert + valide)
           .in('statut', ['ouvert', 'valide'])
           .eq('est_formation', estFormation),
-        // Même périmètre que l'onglet « À faire » de la page Opérations :
-        // seuls les incidents rattachés à un équipement y sont affichés.
+        // Tous les tickets ouverts (à faire, en cours, attente de pièce, extérieur),
+        // comme le total « Tous les parcs » de la page Opérations
         supabase
           .from('incidents')
-          .select('id, equipements!inner(id)', { count: 'exact', head: true })
-          .in('statut', ['ouvert', 'assigne'])
-          .eq('externe', false)
-          .eq('attente_piece', false)
+          .select('id', { count: 'exact', head: true })
+          .in('statut', ['ouvert', 'assigne', 'en_pause', 'en_cours'])
+          .or('validation_manager.is.null,validation_manager.neq.en_attente')
           .eq('est_formation', estFormation),
         supabase
           .from('invitations')
