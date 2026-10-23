@@ -11,6 +11,7 @@ import { useAccesCommandes } from '@/hooks/queries/useCommandes';
 import { useChrono } from '@/hooks/useChrono';
 import { useIncident, useDemarrerIntervention, useValiderTicket } from '@/hooks/queries/useTickets';
 import { ModaleSupprimerTicket } from '@/components/tickets/ModaleSupprimerTicket';
+import { ModaleRouvrirTicket } from '@/components/tickets/ModaleRouvrirTicket';
 import { peutValiderTicket } from '@/lib/acces';
 import { useCloturerIntervention } from '@/hooks/mutations';
 import { ChoixTestActivite } from '@/components/tickets/ChoixTestActivite';
@@ -77,6 +78,10 @@ export function Intervention() {
   const validerTicket = useValiderTicket();
   const [suppression, setSuppression] = useState(false);
   const estResolu = statutIncident === 'resolu' || statutIncident === 'ferme';
+  // Réouverture : chef d'équipe, direction, admin IT (cf RPC rouvrir_ticket)
+  const peutRouvrir = ['chef_maintenance', 'direction', 'admin_it'].includes(utilisateur?.role_code ?? '');
+  const [reouverture, setReouverture] = useState(false);
+  const reouvertures = ((incident?.meta as { reouvertures?: { le: string; par_nom?: string; motif: string }[] } | null)?.reouvertures ?? []);
   // Intervention en cours (fin vide) ; pour un ticket résolu, la dernière intervention.
   // Une intervention déjà clôturée d'un ticket rouvert ne doit pas être reprise ni écrasée.
   const latestIntervention = useMemo(() => {
@@ -458,6 +463,32 @@ export function Intervention() {
               </button>
             )}
           </div>
+        )}
+
+        {/* Ticket résolu / fermé : réouverture (chef d'équipe, direction, admin IT) et historique */}
+        {(estResolu || reouvertures.length > 0) && (peutRouvrir || reouvertures.length > 0) && (
+          <div className="bg-bg-card border border-white/[0.06] rounded-xl px-4 py-3 flex flex-col gap-2">
+            {estResolu && peutRouvrir && (
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="text-[13px] flex-1 min-w-[200px] text-dim">Ticket clôturé. La panne est revenue ou la réparation est incomplète ?</div>
+                <button
+                  onClick={() => setReouverture(true)}
+                  className="px-4 rounded-[10px] text-[13px] font-bold min-h-[44px] bg-amber/15 text-amber border border-amber/40"
+                >
+                  ↺ Rouvrir le ticket
+                </button>
+              </div>
+            )}
+            {reouvertures.map((r, i) => (
+              <div key={i} className="text-[12px] text-dim">
+                ↺ Rouvert le {new Date(r.le).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })}
+                {r.par_nom ? ` par ${r.par_nom}` : ''} : <span className="text-text">{r.motif}</span>
+              </div>
+            ))}
+          </div>
+        )}
+        {reouverture && (
+          <ModaleRouvrirTicket incidentId={incident.id as string} numeroBT={btNumero ?? ''} onClose={() => setReouverture(false)} />
         )}
 
         {suppression && (

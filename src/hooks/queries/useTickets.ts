@@ -266,6 +266,21 @@ export function useCloturerTicketRapide() {
   });
 }
 
+/** Réouverture d'un ticket résolu / fermé (chef d'équipe, direction, admin IT) : motif obligatoire, RPC rouvrir_ticket */
+export function useRouvrirTicket() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ incidentId, motif }: { incidentId: string; motif: string }) => {
+      const { error } = await supabase.rpc('rouvrir_ticket', { p_incident_id: incidentId, p_motif: motif });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['incidents'] });
+      qc.invalidateQueries({ queryKey: ['sidebar-badges'] });
+    },
+  });
+}
+
 export function useValiderBrouillonIncident() {
   const qc = useQueryClient();
   return useMutation({
