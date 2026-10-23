@@ -145,6 +145,8 @@ function CarteCommande({
   const { utilisateur } = useAuth();
   const [edition, setEdition] = useState(false);
   const chefPeutModifier = utilisateur?.role_code === 'chef_maintenance' && ['demandee', 'validee'].includes(c.statut);
+  // Destinataire d'une commande directe (ex. Arcade) : modifiable tant qu'elle n'est pas livrée
+  const preparateurPeutModifier = preparation && ['validee', 'commandee'].includes(c.statut);
   const statut = STATUTS_COMMANDE[c.statut];
   const nbArticles = c.commande_lignes.reduce((s, l) => s + l.quantite, 0);
 
@@ -230,7 +232,7 @@ function CarteCommande({
       {ouverte && (
         <div className="px-4 pb-4 border-t border-white/[0.04]">
           {edition ? (
-            <EditeurCommande commande={c} onFini={() => setEdition(false)} />
+            <EditeurCommande commande={c} onFini={() => setEdition(false)} limiterAMesActivites={preparation && !chefPeutModifier} />
           ) : (
           <table className="w-full text-[13px] mt-3">
             <tbody>
@@ -266,13 +268,13 @@ function CarteCommande({
             </tbody>
           </table>
           )}
-          {chefPeutModifier && !edition && (
+          {(chefPeutModifier || preparateurPeutModifier) && !edition && (
             <div className="flex justify-end mt-2">
               <button
                 onClick={() => setEdition(true)}
                 className="bg-nikito-cyan/12 text-nikito-cyan border border-nikito-cyan/40 px-4 py-2 rounded-[10px] text-[13px] font-semibold min-h-[44px]"
               >
-                ✏️ Modifier (chef d'équipe)
+                {chefPeutModifier ? "✏️ Modifier (chef d'équipe)" : '✏️ Modifier la commande'}
               </button>
             </div>
           )}
@@ -401,11 +403,30 @@ function CarteCommande({
   );
 }
 
-/** Édition d'une commande par le chef d'équipe : quantités, retrait et ajout d'articles. */
-function EditeurCommande({ commande: c, onFini }: { commande: Commande; onFini: () => void }) {
+/** Édition d'une commande (chef d'équipe, ou destinataire d'une commande directe) : quantités, retrait et ajout d'articles. */
+function EditeurCommande({
+  commande: c,
+  onFini,
+  limiterAMesActivites = false,
+}: {
+  commande: Commande;
+  onFini: () => void;
+  /** Destinataire (ex. technicien Arcade) : ajouts limités aux activités dont il reçoit les commandes */
+  limiterAMesActivites?: boolean;
+}) {
   const toast = useToast();
   const modifier = useModifierCommande();
   const { data: catalogue } = useCatalogueCommandes();
+  const { utilisateur } = useAuth();
+  const mesActivites = useMemo(
+    () =>
+      new Set(
+        (catalogue?.activites ?? [])
+          .filter((a) => !!utilisateur && (a.destinataire_ids ?? []).includes(utilisateur.id))
+          .map((a) => a.id)
+      ),
+    [catalogue, utilisateur]
+  );
   const [quantites, setQuantites] = useState<Record<string, number>>(() =>
     Object.fromEntries(c.commande_lignes.map((l) => [l.id, l.quantite]))
   );
@@ -416,9 +437,10 @@ function EditeurCommande({ commande: c, onFini }: { commande: Commande; onFini: 
     const q = recherche.trim().toLowerCase();
     if (q.length < 2 || !catalogue) return [];
     return catalogue.produits
+      .filter((p) => !limiterAMesActivites || mesActivites.has(p.activite_id))
       .filter((p) => p.nom.toLowerCase().includes(q) || (p.reference ?? '').toLowerCase().includes(q))
       .slice(0, 8);
-  }, [recherche, catalogue]);
+  }, [recherche, catalogue, limiterAMesActivites, mesActivites]);
 
   const changer = (id: string, delta: number) =>
     setQuantites((prev) => ({ ...prev, [id]: Math.max(0, (prev[id] ?? 0) + delta) }));
