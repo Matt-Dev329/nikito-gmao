@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Link, Navigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { cn } from '@/lib/utils';
@@ -358,6 +358,7 @@ function CarteAnalyse({
   const [ouvert, setOuvert] = useState(false);
   const [relance, setRelance] = useState(false);
   const [leverOuvert, setLeverOuvert] = useState(false);
+  const { data: ticketsDefauts } = useTicketsDefauts();
   const a = analyseDe(r);
   const ouverts = defautsOuverts(r);
   const echeance = echeanceDe(r);
@@ -518,7 +519,14 @@ function CarteAnalyse({
                               </button>
                             </div>
                           ) : (
-                            p.action && <div className="text-[12px] text-text mt-1">➜ {p.action}</div>
+                            <>
+                              {p.action && <div className="text-[12px] text-text mt-1">➜ {p.action}</div>}
+                              <BoutonTicketDefaut
+                                documentId={r.id}
+                                intitule={p.intitule}
+                                ticket={ticketsDefauts?.get(`${r.id}|${p.intitule.trim()}`)}
+                              />
+                            </>
                           )}
                         </li>
                       );
@@ -575,6 +583,69 @@ function CarteAnalyse({
       )}
       {leverOuvert && <ModaleLeverDefauts rapport={r} defauts={ouverts} onClose={() => setLeverOuvert(false)} />}
     </div>
+  );
+}
+
+/** Tickets créés depuis un défaut de rapport : clé « document|intitulé » → ticket */
+function useTicketsDefauts() {
+  return useQuery({
+    queryKey: ['incidents', 'defauts-rapports'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('incidents')
+        .select('numero_bt, statut, meta')
+        .eq('meta->>via', 'rapport_prestataire')
+        .neq('statut', 'annule');
+      if (error) throw error;
+      const m = new Map<string, { numero_bt: string; statut: string }>();
+      ((data ?? []) as { numero_bt: string; statut: string; meta: Record<string, string> | null }[]).forEach((i) => {
+        if (i.meta?.defaut_document_id) m.set(`${i.meta.defaut_document_id}|${(i.meta.defaut_intitule ?? '').trim()}`, i);
+      });
+      return m;
+    },
+  });
+}
+
+/** Défaut non levé : créer le ticket correspondant (ou ouvrir celui déjà créé). */
+function BoutonTicketDefaut({
+  documentId,
+  intitule,
+  ticket,
+}: {
+  documentId: string;
+  intitule: string;
+  ticket?: { numero_bt: string; statut: string };
+}) {
+  const qc = useQueryClient();
+  const toast = useToast();
+  const [enCours, setEnCours] = useState(false);
+  if (ticket) {
+    const ferme = ticket.statut === 'resolu' || ticket.statut === 'ferme';
+    return (
+      <Link to={`/gmao/operations/${ticket.numero_bt}`} className="inline-block mt-1.5 text-[12px] text-nikito-cyan font-semibold min-h-[32px]">
+        🎫 {ticket.numero_bt} · {ferme ? 'résolu' : 'en cours de traitement'}
+      </Link>
+    );
+  }
+  const creer = async () => {
+    setEnCours(true);
+    const { data, error } = await supabase.rpc('creer_ticket_depuis_defaut', { p_document_id: documentId, p_intitule: intitule });
+    setEnCours(false);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success(`Ticket ${(data as { numero_bt: string }).numero_bt} créé : il est dans Opérations`);
+    qc.invalidateQueries({ queryKey: ['incidents'] });
+  };
+  return (
+    <button
+      onClick={creer}
+      disabled={enCours}
+      className={cn('mt-1.5 text-[12px] text-nikito-cyan font-semibold min-h-[32px] hover:underline', enCours && 'opacity-50')}
+    >
+      {enCours ? 'Création…' : '🎫 Créer un ticket'}
+    </button>
   );
 }
 
