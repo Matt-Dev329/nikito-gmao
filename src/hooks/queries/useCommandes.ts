@@ -213,7 +213,8 @@ export function usePasserCommande() {
         p_commentaire: params.commentaire || null,
       });
       if (error) throw error;
-      return data as { id: string; numero: string };
+      // numero_directe : articles des activités sans validation (ex. Arcade), partis à part
+      return data as { id: string; numero: string; numero_directe?: string };
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['commandes'] }),
   });

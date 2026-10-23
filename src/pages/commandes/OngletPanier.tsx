@@ -69,7 +69,13 @@ export function OngletPanier({
       });
       vider();
       setCommentaire('');
-      toast.success(`Commande ${res.numero} envoyée`);
+      if (res.numero_directe && res.numero_directe !== res.numero) {
+        toast.success(`Commande ${res.numero} envoyée (à valider) · ${res.numero_directe} partie directement (Arcade, sans validation)`);
+      } else if (res.numero_directe) {
+        toast.success(`Commande ${res.numero} partie directement (sans validation)`);
+      } else {
+        toast.success(`Commande ${res.numero} envoyée`);
+      }
       onEnvoyee();
     } catch (e) {
       toast.error(`Envoi impossible : ${(e as Error).message}`);

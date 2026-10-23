@@ -2,7 +2,9 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.45.0";
 
 // Appelée par la RPC passer_commande (pg_net) : envoie un email récapitulatif
-// de la commande à chaque chef d'équipe actif. Idempotente : un email
+// de la commande à chaque chef d'équipe actif. Commande directe (activités
+// « sans validation », ex. Arcade) : envoyée aux destinataires de l'activité,
+// chefs d'équipe en copie, avec une notification appli. Idempotente : un email
 // par commande (colonne commandes.email_envoye_le).
 
 const corsHeaders = {
@@ -48,6 +50,7 @@ function buildHtml(p: {
   commentaire: string | null;
   total: number | null;
   lignes: Ligne[];
+  directe: boolean;
 }): string {
   const rows = p.lignes
     .map(
@@ -74,7 +77,8 @@ function buildHtml(p: {
         <span style="color:#5DE5FF;">A</span>LBA <span style="color:#8b92b8;font-size:14px;font-weight:400;">by Nikito</span>
       </td></tr>
       <tr><td style="background-color:#131836;border-radius:16px;padding:36px 32px;">
-        <div style="font-size:18px;color:#ffffff;font-weight:600;padding-bottom:6px;">Nouvelle demande de commande</div>
+        <div style="font-size:18px;color:#ffffff;font-weight:600;padding-bottom:6px;">${p.directe ? "Commande à préparer" : "Nouvelle demande de commande"}</div>
+        ${p.directe ? `<div style="font-size:13px;color:#FFB547;padding-bottom:10px;">Commande directe, sans validation : à préparer et livrer au parc.</div>` : ""}
         <div style="font-size:13px;color:#8b92b8;padding-bottom:20px;">
           <strong style="color:#5DE5FF;">${esc(p.numero)}</strong> · ${esc(p.parc)} · par ${esc(p.demandeur)}
         </div>
@@ -119,7 +123,7 @@ Deno.serve(async (req: Request) => {
       .update({ email_envoye_le: new Date().toISOString() })
       .eq("id", commande_id)
       .is("email_envoye_le", null)
-      .select("id, numero, commentaire, total_estime, demandeur_id, parc_id")
+      .select("id, numero, commentaire, total_estime, demandeur_id, parc_id, directe")
       .maybeSingle();
     if (!commande) return json({ success: true, skipped: "deja_envoye_ou_introuvable" });
     reserveeId = commande.id;
@@ -127,7 +131,7 @@ Deno.serve(async (req: Request) => {
     const [{ data: lignes }, { data: demandeur }, { data: parc }, { data: gestionnaires }] = await Promise.all([
       supabase
         .from("commande_lignes")
-        .select("activite_nom, produit_nom, reference, unite, quantite, prix_unitaire, lien")
+        .select("activite_id, activite_nom, produit_nom, reference, unite, quantite, prix_unitaire, lien")
         .eq("commande_id", commande.id),
       supabase.from("utilisateurs").select("prenom, nom, email").eq("id", commande.demandeur_id).maybeSingle(),
       supabase.from("parcs").select("nom").eq("id", commande.parc_id).maybeSingle(),
@@ -135,9 +139,26 @@ Deno.serve(async (req: Request) => {
       supabase.from("utilisateurs").select("email, roles!inner(code)").eq("actif", true).eq("roles.code", "chef_maintenance"),
     ]);
 
-    const destinataires = (gestionnaires ?? [])
+    const chefs = (gestionnaires ?? [])
       .map((g) => g.email as string | null)
       .filter((e): e is string => !!e);
+
+    // Commande directe : destinataires désignés sur les activités commandées
+    let directs: { id: string; email: string | null }[] = [];
+    if (commande.directe) {
+      const activiteIds = [...new Set((lignes ?? []).map((l) => l.activite_id as string | null).filter(Boolean))] as string[];
+      const { data: activites } = activiteIds.length
+        ? await supabase.from("commande_activites").select("destinataire_ids").in("id", activiteIds)
+        : { data: [] };
+      const ids = [...new Set((activites ?? []).flatMap((a) => (a.destinataire_ids as string[] | null) ?? []))];
+      if (ids.length) {
+        const { data } = await supabase.from("utilisateurs").select("id, email").in("id", ids).eq("actif", true);
+        directs = (data ?? []) as { id: string; email: string | null }[];
+      }
+    }
+    const emailsDirects = [...new Set(directs.map((u) => u.email).filter((e): e is string => !!e))];
+    const destinataires = emailsDirects.length ? emailsDirects : chefs;
+    const copie = emailsDirects.length ? chefs.filter((e) => !emailsDirects.includes(e)) : [];
     if (destinataires.length === 0) return json({ success: true, skipped: "aucun_destinataire" });
 
     const demandeurNom = demandeur ? `${demandeur.prenom} ${demandeur.nom}` : "—";
@@ -148,6 +169,7 @@ Deno.serve(async (req: Request) => {
       commentaire: commande.commentaire,
       total: commande.total_estime,
       lignes: (lignes ?? []) as Ligne[],
+      directe: !!commande.directe,
     });
 
     const resendRes = await fetch("https://api.resend.com/emails", {
@@ -156,8 +178,9 @@ Deno.serve(async (req: Request) => {
       body: JSON.stringify({
         from: "ALBA by Nikito <noreply@nikito.tech>",
         to: destinataires,
+        ...(copie.length ? { cc: copie } : {}),
         reply_to: demandeur?.email ?? undefined,
-        subject: `[GMAO - Commande] ${commande.numero} · ${parc?.nom ?? ""} · ${demandeurNom}`,
+        subject: `[GMAO - Commande${commande.directe ? " à préparer" : ""}] ${commande.numero} · ${parc?.nom ?? ""} · ${demandeurNom}`,
         html,
       }),
     });
@@ -169,6 +192,16 @@ Deno.serve(async (req: Request) => {
       await supabase.from("commandes").update({ email_envoye_le: null }).eq("id", commande.id);
       reserveeId = null;
       return json({ success: false, error: "Echec envoi email", detail }, 502);
+    }
+
+    // Notification appli aux destinataires d'une commande directe
+    for (const u of directs) {
+      await supabase.rpc("notifier_push", {
+        p_utilisateur_id: u.id,
+        p_titre: `Commande à préparer · ${commande.numero}`,
+        p_corps: `${parc?.nom ?? ""} · ${(lignes ?? []).length} article${(lignes ?? []).length > 1 ? "s" : ""}`,
+        p_url: "/gmao/commander",
+      });
     }
 
     return json({ success: true });
