@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { TabletHeader } from '@/components/layout/TabletHeader';
 import { TicketCard, type TicketSummary } from '@/components/tickets/TicketCard';
+import { useNombreNotes } from '@/hooks/queries/useNotesPartagees';
 import { ModaleReassignerTicket } from '@/components/tickets/ModaleReassignerTicket';
 import { Pill } from '@/components/ui/Pill';
 import { cn, estCheminVideo, formatDateCourt, formatDuree } from '@/lib/utils';
@@ -230,6 +231,11 @@ export function Operations() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [incidentsQ.data, onglet, utilisateur?.role_code]);
 
+  const { data: nbNotes } = useNombreNotes(
+    'ticket',
+    tickets.map((t) => t.id)
+  );
+
   // Activités présentes dans l'onglet, avec leur nombre de tickets (« Autres » en dernier)
   const activites = useMemo(() => {
     const m = new Map<string, number>();
@@ -254,7 +260,9 @@ export function Operations() {
   const ticketsZone = ticketsActivite
     .filter((t) => zoneFiltre === 'toutes' || t.zone === zoneFiltre)
     .filter((t) => !retardSeul || t.enRetard)
-    .sort((a, b) => (retardSeul ? (a.declareLe ?? '').localeCompare(b.declareLe ?? '') : 0));
+    .sort((a, b) => (retardSeul ? (a.declareLe ?? '').localeCompare(b.declareLe ?? '') : 0))
+    // Pastille « 💬 » : le ticket a des notes
+    .map((t) => (nbNotes?.[t.id] ? { ...t, badges: [...(t.badges ?? []), { label: `💬 ${nbNotes[t.id]}` }] } : t));
 
   // Vignette de la photo du problème (URLs signées en un seul appel)
   const { data: urlsPhotos } = useSignedUrls(

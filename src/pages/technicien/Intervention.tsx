@@ -12,6 +12,7 @@ import { useChrono } from '@/hooks/useChrono';
 import { useIncident, useDemarrerIntervention, useValiderTicket } from '@/hooks/queries/useTickets';
 import { ModaleSupprimerTicket } from '@/components/tickets/ModaleSupprimerTicket';
 import { ModaleRouvrirTicket } from '@/components/tickets/ModaleRouvrirTicket';
+import { NotesPartagees } from '@/components/shared/NotesPartagees';
 import { peutValiderTicket } from '@/lib/acces';
 import { useCloturerIntervention } from '@/hooks/mutations';
 import { ChoixTestActivite } from '@/components/tickets/ChoixTestActivite';
@@ -580,6 +581,8 @@ export function Intervention() {
         />
 
         {lectureSeule && <SuiviLectureSeule incident={incident as Record<string, unknown>} intervention={latestIntervention} />}
+
+        <NotesPartagees type="ticket" objetId={incident.id as string} />
 
         {/* Rangements du ticket (sans le fermer) : pièce en attente, intervenant extérieur */}
         {!lectureSeule && incident.externe !== true && <PanneauAttentePiece incident={incident as Record<string, unknown>} />}

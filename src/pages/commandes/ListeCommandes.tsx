@@ -17,6 +17,8 @@ import {
 import { usePanier } from '@/hooks/usePanier';
 import { useAuth } from '@/hooks/useAuth';
 import { formatDateHeure, formatPrix } from './format';
+import { NotesPartagees } from '@/components/shared/NotesPartagees';
+import { useNombreNotes } from '@/hooks/queries/useNotesPartagees';
 
 const TONES: Record<string, string> = {
   cyan: 'bg-nikito-cyan/12 text-nikito-cyan',
@@ -52,6 +54,10 @@ export function ListeCommandes({ portee, onModifier }: { portee: 'miennes' | 'to
     if (filtre === 'en_cours') return all.filter((c) => ['demandee', 'validee', 'commandee'].includes(c.statut));
     return all.filter((c) => c.statut === filtre);
   }, [data, filtre]);
+  const { data: nbNotes } = useNombreNotes(
+    'commande',
+    commandes.map((c) => c.id)
+  );
 
   const filtres: { code: Filtre; label: string }[] =
     portee === 'toutes'
@@ -104,6 +110,7 @@ export function ListeCommandes({ portee, onModifier }: { portee: 'miennes' | 'to
               gestion={portee === 'toutes'}
               preparation={portee === 'a_preparer'}
               onModifier={onModifier}
+              nbNotes={nbNotes?.[c.id] ?? 0}
             />
           ))}
         </div>
@@ -117,9 +124,11 @@ function CarteCommande({
   gestion,
   preparation = false,
   onModifier,
+  nbNotes = 0,
 }: {
   commande: Commande;
   gestion: boolean;
+  nbNotes?: number;
   /** Destinataire d'une commande directe (ex. technicien Arcade) : la marque commandée puis livrée */
   preparation?: boolean;
   onModifier?: () => void;
@@ -210,6 +219,7 @@ function CarteCommande({
           <div className="flex items-center gap-2 flex-wrap">
             <span className="font-mono text-nikito-cyan text-[13px]">{c.numero}</span>
             <span className={cn('text-[11px] px-2 py-0.5 rounded-md font-medium', TONES[statut.tone])}>{statut.label}</span>
+            {nbNotes > 0 && <span className="text-[11px] text-dim">💬 {nbNotes}</span>}
           </div>
           <div className="text-[12px] text-dim mt-1">
             {[
@@ -397,6 +407,8 @@ function CarteCommande({
               </button>
             </div>
           )}
+
+          <NotesPartagees type="commande" objetId={c.id} className="mt-4 p-3" />
         </div>
       )}
     </div>
