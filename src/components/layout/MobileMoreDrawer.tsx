@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils';
 import { getNavIcon } from './NavIcons';
 import type { RoleUtilisateur } from '@/types/database';
 import { useAccesCommandes } from '@/hooks/queries/useCommandes';
-import { ROLES_STOCK, ROLES_PILOTAGE, ROLES_DIRECTION_PARC, ROLES_ANALYSE_CAUSES, ROLES_BONS, estManagerPrincipal } from '@/lib/acces';
+import { ROLES_STOCK, ROLES_PILOTAGE, ROLES_DIRECTION_PARC, ROLES_ANALYSE_CAUSES, ROLES_BONS, estManagerPrincipal, voitTableauDeBord } from '@/lib/acces';
 import { useAuth } from '@/hooks/useAuth';
 import { useViewAs } from '@/hooks/useViewAs';
 
@@ -24,6 +24,8 @@ interface DrawerItem {
   roles: string[];
   gestionnaireCommandes?: boolean;
   accesCommandes?: boolean;
+  /** Réservé au propriétaire du tableau de bord (Ryad), cf voitTableauDeBord */
+  proprietaireSeul?: boolean;
 }
 
 const pilotageItems: DrawerItem[] = [
@@ -47,6 +49,11 @@ const pilotageItems: DrawerItem[] = [
   { to: '/gmao/certifications', label: 'Certifications', iconLabel: 'Certifications', roles: ROLES_PILOTAGE },
   { to: '/gmao/conformite', label: 'Conformite', iconLabel: 'Conformité', roles: ['direction', 'admin_it', 'chef_maintenance', 'directeur_parc', 'manager_parc'] },
   { to: '/gmao/controles-historique', label: 'Historique contrôles', iconLabel: 'Contrôles', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'technicien', 'manager_parc', 'admin_it'] },
+];
+
+const espaceItems: DrawerItem[] = [
+  { to: '/gmao/bloc-notes', label: 'Bloc-notes', iconLabel: 'Bloc-notes', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'manager_parc', 'technicien', 'admin_it'], proprietaireSeul: true },
+  { to: '/gmao/projets', label: 'Projets', iconLabel: 'Projets', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'manager_parc', 'technicien', 'admin_it'], proprietaireSeul: true },
 ];
 
 const configItems: DrawerItem[] = [
@@ -117,15 +124,18 @@ export function MobileMoreDrawer({ open, onClose, roleCode, onSignOut }: MobileM
   }, [open]);
 
   const filterByRole = (items: DrawerItem[]) =>
-    items.filter((it) =>
-      it.accesCommandes
-        ? peutCommander || peutGererCatalogue
-        : it.roles.includes(roleCode) ||
-          (roleCode === 'manager_parc' && it.roles.includes('manager_principal') && (vuePrincipal || estManagerPrincipal(utilisateur))) ||
-          (!!it.gestionnaireCommandes && estGestionnaire)
+    items.filter(
+      (it) =>
+        (it.accesCommandes
+          ? peutCommander || peutGererCatalogue
+          : it.roles.includes(roleCode) ||
+            (roleCode === 'manager_parc' && it.roles.includes('manager_principal') && (vuePrincipal || estManagerPrincipal(utilisateur))) ||
+            (!!it.gestionnaireCommandes && estGestionnaire)) &&
+        (!it.proprietaireSeul || voitTableauDeBord(utilisateur))
     );
 
   const visiblePilotage = filterByRole(pilotageItems);
+  const visibleEspace = filterByRole(espaceItems);
   const visibleConfig = filterByRole(configItems);
   const visibleAccount = filterByRole(accountItems);
 
@@ -166,6 +176,19 @@ export function MobileMoreDrawer({ open, onClose, roleCode, onSignOut }: MobileM
           {visiblePilotage.length > 0 && (
             <Section title="Pilotage">
               {visiblePilotage.map((item) => (
+                <DrawerRow
+                  key={item.to}
+                  item={item}
+                  active={pathname.startsWith(item.to)}
+                  onClick={() => handleNav(item.to)}
+                />
+              ))}
+            </Section>
+          )}
+
+          {visibleEspace.length > 0 && (
+            <Section title="Mon espace">
+              {visibleEspace.map((item) => (
                 <DrawerRow
                   key={item.to}
                   item={item}

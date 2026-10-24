@@ -10,6 +10,7 @@ export type AlbaBucket =
   | 'alba-techniques'
   | 'alba-bons'
   | 'alba-formations'
+  | 'alba-perso'
 
 export interface UploadPhotoOptions {
   bucket: AlbaBucket
@@ -56,14 +57,14 @@ export async function uploadPhotoControle(
   return { path, bucket, size: blob.size, width: dims.width, height: dims.height }
 }
 
-interface ProcessOptions {
+export interface ProcessOptions {
   maxDimension: number
   maxSizeMB: number
   withWatermark: boolean
   utilisateurNom?: string
 }
 
-async function processImage(file: File, opts: ProcessOptions): Promise<Blob> {
+export async function processImage(file: File, opts: ProcessOptions): Promise<Blob> {
   const img = await loadImage(file)
   let { width, height } = img
   if (width > opts.maxDimension || height > opts.maxDimension) {
@@ -132,7 +133,7 @@ function canvasToBlob(canvas: HTMLCanvasElement, quality: number): Promise<Blob>
   })
 }
 
-async function getImageDimensions(blob: Blob): Promise<{ width: number; height: number }> {
+export async function getImageDimensions(blob: Blob): Promise<{ width: number; height: number }> {
   const url = URL.createObjectURL(blob)
   try {
     const img = await new Promise<HTMLImageElement>((resolve, reject) => {

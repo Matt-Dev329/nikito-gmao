@@ -280,7 +280,27 @@ const iconMap: Record<string, (props: { className?: string }) => JSX.Element> = 
   'Conformité': IconConformite,
   'Aide': IconAide,
   'Administration IT': IconAdminIT,
+  'Bloc-notes': IconBlocNotes,
+  'Projets': IconProjets,
 };
+
+function IconBlocNotes({ className = s }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="4" y="3" width="12" height="15" rx="1.5" />
+      <path d="M7 2v2M10 2v2M13 2v2M7 9h6M7 12h6M7 15h3" />
+    </svg>
+  );
+}
+
+function IconProjets({ className = s }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M10 2a5 5 0 0 0-3 9v2h6v-2a5 5 0 0 0-3-9z" />
+      <path d="M8 16h4M9 18h2" />
+    </svg>
+  );
+}
 
 function IconRapports({ className = s }: { className?: string }) {
   return (

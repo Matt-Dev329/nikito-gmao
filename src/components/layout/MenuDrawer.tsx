@@ -23,6 +23,8 @@ const menuItems: { to: string; label: string; icon: string; roles?: string[]; pr
   { to: '/tech/demandes-prestataires', label: 'Demandes prestataires', icon: '📨', roles: ROLES_DIRECTION_PARC },
   { to: '/tech/formations-personnel', label: 'Formations du personnel', icon: '🎓', roles: ROLES_PILOTAGE },
   { to: '/gmao/commander', label: 'Commander', icon: '🛒', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'manager_parc', 'technicien', 'admin_it'] },
+  { to: '/gmao/bloc-notes', label: 'Bloc-notes', icon: '🗒️', proprietaireSeul: true },
+  { to: '/gmao/projets', label: 'Projets', icon: '💡', proprietaireSeul: true },
   { to: '/gmao/profil', label: 'Mon profil', icon: '👤' },
 ];
 

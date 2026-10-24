@@ -88,6 +88,13 @@ const sections: { titre: string; items: NavItem[] }[] = [
     ],
   },
   {
+    titre: 'Mon espace',
+    items: [
+      { to: '/gmao/bloc-notes', label: 'Bloc-notes', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'manager_parc', 'technicien', 'admin_it'], proprietaireSeul: true },
+      { to: '/gmao/projets', label: 'Projets', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'manager_parc', 'technicien', 'admin_it'], proprietaireSeul: true },
+    ],
+  },
+  {
     titre: 'Réglementaire',
     items: [
       { to: '/gmao/conformite', label: 'Conformité', featureCode: 'conformite', roles: ['direction', 'admin_it', 'chef_maintenance', 'directeur_parc', 'manager_parc'] },
