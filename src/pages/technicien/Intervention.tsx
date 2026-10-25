@@ -11,6 +11,7 @@ import { useAccesCommandes } from '@/hooks/queries/useCommandes';
 import { useChrono } from '@/hooks/useChrono';
 import { useIncident, useDemarrerIntervention, useValiderTicket } from '@/hooks/queries/useTickets';
 import { ModaleSupprimerTicket } from '@/components/tickets/ModaleSupprimerTicket';
+import { ModaleRefuserTicket } from '@/components/tickets/ModaleRefuserTicket';
 import { ModaleRouvrirTicket } from '@/components/tickets/ModaleRouvrirTicket';
 import { NotesPartagees } from '@/components/shared/NotesPartagees';
 import { peutValiderTicket } from '@/lib/acces';
@@ -78,6 +79,7 @@ export function Intervention() {
   const peutValider = peutValiderTicket(utilisateur, (equip?.parc_id ?? incident?.parc_ticket) as string | undefined);
   const validerTicket = useValiderTicket();
   const [suppression, setSuppression] = useState(false);
+  const [refus, setRefus] = useState(false);
   const estResolu = statutIncident === 'resolu' || statutIncident === 'ferme';
   // Réouverture : chef d'équipe uniquement (cf RPC rouvrir_ticket)
   const peutRouvrir = utilisateur?.role_code === 'chef_maintenance';
@@ -451,6 +453,14 @@ export function Intervention() {
             </div>
             {peutValider && (
               <button
+                onClick={() => setRefus(true)}
+                className="px-4 rounded-[10px] text-[13px] font-semibold min-h-[44px] bg-bg-card border border-red/40 text-red"
+              >
+                ✕ Refuser
+              </button>
+            )}
+            {peutValider && (
+              <button
                 onClick={() =>
                   validerTicket.mutate(incident.id as string, {
                     onSuccess: () => toast.success('Ticket validé : il est dans Opérations'),
@@ -490,6 +500,15 @@ export function Intervention() {
         )}
         {reouverture && (
           <ModaleRouvrirTicket incidentId={incident.id as string} numeroBT={btNumero ?? ''} onClose={() => setReouverture(false)} />
+        )}
+
+        {refus && (
+          <ModaleRefuserTicket
+            incidentId={incident.id as string}
+            numeroBT={btNumero ?? ''}
+            onClose={() => setRefus(false)}
+            onRefuse={() => navigate(-1)}
+          />
         )}
 
         {suppression && (

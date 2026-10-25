@@ -8,6 +8,7 @@ import { Pill } from '@/components/ui/Pill';
 import { cn, estCheminVideo, formatDateCourt, formatDuree } from '@/lib/utils';
 import { useIncidents, useNombreTicketsParParc, useReprendreIncident, useTicketsAValider, useValiderTicket } from '@/hooks/queries/useTickets';
 import { ModaleSupprimerTicket } from '@/components/tickets/ModaleSupprimerTicket';
+import { ModaleRefuserTicket } from '@/components/tickets/ModaleRefuserTicket';
 import { ModaleClotureRapide } from '@/components/tickets/ModaleClotureRapide';
 import { peutValiderTicket } from '@/lib/acces';
 import { useAuth } from '@/hooks/useAuth';
@@ -135,6 +136,7 @@ export function Operations() {
   const [parcActif, setParcActif] = useState<string | null>(null);
   const [reassignerCible, setReassignerCible] = useState<{ id: string; numeroBT: string } | null>(null);
   const [suppressionCible, setSuppressionCible] = useState<{ id: string; numeroBT: string } | null>(null);
+  const [refusCible, setRefusCible] = useState<{ id: string; numeroBT: string } | null>(null);
   const [clotureCible, setClotureCible] = useState<{ id: string; numeroBT: string } | null>(null);
   const validerTicket = useValiderTicket();
   // Managers de parc : suivi des tickets en lecture seule (ni démarrage, ni réassignation)
@@ -462,10 +464,10 @@ export function Operations() {
                     </button>
                   )}
                   <button
-                    onClick={() => setSuppressionCible({ id: t.id, numeroBT: t.numeroBT })}
+                    onClick={() => setRefusCible({ id: t.id, numeroBT: t.numeroBT })}
                     className="px-4 rounded-[10px] text-[12px] font-semibold min-h-[40px] bg-bg-card border border-red/40 text-red"
                   >
-                    Supprimer
+                    ✕ Refuser
                   </button>
                   <button
                     onClick={() => valider(t)}
@@ -532,6 +534,9 @@ export function Operations() {
         <ModaleClotureRapide incidentId={clotureCible.id} numeroBT={clotureCible.numeroBT} onClose={() => setClotureCible(null)} />
       )}
 
+      {refusCible && (
+        <ModaleRefuserTicket incidentId={refusCible.id} numeroBT={refusCible.numeroBT} onClose={() => setRefusCible(null)} />
+      )}
       {suppressionCible && (
         <ModaleSupprimerTicket
           incidentId={suppressionCible.id}

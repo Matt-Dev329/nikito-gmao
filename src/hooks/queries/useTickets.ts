@@ -250,6 +250,18 @@ export function useSupprimerTicket() {
   });
 }
 
+/** Refuse un ticket à valider : justification obligatoire, envoyée en notification au déclarant (RPC refuser_ticket) */
+export function useRefuserTicket() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ incidentId, motif }: { incidentId: string; motif: string }) => {
+      const { error } = await supabase.rpc('refuser_ticket', { p_incident_id: incidentId, p_motif: motif });
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['incidents'] }),
+  });
+}
+
 /** Clôture rapide (chef d'équipe, directeurs de parc) : justification obligatoire, RPC cloturer_ticket_rapide */
 export function useCloturerTicketRapide() {
   const qc = useQueryClient();

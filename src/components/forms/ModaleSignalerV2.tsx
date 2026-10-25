@@ -8,7 +8,18 @@ import { chargerToutesLesPages } from '@/lib/paginer';
 import { uploadPhotoControle } from '@/lib/uploadPhotoControle';
 import type { RoleUtilisateur } from '@/types/database';
 
-type Etape = 'parc' | 'categorie' | 'equipement' | 'symptome' | 'photo' | 'recap' | 'succes';
+type Etape = 'parc' | 'categorie' | 'equipement' | 'doublon' | 'symptome' | 'photo' | 'recap' | 'succes';
+
+/** Ticket déjà en cours sur le même équipement (RPC tickets_en_cours_similaires) */
+interface TicketEnCours {
+  id: string;
+  numero_bt: string;
+  titre: string | null;
+  description: string | null;
+  statut: string;
+  declare_le: string;
+  declare_par_nom: string | null;
+}
 
 interface Categorie {
   id: string;
@@ -151,6 +162,29 @@ export function ModaleSignalerV2({ open, onClose, via, parcId: propParcId, modeE
   const [resultPriorite, setResultPriorite] = useState<string | null>(null);
   const [resultValidation, setResultValidation] = useState<string | null>(null);
   const [recherche, setRecherche] = useState('');
+  const [doublons, setDoublons] = useState<TicketEnCours[]>([]);
+
+  // Équipement choisi : s'il a déjà un ticket en cours, on le montre avant de continuer
+  const apresEquipement = useCallback(
+    async (equipementId: string | null, categorieId: string) => {
+      setRecherche('');
+      if (parcId) {
+        const { data } = await supabase.rpc('tickets_en_cours_similaires', {
+          p_parc_id: parcId,
+          p_equipement_id: equipementId,
+          p_categorie_id: categorieId,
+        });
+        if (data && data.length > 0) {
+          setDoublons(data as TicketEnCours[]);
+          setEtape('doublon');
+          return;
+        }
+      }
+      setDoublons([]);
+      setEtape('symptome');
+    },
+    [parcId]
+  );
 
   useEffect(() => {
     if (!open) return;
@@ -204,6 +238,10 @@ export function ModaleSignalerV2({ open, onClose, via, parcId: propParcId, modeE
   }, [propParcId, userCtx]);
 
   const goBack = useCallback(() => {
+    if (etape === 'doublon') {
+      setEtape('equipement');
+      return;
+    }
     const idx = STEPS.indexOf(etape);
     if (idx > 0) {
       setEtape(STEPS[idx - 1]);
@@ -213,7 +251,7 @@ export function ModaleSignalerV2({ open, onClose, via, parcId: propParcId, modeE
     }
   }, [etape, STEPS, onClose]);
 
-  const currentStepNum = STEPS.indexOf(etape) + 1;
+  const currentStepNum = STEPS.indexOf(etape === 'doublon' ? 'equipement' : etape) + 1;
   const totalSteps = STEPS.length;
 
   const handleSubmit = useCallback(async () => {
@@ -309,6 +347,7 @@ export function ModaleSignalerV2({ open, onClose, via, parcId: propParcId, modeE
     parc: 'Pour quel parc ?',
     categorie: "Qu'est-ce qui pose probleme ?",
     equipement: 'Lequel exactement ?',
+    doublon: 'Déjà signalé ?',
     symptome: "Qu'observez-vous ?",
     photo: 'Prenez une photo',
     recap: "Verifiez avant d'envoyer",
@@ -364,8 +403,16 @@ export function ModaleSignalerV2({ open, onClose, via, parcId: propParcId, modeE
               categorie={state.categorie}
               recherche={recherche}
               onRecherche={setRecherche}
-              onSelect={(eq) => { update({ equipement: eq, equipementManquantLabel: null }); setEtape('symptome'); setRecherche(''); }}
-              onManquant={(label) => { update({ equipement: null, equipementManquantLabel: label }); setEtape('symptome'); setRecherche(''); }}
+              onSelect={(eq) => { update({ equipement: eq, equipementManquantLabel: null }); void apresEquipement(eq.id, state.categorie!.id); }}
+              onManquant={(label) => { update({ equipement: null, equipementManquantLabel: label }); void apresEquipement(null, state.categorie!.id); }}
+            />
+          )}
+          {etape === 'doublon' && (
+            <EtapeDoublon
+              tickets={doublons}
+              connecte={!!userCtx && !userCtx.isStaff}
+              onContinuer={() => setEtape('symptome')}
+              onFermer={onClose}
             />
           )}
           {etape === 'symptome' && state.categorie && (
@@ -1220,6 +1267,109 @@ function EtapeRecap({
 }
 
 // ─── Step 6: Succes ────────────────────────────────────────────
+
+function EtapeDoublon({
+  tickets,
+  connecte,
+  onContinuer,
+  onFermer,
+}: {
+  tickets: TicketEnCours[];
+  /** Compte connecté : peut ajouter une remarque (note) au ticket existant */
+  connecte: boolean;
+  onContinuer: () => void;
+  onFermer: () => void;
+}) {
+  const [noteSur, setNoteSur] = useState<string | null>(tickets.length === 1 ? tickets[0].id : null);
+  const [texte, setTexte] = useState('');
+  const [envoi, setEnvoi] = useState(false);
+  const [erreur, setErreur] = useState<string | null>(null);
+  const [ajoutee, setAjoutee] = useState<string | null>(null);
+
+  const ajouterNote = async () => {
+    if (!noteSur || !texte.trim()) return;
+    setEnvoi(true);
+    setErreur(null);
+    const { error } = await supabase.from('notes_partagees').insert({ objet_type: 'ticket', objet_id: noteSur, texte: texte.trim() });
+    setEnvoi(false);
+    if (error) setErreur(error.message);
+    else setAjoutee(tickets.find((t) => t.id === noteSur)?.numero_bt ?? '');
+  };
+
+  if (ajoutee !== null) {
+    return (
+      <div className="flex flex-col items-center justify-center p-6 py-16 text-center gap-4">
+        <div className="text-xl font-bold">Remarque ajoutée au ticket {ajoutee}</div>
+        <div className="text-sm text-dim max-w-[320px]">Les personnes qui suivent ce ticket sont prévenues. Pas besoin d’en créer un nouveau.</div>
+        <button onClick={onFermer} className="bg-nikito-cyan text-bg-app px-6 rounded-xl text-[14px] font-bold min-h-[48px]">
+          Terminer
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-4 flex flex-col gap-3">
+      <div className="bg-amber/10 border border-amber/40 rounded-xl p-3.5">
+        <div className="text-[15px] font-semibold text-amber">
+          ⚠️ {tickets.length > 1 ? `${tickets.length} tickets sont déjà en cours` : 'Il y a déjà un ticket en cours'} pour cet équipement
+        </div>
+        <div className="text-[13px] text-dim mt-1">
+          Vérifie que ce n’est pas la même panne avant d’en créer un nouveau.
+        </div>
+      </div>
+
+      {tickets.map((t) => (
+        <button
+          key={t.id}
+          onClick={() => connecte && setNoteSur(t.id)}
+          className={cn(
+            'text-left bg-bg-card rounded-xl border p-3.5 flex flex-col gap-1',
+            noteSur === t.id && connecte ? 'border-nikito-cyan/60' : 'border-white/[0.08]'
+          )}
+        >
+          <div className="flex items-center gap-2">
+            <span className="font-mono text-nikito-cyan text-[13px]">{t.numero_bt}</span>
+            <span className="text-[11px] px-2 py-0.5 rounded bg-white/[0.06] text-dim">{t.statut.replace('_', ' ')}</span>
+          </div>
+          {t.titre && <div className="text-[14px] font-semibold">{t.titre}</div>}
+          {t.description && <div className="text-[13px] text-dim line-clamp-2">{t.description}</div>}
+          <div className="text-[11px] text-faint">
+            Signalé le {new Date(t.declare_le).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })}
+            {t.declare_par_nom ? ` par ${t.declare_par_nom}` : ''}
+          </div>
+        </button>
+      ))}
+
+      {connecte && (
+        <div className="bg-bg-card rounded-xl border border-white/[0.08] p-3.5 flex flex-col gap-2">
+          <div className="text-[13px] font-semibold">C’est la même panne ? Ajoute ta remarque au ticket existant</div>
+          <textarea
+            value={texte}
+            onChange={(e) => setTexte(e.target.value)}
+            rows={2}
+            maxLength={4000}
+            placeholder={noteSur ? 'Ex. Toujours en panne ce matin, la piste 3 aussi…' : 'Choisis d’abord le ticket ci-dessus'}
+            disabled={!noteSur}
+            className="w-full bg-bg-deep border border-white/[0.08] rounded-[10px] p-2.5 text-text text-[13px] outline-none focus:border-nikito-cyan resize-none disabled:opacity-50"
+          />
+          {erreur && <div className="text-[12px] text-red">{erreur}</div>}
+          <button
+            onClick={ajouterNote}
+            disabled={!noteSur || !texte.trim() || envoi}
+            className="bg-nikito-cyan text-bg-app rounded-xl text-[14px] font-bold min-h-[48px] disabled:opacity-40"
+          >
+            {envoi ? 'Envoi…' : 'Ajouter ma remarque'}
+          </button>
+        </div>
+      )}
+
+      <button onClick={onContinuer} className="border border-white/15 text-dim rounded-xl text-[14px] min-h-[48px]">
+        C’est une autre panne : créer un nouveau ticket
+      </button>
+    </div>
+  );
+}
 
 function EtapeSucces({
   numeroBt,
