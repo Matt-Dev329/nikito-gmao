@@ -88,7 +88,7 @@ Deno.serve(async (req: Request) => {
       service
         .from("incidents")
         .select(
-          "numero_bt, titre, declare_le, attente_piece, attente_piece_detail, parc_ticket_code, niveaux_priorite(sla_h), attente_commande:commandes!incidents_attente_piece_commande_id_fkey(numero, statut)",
+          "numero_bt, titre, declare_le, attente_piece, attente_piece_detail, parc_ticket_code, attente_commande:commandes!incidents_attente_piece_commande_id_fkey(numero, statut)",
         )
         .eq("est_formation", false)
         .or("validation_manager.is.null,validation_manager.neq.en_attente")
@@ -115,10 +115,9 @@ Deno.serve(async (req: Request) => {
 
     type Ouvert = {
       numero_bt: string; titre: string | null; declare_le: string; attente_piece: boolean; attente_piece_detail: string | null;
-      parc_ticket_code: string | null; niveaux_priorite: { sla_h: number | null } | null; attente_commande: { numero: string; statut: string } | null;
+      parc_ticket_code: string | null; attente_commande: { numero: string; statut: string } | null;
     };
     const tickets = (ouverts ?? []) as unknown as Ouvert[];
-    const enRetard = (t: Ouvert) => (Date.now() - new Date(t.declare_le).getTime()) / 3_600_000 > (t.niveaux_priorite?.sla_h ?? 24);
     const listeParcs = (parcs ?? []) as { id: string; code: string; nom: string }[];
     const ctrl = (controles ?? []) as { parc_id: string; type: string; statut: string }[];
     const creesL = (crees ?? []) as { parc_ticket_code: string | null }[];
@@ -133,13 +132,11 @@ Deno.serve(async (req: Request) => {
     const ruptures = ((pieces ?? []) as unknown as { nom: string; stock_actuel: number; stock_min: number; parc: { code: string } | null }[])
       .filter((p) => p.stock_min > 0 && p.stock_actuel < p.stock_min);
     const ctrlQuotidiens = ctrl.filter((c) => c.type === "quotidien");
-    const totalRetard = tickets.filter(enRetard).length;
 
     const parParc = tableau(
-      ["Parc", "Créés", "Résolus", "Ouverts", "En retard", "Contrôles du jour"],
+      ["Parc", "Créés", "Résolus", "Ouverts", "Contrôles du jour"],
       listeParcs.map((p) => {
         const duParc = tickets.filter((t) => t.parc_ticket_code === p.code);
-        const retard = duParc.filter(enRetard).length;
         const cq = ctrlQuotidiens.filter((c) => c.parc_id === p.id);
         const faits = cq.filter((c) => c.statut === "valide").length;
         return [
@@ -147,14 +144,13 @@ Deno.serve(async (req: Request) => {
           String(creesL.filter((t) => t.parc_ticket_code === p.code).length),
           `<span style="color:#4ADE80;">${resolusL.filter((t) => t.parc_ticket_code === p.code).length}</span>`,
           String(duParc.length),
-          `<span style="color:${retard ? "#FF4D6D" : "#8b92b8"};font-weight:${retard ? 700 : 400};">${retard}</span>`,
           cq.length ? `<span style="color:${faits < cq.length ? "#FFB547" : "#4ADE80"};">${faits}/${cq.length}</span>` : "—",
         ];
       }),
     );
 
     const anciens = tickets.slice(0, 8).map((t) =>
-      `<a href="${siteUrl}/gmao/operations/${esc(t.numero_bt)}" style="color:#5DE5FF;">${esc(t.numero_bt)}</a> · <b>${esc(t.parc_ticket_code)}</b> · ${esc(t.titre)} · <span style="color:${enRetard(t) ? "#FF4D6D" : "#ffffff"};">${age(t.declare_le)}</span>`
+      `<a href="${siteUrl}/gmao/operations/${esc(t.numero_bt)}" style="color:#5DE5FF;">${esc(t.numero_bt)}</a> · <b>${esc(t.parc_ticket_code)}</b> · ${esc(t.titre)} · ${age(t.declare_le)}`
     );
     const piecesAttendues = tickets.filter((t) => t.attente_piece).map((t) =>
       `<b>${esc(t.parc_ticket_code)}</b> · ${esc(t.numero_bt)} · ${esc(t.titre)}${t.attente_piece_detail ? ` — ${esc(t.attente_piece_detail)}` : ""}${t.attente_commande ? ` <span style="color:#8b92b8;">(commande ${esc(t.attente_commande.numero)} : ${esc(t.attente_commande.statut)})</span>` : ""}`
@@ -181,7 +177,7 @@ Deno.serve(async (req: Request) => {
     ];
 
     const periode = `du ${dateFr(depuis)} au ${dateFr(new Date().toISOString())}`;
-    const sujet = `Bilan de la semaine ${periode} · ${creesL.length} tickets créés, ${resolusL.length} résolus, ${totalRetard} en retard`;
+    const sujet = `Bilan de la semaine ${periode} · ${creesL.length} tickets créés, ${resolusL.length} résolus`;
     const html = `<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
 <body style="margin:0;padding:0;background-color:#0a0e27;font-family:Arial,Helvetica,sans-serif;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#0a0e27;"><tr><td align="center" style="padding:32px 16px;">
@@ -194,7 +190,7 @@ Deno.serve(async (req: Request) => {
       ${chiffre(creesL.length, "tickets créés")}
       ${chiffre(resolusL.length, "résolus", "#4ADE80")}
       ${chiffre(tickets.length, "encore ouverts")}
-      ${chiffre(totalRetard, "en retard", totalRetard ? "#FF4D6D" : "#ffffff")}
+      ${chiffre(piecesAttendues.length, "en attente de pièce", piecesAttendues.length ? "#FFB547" : "#ffffff")}
     </tr><tr>
       ${chiffre(interv.length, "interventions")}
       ${chiffre(`${Math.round(heures)} h`, "de réparation")}
@@ -224,7 +220,7 @@ Deno.serve(async (req: Request) => {
       await service.from("bilans_hebdo").delete().eq("semaine", semaine);
       throw new Error(`Resend ${r.status} : ${await r.text()}`);
     }
-    return repondre({ success: true, envoyes: emails.length, crees: creesL.length, resolus: resolusL.length, en_retard: totalRetard });
+    return repondre({ success: true, envoyes: emails.length, crees: creesL.length, resolus: resolusL.length });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     console.error("bilan-hebdo:", message);

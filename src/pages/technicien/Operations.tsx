@@ -52,11 +52,7 @@ function incidentToTicket(inc: Record<string, unknown>): TicketSummary {
   const cat = equip?.categories_equipement as Record<string, unknown> | null;
   const criticite = mapCriticite(priorite);
   const declareLe = inc.declare_le as string;
-  const slaH = (priorite?.sla_h as number) ?? 24;
-  const heuresDepuis = (Date.now() - new Date(declareLe).getTime()) / 3_600_000;
-  // En retard : ticket encore ouvert au-delà du délai de sa gravité
   const ouvert = !['resolu', 'ferme', 'annule'].includes(inc.statut as string);
-  const enRetard = ouvert && heuresDepuis > slaH;
 
   const badges: TicketSummary['badges'] = [];
   if (cat?.nom) badges.push({ label: cat.nom as string });
@@ -70,9 +66,6 @@ function incidentToTicket(inc: Record<string, unknown>): TicketSummary {
       ? ` · prévu le ${new Date(`${inc.externe_date_prevue as string}T12:00:00`).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' })}`
       : '';
     badges.push({ label: `Extérieur · ${f?.nom ?? (inc.externe_nom as string) ?? 'intervenant'}${prevu}`, tone: 'amber' });
-  }
-  if (enRetard) {
-    badges.push({ label: `En retard · ${formatDuree(declareLe)}`, tone: 'red' });
   }
 
   return {
@@ -89,8 +82,6 @@ function incidentToTicket(inc: Record<string, unknown>): TicketSummary {
       ? `${equip?.code as string ?? ''} · signalé ${formatDuree(declareLe)}`
       : undefined,
     badges: badges.length > 0 ? badges : undefined,
-    slaAlert: enRetard ? `En retard · ouvert depuis ${formatDuree(declareLe)}` : undefined,
-    enRetard,
     declareLe,
     meta: [(parc?.code ?? inc.parc_ticket_code) as string | undefined, inc.numero_bt as string, ouvert ? `depuis ${formatDuree(declareLe)}` : formatDuree(declareLe), inc.declare_par_nom ? `par ${inc.declare_par_nom as string}` : null]
       .filter(Boolean)
@@ -132,7 +123,6 @@ export function Operations() {
   const [zoneFiltre, setZoneFiltre] = useState<string>('toutes');
   const [activiteFiltre, setActiviteFiltre] = useState<string>('toutes');
   // Seulement les tickets en retard, du plus ancien au plus récent
-  const [retardSeul, setRetardSeul] = useState(false);
   const [parcActif, setParcActif] = useState<string | null>(null);
   const [reassignerCible, setReassignerCible] = useState<{ id: string; numeroBT: string } | null>(null);
   const [suppressionCible, setSuppressionCible] = useState<{ id: string; numeroBT: string } | null>(null);
@@ -258,11 +248,8 @@ export function Operations() {
     return ['toutes', ...Array.from(zoneSet).sort()];
   }, [ticketsActivite]);
 
-  const nbEnRetard = ticketsActivite.filter((t) => t.enRetard).length;
   const ticketsZone = ticketsActivite
     .filter((t) => zoneFiltre === 'toutes' || t.zone === zoneFiltre)
-    .filter((t) => !retardSeul || t.enRetard)
-    .sort((a, b) => (retardSeul ? (a.declareLe ?? '').localeCompare(b.declareLe ?? '') : 0))
     // Pastille « 💬 » : le ticket a des notes
     .map((t) => (nbNotes?.[t.id] ? { ...t, badges: [...(t.badges ?? []), { label: `💬 ${nbNotes[t.id]}` }] } : t));
 
@@ -411,17 +398,6 @@ export function Operations() {
       )}
 
       <div className="px-3 md:px-[18px] py-3 bg-bg-deep flex gap-2 items-center flex-wrap border-b border-white/[0.04]">
-        {(nbEnRetard > 0 || retardSeul) && (
-          <button
-            onClick={() => setRetardSeul((v) => !v)}
-            className={cn(
-              'px-3 py-1.5 rounded-[14px] text-[12px] min-h-[40px] whitespace-nowrap font-semibold',
-              retardSeul ? 'bg-red text-bg-app' : 'bg-red/10 border border-red/40 text-red'
-            )}
-          >
-            ⏱ En retard <span className="opacity-80">{nbEnRetard}</span>
-          </button>
-        )}
         <span className="text-[11px] text-faint uppercase tracking-wider mr-1">Zone</span>
         {zones.map((z) => (
           <button

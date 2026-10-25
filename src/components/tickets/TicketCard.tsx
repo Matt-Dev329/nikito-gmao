@@ -13,7 +13,6 @@ export interface TicketSummary {
   description?: string;
   badges?: Array<{ label: string; tone?: 'default' | 'pink' | 'amber' | 'red' }>;
   meta?: string;
-  slaAlert?: string;
   enAttente?: boolean;
   enPause?: boolean;
   /** Photo du problème (chemin dans alba-incidents) et son URL signée */
@@ -25,8 +24,6 @@ export interface TicketSummary {
   parcId?: string;
   /** Problème signalé (description), affiché sur la carte pour les directeurs de parc */
   probleme?: string;
-  /** Ticket ouvert qui dépasse le délai de sa gravité (bloquant 1 h, majeur 4 h, mineur 48 h) */
-  enRetard?: boolean;
   /** Date du signalement (tri par ancienneté) */
   declareLe?: string;
 }
@@ -66,7 +63,6 @@ export function TicketCard({ ticket, variant, onDemarrer, onReassigner, onRepren
         className={cn(
           'bg-bg-card rounded-xl p-[13px] px-4 flex items-center gap-3 cursor-pointer w-full text-left',
           borderByCrit[ticket.criticite],
-          ticket.enRetard && 'ring-1 ring-red/50',
           ticket.enAttente && 'opacity-75'
         )}
       >
@@ -137,16 +133,12 @@ export function TicketCard({ ticket, variant, onDemarrer, onReassigner, onRepren
         'bg-bg-card rounded-2xl p-4 flex flex-col gap-3',
         onClick && 'cursor-pointer',
         borderByCrit[ticket.criticite],
-        ticket.enRetard && 'ring-1 ring-red/50'
       )}
     >
       <div className="flex items-center gap-2.5 flex-wrap">
         <CritTag niveau={ticket.criticite} />
         <span className="bt-num">{ticket.numeroBT}</span>
         {ticket.zone && <span className="bt-num">Zone {ticket.zone}</span>}
-        {ticket.slaAlert && (
-          <span className="ml-auto text-red text-[11px] font-semibold">⏱ {ticket.slaAlert}</span>
-        )}
       </div>
       <div>
         <div className="text-[17px] font-semibold mb-1">{ticket.titre}</div>
