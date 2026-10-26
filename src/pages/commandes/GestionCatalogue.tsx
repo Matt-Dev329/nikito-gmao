@@ -81,7 +81,7 @@ export function GestionCatalogue() {
                     {a.description && <div className="text-[12px] text-dim">{a.description}</div>}
                   </div>
                   <button
-                    onClick={() => setProduitEdite({ activite_id: a.id, actif: true, unite: 'unité', ordre: siens.length })}
+                    onClick={() => setProduitEdite({ activite_id: a.id, actif: true, unite: /arcade/i.test(a.nom) ? 'carton' : 'unité', ordre: siens.length })}
                     className="text-nikito-cyan text-[12px] font-medium min-h-[36px] px-2 hover:underline"
                   >
                     + Produit
