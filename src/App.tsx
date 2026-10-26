@@ -28,6 +28,8 @@ const PageFormationsPersonnel = page(() => import('@/pages/formations/PageFormat
 const PageRapportsPrestataires = page(() => import('@/pages/documentation/PageDocumentsTechniques'), 'PageRapportsPrestataires');
 const PageContrats = page(() => import('@/pages/documentation/PageDocumentsTechniques'), 'PageContrats');
 const PageDemandesPrestataires = page(() => import('@/pages/documentation/PageDemandesPrestataires'), 'PageDemandesPrestataires');
+const PageHistoriqueTickets = page(() => import('@/pages/historiques/PageHistoriqueTickets'), 'PageHistoriqueTickets');
+const PageHistoriqueCommandes = page(() => import('@/pages/historiques/PageHistoriqueCommandes'), 'PageHistoriqueCommandes');
 const PageBlocNotes = page(() => import('@/pages/perso/PageBlocNotes'), 'PageBlocNotes');
 const PageProjets = page(() => import('@/pages/perso/PageProjets'), 'PageProjets');
 const PageBonsIntervention = page(() => import('@/pages/interventions/PageBonsIntervention'), 'PageBonsIntervention');
@@ -143,6 +145,8 @@ export function App() {
           <Route path="contrats" element={<PageContrats />} />
           <Route path="demandes-prestataires" element={<PageDemandesPrestataires />} />
           <Route path="formations-personnel" element={<PageFormationsPersonnel />} />
+          <Route path="historique-tickets" element={<PageHistoriqueTickets />} />
+          <Route path="historique-commandes" element={<PageHistoriqueCommandes />} />
           <Route path="bloc-notes" element={<PageBlocNotes />} />
           <Route path="projets" element={<PageProjets />} />
           <Route path="equipements" element={<PageEquipements />} />

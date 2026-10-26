@@ -47,6 +47,15 @@ export function voitTableauDeBord(u: { email?: string | null } | null | undefine
   return (u?.email ?? '').trim().toLowerCase() === EMAIL_TABLEAU_DE_BORD;
 }
 
+/**
+ * Historique des tickets : chef d'équipe, direction, admin IT, directeurs de
+ * parc et managers principaux (chacun ses parcs, cf RLS incidents).
+ */
+export const ROLES_HISTORIQUES: string[] = ['direction', 'chef_maintenance', 'directeur_parc', 'admin_it', 'manager_principal'];
+
+/** Historique des commandes : chef d'équipe (tout), directeurs de parc et managers principaux (leurs parcs) */
+export const ROLES_HISTORIQUE_COMMANDES: string[] = ['chef_maintenance', 'directeur_parc', 'manager_principal'];
+
 /** Bons d'intervention : techniciens et chef d'équipe (direction et admin IT compris) */
 export const ROLES_BONS: RoleUtilisateur[] = ['direction', 'chef_maintenance', 'technicien', 'admin_it'];
 

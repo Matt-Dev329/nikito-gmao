@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils';
 import { getNavIcon } from './NavIcons';
 import type { RoleUtilisateur } from '@/types/database';
 import { useAccesCommandes } from '@/hooks/queries/useCommandes';
-import { ROLES_STOCK, ROLES_PILOTAGE, ROLES_DIRECTION_PARC, ROLES_ANALYSE_CAUSES, ROLES_BONS, estManagerPrincipal, voitTableauDeBord } from '@/lib/acces';
+import { ROLES_STOCK, ROLES_PILOTAGE, ROLES_DIRECTION_PARC, ROLES_ANALYSE_CAUSES, ROLES_BONS, ROLES_HISTORIQUES, ROLES_HISTORIQUE_COMMANDES, estManagerPrincipal, voitTableauDeBord } from '@/lib/acces';
 import { useAuth } from '@/hooks/useAuth';
 import { useViewAs } from '@/hooks/useViewAs';
 
@@ -30,6 +30,8 @@ interface DrawerItem {
 
 const pilotageItems: DrawerItem[] = [
   { to: '/gmao/mon-parc', label: 'Mon parc', iconLabel: 'Mon parc', roles: ['manager_parc'] },
+  { to: '/gmao/historique-tickets', label: 'Historique des tickets', iconLabel: 'Historique des tickets', roles: ROLES_HISTORIQUES },
+  { to: '/gmao/historique-commandes', label: 'Historique des commandes', iconLabel: 'Historique des commandes', roles: ROLES_HISTORIQUE_COMMANDES },
   { to: '/gmao/controles', label: 'Contrôles', iconLabel: 'Contrôles', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'technicien', 'manager_parc', 'admin_it'] },
   { to: '/gmao/rapports', label: 'Rapports de réparation', iconLabel: 'Rapports de réparation', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'technicien', 'manager_parc', 'admin_it'] },
   { to: '/gmao/bons', label: "Bons d'intervention", iconLabel: "Bons d'intervention", roles: ROLES_BONS },

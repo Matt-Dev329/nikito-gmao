@@ -3,7 +3,7 @@ import { actualiserApplication } from '@/lib/miseAJour';
 import { cn } from '@/lib/utils';
 import { Logo } from '@/components/ui/Logo';
 import { useAuth } from '@/hooks/useAuth';
-import { ROLES_PILOTAGE, ROLES_BONS, ROLES_DIRECTION_PARC, aAcces, voitTableauDeBord } from '@/lib/acces';
+import { ROLES_PILOTAGE, ROLES_BONS, ROLES_DIRECTION_PARC, ROLES_HISTORIQUES, ROLES_HISTORIQUE_COMMANDES, aAcces, voitTableauDeBord } from '@/lib/acces';
 
 interface MenuDrawerProps {
   open: boolean;
@@ -13,6 +13,8 @@ interface MenuDrawerProps {
 const menuItems: { to: string; label: string; icon: string; roles?: string[]; proprietaireSeul?: boolean }[] = [
   { to: '/gmao', label: 'Tableau de bord', icon: '📊', proprietaireSeul: true },
   { to: '/tech/controles', label: 'Contrôles', icon: '✅' },
+  { to: '/gmao/historique-tickets', label: 'Historique des tickets', icon: '🗂️', roles: ROLES_HISTORIQUES },
+  { to: '/gmao/historique-commandes', label: 'Historique des commandes', icon: '📦', roles: ROLES_HISTORIQUE_COMMANDES },
   { to: '/tech/rapports', label: 'Rapports de réparation', icon: '📋' },
   { to: '/tech/bons', label: "Bons d'intervention", icon: '🧾', roles: ROLES_BONS },
   { to: '/tech/plans', label: 'Plans', icon: '🗺️' },

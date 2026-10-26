@@ -281,6 +281,8 @@ const iconMap: Record<string, (props: { className?: string }) => JSX.Element> = 
   'Aide': IconAide,
   'Administration IT': IconAdminIT,
   'Bloc-notes': IconBlocNotes,
+  'Historique des tickets': IconRapports,
+  'Historique des commandes': IconCommander,
   'Projets': IconProjets,
 };
 
