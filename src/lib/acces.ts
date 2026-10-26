@@ -49,12 +49,12 @@ export function voitTableauDeBord(u: { email?: string | null } | null | undefine
 
 /**
  * Historique des tickets : chef d'équipe, direction, admin IT, directeurs de
- * parc et managers principaux (chacun ses parcs, cf RLS incidents).
+ * parc et managers (chacun ses parcs, en lecture, cf RLS incidents).
  */
-export const ROLES_HISTORIQUES: string[] = ['direction', 'chef_maintenance', 'directeur_parc', 'admin_it', 'manager_principal'];
+export const ROLES_HISTORIQUES: string[] = ['direction', 'chef_maintenance', 'directeur_parc', 'admin_it', 'manager_parc'];
 
-/** Historique des commandes : chef d'équipe (tout), directeurs de parc et managers principaux (leurs parcs) */
-export const ROLES_HISTORIQUE_COMMANDES: string[] = ['chef_maintenance', 'directeur_parc', 'manager_principal'];
+/** Historique des commandes : chef d'équipe (tout), directeurs de parc et managers (leurs parcs, en lecture) */
+export const ROLES_HISTORIQUE_COMMANDES: string[] = ['chef_maintenance', 'directeur_parc', 'manager_parc'];
 
 /** Bons d'intervention : techniciens et chef d'équipe (direction et admin IT compris) */
 export const ROLES_BONS: RoleUtilisateur[] = ['direction', 'chef_maintenance', 'technicien', 'admin_it'];
@@ -139,16 +139,17 @@ export function peutVoirComme(
 }
 
 /**
- * Tout ce qui se passe dans un parc (commandes, tickets à valider…) : directeur
- * de parc sur ses parcs, manager principal sur les parcs où il a le badge MGR.
- * Même règle en base : voit_tout_le_parc.
+ * Tout ce qui se passe dans un parc (commandes, tickets à valider…), en
+ * lecture : directeurs de parc et managers (principaux ou non) sur leurs parcs.
+ * Même règle en base : voit_tout_le_parc. Les actions restent à part
+ * (peutValiderTicket, peut_intervenir, gestionnaire des commandes).
  */
 export function voitToutLeParc(
   u: { role_code: string; parc_ids: string[]; parcs_manager_principal?: string[] } | null | undefined,
   parcId?: string | null
 ): boolean {
   if (!u) return false;
-  const parcs = u.role_code === 'directeur_parc' ? u.parc_ids : u.role_code === 'manager_parc' ? u.parcs_manager_principal ?? [] : [];
+  const parcs = u.role_code === 'directeur_parc' || u.role_code === 'manager_parc' ? u.parc_ids : [];
   return parcId ? parcs.includes(parcId) : parcs.length > 0;
 }
 

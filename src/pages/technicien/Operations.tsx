@@ -140,7 +140,7 @@ export function Operations() {
     utilisateur?.role_code === 'directeur_parc' ? t : { ...t, probleme: undefined };
 
   // Valideurs (et suppression) : chef d'équipe, direction, admin IT, directeurs de parc
-  // Onglet « À valider » : valideurs, et managers principaux en lecture (tout ce qui se passe dans leur parc)
+  // Onglet « À valider » : valideurs, et managers en lecture (tout ce qui se passe dans leur parc)
   const estValideur = ['direction', 'chef_maintenance', 'admin_it', 'directeur_parc'].includes(utilisateur?.role_code ?? '') || voitToutLeParc(utilisateur);
 
   const { parcsVisibles, peutVoirTous } = useParcsVisibles();
