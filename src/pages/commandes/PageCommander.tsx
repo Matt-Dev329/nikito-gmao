@@ -9,8 +9,9 @@ import { OngletPanier } from './OngletPanier';
 import { ListeCommandes } from './ListeCommandes';
 import { GestionCatalogue } from './GestionCatalogue';
 import { OngletCommandeSpecifique } from './OngletCommandeSpecifique';
+import { OngletHistorique } from './OngletHistorique';
 
-type Onglet = 'catalogue' | 'panier' | 'specifique' | 'mes_commandes' | 'a_preparer' | 'a_traiter' | 'gestion';
+type Onglet = 'catalogue' | 'panier' | 'specifique' | 'mes_commandes' | 'a_preparer' | 'a_traiter' | 'historique' | 'gestion';
 
 export function PageCommander() {
   const { utilisateur } = useAuth();
@@ -53,6 +54,7 @@ export function PageCommander() {
     { code: 'mes_commandes', label: 'Mes commandes', visible: peutCommander },
     { code: 'a_preparer', label: 'À préparer', badge: nbAPreparer, visible: estDestinataire },
     { code: 'a_traiter', label: 'Commandes reçues', badge: nbATraiter, visible: estGestionnaire },
+    { code: 'historique', label: 'Historique', visible: estGestionnaire },
     { code: 'gestion', label: 'Gérer le catalogue', visible: peutGererCatalogue },
   ];
   const ongletsVisibles = onglets.filter((o) => o.visible);
@@ -107,6 +109,7 @@ export function PageCommander() {
       {ongletActif === 'mes_commandes' && <ListeCommandes portee="miennes" onModifier={() => setOnglet('panier')} />}
       {ongletActif === 'a_preparer' && <ListeCommandes portee="a_preparer" />}
       {ongletActif === 'a_traiter' && <ListeCommandes portee="toutes" />}
+      {ongletActif === 'historique' && <OngletHistorique />}
       {ongletActif === 'gestion' && <GestionCatalogue />}
     </div>
   );

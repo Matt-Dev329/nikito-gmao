@@ -183,7 +183,7 @@ export function useCatalogueCommandes(inclureInactifs = false) {
   });
 }
 
-const SELECT_COMMANDE = `id, numero, statut, commentaire, motif_refus, total_estime, cree_le, traitee_le, demandeur_id, directe,
+export const SELECT_COMMANDE = `id, numero, statut, commentaire, motif_refus, total_estime, cree_le, traitee_le, demandeur_id, directe,
   demandeur:utilisateurs!commandes_demandeur_id_fkey(prenom, nom),
   parc:parcs(code, nom),
   commande_lignes(id, produit_id, activite_nom, produit_nom, reference, unite, quantite, prix_unitaire, specifique, lien)`;
