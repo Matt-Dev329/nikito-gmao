@@ -10,7 +10,7 @@ import { useIncidents, useNombreTicketsParParc, useReprendreIncident, useTickets
 import { ModaleSupprimerTicket } from '@/components/tickets/ModaleSupprimerTicket';
 import { ModaleRefuserTicket } from '@/components/tickets/ModaleRefuserTicket';
 import { ModaleClotureRapide } from '@/components/tickets/ModaleClotureRapide';
-import { peutValiderTicket } from '@/lib/acces';
+import { peutValiderTicket, voitToutLeParc } from '@/lib/acces';
 import { useAuth } from '@/hooks/useAuth';
 import { useParcs } from '@/hooks/queries/useReferentiel';
 import { useToast } from '@/components/ui/ToastProvider';
@@ -140,7 +140,8 @@ export function Operations() {
     utilisateur?.role_code === 'directeur_parc' ? t : { ...t, probleme: undefined };
 
   // Valideurs (et suppression) : chef d'équipe, direction, admin IT, directeurs de parc
-  const estValideur = ['direction', 'chef_maintenance', 'admin_it', 'directeur_parc'].includes(utilisateur?.role_code ?? '');
+  // Onglet « À valider » : valideurs, et managers principaux en lecture (tout ce qui se passe dans leur parc)
+  const estValideur = ['direction', 'chef_maintenance', 'admin_it', 'directeur_parc'].includes(utilisateur?.role_code ?? '') || voitToutLeParc(utilisateur);
 
   const { parcsVisibles, peutVoirTous } = useParcsVisibles();
 
@@ -191,7 +192,7 @@ export function Operations() {
       ((aValiderQ.data ?? []) as Record<string, unknown>[])
         .filter((i) => {
           const parcId = (i.equipements as { parc_id?: string } | null)?.parc_id ?? (i.parc_ticket as string | undefined);
-          return (!parcIdEffectif || parcId === parcIdEffectif) && peutValiderTicket(utilisateur, parcId);
+          return (!parcIdEffectif || parcId === parcIdEffectif) && (peutValiderTicket(utilisateur, parcId) || voitToutLeParc(utilisateur, parcId));
         })
         .map(incidentToTicket)
         .map(sansProblemeSiNonDirecteur),
@@ -439,19 +440,25 @@ export function Operations() {
                       ✓ Clôturer (rien à faire)
                     </button>
                   )}
-                  <button
-                    onClick={() => setRefusCible({ id: t.id, numeroBT: t.numeroBT })}
-                    className="px-4 rounded-[10px] text-[12px] font-semibold min-h-[40px] bg-bg-card border border-red/40 text-red"
-                  >
-                    ✕ Refuser
-                  </button>
-                  <button
-                    onClick={() => valider(t)}
-                    disabled={validerTicket.isPending}
-                    className="px-4 rounded-[10px] text-[12px] font-bold min-h-[40px] bg-gradient-cta text-text disabled:opacity-50"
-                  >
-                    ✓ Valider
-                  </button>
+                  {peutValiderTicket(utilisateur, t.parcId) ? (
+                    <>
+                      <button
+                        onClick={() => setRefusCible({ id: t.id, numeroBT: t.numeroBT })}
+                        className="px-4 rounded-[10px] text-[12px] font-semibold min-h-[40px] bg-bg-card border border-red/40 text-red"
+                      >
+                        ✕ Refuser
+                      </button>
+                      <button
+                        onClick={() => valider(t)}
+                        disabled={validerTicket.isPending}
+                        className="px-4 rounded-[10px] text-[12px] font-bold min-h-[40px] bg-gradient-cta text-text disabled:opacity-50"
+                      >
+                        ✓ Valider
+                      </button>
+                    </>
+                  ) : (
+                    <span className="text-[12px] text-dim self-center">En attente de validation par le directeur de parc</span>
+                  )}
                 </div>
               </div>
             ))

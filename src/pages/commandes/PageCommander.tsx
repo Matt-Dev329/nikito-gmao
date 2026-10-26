@@ -10,6 +10,7 @@ import { ListeCommandes } from './ListeCommandes';
 import { GestionCatalogue } from './GestionCatalogue';
 import { OngletCommandeSpecifique } from './OngletCommandeSpecifique';
 import { OngletHistorique } from './OngletHistorique';
+import { voitToutLeParc } from '@/lib/acces';
 
 type Onglet = 'catalogue' | 'panier' | 'specifique' | 'mes_commandes' | 'a_preparer' | 'a_traiter' | 'historique' | 'gestion';
 
@@ -39,7 +40,9 @@ export function PageCommander() {
       </div>
     );
   }
-  if (!peutCommander && !peutGererCatalogue && !estDestinataire) return <Navigate to="/gmao" replace />;
+  // Directeurs de parc et managers principaux : toutes les commandes de leur parc
+  const voitParc = voitToutLeParc(utilisateur);
+  if (!peutCommander && !peutGererCatalogue && !estDestinataire && !voitParc) return <Navigate to="/gmao" replace />;
 
   const nbPanier = nombreArticles(lignes);
   const nbATraiter = estGestionnaire
@@ -54,7 +57,7 @@ export function PageCommander() {
     { code: 'mes_commandes', label: 'Mes commandes', visible: peutCommander },
     { code: 'a_preparer', label: 'À préparer', badge: nbAPreparer, visible: estDestinataire },
     { code: 'a_traiter', label: 'Commandes reçues', badge: nbATraiter, visible: estGestionnaire },
-    { code: 'historique', label: 'Historique', visible: estGestionnaire },
+    { code: 'historique', label: estGestionnaire ? 'Historique' : 'Commandes du parc', visible: estGestionnaire || voitParc },
     { code: 'gestion', label: 'Gérer le catalogue', visible: peutGererCatalogue },
   ];
   const ongletsVisibles = onglets.filter((o) => o.visible);

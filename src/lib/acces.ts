@@ -130,6 +130,20 @@ export function peutVoirComme(
 }
 
 /**
+ * Tout ce qui se passe dans un parc (commandes, tickets à valider…) : directeur
+ * de parc sur ses parcs, manager principal sur les parcs où il a le badge MGR.
+ * Même règle en base : voit_tout_le_parc.
+ */
+export function voitToutLeParc(
+  u: { role_code: string; parc_ids: string[]; parcs_manager_principal?: string[] } | null | undefined,
+  parcId?: string | null
+): boolean {
+  if (!u) return false;
+  const parcs = u.role_code === 'directeur_parc' ? u.parc_ids : u.role_code === 'manager_parc' ? u.parcs_manager_principal ?? [] : [];
+  return parcId ? parcs.includes(parcId) : parcs.length > 0;
+}
+
+/**
  * Valider ou supprimer un ticket (même règle qu'en base : peut_valider_ticket) :
  * chef d'équipe, direction, admin IT partout ; directeur de parc sur ses parcs ;
  * manager principal sur les parcs où il a le badge MGR.
