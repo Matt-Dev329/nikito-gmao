@@ -449,7 +449,7 @@ export function Intervention() {
           <div className="bg-amber/10 border border-amber/40 rounded-xl px-4 py-3 flex flex-wrap items-center gap-3">
             <div className="text-[13px] flex-1 min-w-[200px]">
               <strong className="text-amber">En attente de validation</strong>
-              <div className="text-dim">Le ticket arrivera dans Opérations une fois validé par le directeur du parc ou le chef d'équipe.</div>
+              <div className="text-dim">Le ticket arrivera dans Opérations une fois validé par le directeur du parc, un manager principal ou le chef d'équipe.</div>
             </div>
             {peutValider && (
               <button

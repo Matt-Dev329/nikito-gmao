@@ -144,7 +144,7 @@ export function voitToutLeParc(
 }
 
 /**
- * Valider ou supprimer un ticket (même règle qu'en base : peut_valider_ticket) :
+ * Valider, refuser ou supprimer un ticket (même règle qu'en base : peut_valider_ticket) :
  * chef d'équipe, direction, admin IT partout ; directeur de parc sur ses parcs ;
  * manager principal sur les parcs où il a le badge MGR.
  */
@@ -155,7 +155,8 @@ export function peutValiderTicket(
   if (!u) return false;
   if (['direction', 'chef_maintenance', 'admin_it'].includes(u.role_code)) return true;
   if (!parcId) return false;
-  // Directeurs de parc seulement (plus les managers principaux) : même règle qu'en base
+  // Directeur de parc sur ses parcs, manager principal là où il a le badge MGR : même règle qu'en base
   if (u.role_code === 'directeur_parc') return u.parc_ids.includes(parcId);
+  if (u.role_code === 'manager_parc') return (u.parcs_manager_principal ?? []).includes(parcId);
   return false;
 }

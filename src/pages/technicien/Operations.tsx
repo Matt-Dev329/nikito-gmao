@@ -457,7 +457,7 @@ export function Operations() {
                       </button>
                     </>
                   ) : (
-                    <span className="text-[12px] text-dim self-center">En attente de validation par le directeur de parc</span>
+                    <span className="text-[12px] text-dim self-center">En attente de validation par le directeur de parc ou un manager principal</span>
                   )}
                 </div>
               </div>
