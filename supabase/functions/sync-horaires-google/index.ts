@@ -4,8 +4,9 @@ import { createClient } from "npm:@supabase/supabase-js@2.45.0";
 /**
  * Horaires des parcs calés sur Google (fiche Google Maps de chaque parc),
  * via l'API Google Places (clé GOOGLE_PLACES_API_KEY dans les secrets).
- * - fiche Google trouvée une fois par recherche « Nikito <ville> », puis
- *   gardée dans parcs.google_place_id ;
+ * - fiche Google trouvée une fois par son nom (parcs.meta.nom_google, ex.
+ *   « Nikito SGDB », sinon « Nikito <ville> »), puis gardée dans
+ *   parcs.google_place_id ;
  * - horaires de la semaine (regularOpeningHours) recopiés dans
  *   parcs.horaires, jour par jour ; les horaires « vacances » restent ceux
  *   d'ALBA.
@@ -114,6 +115,7 @@ Deno.serve(async (req: Request) => {
       try {
         // 1. Fiche Google du parc
         let placeId = parc.google_place_id as string | null;
+        const nomGoogle = (meta.nom_google as string | undefined) ?? `Nikito ${parc.ville}`;
         if (!placeId) {
           const r = await fetch("https://places.googleapis.com/v1/places:searchText", {
             method: "POST",
@@ -122,12 +124,12 @@ Deno.serve(async (req: Request) => {
               "X-Goog-Api-Key": cle,
               "X-Goog-FieldMask": "places.id,places.displayName,places.formattedAddress",
             },
-            body: JSON.stringify({ textQuery: `Nikito ${parc.ville}`, languageCode: "fr", regionCode: "FR" }),
+            body: JSON.stringify({ textQuery: `${nomGoogle}, ${parc.ville}`, languageCode: "fr", regionCode: "FR" }),
           });
           if (!r.ok) throw new Error(`Recherche Google ${r.status} : ${(await r.text()).slice(0, 200)}`);
           const { places } = (await r.json()) as { places?: { id: string; displayName?: { text: string }; formattedAddress?: string }[] };
           const trouve = (places ?? []).find((p) => /nikito/i.test(p.displayName?.text ?? ""));
-          if (!trouve) throw new Error(`Fiche Google introuvable pour « Nikito ${parc.ville} »`);
+          if (!trouve) throw new Error(`Fiche Google introuvable pour « ${nomGoogle} »`);
           placeId = trouve.id;
           await service.from("parcs").update({ google_place_id: placeId }).eq("id", parc.id);
         }
