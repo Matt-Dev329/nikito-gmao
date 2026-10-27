@@ -93,6 +93,10 @@ export type HorairesParc = Record<JourSemaine, HoraireJour> & { vacances?: Horai
 export interface ParcMeta {
   est_vacances?: boolean;
   date_fin_vacances?: string;
+  /** Horaires calés sur la fiche Google du parc (fonction sync-horaires-google) */
+  horaires_google_le?: string;
+  horaires_google_fiche?: string | null;
+  horaires_google_erreur?: string | null;
 }
 
 export interface Parc {

@@ -1,4 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/components/ui/ToastProvider';
 import type { Parc, HorairesParc, HoraireJour, HoraireVacances, JourSemaine } from '@/types/database';
 import { useModifierHorairesParc } from '@/hooks/queries/useReferentiel';
 import { JOURS_ORDERED } from '@/lib/horaires';
@@ -56,7 +60,8 @@ export function EditeurHorairesParc({ parc, disabled }: Props) {
 
   return (
     <div className="bg-bg-card rounded-2xl border border-white/[0.06] p-4 md:p-5">
-      <h4 className="text-[14px] font-semibold mb-4">Horaires d'ouverture</h4>
+      <h4 className="text-[14px] font-semibold mb-1">Horaires d'ouverture</h4>
+      <SynchroGoogle parc={parc} />
 
       <div className="overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0">
         <table className="w-full text-[13px]">
@@ -196,6 +201,54 @@ export function EditeurHorairesParc({ parc, disabled }: Props) {
 
       {mutation.isSuccess && !dirty && (
         <p className="text-green text-[12px] mt-2 text-right">Horaires enregistrés</p>
+      )}
+    </div>
+  );
+}
+
+/** Horaires calés sur la fiche Google du parc : date de la dernière reprise, et reprise à la demande */
+function SynchroGoogle({ parc }: { parc: Parc }) {
+  const { utilisateur } = useAuth();
+  const qc = useQueryClient();
+  const toast = useToast();
+  const [enCours, setEnCours] = useState(false);
+  const meta = parc.meta ?? {};
+  const peutSynchroniser = ['chef_maintenance', 'direction', 'admin_it'].includes(utilisateur?.role_code ?? '');
+
+  const synchroniser = async () => {
+    setEnCours(true);
+    const { data, error } = await supabase.functions.invoke('sync-horaires-google', { body: { force: true } });
+    setEnCours(false);
+    qc.invalidateQueries({ queryKey: ['parcs'] });
+    if (error || data?.success === false) {
+      toast.error(data?.error ?? error?.message ?? 'Synchronisation impossible');
+      return;
+    }
+    const r = (data?.resultats ?? []) as { parc: string; statut: string; erreur?: string }[];
+    const erreurs = r.filter((x) => x.statut === 'erreur');
+    if (erreurs.length) toast.error(erreurs.map((x) => `${x.parc} : ${x.erreur}`).join(' · '));
+    else toast.success(`Horaires repris de Google (${r.filter((x) => x.statut === 'mis_a_jour').length} parc(s) modifié(s))`);
+  };
+
+  return (
+    <div className="flex flex-wrap items-center gap-2 mb-4 text-[12px]">
+      {meta.horaires_google_le ? (
+        <span className="text-dim">
+          Calés sur Google le {new Date(meta.horaires_google_le).toLocaleDateString('fr-FR')}
+          {meta.horaires_google_fiche ? ` (fiche « ${meta.horaires_google_fiche} »)` : ''}
+        </span>
+      ) : (
+        <span className="text-faint">Pas encore calés sur Google</span>
+      )}
+      {meta.horaires_google_erreur && <span className="text-amber">· {meta.horaires_google_erreur}</span>}
+      {peutSynchroniser && (
+        <button
+          onClick={synchroniser}
+          disabled={enCours}
+          className="ml-auto bg-nikito-cyan/12 border border-nikito-cyan/45 text-nikito-cyan px-3 rounded-lg font-semibold min-h-[36px] disabled:opacity-50"
+        >
+          {enCours ? 'Synchronisation…' : '↻ Reprendre les horaires Google'}
+        </button>
       )}
     </div>
   );
