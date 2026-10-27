@@ -6,6 +6,7 @@ import { RouteProtegee } from '@/components/auth/RouteProtegee';
 import { Login } from '@/pages/auth/Login';
 import { useAuth } from '@/hooks/useAuth';
 import { rattacherAbonnementPush } from '@/lib/push';
+import { useDeconnexionInactivite } from '@/hooks/useDeconnexionInactivite';
 import { useEffectiveRole } from '@/hooks/useViewAs';
 import { GardeAcces } from '@/components/auth/GardeAcces';
 import { ROLES_ANALYSE_CAUSES, ROLES_PILOTAGE, voitTableauDeBord } from '@/lib/acces';
@@ -95,9 +96,11 @@ function ChargementPage() {
   );
 }
 
-// Un appareil déjà abonné aux notifications est rattaché au compte connecté
+// Un appareil déjà abonné aux notifications est rattaché au compte connecté ;
+// déconnexion automatique des comptes réglés ainsi après inactivité
 function RattachementPush() {
   const { utilisateur } = useAuth();
+  useDeconnexionInactivite();
   useEffect(() => {
     if (utilisateur?.id) rattacherAbonnementPush().catch(() => undefined);
   }, [utilisateur?.id]);

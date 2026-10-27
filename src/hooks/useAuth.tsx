@@ -18,6 +18,8 @@ export interface UtilisateurMetier {
   profil_technicien?: string | null;
   consentement_gps: boolean;
   tour_vu: boolean;
+  /** Déconnexion automatique après N minutes d'inactivité (null : jamais) */
+  deconnexion_inactivite_min: number | null;
 }
 
 interface AuthContextValue {
@@ -97,7 +99,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     supabase
       .from('utilisateurs')
       .select(
-        `id, email, nom, prenom, trigramme, consentement_gps, tour_vu, peut_intervenir, profil_technicien,
+        `id, email, nom, prenom, trigramme, consentement_gps, tour_vu, peut_intervenir, profil_technicien, deconnexion_inactivite_min,
          roles!inner(code),
          parcs_utilisateurs(parc_id, est_manager)`
       )
@@ -124,6 +126,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             parcs_manager_principal: pu.filter((p) => p.est_manager).map((p) => p.parc_id),
             peut_intervenir: (d.peut_intervenir as boolean) ?? false,
             profil_technicien: (d.profil_technicien as string | null) ?? null,
+            deconnexion_inactivite_min: (d.deconnexion_inactivite_min as number | null) ?? null,
           });
         }
         setLoading(false);
