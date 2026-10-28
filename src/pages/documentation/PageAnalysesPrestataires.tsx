@@ -60,6 +60,8 @@ const RESULTATS: Record<string, { label: string; classe: string }> = {
   conforme_avec_reserves: { label: 'Conforme avec réserves', classe: 'bg-amber/15 text-amber' },
   non_conforme: { label: 'Non conforme', classe: 'bg-red/15 text-red' },
   indetermine: { label: 'Indéterminé', classe: 'bg-white/[0.06] text-dim' },
+  // Tous les défauts du rapport levés depuis le contrôle
+  leve: { label: 'Conforme · défauts levés', classe: 'bg-green/15 text-green' },
 };
 const GRAVITES: Record<string, string> = { bloquante: 'text-red', majeure: 'text-amber', mineure: 'text-dim' };
 const ORDRE_GRAVITE: Record<string, number> = { bloquante: 0, majeure: 1, mineure: 2 };
@@ -84,6 +86,13 @@ const echeanceDe = (r: RapportAnalyse) => r.prochaine_echeance ?? analyseDe(r)?.
 const leveeDe = (r: RapportAnalyse, intitule: string) =>
   (r.levees ?? []).find((l) => l.statut === 'levee' && l.point_intitule.trim() === intitule.trim()) ?? null;
 const defautsOuverts = (r: RapportAnalyse) => (analyseDe(r)?.points_non_conformes ?? []).filter((p) => !leveeDe(r, p.intitule));
+/** Résultat à afficher : celui du rapport, ou « conforme » une fois tous ses défauts levés */
+const resultatDe = (r: RapportAnalyse) => {
+  const a = analyseDe(r);
+  if (a?.statut === 'terminee' && (a.points_non_conformes ?? []).length > 0 && defautsOuverts(r).length === 0) return 'leve';
+  return a?.resultat_global ?? null;
+};
+const estConforme = (r: RapportAnalyse) => ['conforme', 'leve'].includes(resultatDe(r) ?? '');
 const joursAvant = (date: string) => Math.ceil((new Date(date).getTime() - Date.now()) / 86_400_000);
 
 function useAnalyses() {
@@ -154,7 +163,7 @@ function ContenuAnalyses() {
           : filtre === 'a_renouveler'
             ? aRenouveler(r)
             : filtre === 'conformes'
-              ? analyseDe(r)?.resultat_global === 'conforme'
+              ? estConforme(r)
               : true
       )
       .filter((r) => !parc || parcDe(r) === parc)
@@ -167,7 +176,7 @@ function ContenuAnalyses() {
       .sort((a, b) => {
         // Bloquants / non conformes d'abord, puis échéances les plus proches
         const rang = (r: RapportAnalyse) => {
-          const res = analyseDe(r)?.resultat_global;
+          const res = resultatDe(r);
           return res === 'non_conforme' ? 0 : res === 'conforme_avec_reserves' ? 1 : 2;
         };
         if (rang(a) !== rang(b)) return rang(a) - rang(b);
@@ -197,7 +206,7 @@ function ContenuAnalyses() {
 
   const compte = (f: Filtre) =>
     (rapports ?? []).filter((r) =>
-      f === 'a_corriger' ? aCorriger(r) : f === 'a_renouveler' ? aRenouveler(r) : f === 'conformes' ? analyseDe(r)?.resultat_global === 'conforme' : true
+      f === 'a_corriger' ? aCorriger(r) : f === 'a_renouveler' ? aRenouveler(r) : f === 'conformes' ? estConforme(r) : true
     ).length;
 
   return (
@@ -364,7 +373,8 @@ function CarteAnalyse({
   const echeance = echeanceDe(r);
   const jours = echeance ? joursAvant(echeance) : null;
   const nonConformes = [...(a?.points_non_conformes ?? [])].sort((x, y) => ORDRE_GRAVITE[x.gravite] - ORDRE_GRAVITE[y.gravite]);
-  const resultat = a?.resultat_global ? RESULTATS[a.resultat_global] : null;
+  const codeResultat = resultatDe(r);
+  const resultat = codeResultat ? RESULTATS[codeResultat] : null;
 
   const relancer = async () => {
     setRelance(true);
@@ -464,7 +474,7 @@ function CarteAnalyse({
             {ouverts.length > 0 ? (
               <span className="text-[11px] text-red">❌ {ouverts.length} à corriger</span>
             ) : (
-              nonConformes.length > 0 && <span className="text-[11px] text-green">✅ Défauts levés</span>
+              nonConformes.length > 0 && <span className="text-[11px] text-green">✅ {nonConformes.length} défaut{nonConformes.length > 1 ? 's' : ''} levé{nonConformes.length > 1 ? 's' : ''}</span>
             )}
             {echeance && jours !== null && (
               <span className={cn('text-[11px]', jours < 0 ? 'text-red' : jours <= 30 ? 'text-amber' : 'text-dim')}>
