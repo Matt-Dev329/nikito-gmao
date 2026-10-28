@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
+import { useParcCourant } from '@/hooks/useParcCourant';
 import { useParcs } from '@/hooks/queries/useReferentiel';
 import { useCatalogueCommandes } from '@/hooks/queries/useCommandes';
 import { useSignedUrls } from '@/hooks/useSignedUrl';
@@ -141,7 +142,18 @@ function ContenuDocuments({ type }: { type: TypeDocument }) {
   const { utilisateur } = useAuth();
   const peutEditer = aAcces(utilisateur, estPrestataire(type) ? rolesPrestataire(type) : ROLES_EDITION);
   const t = TEXTES[type];
-  const { data: documents, isLoading, isError, error } = useDocuments(type);
+  const { data: tousDocuments, isLoading, isError, error } = useDocuments(type);
+  const parcCourant = useParcCourant((s) => s.parc);
+  // Plans : seulement ceux du parc sélectionné (ou des parcs de l'utilisateur), plus les plans communs
+  const documents = useMemo(() => {
+    if (type !== 'plan' || !tousDocuments) return tousDocuments;
+    const vueGlobale = ['direction', 'chef_maintenance', 'admin_it'].includes(utilisateur?.role_code ?? '');
+    return tousDocuments.filter(
+      (d) =>
+        !d.parc_id ||
+        (parcCourant ? d.parc_id === parcCourant.id : vueGlobale || (utilisateur?.parc_ids ?? []).includes(d.parc_id))
+    );
+  }, [tousDocuments, type, parcCourant, utilisateur]);
   const [filtre, setFiltre] = useState<string | null>(null);
   const [filtreDomaine, setFiltreDomaine] = useState<string | null>(null);
   const [recherche, setRecherche] = useState('');
