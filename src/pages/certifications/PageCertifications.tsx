@@ -8,6 +8,7 @@ import { Card } from '@/components/ui/Card';
 import { Pill } from '@/components/ui/Pill';
 import { cn } from '@/lib/utils';
 import type { CertificationAvecJoins } from '@/types/database';
+import { useFiltreParc } from '@/hooks/useParcCourant';
 
 type FiltreStatut = 'tous' | 'valide' | 'expire_bientot' | 'expire';
 
@@ -72,7 +73,7 @@ const STATUT_BADGE = {
 export function PageCertifications() {
   const { data: certifications, isLoading } = useCertifications();
   const { data: parcs } = useParcs();
-  const [parcFilter, setParcFilter] = useState('');
+  const [parcFilter, setParcFilter] = useFiltreParc('');
   const [statutFilter, setStatutFilter] = useState<FiltreStatut>('tous');
   const [recherche, setRecherche] = useState('');
   const [modaleCreer, setModaleCreer] = useState(false);

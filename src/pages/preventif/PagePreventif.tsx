@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils';
 import { aujourdhuiParis, dateParis } from '@/lib/dates';
 import { SignalerInlineButton } from '@/components/shared/SignalerInlineButton';
 import type { MaintenancePreventiveAvecJoins } from '@/types/database';
+import { useFiltreParc } from '@/hooks/useParcCourant';
 
 type FiltreStatut = 'tous' | 'planifie' | 'en_retard' | 'fait';
 
@@ -108,7 +109,7 @@ export function PagePreventif() {
   const { data: parcs } = useParcs();
   const marquerFait = useMarquerFait();
 
-  const [parcFilter, setParcFilter] = useState('');
+  const [parcFilter, setParcFilter] = useFiltreParc('');
   const [statutFilter, setStatutFilter] = useState<FiltreStatut>('tous');
   const [recherche, setRecherche] = useState('');
   const [modaleCreer, setModaleCreer] = useState(false);

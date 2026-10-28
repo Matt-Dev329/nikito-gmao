@@ -7,6 +7,8 @@ import { Logo } from '@/components/ui/Logo';
 interface SelectionParcProps {
   titre: string;
   onSelect: (parc: { id: string; code: string; nom: string }) => void;
+  /** Si fourni (et plusieurs parcs) : carte « Tous les parcs » en premier */
+  onSelectTous?: () => void;
 }
 
 function getStaffParcIds(): string[] {
@@ -18,7 +20,7 @@ function getStaffParcIds(): string[] {
   } catch { return []; }
 }
 
-export function SelectionParc({ titre, onSelect }: SelectionParcProps) {
+export function SelectionParc({ titre, onSelect, onSelectTous }: SelectionParcProps) {
   const navigate = useNavigate();
   const { utilisateur, signOut } = useAuth();
   const { data: allParcs, isLoading } = useParcs();
@@ -101,6 +103,18 @@ export function SelectionParc({ titre, onSelect }: SelectionParcProps) {
           </div>
         ) : (
           <div className="grid grid-cols-2 gap-3.5">
+            {onSelectTous && (
+              <button
+                onClick={onSelectTous}
+                className="col-span-2 bg-bg-card border border-nikito-cyan/30 hover:border-nikito-pink rounded-2xl p-5 px-[18px] text-left transition-colors"
+              >
+                <div className="flex justify-between items-center mb-1.5">
+                  <span className="text-lg font-bold font-mono text-nikito-cyan">TOUS</span>
+                  <span className="text-[11px] text-dim">{parcsVisibles.length} parcs</span>
+                </div>
+                <div className="text-sm font-semibold">Tous les parcs</div>
+              </button>
+            )}
             {parcsVisibles.map((p) => (
               <button
                 key={p.id}

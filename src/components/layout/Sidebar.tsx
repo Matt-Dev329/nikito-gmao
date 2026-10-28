@@ -156,7 +156,9 @@ export function Sidebar({ user, roleAffiche, roleCode, realRoleCode, compact = f
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const { utilisateur } = useAuth();
   const vuePrincipal = useViewAs((s) => s.principal);
-  const parcCourant = useParcCourant((s) => s.parc);
+  const parcChoisi = useParcCourant((s) => s.parc);
+  const vueTousParcs = useParcCourant((s) => s.tous);
+  const parcCourant = parcChoisi ?? (vueTousParcs ? { code: 'TOUS', nom: 'Tous les parcs' } : null);
   const navigate = useNavigate();
   const isAdminRole = roleCode === 'direction' || roleCode === 'chef_maintenance' || roleCode === 'directeur_parc' || roleCode === 'admin_it';
   const isMultiParc = isAdminRole || (utilisateur?.parc_ids?.length ?? 0) > 1;

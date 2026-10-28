@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils';
 import { usePrescriptions, useUpdatePrescriptionStatut, type Prescription } from '@/hooks/queries/useConformite';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/components/ui/ToastProvider';
+import { useFiltreParc } from '@/hooks/useParcCourant';
 
 const COLONNES = [
   { statut: 'a_lever', label: 'A lever', color: 'border-red' },
@@ -29,7 +30,7 @@ export function PageReserves() {
     [toast]
   );
 
-  const [filtreParc, setFiltreParc] = useState<string>('');
+  const [filtreParc, setFiltreParc] = useFiltreParc('');
   const [filtreCategorie, setFiltreCategorie] = useState<string>('');
   const [filtreGravite, setFiltreGravite] = useState<string>('');
   const [mesSeulement, setMesSeulement] = useState(false);

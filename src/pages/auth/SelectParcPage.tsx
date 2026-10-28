@@ -7,6 +7,7 @@ export function SelectParcPage() {
   const navigate = useNavigate();
   const { utilisateur } = useAuth();
   const setParc = useParcCourant((s) => s.setParc);
+  const setTous = useParcCourant((s) => s.setTous);
 
   if (!utilisateur) return null;
 
@@ -17,6 +18,14 @@ export function SelectParcPage() {
         setParc(parc);
         navigate('/gmao', { replace: true });
       }}
+      onSelectTous={
+        utilisateur.parc_ids.length > 1
+          ? () => {
+              setTous();
+              navigate('/gmao', { replace: true });
+            }
+          : undefined
+      }
     />
   );
 }

@@ -8,6 +8,7 @@ import { useToast } from '@/components/ui/ToastProvider';
 import { Pill } from '@/components/ui/Pill';
 import { envoyerFichier, recollerDocument } from '@/lib/envoiGrosFichier';
 import { ROLES_PILOTAGE, aAcces } from '@/lib/acces';
+import { useFiltreParc } from '@/hooks/useParcCourant';
 
 interface PointConforme {
   intitule: string;
@@ -130,7 +131,7 @@ function ContenuAnalyses() {
   const [filtre, setFiltre] = useState<Filtre>('tous');
   const [recherche, setRecherche] = useState('');
   const [categorie, setCategorie] = useState<string | null>(null);
-  const [parc, setParc] = useState<string | null>(null);
+  const [parc, setParc] = useFiltreParc(null, 'libelle');
   // Mode « mail de réparation » : rapports cochés
   const [selection, setSelection] = useState<Set<string> | null>(null);
   const [mailOuvert, setMailOuvert] = useState(false);

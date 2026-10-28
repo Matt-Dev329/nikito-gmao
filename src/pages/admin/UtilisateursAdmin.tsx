@@ -26,6 +26,7 @@ import {
   type UtilisateurRow,
   type InvitationRow,
 } from '@/hooks/queries/useUtilisateurs';
+import { useFiltreParc } from '@/hooks/useParcCourant';
 
 /** Compte modifiable par l'utilisateur connecté (à hauteur de grade, ses parcs) — jamais le sien */
 function peutGererUtilisateur(moi: UtilisateurMetier | null, u: UtilisateurRow): boolean {
@@ -364,7 +365,7 @@ function ListeActifs({ recherche }: { recherche: string }) {
   const navigate = useNavigate();
   const gere = (u: UtilisateurRow) => peutGererUtilisateur(utilisateur, u);
   const [editUser, setEditUser] = useState<UtilisateurRow | null>(null);
-  const [parcFiltre, setParcFiltre] = useState<string | null>(null);
+  const [parcFiltre, setParcFiltre] = useFiltreParc(null, 'code');
   const toast = useToast();
   const qc = useQueryClient();
   const [envoiPin, setEnvoiPin] = useState<Set<string>>(new Set());

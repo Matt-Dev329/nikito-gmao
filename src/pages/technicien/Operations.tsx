@@ -16,6 +16,7 @@ import { useParcs } from '@/hooks/queries/useReferentiel';
 import { useToast } from '@/components/ui/ToastProvider';
 import { useSignedUrls } from '@/hooks/useSignedUrl';
 import type { Criticite } from '@/types/database';
+import { useFiltreParc } from '@/hooks/useParcCourant';
 
 type Onglet = 'a_valider' | 'a_faire' | 'en_cours' | 'attente_piece' | 'exterieur' | 'resolus' | 'controles' | 'preventif';
 
@@ -123,7 +124,7 @@ export function Operations() {
   const [zoneFiltre, setZoneFiltre] = useState<string>('toutes');
   const [activiteFiltre, setActiviteFiltre] = useState<string>('toutes');
   // Seulement les tickets en retard, du plus ancien au plus récent
-  const [parcActif, setParcActif] = useState<string | null>(null);
+  const [parcActif, setParcActif] = useFiltreParc(null);
   const [reassignerCible, setReassignerCible] = useState<{ id: string; numeroBT: string } | null>(null);
   const [suppressionCible, setSuppressionCible] = useState<{ id: string; numeroBT: string } | null>(null);
   const [refusCible, setRefusCible] = useState<{ id: string; numeroBT: string } | null>(null);

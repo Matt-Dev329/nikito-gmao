@@ -8,6 +8,7 @@ import { Pill } from '@/components/ui/Pill';
 import { BoutonTelecharger } from '@/components/ui/BoutonTelecharger';
 import { nomDepuisChemin } from '@/lib/telecharger';
 import { useRapports, type Rapport } from '@/hooks/queries/useRapportsReparation';
+import { useCodeParcSelectionne } from '@/hooks/useParcCourant';
 
 export const ROLES_RAPPORTS = ['direction', 'chef_maintenance', 'directeur_parc', 'manager_parc', 'technicien', 'admin_it'];
 
@@ -43,18 +44,22 @@ function ContenuRapports() {
   const jours = PERIODES.find((p) => p.code === periode)?.jours ?? 30;
   const { data: rapports, isLoading, isError, error } = useRapports(jours);
 
+  // Parc choisi en haut à gauche : seulement ses rapports
+  const codeParc = useCodeParcSelectionne();
+  const duParc = useMemo(() => (rapports ?? []).filter((r) => !codeParc || r.parc_code === codeParc), [rapports, codeParc]);
+
   const activites = useMemo(() => {
     const m = new Map<string, number>();
-    (rapports ?? []).forEach((r) => m.set(r.activite, (m.get(r.activite) ?? 0) + 1));
+    duParc.forEach((r) => m.set(r.activite, (m.get(r.activite) ?? 0) + 1));
     return [...m.entries()].sort((a, b) =>
       a[0] === 'Autres' ? 1 : b[0] === 'Autres' ? -1 : a[0].localeCompare(b[0], 'fr')
     );
-  }, [rapports]);
+  }, [duParc]);
   const activiteActive = activite && activites.some(([a]) => a === activite) ? activite : null;
 
   const filtres = useMemo(() => {
     const q = recherche.trim().toLowerCase();
-    return (rapports ?? []).filter(
+    return duParc.filter(
       (r) =>
         (!activiteActive || r.activite === activiteActive) &&
         (!q ||
@@ -64,7 +69,7 @@ function ContenuRapports() {
             .toLowerCase()
             .includes(q))
     );
-  }, [rapports, activiteActive, recherche]);
+  }, [duParc, activiteActive, recherche]);
 
   // Regroupement par activité (dans l'ordre alphabétique, « Autres » en dernier)
   const groupes = useMemo(() => {

@@ -7,6 +7,7 @@ import { Pill } from '@/components/ui/Pill';
 import { cn } from '@/lib/utils';
 import { SignalerInlineButton } from '@/components/shared/SignalerInlineButton';
 import type { Fiche5PourquoiAvecJoins, Statut5Pourquoi } from '@/types/database';
+import { useFiltreParc } from '@/hooks/useParcCourant';
 
 const STATUTS_FILTRE: Array<{ value: Statut5Pourquoi | 'tous'; label: string }> = [
   { value: 'tous', label: 'Tous' },
@@ -33,7 +34,7 @@ export function ListeCinqPourquoi() {
   const { data: fiches, isLoading } = useFiches5P();
   const { data: parcs } = useParcs();
   const [statutFilter, setStatutFilter] = useState<Statut5Pourquoi | 'tous'>('tous');
-  const [parcFilter, setParcFilter] = useState('');
+  const [parcFilter, setParcFilter] = useFiltreParc('');
   const [recherche, setRecherche] = useState('');
 
   const filtrees = useMemo(() => {

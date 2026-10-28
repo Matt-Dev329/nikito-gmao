@@ -12,6 +12,7 @@ import { exportControlePDF } from './exportPDF';
 import { useToast } from '@/components/ui/ToastProvider';
 import { SignalerInlineButton } from '@/components/shared/SignalerInlineButton';
 import type { TypeControle, StatutControle } from '@/types/database';
+import { useFiltreParc } from '@/hooks/useParcCourant';
 
 function get30DaysAgo(): string {
   const d = new Date();
@@ -23,7 +24,7 @@ export function PageHistoriqueControles() {
   const today = ymdLocal(new Date());
   const [dateDebut, setDateDebut] = useState(get30DaysAgo);
   const [dateFin, setDateFin] = useState(today);
-  const [parcId, setParcId] = useState('');
+  const [parcId, setParcId] = useFiltreParc('');
   const [type, setType] = useState<TypeControle | ''>('');
   const [statut, setStatut] = useState<StatutControle | ''>('');
   const [recherche, setRecherche] = useState('');

@@ -7,6 +7,7 @@ import { Pill } from '@/components/ui/Pill';
 import { NotesPartagees } from '@/components/shared/NotesPartagees';
 import { SELECT_COMMANDE, STATUTS_COMMANDE, type Commande, type StatutCommande } from '@/hooks/queries/useCommandes';
 import { formatDateHeure, formatPrix } from './format';
+import { useFiltreParc } from '@/hooks/useParcCourant';
 
 const TONES: Record<string, string> = {
   cyan: 'bg-nikito-cyan/12 text-nikito-cyan',
@@ -63,7 +64,7 @@ export function OngletHistorique() {
   const [recherche, setRecherche] = useState('');
   const [periode, setPeriode] = useState<Periode>('3m');
   const [statut, setStatut] = useState<FiltreStatut>('toutes');
-  const [parc, setParc] = useState<string | null>(null);
+  const [parc, setParc] = useFiltreParc(null, 'code');
   const [voirRemplacees, setVoirRemplacees] = useState(false);
 
   // Période, recherche et versions remplacées : base commune des filtres parc / statut
@@ -90,7 +91,7 @@ export function OngletHistorique() {
     base.forEach((c) => c.parc && m.set(c.parc.code, (m.get(c.parc.code) ?? 0) + 1));
     return [...m.entries()].sort((a, b) => a[0].localeCompare(b[0]));
   }, [base]);
-  const parcActif = parc && parcs.some(([p]) => p === parc) ? parc : null;
+  const parcActif = parc;
 
   const correspondStatut = (c: Commande, f: FiltreStatut) =>
     f === 'toutes' || (f === 'en_cours' ? EN_COURS.includes(c.statut) : c.statut === f);

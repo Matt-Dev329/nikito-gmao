@@ -19,6 +19,7 @@ import { ZoneSignature } from '@/components/ui/ZoneSignature';
 import { BoutonTelecharger } from '@/components/ui/BoutonTelecharger';
 import { ROLES_BONS } from '@/lib/acces';
 import { BUCKET_BONS, exportBonPDF, formatDuree, type BonIntervention } from './exportBonPDF';
+import { useCodeParcSelectionne } from '@/hooks/useParcCourant';
 
 // Bons hors ticket, avec en tête les tickets en cours / en attente de pièce
 // (les interventions clôturées sur ticket restent dans « Rapports de réparation »)
@@ -123,6 +124,8 @@ function ContenuBons() {
   const isError = bonsQ.isError || enCoursQ.isError;
   const error = bonsQ.error ?? enCoursQ.error;
 
+  // Parc choisi en haut à gauche : seulement ses bons et tickets
+  const codeParc = useCodeParcSelectionne();
   const elements = useMemo<Element[]>(
     () =>
       [
@@ -131,8 +134,8 @@ function ContenuBons() {
           .map((ticket) => ({ type: 'encours' as const, date: debutTicket(ticket), ticket }))
           .sort((a, b) => b.date.localeCompare(a.date)),
         ...(bonsQ.data ?? []).map((bon) => ({ type: 'bon' as const, date: bon.date_intervention, bon })),
-      ],
-    [bonsQ.data, enCoursQ.data]
+      ].filter((e) => !codeParc || (e.type === 'bon' ? e.bon.parc?.code : e.ticket.equipements?.parc?.code) === codeParc),
+    [bonsQ.data, enCoursQ.data, codeParc]
   );
   const activiteDe = (e: Element) =>
     (e.type === 'bon' ? e.bon.activite : e.ticket.equipements?.categorie?.activite) || 'Autres';

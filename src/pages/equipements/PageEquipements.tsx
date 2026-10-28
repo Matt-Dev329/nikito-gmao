@@ -7,9 +7,10 @@ import { ModaleDetailEquipement } from '@/components/equipements/ModaleDetailEqu
 import { ModaleImportCSV } from '@/components/equipements/ModaleImportCSV';
 import { SignalerInlineButton } from '@/components/shared/SignalerInlineButton';
 import type { EquipementAvecJoins, StatutEquipement } from '@/types/database';
+import { useFiltreParc } from '@/hooks/useParcCourant';
 
 export function PageEquipements() {
-  const [parcFilter, setParcFilter] = useState<string | undefined>(undefined);
+  const [parcFilter, setParcFilter] = useFiltreParc(undefined);
   const [categorieFilter, setCategorieFilter] = useState<string | undefined>(undefined);
   const [statutFilter, setStatutFilter] = useState<StatutEquipement | 'tous'>('tous');
   const [recherche, setRecherche] = useState('');

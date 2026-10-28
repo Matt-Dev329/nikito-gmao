@@ -11,6 +11,7 @@ import { useParcs } from '@/hooks/queries/useReferentiel';
 import { useAuth } from '@/hooks/useAuth';
 import { SignalerInlineButton } from '@/components/shared/SignalerInlineButton';
 import type { Criticite } from '@/types/database';
+import { useFiltreParc } from '@/hooks/useParcCourant';
 
 function SkeletonBlock({ className }: { className?: string }) {
   return (
@@ -44,7 +45,7 @@ function getCriticite(pannes30j: number, plaintes7j: number): Criticite {
 export function Recurrences() {
   const navigate = useNavigate();
   const { utilisateur } = useAuth();
-  const [parcActif, setParcActif] = useState<string | null>(null);
+  const [parcActif, setParcActif] = useFiltreParc(null);
   const [seuilPannes, setSeuilPannes] = useState(3);
   const [erreur5P, setErreur5P] = useState<string | null>(null);
 

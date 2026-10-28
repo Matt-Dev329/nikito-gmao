@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useMemo } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { voitTableauDeBord } from '@/lib/acces';
@@ -21,6 +21,7 @@ import { useIncidents } from '@/hooks/queries/useTickets';
 import { useParcs } from '@/hooks/queries/useReferentiel';
 import { useControlesOuvertureManquants } from '@/hooks/queries/useControlesManquants';
 import type { Criticite } from '@/types/database';
+import { useFiltreParc } from '@/hooks/useParcCourant';
 
 function SkeletonBlock({ className }: { className?: string }) {
   return (
@@ -113,7 +114,7 @@ export function TableauDeBord() {
 
 function ContenuTableauDeBord() {
   const navigate = useNavigate();
-  const [parcActif, setParcActif] = useState<string | null>(null);
+  const [parcActif, setParcActif] = useFiltreParc(null);
 
   const perfQ = useKpiPerformance();
   const mtbfQ = useKpiMtbf();

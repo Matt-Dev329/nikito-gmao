@@ -8,6 +8,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useFormationFilter } from '@/hooks/useFormation';
 import { Pill } from '@/components/ui/Pill';
 import { aAcces, ROLES_HISTORIQUES } from '@/lib/acces';
+import { useFiltreParc } from '@/hooks/useParcCourant';
 
 interface TicketHistorique {
   id: string;
@@ -116,7 +117,7 @@ function ContenuHistoriqueTickets() {
   const [recherche, setRecherche] = useState('');
   const [periode, setPeriode] = useState<Periode>('3m');
   const [statut, setStatut] = useState<FiltreStatut>('tous');
-  const [parc, setParc] = useState<string | null>(null);
+  const [parc, setParc] = useFiltreParc(null, 'code');
   const [activite, setActivite] = useState<string | null>(null);
 
   const base = useMemo(() => {
@@ -145,7 +146,7 @@ function ContenuHistoriqueTickets() {
     return [...m.entries()].sort((a, b) => a[0].localeCompare(b[0], 'fr'));
   };
   const parcs = useMemo(() => compter(base, (t) => t.parc_ticket_code), [base]);
-  const parcActif = parc && parcs.some(([p]) => p === parc) ? parc : null;
+  const parcActif = parc;
   const duParc = base.filter((t) => !parcActif || t.parc_ticket_code === parcActif);
   const activites = useMemo(() => compter(duParc, (t) => t.equipements?.categories_equipement?.activite ?? 'Autres'), [duParc]);
   const activiteActive = activite && activites.some(([a]) => a === activite) ? activite : null;

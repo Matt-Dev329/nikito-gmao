@@ -15,6 +15,7 @@ import { useToast } from '@/components/ui/ToastProvider';
 import { ChampQuantite } from '@/components/ui/ChampQuantite';
 import { SignalerInlineButton } from '@/components/shared/SignalerInlineButton';
 import type { PieceDetacheeAvecJoins } from '@/types/database';
+import { useFiltreParc } from '@/hooks/useParcCourant';
 
 type FiltreCritique = 'tous' | 'critique' | 'ok';
 
@@ -155,7 +156,7 @@ function ContenuStock() {
   // Entrée de stock : parc qui reçoit les pièces (vide = stock commun)
   const [parcEntree, setParcEntree] = useState('');
   const [mouvementQty, setMouvementQty] = useState(1);
-  const [parcFiltre, setParcFiltre] = useState<string | null>(null);
+  const [parcFiltre, setParcFiltre] = useFiltreParc(null, 'libelle');
   const [domaineFiltre, setDomaineFiltre] = useState<string | null>(null);
   const [pieceARanger, setPieceARanger] = useState<PieceDetacheeAvecJoins | null>(null);
 

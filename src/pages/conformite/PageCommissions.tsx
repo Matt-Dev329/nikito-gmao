@@ -4,6 +4,7 @@ import { useCommissions, useCreateCommission, useExtractionsDocument, type Commi
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { ModaleExtractionPV } from './ModaleExtractionPV';
+import { useFiltreParc } from '@/hooks/useParcCourant';
 
 const TYPE_LABELS: Record<string, string> = {
   initiale_ouverture: 'Initiale (ouverture)',
@@ -24,7 +25,7 @@ const RESULTAT_LABELS: Record<string, { label: string; color: string }> = {
 export function PageCommissions() {
   const { data: commissions, isLoading } = useCommissions();
   const [vue, setVue] = useState<'liste' | 'calendrier'>('liste');
-  const [filtreParc, setFiltreParc] = useState('');
+  const [filtreParc, setFiltreParc] = useFiltreParc('');
   const [filtreType, setFiltreType] = useState('');
   const [filtreResultat, setFiltreResultat] = useState('');
   const [showModale, setShowModale] = useState(false);

@@ -19,6 +19,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { formatDateHeure, formatPrix } from './format';
 import { NotesPartagees } from '@/components/shared/NotesPartagees';
 import { useNombreNotes } from '@/hooks/queries/useNotesPartagees';
+import { useCodeParcSelectionne } from '@/hooks/useParcCourant';
 
 const TONES: Record<string, string> = {
   cyan: 'bg-nikito-cyan/12 text-nikito-cyan',
@@ -48,12 +49,14 @@ export function ListeCommandes({ portee, onModifier }: { portee: 'miennes' | 'to
   const { data, isLoading, isError, error } = useCommandes(portee);
   const [filtre, setFiltre] = useState<Filtre>(portee === 'toutes' ? 'demandee' : portee === 'a_preparer' ? 'en_cours' : 'toutes');
 
+  // Parc choisi en haut à gauche : seulement ses commandes
+  const codeParc = useCodeParcSelectionne();
   const commandes = useMemo(() => {
-    const all = data ?? [];
+    const all = (data ?? []).filter((c) => !codeParc || c.parc?.code === codeParc);
     if (filtre === 'toutes') return all;
     if (filtre === 'en_cours') return all.filter((c) => ['demandee', 'validee', 'commandee'].includes(c.statut));
     return all.filter((c) => c.statut === filtre);
-  }, [data, filtre]);
+  }, [data, filtre, codeParc]);
   const { data: nbNotes } = useNombreNotes(
     'commande',
     commandes.map((c) => c.id)

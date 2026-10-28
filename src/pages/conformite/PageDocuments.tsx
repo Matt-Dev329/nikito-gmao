@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { useDocumentsChantier, useCreateDocument, type DocumentChantier } from '@/hooks/queries/useConformite';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
+import { useFiltreParc } from '@/hooks/useParcCourant';
 
 const CATEGORIE_LABELS: Record<string, { label: string; icon: string }> = {
   plan_architecte: { label: 'Plan architecte', icon: 'M' },
@@ -18,7 +19,7 @@ const CATEGORIE_LABELS: Record<string, { label: string; icon: string }> = {
 
 export function PageDocuments() {
   const { data: documents, isLoading } = useDocumentsChantier();
-  const [filtreParc, setFiltreParc] = useState('');
+  const [filtreParc, setFiltreParc] = useFiltreParc('');
   const [filtreCategorie, setFiltreCategorie] = useState('');
   const [showModale, setShowModale] = useState(false);
 

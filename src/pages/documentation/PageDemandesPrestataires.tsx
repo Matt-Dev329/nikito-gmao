@@ -10,6 +10,7 @@ import { useToast } from '@/components/ui/ToastProvider';
 import { Pill } from '@/components/ui/Pill';
 import { ROLES_DIRECTION_PARC, aAcces } from '@/lib/acces';
 import { DOMAINES_PRESTATAIRES } from '@/lib/domainesPrestataires';
+import { useFiltreParc } from '@/hooks/useParcCourant';
 
 const BUCKET = 'alba-techniques';
 const TAILLE_MAX = 50 * 1024 * 1024;
@@ -94,7 +95,7 @@ function ContenuDemandes() {
   const [ajout, setAjout] = useState(false);
   const [filtre, setFiltre] = useState<FiltreStatut>('en_cours');
   const [type, setType] = useState<TypeDemande | null>(null);
-  const [parc, setParc] = useState<string | null>(null);
+  const [parc, setParc] = useFiltreParc(null, 'libelle');
   const [recherche, setRecherche] = useState('');
 
   const parcsDispo = useMemo(() => {
@@ -102,7 +103,7 @@ function ContenuDemandes() {
     (demandes ?? []).filter((d) => correspondStatut(d, filtre)).forEach((d) => m.set(parcDe(d), (m.get(parcDe(d)) ?? 0) + 1));
     return [...m.entries()].sort((a, b) => a[0].localeCompare(b[0], 'fr'));
   }, [demandes, filtre]);
-  const parcActif = parc && parcsDispo.some(([p]) => p === parc) ? parc : null;
+  const parcActif = parc;
 
   const groupes = useMemo(() => {
     const q = recherche.trim().toLowerCase();
