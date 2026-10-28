@@ -6,7 +6,7 @@ import { createClient } from "npm:@supabase/supabase-js@2.45.0";
  * directeurs de parc et les managers principaux du parc :
  *  - { mode: "fait", controle_id } : contrôle quotidien ou hebdo validé
  *    (appelé par le trigger trg_notifier_controle_fait) ;
- *  - { mode: "verifier" } : contrôle quotidien toujours pas validé 30 min
+ *  - { mode: "verifier" } : contrôle quotidien toujours pas fait 30 min
  *    après l'ouverture du parc (appelé toutes les 10 min par pg_cron).
  * Chaque message n'est envoyé qu'une fois (table notifications_controles_envoyees).
  */
@@ -202,7 +202,8 @@ Deno.serve(async (req: Request) => {
           .eq("parc_id", parc.id)
           .eq("type", "quotidien")
           .eq("date_planifiee", now.date)
-          .eq("statut", "valide")
+          // Contrôle déjà fait ou en train d'être fait : pas de rappel
+          .in("statut", ["valide", "en_cours"])
           .eq("est_formation", false);
         if ((count ?? 0) > 0) continue;
         const n = await envoyer(

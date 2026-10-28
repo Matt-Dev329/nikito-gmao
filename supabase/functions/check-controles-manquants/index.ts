@@ -132,16 +132,19 @@ Deno.serve(async (req: Request) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const today = new Date().toISOString().slice(0, 10);
+    // Date du jour à Paris (et non en UTC)
+    const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Paris" }).format(new Date());
 
     const [parcsRes, ctrlRes] = await Promise.all([
-      supabase.from("parcs").select("id, code, nom").eq("actif", true),
+      supabase.from("parcs").select("id, code, nom").eq("actif", true).eq("en_production", true).neq("code", "ECO"),
       supabase
         .from("controles")
         .select("parc_id")
         .eq("type", "quotidien")
         .eq("date_planifiee", today)
-        .eq("statut", "valide"),
+        // Contrôle déjà fait ou en train d'être fait : pas d'alerte
+        .in("statut", ["valide", "en_cours"])
+        .eq("est_formation", false),
     ]);
 
     if (parcsRes.error) throw parcsRes.error;
