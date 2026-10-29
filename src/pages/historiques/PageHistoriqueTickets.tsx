@@ -9,6 +9,7 @@ import { useFormationFilter } from '@/hooks/useFormation';
 import { Pill } from '@/components/ui/Pill';
 import { aAcces, ROLES_HISTORIQUES } from '@/lib/acces';
 import { useFiltreParc } from '@/hooks/useParcCourant';
+import { FiltreParcPills } from '@/components/ui/FiltreParcPills';
 
 interface TicketHistorique {
   id: string;
@@ -231,18 +232,7 @@ function ContenuHistoriqueTickets() {
             </Pill>
           ))}
         </div>
-        {parcs.length > 1 && (
-          <div className="flex gap-1.5 overflow-x-auto pb-1">
-            <Pill active={!parcActif} onClick={() => setParc(null)}>
-              Tous les parcs
-            </Pill>
-            {parcs.map(([p, n]) => (
-              <Pill key={p} active={parcActif === p} onClick={() => setParc(p)}>
-                {p} <span className="opacity-60">· {n}</span>
-              </Pill>
-            ))}
-          </div>
-        )}
+        <FiltreParcPills parcs={parcs} actif={parcActif} onChange={setParc} />
         {activites.length > 1 && (
           <div className="flex gap-1.5 overflow-x-auto pb-1">
             <Pill active={!activiteActive} onClick={() => setActivite(null)}>

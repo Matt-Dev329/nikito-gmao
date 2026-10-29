@@ -11,6 +11,7 @@ import { Pill } from '@/components/ui/Pill';
 import { ROLES_DIRECTION_PARC, aAcces } from '@/lib/acces';
 import { DOMAINES_PRESTATAIRES } from '@/lib/domainesPrestataires';
 import { useFiltreParc } from '@/hooks/useParcCourant';
+import { FiltreParcPills } from '@/components/ui/FiltreParcPills';
 
 const BUCKET = 'alba-techniques';
 const TAILLE_MAX = 50 * 1024 * 1024;
@@ -167,18 +168,7 @@ function ContenuDemandes() {
             </Pill>
           ))}
         </div>
-        {parcsDispo.length > 1 && (
-          <div className="flex gap-1.5 overflow-x-auto pb-1">
-            <Pill active={!parcActif} onClick={() => setParc(null)}>
-              Tous les parcs
-            </Pill>
-            {parcsDispo.map(([p, n]) => (
-              <Pill key={p} active={parcActif === p} onClick={() => setParc(p)}>
-                {p} <span className="opacity-60">· {n}</span>
-              </Pill>
-            ))}
-          </div>
-        )}
+        <FiltreParcPills parcs={parcsDispo} actif={parcActif} onChange={setParc} />
       </div>
 
       {isLoading ? (

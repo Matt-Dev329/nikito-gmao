@@ -8,6 +8,7 @@ import { NotesPartagees } from '@/components/shared/NotesPartagees';
 import { SELECT_COMMANDE, STATUTS_COMMANDE, type Commande, type StatutCommande } from '@/hooks/queries/useCommandes';
 import { formatDateHeure, formatPrix } from './format';
 import { useFiltreParc } from '@/hooks/useParcCourant';
+import { FiltreParcPills } from '@/components/ui/FiltreParcPills';
 
 const TONES: Record<string, string> = {
   cyan: 'bg-nikito-cyan/12 text-nikito-cyan',
@@ -170,18 +171,7 @@ export function OngletHistorique() {
           </Pill>
         ))}
       </div>
-      {parcs.length > 1 && (
-        <div className="flex gap-1.5 overflow-x-auto pb-1">
-          <Pill active={!parcActif} onClick={() => setParc(null)}>
-            Tous les parcs
-          </Pill>
-          {parcs.map(([p, n]) => (
-            <Pill key={p} active={parcActif === p} onClick={() => setParc(p)}>
-              {p} <span className="opacity-60">· {n}</span>
-            </Pill>
-          ))}
-        </div>
-      )}
+      <FiltreParcPills parcs={parcs} actif={parcActif} onChange={setParc} />
       <label className="flex items-center gap-2 text-[12px] text-dim cursor-pointer self-start min-h-[36px]">
         <input type="checkbox" checked={voirRemplacees} onChange={(e) => setVoirRemplacees(e.target.checked)} className="w-4 h-4 accent-nikito-cyan" />
         Afficher aussi les anciennes versions des commandes modifiées

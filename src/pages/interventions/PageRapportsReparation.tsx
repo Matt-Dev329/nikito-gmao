@@ -8,7 +8,8 @@ import { Pill } from '@/components/ui/Pill';
 import { BoutonTelecharger } from '@/components/ui/BoutonTelecharger';
 import { nomDepuisChemin } from '@/lib/telecharger';
 import { useRapports, type Rapport } from '@/hooks/queries/useRapportsReparation';
-import { useCodeParcSelectionne } from '@/hooks/useParcCourant';
+import { useFiltreParc } from '@/hooks/useParcCourant';
+import { FiltreParcPills } from '@/components/ui/FiltreParcPills';
 
 export const ROLES_RAPPORTS = ['direction', 'chef_maintenance', 'directeur_parc', 'manager_parc', 'technicien', 'admin_it'];
 
@@ -44,8 +45,13 @@ function ContenuRapports() {
   const jours = PERIODES.find((p) => p.code === periode)?.jours ?? 30;
   const { data: rapports, isLoading, isError, error } = useRapports(jours);
 
-  // Parc choisi en haut à gauche : seulement ses rapports
-  const codeParc = useCodeParcSelectionne();
+  // Parc : part du parc choisi en haut à gauche, modifiable ici (« Tous les parcs »)
+  const [codeParc, setCodeParc] = useFiltreParc(null, 'code');
+  const parcs = useMemo(() => {
+    const m = new Map<string, number>();
+    (rapports ?? []).forEach((r) => r.parc_code && m.set(r.parc_code, (m.get(r.parc_code) ?? 0) + 1));
+    return [...m.entries()].sort((x, y) => x[0].localeCompare(y[0]));
+  }, [rapports]);
   const duParc = useMemo(() => (rapports ?? []).filter((r) => !codeParc || r.parc_code === codeParc), [rapports, codeParc]);
 
   const activites = useMemo(() => {
@@ -95,6 +101,7 @@ function ContenuRapports() {
             </Pill>
           ))}
         </div>
+        <FiltreParcPills parcs={parcs} actif={codeParc} total={(rapports ?? []).length} onChange={setCodeParc} />
         <input
           type="text"
           value={recherche}
@@ -105,7 +112,7 @@ function ContenuRapports() {
         {activites.length > 0 && (
           <div className="flex gap-1.5 overflow-x-auto pb-1">
             <Pill variant="cyan" active={!activiteActive} onClick={() => setActivite(null)}>
-              Toutes <span className="opacity-60">· {(rapports ?? []).length}</span>
+              Toutes <span className="opacity-60">· {duParc.length}</span>
             </Pill>
             {activites.map(([a, n]) => (
               <Pill key={a} variant="cyan" active={activiteActive === a} onClick={() => setActivite(a)}>
@@ -125,7 +132,14 @@ function ContenuRapports() {
       ) : isError ? (
         <div className="text-red text-[13px] bg-red/10 rounded-lg p-3">Erreur : {(error as Error).message}</div>
       ) : groupes.length === 0 ? (
-        <div className="text-center py-16 text-dim text-sm">Aucun rapport de réparation sur cette période.</div>
+        <div className="text-center py-16 text-dim text-sm">
+          Aucun rapport de réparation sur cette période{codeParc ? ` pour ${codeParc}` : ''}.
+          {codeParc && (
+            <button onClick={() => setCodeParc(null)} className="block mx-auto mt-3 text-nikito-cyan text-[13px] underline">
+              Voir tous les parcs
+            </button>
+          )}
+        </div>
       ) : (
         <div className="flex flex-col gap-6">
           {groupes.map(([act, liste]) => (

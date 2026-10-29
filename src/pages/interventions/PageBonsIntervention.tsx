@@ -19,11 +19,14 @@ import { ZoneSignature } from '@/components/ui/ZoneSignature';
 import { BoutonTelecharger } from '@/components/ui/BoutonTelecharger';
 import { ROLES_BONS } from '@/lib/acces';
 import { BUCKET_BONS, exportBonPDF, formatDuree, type BonIntervention } from './exportBonPDF';
-import { useCodeParcSelectionne } from '@/hooks/useParcCourant';
+import { useFiltreParc } from '@/hooks/useParcCourant';
+import { FiltreParcPills } from '@/components/ui/FiltreParcPills';
 
 // Bons hors ticket, avec en tête les tickets en cours / en attente de pièce
 // (les interventions clôturées sur ticket restent dans « Rapports de réparation »)
 type Element = { type: 'bon'; date: string; bon: BonIntervention } | { type: 'encours'; date: string; ticket: TicketEnCours };
+/** Code du parc d'une ligne (bon signé ou ticket en cours) */
+const parcDe = (e: Element) => (e.type === 'bon' ? e.bon.parc?.code : e.ticket.equipements?.parc?.code) ?? null;
 type Source = 'tous' | 'encours' | 'bon';
 
 /** Ticket pas encore clôturé : intervention en cours, en pause ou en attente de pièce. */
@@ -124,9 +127,9 @@ function ContenuBons() {
   const isError = bonsQ.isError || enCoursQ.isError;
   const error = bonsQ.error ?? enCoursQ.error;
 
-  // Parc choisi en haut à gauche : seulement ses bons et tickets
-  const codeParc = useCodeParcSelectionne();
-  const elements = useMemo<Element[]>(
+  // Parc : part du parc choisi en haut à gauche, modifiable ici (« Tous les parcs »)
+  const [codeParc, setCodeParc] = useFiltreParc(null, 'code');
+  const tousElements = useMemo<Element[]>(
     () =>
       [
         // Tickets pas encore clôturés en tête, quelle que soit la période
@@ -134,9 +137,18 @@ function ContenuBons() {
           .map((ticket) => ({ type: 'encours' as const, date: debutTicket(ticket), ticket }))
           .sort((a, b) => b.date.localeCompare(a.date)),
         ...(bonsQ.data ?? []).map((bon) => ({ type: 'bon' as const, date: bon.date_intervention, bon })),
-      ].filter((e) => !codeParc || (e.type === 'bon' ? e.bon.parc?.code : e.ticket.equipements?.parc?.code) === codeParc),
-    [bonsQ.data, enCoursQ.data, codeParc]
+      ],
+    [bonsQ.data, enCoursQ.data]
   );
+  const parcs = useMemo(() => {
+    const m = new Map<string, number>();
+    tousElements.forEach((e) => {
+      const p = parcDe(e);
+      if (p) m.set(p, (m.get(p) ?? 0) + 1);
+    });
+    return [...m.entries()].sort((x, y) => x[0].localeCompare(y[0]));
+  }, [tousElements]);
+  const elements = useMemo(() => tousElements.filter((e) => !codeParc || parcDe(e) === codeParc), [tousElements, codeParc]);
   const activiteDe = (e: Element) =>
     (e.type === 'bon' ? e.bon.activite : e.ticket.equipements?.categorie?.activite) || 'Autres';
   const texteDe = (e: Element) =>
@@ -215,6 +227,7 @@ function ContenuBons() {
             </Pill>
           ))}
         </div>
+        <FiltreParcPills parcs={parcs} actif={codeParc} total={tousElements.length} onChange={setCodeParc} />
         <input
           type="text"
           value={recherche}
@@ -245,7 +258,14 @@ function ContenuBons() {
       ) : isError ? (
         <div className="text-red text-[13px] bg-red/10 rounded-lg p-3">Erreur : {(error as Error).message}</div>
       ) : filtres.length === 0 ? (
-        <div className="text-center py-16 text-dim text-sm">Aucune intervention sur cette période.</div>
+        <div className="text-center py-16 text-dim text-sm">
+          Aucune intervention sur cette période{codeParc ? ` pour ${codeParc}` : ''}.
+          {codeParc && (
+            <button onClick={() => setCodeParc(null)} className="block mx-auto mt-3 text-nikito-cyan text-[13px] underline">
+              Voir tous les parcs
+            </button>
+          )}
+        </div>
       ) : (
         <div className="flex flex-col gap-2.5">
           {filtres.map((e) =>
