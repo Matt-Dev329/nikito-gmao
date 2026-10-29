@@ -293,6 +293,39 @@ export function useRouvrirTicket() {
   });
 }
 
+export type StatutTicketManuel = 'ouvert' | 'assigne' | 'en_cours' | 'en_pause' | 'attente_piece' | 'resolu' | 'ferme';
+
+/** Changement manuel du statut (chef d'équipe), RPC changer_statut_ticket : tracé dans l'historique du ticket */
+export function useChangerStatutTicket() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      incidentId,
+      statut,
+      motif,
+      testActivite,
+    }: {
+      incidentId: string;
+      statut: StatutTicketManuel;
+      motif: string;
+      testActivite: boolean | null;
+    }) => {
+      const { error } = await supabase.rpc('changer_statut_ticket', {
+        p_incident_id: incidentId,
+        p_statut: statut,
+        p_motif: motif,
+        p_test_activite: testActivite,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['incidents'] });
+      qc.invalidateQueries({ queryKey: ['sidebar-badges'] });
+      qc.invalidateQueries({ queryKey: ['rapports-reparation'] });
+    },
+  });
+}
+
 export function useValiderBrouillonIncident() {
   const qc = useQueryClient();
   return useMutation({

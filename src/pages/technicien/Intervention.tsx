@@ -13,6 +13,7 @@ import { useIncident, useDemarrerIntervention, useValiderTicket } from '@/hooks/
 import { ModaleSupprimerTicket } from '@/components/tickets/ModaleSupprimerTicket';
 import { ModaleRefuserTicket } from '@/components/tickets/ModaleRefuserTicket';
 import { ModaleRouvrirTicket } from '@/components/tickets/ModaleRouvrirTicket';
+import { ModaleChangerStatut, HistoriqueStatuts } from '@/components/tickets/ModaleChangerStatut';
 import { NotesPartagees } from '@/components/shared/NotesPartagees';
 import { peutValiderTicket } from '@/lib/acces';
 import { useCloturerIntervention } from '@/hooks/mutations';
@@ -89,6 +90,18 @@ export function Intervention() {
   // Réouverture : chef d'équipe uniquement (cf RPC rouvrir_ticket)
   const peutRouvrir = utilisateur?.role_code === 'chef_maintenance';
   const [reouverture, setReouverture] = useState(false);
+  // Changement manuel du statut : chef d'équipe (RPC changer_statut_ticket)
+  const peutChangerStatut = utilisateur?.role_code === 'chef_maintenance';
+  const [changementStatut, setChangementStatut] = useState(false);
+  const changementsStatut =
+    (incident?.meta as { changements_statut?: { le: string; par_nom?: string; avant: string; apres: string; motif?: string | null }[] } | null)
+      ?.changements_statut ?? [];
+  const statutAffiche =
+    !['resolu', 'ferme', 'annule'].includes(statutIncident) && incident?.attente_piece
+      ? 'attente_piece'
+      : !['resolu', 'ferme', 'annule'].includes(statutIncident) && incident?.externe
+        ? 'exterieur'
+        : statutIncident;
   const reouvertures = ((incident?.meta as { reouvertures?: { le: string; par_nom?: string; motif: string }[] } | null)?.reouvertures ?? []);
   // Intervention en cours (fin vide) ; pour un ticket résolu, la dernière intervention.
   // Une intervention déjà clôturée d'un ticket rouvert ne doit pas être reprise ni écrasée.
@@ -479,6 +492,33 @@ export function Intervention() {
               </button>
             )}
           </div>
+        )}
+
+        {/* Statut modifiable à la main (chef d'équipe), avec l'historique des changements */}
+        {!estAnnule && !enAttenteValidation && (peutChangerStatut || changementsStatut.length > 0) && (
+          <div className="bg-bg-card border border-white/[0.06] rounded-xl px-4 py-3 flex flex-col gap-2">
+            {peutChangerStatut && (
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="text-[13px] flex-1 min-w-[200px] text-dim">Statut du ticket modifiable à la main</div>
+                <button
+                  onClick={() => setChangementStatut(true)}
+                  className="px-4 rounded-[10px] text-[13px] font-bold min-h-[44px] bg-nikito-cyan/15 text-nikito-cyan border border-nikito-cyan/40"
+                >
+                  ⇄ Changer le statut
+                </button>
+              </div>
+            )}
+            <HistoriqueStatuts changements={changementsStatut} />
+          </div>
+        )}
+        {changementStatut && (
+          <ModaleChangerStatut
+            incidentId={incident.id as string}
+            numeroBT={btNumero ?? ''}
+            statutActuel={statutAffiche}
+            aUnTechnicien={!!incident.assigne_a_id}
+            onClose={() => setChangementStatut(false)}
+          />
         )}
 
         {/* Ticket résolu / fermé : réouverture (chef d'équipe) et historique */}
