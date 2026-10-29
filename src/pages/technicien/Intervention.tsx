@@ -522,11 +522,15 @@ export function Intervention() {
         )}
 
         {/* Ticket résolu / fermé : réouverture (chef d'équipe) et historique */}
-        {(estResolu || reouvertures.length > 0) && (peutRouvrir || reouvertures.length > 0) && (
+        {(estResolu || estAnnule || reouvertures.length > 0) && (peutRouvrir || reouvertures.length > 0) && (
           <div className="bg-bg-card border border-white/[0.06] rounded-xl px-4 py-3 flex flex-col gap-2">
-            {estResolu && peutRouvrir && (
+            {(estResolu || estAnnule) && peutRouvrir && (
               <div className="flex flex-wrap items-center gap-3">
-                <div className="text-[13px] flex-1 min-w-[200px] text-dim">Ticket clôturé. La panne est revenue ou la réparation est incomplète ?</div>
+                <div className="text-[13px] flex-1 min-w-[200px] text-dim">
+                  {estAnnule
+                    ? 'Ticket supprimé ou refusé. Le remettre dans « À faire » ?'
+                    : 'Ticket clôturé. La panne est revenue ou la réparation est incomplète ?'}
+                </div>
                 <button
                   onClick={() => setReouverture(true)}
                   className="px-4 rounded-[10px] text-[13px] font-bold min-h-[44px] bg-amber/15 text-amber border border-amber/40"

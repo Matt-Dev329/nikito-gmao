@@ -17,6 +17,7 @@ import { useToast } from '@/components/ui/ToastProvider';
 import { useSignedUrls } from '@/hooks/useSignedUrl';
 import type { Criticite } from '@/types/database';
 import { useFiltreParc } from '@/hooks/useParcCourant';
+import { ModaleRouvrirTicket } from '@/components/tickets/ModaleRouvrirTicket';
 
 type Onglet = 'a_valider' | 'a_faire' | 'en_cours' | 'attente_piece' | 'exterieur' | 'resolus' | 'controles' | 'preventif';
 
@@ -129,6 +130,8 @@ export function Operations() {
   const [suppressionCible, setSuppressionCible] = useState<{ id: string; numeroBT: string } | null>(null);
   const [refusCible, setRefusCible] = useState<{ id: string; numeroBT: string } | null>(null);
   const [clotureCible, setClotureCible] = useState<{ id: string; numeroBT: string } | null>(null);
+  // Réouverture d'un ticket résolu, depuis l'onglet « Résolus » (chef d'équipe)
+  const [reouvertureCible, setReouvertureCible] = useState<{ id: string; numeroBT: string } | null>(null);
   const validerTicket = useValiderTicket();
   // Managers de parc : suivi des tickets en lecture seule (ni démarrage, ni réassignation)
   // Directeurs et managers : suivi des tickets sans action d'intervention
@@ -482,6 +485,11 @@ export function Operations() {
                 onClick={() => navigate(`/tech/operations/${t.numeroBT}`)}
                 onSupprimer={supprimerSiAutorise(t)}
                 onCloturer={onglet === 'resolus' ? undefined : cloturerSiAutorise(t)}
+                onRouvrir={
+                  onglet === 'resolus' && utilisateur?.role_code === 'chef_maintenance'
+                    ? () => setReouvertureCible({ id: t.id, numeroBT: t.numeroBT })
+                    : undefined
+                }
               />
             ))}
           </>
@@ -514,6 +522,9 @@ export function Operations() {
         )}
       </div>
 
+      {reouvertureCible && (
+        <ModaleRouvrirTicket incidentId={reouvertureCible.id} numeroBT={reouvertureCible.numeroBT} onClose={() => setReouvertureCible(null)} />
+      )}
       {clotureCible && (
         <ModaleClotureRapide incidentId={clotureCible.id} numeroBT={clotureCible.numeroBT} onClose={() => setClotureCible(null)} />
       )}

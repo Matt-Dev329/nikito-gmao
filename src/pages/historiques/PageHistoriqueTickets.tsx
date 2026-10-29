@@ -10,6 +10,7 @@ import { Pill } from '@/components/ui/Pill';
 import { aAcces, ROLES_HISTORIQUES } from '@/lib/acces';
 import { useFiltreParc } from '@/hooks/useParcCourant';
 import { FiltreParcPills } from '@/components/ui/FiltreParcPills';
+import { ModaleRouvrirTicket } from '@/components/tickets/ModaleRouvrirTicket';
 
 interface TicketHistorique {
   id: string;
@@ -114,6 +115,10 @@ export function PageHistoriqueTickets() {
 
 function ContenuHistoriqueTickets() {
   const navigate = useNavigate();
+  const { utilisateur } = useAuth();
+  // Réouverture des tickets résolus, fermés, refusés ou supprimés : chef d'équipe
+  const peutRouvrir = utilisateur?.role_code === 'chef_maintenance';
+  const [aRouvrir, setARouvrir] = useState<TicketHistorique | null>(null);
   const { data, isLoading, isError, error } = useHistoriqueTickets();
   const [recherche, setRecherche] = useState('');
   const [periode, setPeriode] = useState<Periode>('3m');
@@ -275,7 +280,12 @@ function ContenuHistoriqueTickets() {
                     {mois} <span className="text-faint">· {tickets.length}</span>
                   </h2>
                   {tickets.map((t) => (
-                    <LigneTicket key={t.id} ticket={t} onOuvrir={() => navigate(`/gmao/operations/${t.numero_bt}`)} />
+                    <LigneTicket
+                      key={t.id}
+                      ticket={t}
+                      onOuvrir={() => navigate(`/gmao/operations/${t.numero_bt}`)}
+                      onRouvrir={peutRouvrir && ['resolu', 'ferme', 'annule'].includes(t.statut) ? () => setARouvrir(t) : undefined}
+                    />
                   ))}
                 </section>
               ))
@@ -283,6 +293,7 @@ function ContenuHistoriqueTickets() {
           </>
         )}
       </div>
+      {aRouvrir && <ModaleRouvrirTicket incidentId={aRouvrir.id} numeroBT={aRouvrir.numero_bt} onClose={() => setARouvrir(null)} />}
     </div>
   );
 }
@@ -296,7 +307,7 @@ function Chiffre({ valeur, libelle }: { valeur: string; libelle: string }) {
   );
 }
 
-function LigneTicket({ ticket: t, onOuvrir }: { ticket: TicketHistorique; onOuvrir: () => void }) {
+function LigneTicket({ ticket: t, onOuvrir, onRouvrir }: { ticket: TicketHistorique; onOuvrir: () => void; onRouvrir?: () => void }) {
   const cat = categorie(t) as Exclude<FiltreStatut, 'tous'>;
   const etat = ETATS[cat];
   const detail =
@@ -304,36 +315,43 @@ function LigneTicket({ ticket: t, onOuvrir }: { ticket: TicketHistorique; onOuvr
       ? [DETAIL_STATUT[t.statut], t.attente_piece ? 'pièce en attente' : null, t.externe ? 'intervenant extérieur' : null].filter(Boolean).join(' · ')
       : null;
   return (
-    <button
-      onClick={onOuvrir}
-      className={cn(
-        'w-full text-left bg-bg-card rounded-xl border border-white/[0.06] hover:border-nikito-cyan/40 p-3.5 flex items-center gap-3 transition-colors',
-        cat === 'annules' && 'opacity-70'
+    <div className="w-full bg-bg-card rounded-xl border border-white/[0.06] hover:border-nikito-cyan/40 flex items-center transition-colors">
+      <button
+        onClick={onOuvrir}
+        className={cn('flex-1 min-w-0 text-left p-3.5 flex items-center gap-3', cat === 'annules' && 'opacity-70')}
+      >
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="font-mono text-nikito-cyan text-[13px]">{t.numero_bt}</span>
+            <span className={cn('text-[11px] px-2 py-0.5 rounded-md font-medium', etat.classe)}>{etat.label}</span>
+            {detail && <span className="text-[11px] text-dim">{detail}</span>}
+            {t.niveaux_priorite?.code === 'bloquant' && OUVERTS.includes(t.statut) && (
+              <span className="text-[11px] px-2 py-0.5 rounded-md bg-red/15 text-red">Bloquant</span>
+            )}
+          </div>
+          <div className="text-[14px] font-semibold mt-1 truncate">
+            {[t.equipements?.categories_equipement?.activite, t.equipements?.libelle ?? t.titre].filter(Boolean).join(' · ')}
+          </div>
+          {t.description && <div className="text-[12px] text-dim truncate">{t.description}</div>}
+          {cat === 'annules' && t.supprime_motif && <div className="text-[12px] text-dim truncate">Motif : {t.supprime_motif}</div>}
+          <div className="text-[11px] text-faint mt-0.5">
+            {[t.parc_ticket_code, dateHeure(t.declare_le), t.declare_par_nom ? `par ${t.declare_par_nom}` : null, t.resolu_le ? `résolu en ${duree(t.declare_le, t.resolu_le)}` : null]
+              .filter(Boolean)
+              .join(' · ')}
+          </div>
+        </div>
+        <span className="text-faint text-[18px]" aria-hidden>
+          ›
+        </span>
+      </button>
+      {onRouvrir && (
+        <button
+          onClick={onRouvrir}
+          className="mr-3 px-3 rounded-[10px] text-[12px] font-bold min-h-[40px] bg-amber/15 text-amber border border-amber/40 shrink-0"
+        >
+          ↺ Rouvrir
+        </button>
       )}
-    >
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="font-mono text-nikito-cyan text-[13px]">{t.numero_bt}</span>
-          <span className={cn('text-[11px] px-2 py-0.5 rounded-md font-medium', etat.classe)}>{etat.label}</span>
-          {detail && <span className="text-[11px] text-dim">{detail}</span>}
-          {t.niveaux_priorite?.code === 'bloquant' && OUVERTS.includes(t.statut) && (
-            <span className="text-[11px] px-2 py-0.5 rounded-md bg-red/15 text-red">Bloquant</span>
-          )}
-        </div>
-        <div className="text-[14px] font-semibold mt-1 truncate">
-          {[t.equipements?.categories_equipement?.activite, t.equipements?.libelle ?? t.titre].filter(Boolean).join(' · ')}
-        </div>
-        {t.description && <div className="text-[12px] text-dim truncate">{t.description}</div>}
-        {cat === 'annules' && t.supprime_motif && <div className="text-[12px] text-dim truncate">Motif : {t.supprime_motif}</div>}
-        <div className="text-[11px] text-faint mt-0.5">
-          {[t.parc_ticket_code, dateHeure(t.declare_le), t.declare_par_nom ? `par ${t.declare_par_nom}` : null, t.resolu_le ? `résolu en ${duree(t.declare_le, t.resolu_le)}` : null]
-            .filter(Boolean)
-            .join(' · ')}
-        </div>
-      </div>
-      <span className="text-faint text-[18px]" aria-hidden>
-        ›
-      </span>
-    </button>
+    </div>
   );
 }

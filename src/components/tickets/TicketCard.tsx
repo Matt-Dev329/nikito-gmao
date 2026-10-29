@@ -40,6 +40,8 @@ interface TicketCardProps {
   onSupprimer?: () => void;
   /** Clôture rapide avec justification (chef d'équipe, directeurs de parc) */
   onCloturer?: () => void;
+  /** Réouverture d'un ticket résolu (chef d'équipe) */
+  onRouvrir?: () => void;
 }
 
 const borderByCrit: Record<Criticite, string> = {
@@ -55,7 +57,7 @@ const badgeToneClass = {
   red: 'text-red font-semibold',
 };
 
-export function TicketCard({ ticket, variant, onDemarrer, onReassigner, onReprendre, reprenant, onClick, onSupprimer, onCloturer }: TicketCardProps) {
+export function TicketCard({ ticket, variant, onDemarrer, onReassigner, onReprendre, reprenant, onClick, onSupprimer, onCloturer, onRouvrir }: TicketCardProps) {
   if (variant === 'compact') {
     const carte = (
       <button
@@ -98,10 +100,20 @@ export function TicketCard({ ticket, variant, onDemarrer, onReassigner, onRepren
         <span className="text-nikito-cyan text-lg">›</span>
       </button>
     );
-    if (!onSupprimer && !onCloturer) return carte;
+    if (!onSupprimer && !onCloturer && !onRouvrir) return carte;
     return (
       <div className="flex items-stretch gap-1.5">
         <div className="flex-1 min-w-0">{carte}</div>
+        {onRouvrir && (
+          <button
+            onClick={onRouvrir}
+            title="Rouvrir le ticket (motif obligatoire)"
+            aria-label="Rouvrir le ticket"
+            className="bg-bg-card rounded-xl px-3 text-amber border border-amber/30 flex-shrink-0 min-w-[44px] text-[16px] font-bold"
+          >
+            ↺
+          </button>
+        )}
         {onCloturer && (
           <button
             onClick={onCloturer}
