@@ -59,6 +59,11 @@ export function Intervention() {
   const { btNumero } = useParams();
   const navigate = useNavigate();
   const { utilisateur } = useAuth();
+  // Photos AVANT / APRÈS facultatives pour le chef d'équipe et les techniciens arcade
+  // (même règle côté base : photos_reparation_facultatives)
+  const photosFacultatives =
+    utilisateur?.role_code === 'chef_maintenance' ||
+    (utilisateur?.role_code === 'technicien' && utilisateur?.profil_technicien === 'arcade');
   // Phase de test : la saisie des pièces utilisées n'est ouverte qu'aux chefs d'équipe
   const { estGestionnaire: saisiePiecesActive } = useAccesCommandes();
   const cloturer = useCloturerIntervention();
@@ -137,7 +142,7 @@ export function Intervention() {
         setCopiePhoto(false);
       }
     }
-    if (!photo) {
+    if (!photo && !photosFacultatives) {
       toast.error('Prends d’abord la photo AVANT du problème');
       return;
     }
@@ -196,9 +201,9 @@ export function Intervention() {
   const [photosAvant, setPhotosAvant] = useState<string[]>([]);
   const photoAvant = photosAvant[0] ?? null;
   // Rien ne peut être saisi tant que la photo AVANT n'est pas prise
-  const verrouPhoto = !photoAvant && !estResolu;
+  const verrouPhoto = !photoAvant && !estResolu && !photosFacultatives;
   // Démarrage possible : photo AVANT prise, ou photo du signalement réutilisée
-  const photoDisponible = !!photoAvant || (!!photoSignalement && !autrePhoto);
+  const photoDisponible = photosFacultatives || !!photoAvant || (!!photoSignalement && !autrePhoto);
   // Intervention pas encore démarrée (ou en pause) : seul le bloc « Démarrer » est proposé
   // Directeurs et managers de parc : suivi en lecture seule (pas de démarrage ni de saisie),
   // sauf autorisation « peut intervenir » (tickets de leurs parcs, contrôlé en base)
@@ -285,9 +290,9 @@ export function Intervention() {
     setErreur(null);
 
     if (!diagnostic.trim()) return setErreur('Le diagnostic est obligatoire.');
-    if (!photoAvant) return setErreur('La photo AVANT intervention est obligatoire.');
+    if (!photoAvant && !photosFacultatives) return setErreur('La photo AVANT intervention est obligatoire.');
     if (!actions.trim()) return setErreur('Les actions réalisées sont obligatoires.');
-    if (!photoApres) return setErreur('La photo APRES réparation est obligatoire.');
+    if (!photoApres && !photosFacultatives) return setErreur('La photo APRES réparation est obligatoire.');
     if (premierCoup === null) return setErreur('Indique si le problème a été résolu du 1er coup.');
     if (testActivite === null) return setErreur('Indique si le test de l’activité a été fait (oui ou non).');
     if (!incident?.id) return setErreur('Incident introuvable.');
@@ -533,7 +538,9 @@ export function Intervention() {
                     ? signalementVideo
                       ? 'La vidéo prise à la création du ticket sert de photo AVANT. Démarre quand tu es prêt.'
                       : 'La photo prise à la création du ticket sert de photo AVANT. Démarre quand tu es prêt.'
-                    : 'Étape 1 : photo AVANT du problème. Étape 2 : démarrer (chrono, ticket « en cours »).'}
+                    : photosFacultatives
+                      ? 'Photo AVANT facultative pour toi : démarre quand tu es prêt.'
+                      : 'Étape 1 : photo AVANT du problème. Étape 2 : démarrer (chrono, ticket « en cours »).'}
               </div>
               {/* Problème à traiter : toujours sous les yeux du technicien au moment de démarrer */}
               <div className="mt-3 bg-amber/10 border border-amber/40 rounded-xl px-3.5 py-3">
@@ -567,8 +574,8 @@ export function Intervention() {
                     bucketName="alba-interventions"
                     storagePath={`intervention/${btNumero ?? 'draft'}/avant`}
                     onPhotoUploaded={(url) => { setPhotosAvant([url]); setDirty(true); }}
-                    required
-                    label="📷 Photo AVANT réparation (obligatoire pour démarrer)"
+                    required={!photosFacultatives}
+                    label={photosFacultatives ? '📷 Photo AVANT réparation (facultative)' : '📷 Photo AVANT réparation (obligatoire pour démarrer)'}
                   />
                 </div>
               )}
@@ -672,7 +679,7 @@ export function Intervention() {
               chemins={photosAvant}
               onChange={(c) => { setPhotosAvant(c); setDirty(true); }}
               modifiable={!estResolu}
-              required
+              required={!photosFacultatives}
               label="Photo AVANT intervention (avant de toucher à quoi que ce soit)"
             />
           </div>
@@ -784,7 +791,7 @@ export function Intervention() {
               chemins={photosApres}
               onChange={(c) => { setPhotosApres(c); setDirty(true); }}
               modifiable={!estResolu}
-              required
+              required={!photosFacultatives}
               label="Photo APRES reparation"
             />
           </div>
