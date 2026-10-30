@@ -1,7 +1,7 @@
 import { useState, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { TabletHeader } from '@/components/layout/TabletHeader';
-import { CritTag } from '@/components/ui/CritTag';
+import { ChoixGravite } from '@/components/tickets/ChoixGravite';
 import { PhotoCapture } from '@/components/shared/PhotoCapture';
 import { PhotosMultiples } from '@/components/shared/PhotosMultiples';
 import { ModaleQuitterSansValider } from '@/components/ui/ModaleQuitterSansValider';
@@ -417,7 +417,12 @@ export function Intervention() {
       />
 
       <div className="bg-bg-deep px-[18px] py-3.5 flex items-center gap-2.5 border-b border-white/[0.04]">
-        <CritTag niveau={criticite} />
+        <ChoixGravite
+          incidentId={incident.id as string}
+          numeroBT={btNumero ?? ''}
+          niveau={criticite}
+          modifiable={peutChangerStatut && !estAnnule}
+        />
         <span className="text-[13px] text-dim">
           {equipCode}{zoneName ? ` · ${zoneName}` : ''}{parcNom ? ` · ${parcNom}` : ''}
         </span>

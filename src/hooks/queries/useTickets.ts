@@ -293,6 +293,21 @@ export function useRouvrirTicket() {
   });
 }
 
+/** Changement de la gravité d'un ticket (bloquant / majeur / mineur), RPC changer_priorite_incident */
+export function useChangerGraviteTicket() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ incidentId, code }: { incidentId: string; code: 'bloquant' | 'majeur' | 'mineur' }) => {
+      const { error } = await supabase.rpc('changer_priorite_incident', { p_incident_id: incidentId, p_code: code });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['incidents'] });
+      qc.invalidateQueries({ queryKey: ['sidebar-badges'] });
+    },
+  });
+}
+
 export type StatutTicketManuel = 'ouvert' | 'assigne' | 'en_cours' | 'en_pause' | 'attente_piece' | 'resolu' | 'ferme';
 
 /** Changement manuel du statut (chef d'équipe), RPC changer_statut_ticket : tracé dans l'historique du ticket */
