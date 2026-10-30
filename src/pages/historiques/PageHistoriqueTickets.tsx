@@ -8,7 +8,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { useFormationFilter } from '@/hooks/useFormation';
 import { Pill } from '@/components/ui/Pill';
 import { aAcces, ROLES_HISTORIQUES } from '@/lib/acces';
-import { useFiltreParc } from '@/hooks/useParcCourant';
+import { useCodeParcSelectionne } from '@/hooks/useParcCourant';
+import { useEtatUrl } from '@/hooks/useEtatUrl';
 import { FiltreParcPills } from '@/components/ui/FiltreParcPills';
 import { ModaleRouvrirTicket } from '@/components/tickets/ModaleRouvrirTicket';
 
@@ -120,11 +121,18 @@ function ContenuHistoriqueTickets() {
   const peutRouvrir = utilisateur?.role_code === 'chef_maintenance';
   const [aRouvrir, setARouvrir] = useState<TicketHistorique | null>(null);
   const { data, isLoading, isError, error } = useHistoriqueTickets();
+  // Filtres gardés dans l'adresse : le retour depuis un ticket les retrouve
   const [recherche, setRecherche] = useState('');
-  const [periode, setPeriode] = useState<Periode>('3m');
-  const [statut, setStatut] = useState<FiltreStatut>('tous');
-  const [parc, setParc] = useFiltreParc(null, 'code');
-  const [activite, setActivite] = useState<string | null>(null);
+  const [periode, setPeriode] = useEtatUrl<Periode>('periode', '3m');
+  const [statut, setStatut] = useEtatUrl<FiltreStatut>('statut', 'tous');
+  // Parc : celui choisi en haut à gauche, sauf si un autre a été choisi sur la page
+  const codeParcGlobal = useCodeParcSelectionne();
+  const [parcUrl, setParcUrl] = useEtatUrl<string>('parc', '');
+  const parc = parcUrl === '' ? codeParcGlobal : parcUrl === 'tous' ? null : parcUrl;
+  const setParc = (code: string | null) => setParcUrl(code ?? 'tous');
+  const [activiteUrl, setActiviteUrl] = useEtatUrl<string>('activite', '');
+  const activite = activiteUrl || null;
+  const setActivite = (a: string | null) => setActiviteUrl(a ?? '');
 
   const base = useMemo(() => {
     const jours = PERIODES.find(([p]) => p === periode)?.[2] ?? null;

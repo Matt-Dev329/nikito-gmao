@@ -16,7 +16,8 @@ import { useParcs } from '@/hooks/queries/useReferentiel';
 import { useToast } from '@/components/ui/ToastProvider';
 import { useSignedUrls } from '@/hooks/useSignedUrl';
 import type { Criticite } from '@/types/database';
-import { useFiltreParc } from '@/hooks/useParcCourant';
+import { useParcSelectionne } from '@/hooks/useParcCourant';
+import { useEtatUrl } from '@/hooks/useEtatUrl';
 import { ModaleRouvrirTicket } from '@/components/tickets/ModaleRouvrirTicket';
 
 type Onglet = 'a_valider' | 'a_faire' | 'en_cours' | 'attente_piece' | 'exterieur' | 'resolus' | 'controles' | 'preventif';
@@ -121,11 +122,15 @@ export function Operations() {
   const { utilisateur } = useAuth();
   const toast = useToast();
   const reprendre = useReprendreIncident();
-  const [onglet, setOnglet] = useState<Onglet>('a_faire');
-  const [zoneFiltre, setZoneFiltre] = useState<string>('toutes');
-  const [activiteFiltre, setActiviteFiltre] = useState<string>('toutes');
-  // Seulement les tickets en retard, du plus ancien au plus récent
-  const [parcActif, setParcActif] = useFiltreParc(null);
+  // Onglet, parc et filtres gardés dans l'adresse : le retour depuis un ticket les retrouve
+  const [onglet, setOnglet] = useEtatUrl<Onglet>('onglet', 'a_faire');
+  const [zoneFiltre, setZoneFiltre] = useEtatUrl<string>('zone', 'toutes');
+  const [activiteFiltre, setActiviteFiltre] = useEtatUrl<string>('activite', 'toutes');
+  // Parc : celui choisi en haut à gauche, sauf si un autre a été choisi sur la page
+  const parcGlobal = useParcSelectionne();
+  const [parcUrl, setParcUrl] = useEtatUrl<string>('parc', '');
+  const parcActif = parcUrl === '' ? parcGlobal : parcUrl === 'tous' ? null : parcUrl;
+  const setParcActif = (id: string | null) => setParcUrl(id ?? 'tous');
   const [reassignerCible, setReassignerCible] = useState<{ id: string; numeroBT: string } | null>(null);
   const [suppressionCible, setSuppressionCible] = useState<{ id: string; numeroBT: string } | null>(null);
   const [refusCible, setRefusCible] = useState<{ id: string; numeroBT: string } | null>(null);
