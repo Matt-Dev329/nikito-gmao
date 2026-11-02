@@ -395,7 +395,9 @@ export function ControleOuverture({ typeControle = 'quotidien' }: { typeControle
             l'application ouverte ou rouvre-la une fois connecté.
           </div>
         )}
-        <div className="flex flex-wrap gap-2.5 justify-center">
+        <div className="flex flex-wrap gap-2.5 justify-center items-center">
+          {/* Récupérer la dernière version de l'appli sans la fermer (tablettes fixes) */}
+          <BoutonActualiser className="w-11 h-11 text-[18px]" />
           {/* Ouverture déjà faite : accès direct au contrôle hebdo (sinon le staff reste bloqué ici) */}
           {typeControle === 'quotidien' && (
             <button
