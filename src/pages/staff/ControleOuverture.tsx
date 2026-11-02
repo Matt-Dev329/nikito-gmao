@@ -395,12 +395,27 @@ export function ControleOuverture({ typeControle = 'quotidien' }: { typeControle
             l'application ouverte ou rouvre-la une fois connecté.
           </div>
         )}
-        <button
-          onClick={() => navigate(retourDestination)}
-          className="bg-gradient-cta text-text px-6 py-3 rounded-[10px] text-[13px] font-bold min-h-[44px]"
-        >
-          Retour
-        </button>
+        <div className="flex flex-wrap gap-2.5 justify-center">
+          {/* Ouverture déjà faite : accès direct au contrôle hebdo (sinon le staff reste bloqué ici) */}
+          {typeControle === 'quotidien' && (
+            <button
+              onClick={() => navigate(L.autreRoute)}
+              className="bg-gradient-cta text-text px-6 py-3 rounded-[10px] text-[13px] font-bold min-h-[44px]"
+            >
+              Faire le contrôle hebdo
+            </button>
+          )}
+          <button
+            onClick={() => navigate(retourDestination)}
+            className={
+              typeControle === 'quotidien'
+                ? 'bg-bg-card border border-white/[0.08] text-text px-6 py-3 rounded-[10px] text-[13px] font-semibold min-h-[44px]'
+                : 'bg-gradient-cta text-text px-6 py-3 rounded-[10px] text-[13px] font-bold min-h-[44px]'
+            }
+          >
+            Retour
+          </button>
+        </div>
       </div>
     );
   }
