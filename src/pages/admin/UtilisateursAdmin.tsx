@@ -221,10 +221,13 @@ function UserRow({
   reactivant,
   onEnvoyerPin,
   envoiPin,
+  onNouveauCode,
 }: {
   user: UtilisateurRow;
   onEnvoyerPin?: () => void;
   envoiPin?: boolean;
+  /** Nouveau code PIN affiché à l'écran (chef d'équipe), pour le staff sans mail */
+  onNouveauCode?: () => void;
   onSupprimer?: () => void;
   supprimant?: boolean;
   onViewAs?: () => void;
@@ -294,6 +297,16 @@ function UserRow({
             className="text-[11px] font-semibold px-3 py-1.5 rounded-lg bg-bg-deep border border-white/[0.08] text-nikito-cyan hover:border-nikito-cyan/30 transition-colors disabled:opacity-40"
           >
             {envoiPin ? '…' : '✉ Code'}
+          </button>
+        )}
+        {onNouveauCode && (
+          <button
+            onClick={onNouveauCode}
+            disabled={envoiPin}
+            title="Créer un nouveau code et l'afficher ici"
+            className="text-[11px] font-semibold px-3 py-1.5 rounded-lg bg-bg-deep border border-white/[0.08] text-amber hover:border-amber/30 transition-colors disabled:opacity-40"
+          >
+            🔑 Code
           </button>
         )}
         {onReactiver && (
@@ -381,6 +394,23 @@ function ListeActifs({ recherche }: { recherche: string }) {
     }
     setEnvoiPin((s) => new Set([...s].filter((id) => !liste.some((u) => u.id === id))));
     if (ok) toast.success(ok > 1 ? `${ok} codes envoyés par mail` : `Code envoyé par mail à ${liste[0].prenom}`);
+    qc.invalidateQueries({ queryKey: ['utilisateurs'] });
+  };
+
+  // Nouveau code affiché à l'écran (chef d'équipe) : pour le staff sans mail.
+  // Le code n'est enregistré nulle part en clair ; l'ancien ne marche plus.
+  const peutAfficherCode = utilisateur?.role_code === 'chef_maintenance';
+  const [codeAffiche, setCodeAffiche] = useState<{ nom: string; code: string } | null>(null);
+  const nouveauCode = async (u: UtilisateurRow) => {
+    if (u.code_pin_genere_le && !confirm(`Créer un nouveau code pour ${u.prenom} ? L'ancien ne marchera plus.`)) return;
+    setEnvoiPin((s) => new Set([...s, u.id]));
+    const { data: code, error } = await supabase.rpc('generer_pin_staff', { p_utilisateur_id: u.id });
+    setEnvoiPin((s) => new Set([...s].filter((id) => id !== u.id)));
+    if (error || !code) {
+      toast.error(`${u.prenom} ${u.nom} : ${error?.message ?? 'code non créé'}`);
+      return;
+    }
+    setCodeAffiche({ nom: `${u.prenom} ${u.nom}`, code: code as string });
     qc.invalidateQueries({ queryKey: ['utilisateurs'] });
   };
 
@@ -507,6 +537,7 @@ function ListeActifs({ recherche }: { recherche: string }) {
                         : undefined
                     }
                     envoiPin={envoiPin.has(u.id)}
+                    onNouveauCode={peutAfficherCode && gere(u) && u.auth_mode === 'pin_seul' ? () => nouveauCode(u) : undefined}
                   />
                 ))}
               </div>
@@ -514,6 +545,27 @@ function ListeActifs({ recherche }: { recherche: string }) {
           </section>
         ))}
       </div>
+      {codeAffiche && (
+        <div className="fixed inset-0 z-[150] bg-black/60 flex items-end md:items-center justify-center md:p-4" onClick={() => setCodeAffiche(null)}>
+          <div
+            className="w-full md:max-w-[400px] bg-bg-card rounded-t-[18px] md:rounded-[18px] border border-amber/30 p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] text-center"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="text-[14px] text-dim">Nouveau code de connexion de</div>
+            <div className="text-[16px] font-semibold mb-3">{codeAffiche.nom}</div>
+            <div className="font-mono text-[40px] font-bold tracking-[0.3em] text-amber bg-bg-deep rounded-xl py-4 select-all">{codeAffiche.code}</div>
+            <div className="text-[12px] text-dim mt-3">
+              Note-le et donne-le à la personne : il ne sera plus affiché après fermeture. Son ancien code ne marche plus.
+            </div>
+            <button
+              onClick={() => setCodeAffiche(null)}
+              className="mt-4 w-full rounded-[10px] text-[13px] font-bold min-h-[44px] bg-gradient-cta text-text"
+            >
+              C’est noté
+            </button>
+          </div>
+        </div>
+      )}
       {editUser && (
         <ModaleEditerUtilisateur
           open={!!editUser}
