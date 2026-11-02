@@ -15,7 +15,7 @@ import { ModaleRefuserTicket } from '@/components/tickets/ModaleRefuserTicket';
 import { ModaleRouvrirTicket } from '@/components/tickets/ModaleRouvrirTicket';
 import { ModaleChangerStatut, HistoriqueStatuts } from '@/components/tickets/ModaleChangerStatut';
 import { NotesPartagees } from '@/components/shared/NotesPartagees';
-import { peutValiderTicket } from '@/lib/acces';
+import { peutValiderTicket, peutModifierTicket } from '@/lib/acces';
 import { useCloturerIntervention } from '@/hooks/mutations';
 import { ChoixTestActivite } from '@/components/tickets/ChoixTestActivite';
 import { useAuth } from '@/hooks/useAuth';
@@ -90,8 +90,8 @@ export function Intervention() {
   // Réouverture : chef d'équipe uniquement (cf RPC rouvrir_ticket)
   const peutRouvrir = utilisateur?.role_code === 'chef_maintenance';
   const [reouverture, setReouverture] = useState(false);
-  // Changement manuel du statut : chef d'équipe (RPC changer_statut_ticket)
-  const peutChangerStatut = utilisateur?.role_code === 'chef_maintenance';
+  // Modifier gravité / statut : gestion — direction, chef d'équipe, directeur de parc (ses parcs), admin IT
+  const peutChangerStatut = peutModifierTicket(utilisateur, (equip?.parc_id ?? incident?.parc_ticket) as string | undefined);
   const [changementStatut, setChangementStatut] = useState(false);
   const changementsStatut =
     (incident?.meta as { changements_statut?: { le: string; par_nom?: string; avant: string; apres: string; motif?: string | null }[] } | null)

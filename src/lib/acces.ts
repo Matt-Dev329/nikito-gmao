@@ -170,3 +170,19 @@ export function peutValiderTicket(
   if (u.role_code === 'manager_parc') return (u.parcs_manager_principal ?? []).includes(parcId);
   return false;
 }
+
+/**
+ * Modifier la gravité ou le statut d'un ticket (même règle qu'en base :
+ * changer_priorite_incident / changer_statut_ticket) : chef d'équipe,
+ * direction et admin IT partout ; directeur de parc sur ses parcs. Ni les
+ * managers, ni les techniciens, ni le staff.
+ */
+export function peutModifierTicket(
+  u: { role_code: string; parc_ids: string[] } | null | undefined,
+  parcId: string | null | undefined
+): boolean {
+  if (!u) return false;
+  if (['direction', 'chef_maintenance', 'admin_it'].includes(u.role_code)) return true;
+  if (u.role_code === 'directeur_parc') return !!parcId && u.parc_ids.includes(parcId);
+  return false;
+}
