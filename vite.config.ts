@@ -2,10 +2,30 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 import path from 'path';
+import type { Plugin } from 'vite';
+
+// Numéro de version de chaque mise en ligne : l'appli le compare à
+// /version.json pour se recharger d'elle-même quand une nouvelle version
+// est publiée (src/lib/miseAJour.ts)
+const BUILD_ID = new Date().toISOString();
+
+function fichierVersion(): Plugin {
+  return {
+    name: 'alba-version',
+    apply: 'build',
+    generateBundle() {
+      this.emitFile({ type: 'asset', fileName: 'version.json', source: JSON.stringify({ build: BUILD_ID }) });
+    },
+  };
+}
 
 export default defineConfig({
+  define: {
+    __ALBA_BUILD__: JSON.stringify(BUILD_ID),
+  },
   plugins: [
     react(),
+    fichierVersion(),
     VitePWA({
       registerType: 'autoUpdate',
       // Enregistrement fait par l'appli (src/lib/miseAJour.ts) pour vérifier les mises à jour

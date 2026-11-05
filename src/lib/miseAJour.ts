@@ -15,8 +15,60 @@ import { registerSW } from 'virtual:pwa-register';
 
 let registration: ServiceWorkerRegistration | undefined;
 
+/**
+ * Version publiée (version.json, jamais mis en cache) comparée à celle qui
+ * tourne : si une nouvelle version est en ligne, l'appli se met à jour seule
+ * — tout de suite au retour sur l'appli, sinon dès que l'écran n'a pas été
+ * touché depuis 2 minutes (pour ne pas recharger en pleine saisie ; les
+ * saisies en cours sont de toute façon gardées en brouillon).
+ */
+let nouvelleVersionEnLigne = false;
+let derniereActivite = Date.now();
+const CLE_TENTATIVE = 'alba:maj_tentee';
+
+async function nouvelleVersionPubliee(): Promise<boolean> {
+  if (!navigator.onLine || typeof __ALBA_BUILD__ === 'undefined') return false;
+  try {
+    const r = await fetch(`/version.json?t=${Date.now()}`, { cache: 'no-store' });
+    if (!r.ok) return false;
+    const { build } = (await r.json()) as { build?: string };
+    return !!build && build !== __ALBA_BUILD__;
+  } catch {
+    return false;
+  }
+}
+
+async function appliquerSiNouvelleVersion(immediat: boolean): Promise<void> {
+  if (!nouvelleVersionEnLigne) nouvelleVersionEnLigne = await nouvelleVersionPubliee();
+  if (!nouvelleVersionEnLigne) return;
+  const inactif = Date.now() - derniereActivite > 2 * 60 * 1000;
+  if (!immediat && !inactif) return;
+  // Garde-fou : une seule tentative toutes les 10 minutes (évite une boucle de rechargements)
+  try {
+    const derniere = Number(sessionStorage.getItem(CLE_TENTATIVE) ?? 0);
+    if (Date.now() - derniere < 10 * 60 * 1000) return;
+    sessionStorage.setItem(CLE_TENTATIVE, String(Date.now()));
+  } catch {
+    // stockage indisponible : on tente quand même
+  }
+  await actualiserApplication();
+}
+
+function surveillerNouvelleVersion(): void {
+  for (const evt of ['pointerdown', 'keydown', 'touchstart']) {
+    window.addEventListener(evt, () => (derniereActivite = Date.now()), { passive: true });
+  }
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') void appliquerSiNouvelleVersion(true);
+  });
+  window.setInterval(() => void appliquerSiNouvelleVersion(false), 5 * 60 * 1000);
+  void appliquerSiNouvelleVersion(false);
+}
+
 export function initialiserMisesAJour(): void {
-  if (typeof window === 'undefined' || !('serviceWorker' in navigator)) return;
+  if (typeof window === 'undefined') return;
+  surveillerNouvelleVersion();
+  if (!('serviceWorker' in navigator)) return;
   registerSW({
     immediate: true,
     onRegisteredSW(_url, reg) {
