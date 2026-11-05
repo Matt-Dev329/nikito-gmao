@@ -49,7 +49,9 @@ export function useSignedUrl(
     // Re-signe avant l'expiration du jeton pour que les images restent valides.
     refetchInterval: Math.max((expiresIn - 600) * 1000, 60_000),
     gcTime: expiresIn * 1000,
-    refetchOnWindowFocus: false,
+    // Tablette en veille : le renouvellement périodique s'arrête ; au retour sur
+    // l'appli, les liens périmés (plus de 50 min) sont re-signés
+    refetchOnWindowFocus: true,
   })
 }
 
@@ -82,6 +84,8 @@ export function useSignedUrls(
     staleTime: Math.max((expiresIn - 600) * 1000, 60_000),
     refetchInterval: Math.max((expiresIn - 600) * 1000, 60_000),
     gcTime: expiresIn * 1000,
-    refetchOnWindowFocus: false,
+    // Tablette en veille : le renouvellement périodique s'arrête ; au retour sur
+    // l'appli, les liens périmés (plus de 50 min) sont re-signés
+    refetchOnWindowFocus: true,
   })
 }
