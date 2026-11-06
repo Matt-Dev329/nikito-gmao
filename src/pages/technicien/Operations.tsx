@@ -10,7 +10,7 @@ import { useIncidents, useNombreTicketsParParc, useReprendreIncident, useTickets
 import { ModaleSupprimerTicket } from '@/components/tickets/ModaleSupprimerTicket';
 import { ModaleRefuserTicket } from '@/components/tickets/ModaleRefuserTicket';
 import { ModaleClotureRapide } from '@/components/tickets/ModaleClotureRapide';
-import { aAcces, peutValiderTicket, ROLES_DIRECTION_PARC, voitToutLeParc } from '@/lib/acces';
+import { aAcces, peutValiderTicket, ROLES_DEMANDES_PRESTA, voitToutLeParc } from '@/lib/acces';
 import { useAuth } from '@/hooks/useAuth';
 import { useParcs } from '@/hooks/queries/useReferentiel';
 import { useToast } from '@/components/ui/ToastProvider';
@@ -189,8 +189,8 @@ export function Operations() {
     parcId: parcIdEffectif,
   });
 
-  // Demandes spécifiques et prestataires en cours (directeurs de parc, chef d'équipe, direction, admin IT)
-  const voitDemandes = aAcces(utilisateur, ROLES_DIRECTION_PARC);
+  // Demandes spécifiques et prestataires en cours (directeurs de parc, managers principaux, chef d'équipe, direction, admin IT)
+  const voitDemandes = aAcces(utilisateur, ROLES_DEMANDES_PRESTA);
   const demandesQ = useDemandesEnCours(voitDemandes);
   const demandes = useMemo(
     () => (demandesQ.data ?? []).filter((d) => !parcIdEffectif || d.parc_id === parcIdEffectif),

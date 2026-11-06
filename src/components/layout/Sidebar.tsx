@@ -14,7 +14,7 @@ import { useViewAs } from '@/hooks/useViewAs';
 import { useParcCourant } from '@/hooks/useParcCourant';
 import { useFeatureFlags } from '@/hooks/useFeatureFlags';
 import { useAccesCommandes } from '@/hooks/queries/useCommandes';
-import { ROLES_STOCK, ROLES_PILOTAGE, ROLES_DIRECTION_PARC, ROLES_ANALYSE_CAUSES, ROLES_BONS, ROLES_HISTORIQUES, ROLES_HISTORIQUE_COMMANDES, estManagerPrincipal, rolesAttribuables, voitTableauDeBord } from '@/lib/acces';
+import { ROLES_STOCK, ROLES_PILOTAGE, ROLES_DIRECTION_PARC, ROLES_DEMANDES_PRESTA, ROLES_ANALYSE_CAUSES, ROLES_BONS, ROLES_HISTORIQUES, ROLES_HISTORIQUE_COMMANDES, estManagerPrincipal, rolesAttribuables, voitTableauDeBord } from '@/lib/acces';
 import type { RoleUtilisateur } from '@/types/database';
 
 const TOUR_KEYS: Record<string, string> = {
@@ -78,7 +78,7 @@ const sections: { titre: string; items: NavItem[] }[] = [
       { to: '/gmao/prestataires', label: 'Rapports prestataires', roles: ROLES_PILOTAGE },
       { to: '/gmao/analyses-prestataires', label: 'Analyses prestataires', roles: ROLES_PILOTAGE },
       { to: '/gmao/contrats', label: 'Contrats prestataires', roles: ROLES_DIRECTION_PARC },
-      { to: '/gmao/demandes-prestataires', label: 'Demandes prestataires', roles: ROLES_DIRECTION_PARC },
+      { to: '/gmao/demandes-prestataires', label: 'Demandes prestataires', roles: ROLES_DEMANDES_PRESTA },
       { to: '/gmao/formations-personnel', label: 'Formations du personnel', roles: ROLES_PILOTAGE },
       { to: '/gmao/equipements', label: 'Équipements', featureCode: 'equipements', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'technicien', 'manager_parc', 'admin_it'] },
       { to: '/gmao/recurrences', label: 'Récurrences', featureCode: 'recurrences', badgeKey: 'recurrences', badgeTone: 'red', roles: ROLES_ANALYSE_CAUSES },

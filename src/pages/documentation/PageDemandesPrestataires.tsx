@@ -8,7 +8,7 @@ import { useParcs } from '@/hooks/queries/useReferentiel';
 import { useSignedUrls } from '@/hooks/useSignedUrl';
 import { useToast } from '@/components/ui/ToastProvider';
 import { Pill } from '@/components/ui/Pill';
-import { ROLES_DIRECTION_PARC, aAcces } from '@/lib/acces';
+import { ROLES_DEMANDES_PRESTA, aAcces } from '@/lib/acces';
 import { DOMAINES_PRESTATAIRES } from '@/lib/domainesPrestataires';
 import { useFiltreParc } from '@/hooks/useParcCourant';
 import { FiltreParcPills } from '@/components/ui/FiltreParcPills';
@@ -87,7 +87,7 @@ function useDemandes() {
 /** Demandes spécifiques et demandes d'intervention aux prestataires, réservées aux directeurs de parc. */
 export function PageDemandesPrestataires() {
   const { utilisateur } = useAuth();
-  if (utilisateur && !aAcces(utilisateur, ROLES_DIRECTION_PARC)) return <Navigate to="/" replace />;
+  if (utilisateur && !aAcces(utilisateur, ROLES_DEMANDES_PRESTA)) return <Navigate to="/" replace />;
   return <ContenuDemandes />;
 }
 
@@ -340,7 +340,10 @@ function FormulaireDemande({ onFini }: { onFini: () => void }) {
   const { data: tousParcs } = useParcs();
   // Un directeur de parc ne crée des demandes que pour ses parcs
   const parcs = ((tousParcs ?? []) as Array<{ id: string; code: string; nom: string }>).filter(
-    (p) => utilisateur?.role_code !== 'directeur_parc' || utilisateur.parc_ids.includes(p.id)
+    (p) =>
+      utilisateur?.role_code === 'manager_parc'
+        ? (utilisateur.parcs_manager_principal ?? []).includes(p.id)
+        : utilisateur?.role_code !== 'directeur_parc' || utilisateur.parc_ids.includes(p.id)
   );
   const [parcId, setParcId] = useState(utilisateur?.parc_ids?.length === 1 ? utilisateur.parc_ids[0] : '');
   const [type, setType] = useState<TypeDemande>('intervention');

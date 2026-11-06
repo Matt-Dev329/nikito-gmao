@@ -39,6 +39,13 @@ export const ROLES_PILOTAGE: string[] = ['direction', 'chef_maintenance', 'direc
 export const ROLES_DIRECTION_PARC: RoleUtilisateur[] = ['direction', 'chef_maintenance', 'directeur_parc', 'admin_it'];
 
 /**
+ * Demandes spécifiques / prestataires : comme ROLES_DIRECTION_PARC, plus les
+ * managers principaux sur leurs parcs (même règle en base :
+ * acces_demandes_prestataires).
+ */
+export const ROLES_DEMANDES_PRESTA: string[] = [...ROLES_DIRECTION_PARC, 'manager_principal'];
+
+/**
  * Tableau de bord (indicateurs de performance) : réservé à Ryad, et à lui seul
  * (même règle en base : acces_tableau_de_bord).
  */
