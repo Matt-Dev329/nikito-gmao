@@ -45,6 +45,9 @@ const LIBELLES_ACTION: Partial<Record<StatutCommande, string>> = {
 
 type Filtre = 'en_cours' | 'toutes' | StatutCommande;
 
+/** Commande Arcade (une commande ne porte que sur une activité) */
+const estArcade = (c: Commande) => c.commande_lignes.some((l) => l.activite_nom?.trim().toLowerCase() === 'arcade');
+
 export function ListeCommandes({ portee, onModifier }: { portee: 'miennes' | 'toutes' | 'a_preparer'; onModifier?: () => void }) {
   const { data, isLoading, isError, error } = useCommandes(portee);
   const [filtre, setFiltre] = useState<Filtre>(portee === 'toutes' ? 'demandee' : portee === 'a_preparer' ? 'en_cours' : 'toutes');
@@ -105,17 +108,34 @@ export function ListeCommandes({ portee, onModifier }: { portee: 'miennes' | 'to
           <p className="text-dim text-sm">Aucune commande.</p>
         </div>
       ) : (
-        <div className="space-y-2.5">
-          {commandes.map((c) => (
-            <CarteCommande
-              key={c.id}
-              commande={c}
-              gestion={portee === 'toutes'}
-              preparation={portee === 'a_preparer'}
-              onModifier={onModifier}
-              nbNotes={nbNotes?.[c.id] ?? 0}
-            />
-          ))}
+        // Deux rubriques : commandes Arcade, puis toutes les autres activités
+        <div className="flex flex-col gap-6">
+          {(
+            [
+              ['Arcade', commandes.filter(estArcade)],
+              ['Autres activités', commandes.filter((c) => !estArcade(c))],
+            ] as [string, Commande[]][]
+          )
+            .filter(([, liste]) => liste.length > 0)
+            .map(([rubrique, liste]) => (
+              <section key={rubrique}>
+                <h2 className="text-[13px] text-dim uppercase tracking-wider mb-2">
+                  {rubrique} <span className="text-faint">· {liste.length}</span>
+                </h2>
+                <div className="space-y-2.5">
+                  {liste.map((c) => (
+                    <CarteCommande
+                      key={c.id}
+                      commande={c}
+                      gestion={portee === 'toutes'}
+                      preparation={portee === 'a_preparer'}
+                      onModifier={onModifier}
+                      nbNotes={nbNotes?.[c.id] ?? 0}
+                    />
+                  ))}
+                </div>
+              </section>
+            ))}
         </div>
       )}
     </div>
