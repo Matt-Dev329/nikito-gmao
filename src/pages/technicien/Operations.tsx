@@ -10,7 +10,7 @@ import { useIncidents, useNombreTicketsParParc, useReprendreIncident, useTickets
 import { ModaleSupprimerTicket } from '@/components/tickets/ModaleSupprimerTicket';
 import { ModaleRefuserTicket } from '@/components/tickets/ModaleRefuserTicket';
 import { ModaleClotureRapide } from '@/components/tickets/ModaleClotureRapide';
-import { peutValiderTicket, voitToutLeParc } from '@/lib/acces';
+import { aAcces, peutValiderTicket, ROLES_DIRECTION_PARC, voitToutLeParc } from '@/lib/acces';
 import { useAuth } from '@/hooks/useAuth';
 import { useParcs } from '@/hooks/queries/useReferentiel';
 import { useToast } from '@/components/ui/ToastProvider';
@@ -19,8 +19,10 @@ import type { Criticite } from '@/types/database';
 import { useParcSelectionne } from '@/hooks/useParcCourant';
 import { useEtatUrl } from '@/hooks/useEtatUrl';
 import { ModaleRouvrirTicket } from '@/components/tickets/ModaleRouvrirTicket';
+import { useDemandesEnCours } from '@/hooks/queries/useDemandesEnCours';
+import { ListeDemandesPresta } from '@/components/tickets/ListeDemandesPresta';
 
-type Onglet = 'a_valider' | 'a_faire' | 'en_cours' | 'attente_piece' | 'exterieur' | 'resolus' | 'controles' | 'preventif';
+type Onglet = 'a_valider' | 'a_faire' | 'en_cours' | 'attente_piece' | 'exterieur' | 'resolus' | 'demandes' | 'controles' | 'preventif';
 
 interface ParcOption {
   id: string;
@@ -187,6 +189,14 @@ export function Operations() {
     parcId: parcIdEffectif,
   });
 
+  // Demandes spécifiques et prestataires en cours (directeurs de parc, chef d'équipe, direction, admin IT)
+  const voitDemandes = aAcces(utilisateur, ROLES_DIRECTION_PARC);
+  const demandesQ = useDemandesEnCours(voitDemandes);
+  const demandes = useMemo(
+    () => (demandesQ.data ?? []).filter((d) => !parcIdEffectif || d.parc_id === parcIdEffectif),
+    [demandesQ.data, parcIdEffectif]
+  );
+
   // Tickets ouverts : total et nombre par parc (affichés sur les boutons de parc)
   const { data: nombreTickets } = useNombreTicketsParParc();
 
@@ -351,6 +361,9 @@ export function Operations() {
           { code: 'attente_piece' as Onglet, label: 'Pièce en attente', badge: compteurs.attentePiece, badgeTone: 'amber' },
           { code: 'exterieur' as Onglet, label: 'Extérieur', badge: compteurs.exterieur, badgeTone: 'amber' },
           { code: 'resolus' as Onglet, label: 'Résolus', badge: compteurs.resolus, badgeTone: 'white' },
+          ...(voitDemandes
+            ? [{ code: 'demandes' as Onglet, label: 'Demandes presta', badge: demandes.length, badgeTone: 'amber' }]
+            : []),
           { code: 'controles' as Onglet, label: 'Contrôles' },
           { code: 'preventif' as Onglet, label: 'Préventif' },
         ].map((o) => (
@@ -383,7 +396,7 @@ export function Operations() {
         ))}
       </div>
 
-      {activites.length > 0 && (
+      {onglet !== 'demandes' && activites.length > 0 && (
         <div className="px-3 md:px-[18px] pt-3 bg-bg-deep flex gap-2 items-center overflow-x-auto">
           <span className="text-[11px] text-faint uppercase tracking-wider mr-1 flex-shrink-0">Activité</span>
           {[['toutes', tickets.length] as [string, number], ...activites].map(([a, n]) => (
@@ -407,23 +420,25 @@ export function Operations() {
         </div>
       )}
 
-      <div className="px-3 md:px-[18px] py-3 bg-bg-deep flex gap-2 items-center flex-wrap border-b border-white/[0.04]">
-        <span className="text-[11px] text-faint uppercase tracking-wider mr-1">Zone</span>
-        {zones.map((z) => (
-          <button
-            key={z}
-            onClick={() => setZoneFiltre(z)}
-            className={cn(
-              'px-3 py-1.5 rounded-[14px] text-[11px] min-h-[44px]',
-              zoneFiltre === z
-                ? 'bg-nikito-cyan text-bg-app font-semibold'
-                : 'bg-transparent border border-white/10 text-dim'
-            )}
-          >
-            {z === 'toutes' ? 'Toutes' : z}
-          </button>
-        ))}
-      </div>
+      {onglet !== 'demandes' && (
+        <div className="px-3 md:px-[18px] py-3 bg-bg-deep flex gap-2 items-center flex-wrap border-b border-white/[0.04]">
+          <span className="text-[11px] text-faint uppercase tracking-wider mr-1">Zone</span>
+          {zones.map((z) => (
+            <button
+              key={z}
+              onClick={() => setZoneFiltre(z)}
+              className={cn(
+                'px-3 py-1.5 rounded-[14px] text-[11px] min-h-[44px]',
+                zoneFiltre === z
+                  ? 'bg-nikito-cyan text-bg-app font-semibold'
+                  : 'bg-transparent border border-white/10 text-dim'
+              )}
+            >
+              {z === 'toutes' ? 'Toutes' : z}
+            </button>
+          ))}
+        </div>
+      )}
 
       <div className="p-3 px-3 md:p-3.5 md:px-[18px] flex flex-col gap-2.5 bg-bg-app">
         {incidentsQ.isLoading ? (
@@ -471,6 +486,12 @@ export function Operations() {
                 </div>
               </div>
             ))
+          )
+        ) : onglet === 'demandes' ? (
+          demandesQ.isLoading ? (
+            <div className="text-center py-12 text-dim text-sm">Chargement…</div>
+          ) : (
+            <ListeDemandesPresta demandes={demandes} />
           )
         ) : onglet === 'controles' || onglet === 'preventif' ? (
           <div className="text-center py-12 text-dim text-sm">
