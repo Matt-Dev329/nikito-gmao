@@ -1,4 +1,3 @@
-import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.45.0";
 
 /**
@@ -7,7 +6,10 @@ import { createClient } from "npm:@supabase/supabase-js@2.45.0";
  *  - { mode: "fait", controle_id } : contrôle quotidien ou hebdo validé
  *    (appelé par le trigger trg_notifier_controle_fait) ;
  *  - { mode: "verifier" } : contrôle quotidien toujours pas fait 30 min
- *    après l'ouverture du parc (appelé toutes les 10 min par pg_cron).
+ *    après l'ouverture du parc (appelé toutes les 10 min par pg_cron) ;
+ *    contrôle hebdo de la semaine (mardi → lundi) pas encore validé : rappel
+ *    le jeudi (ou le jour d'ouverture suivant) puis « dernier jour » le
+ *    dernier jour d'ouverture de la semaine, 1 h après l'ouverture.
  * Chaque message n'est envoyé qu'une fois (table notifications_controles_envoyees).
  */
 
@@ -18,6 +20,19 @@ const corsHeaders = {
 };
 
 const DELAI_APRES_OUVERTURE_MIN = 30;
+const DELAI_RAPPEL_HEBDO_MIN = 60;
+/** Semaine du contrôle hebdo : du mardi (génération) au lundi */
+const SEMAINE_HEBDO = ["mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche", "lundi"];
+/** Premier rappel : le jeudi (3e jour), ou le jour d'ouverture suivant */
+const INDEX_RAPPEL_HEBDO = 2;
+
+/** AAAA-MM-JJ décalée de n jours */
+const decaler = (date: string, n: number) => {
+  const d = new Date(`${date}T12:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + n);
+  return d.toISOString().slice(0, 10);
+};
+const jjmm = (date: string) => `${date.slice(8, 10)}/${date.slice(5, 7)}`;
 const LIBELLES: Record<string, string> = { quotidien: "quotidien", hebdo: "hebdomadaire" };
 
 type Evenement = "fait" | "non_fait";
@@ -215,6 +230,46 @@ Deno.serve(async (req: Request) => {
           `Le contrôle quotidien de ${parc.nom} n'est toujours pas validé, ${DELAI_APRES_OUVERTURE_MIN} minutes après l'ouverture (${h.ouverture.slice(0, 5)}).`,
         );
         if (n) alertes++;
+      }
+
+      // Contrôle hebdo pas encore fait cette semaine (mardi → lundi)
+      const indexJour = SEMAINE_HEBDO.indexOf(now.jour);
+      if (indexJour >= 0) {
+        const debutSemaine = decaler(now.date, -indexJour);
+        const finSemaine = decaler(debutSemaine, 6);
+        for (const parc of (parcs ?? []) as Parc[]) {
+          const h = horairesDuJour(parc, now.jour);
+          if (!h) continue;
+          if (now.minutes < enMinutes(h.ouverture) + DELAI_RAPPEL_HEBDO_MIN) continue;
+          const ouverts = SEMAINE_HEBDO.map((j, i) => (horairesDuJour(parc, j) ? i : -1)).filter((i) => i >= 0);
+          const dernierOuvert = ouverts[ouverts.length - 1];
+          const premierRappel = ouverts.find((i) => i >= INDEX_RAPPEL_HEBDO);
+          const dernierJour = indexJour === dernierOuvert;
+          if (!dernierJour && indexJour !== premierRappel) continue;
+          const { count } = await service
+            .from("controles")
+            .select("id", { count: "exact", head: true })
+            .eq("parc_id", parc.id)
+            .eq("type", "hebdo")
+            .eq("statut", "valide")
+            .eq("est_formation", false)
+            .or(`and(date_planifiee.gte.${debutSemaine},date_planifiee.lte.${finSemaine}),date_validation.gte.${decaler(debutSemaine, -1)}T22:00:00Z`);
+          if ((count ?? 0) > 0) continue;
+          const derniereDate = decaler(debutSemaine, dernierOuvert);
+          const n = await envoyer(
+            parc,
+            "hebdo",
+            now.date,
+            "non_fait",
+            dernierJour
+              ? `⚠️ Dernier jour : contrôle hebdo pas fait · ${parc.nom}`
+              : `📋 Contrôle hebdo pas encore fait · ${parc.nom}`,
+            dernierJour
+              ? `Le contrôle hebdomadaire de ${parc.nom} (semaine du mardi ${jjmm(debutSemaine)}) n'est toujours pas validé. Il doit être fait aujourd'hui, avant la fermeture.`
+              : `Le contrôle hebdomadaire de ${parc.nom} (semaine du mardi ${jjmm(debutSemaine)}) n'est pas encore validé. Il reste jusqu'au ${SEMAINE_HEBDO[dernierOuvert]} ${jjmm(derniereDate)} pour le faire.`,
+          );
+          if (n) alertes++;
+        }
       }
       return repondre({ success: true, alertes });
     }
