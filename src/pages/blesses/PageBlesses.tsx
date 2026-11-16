@@ -9,6 +9,7 @@ import { useToast } from '@/components/ui/ToastProvider';
 import { FiltreParcPills } from '@/components/ui/FiltreParcPills';
 import { FormulaireBlesse } from '@/components/blesses/FormulaireBlesse';
 import type { DeclarationBlesse } from '@/lib/blesses';
+import { estManagerPrincipal } from '@/lib/acces';
 
 const NIVEAU_CLS: Record<number, string> = {
   1: 'bg-green/15 text-green',
@@ -71,6 +72,10 @@ export function PageBlesses() {
   const [recherche, setRecherche] = useState('');
   const [declarer, setDeclarer] = useState(false);
   const [ouvert, setOuvert] = useState<string | null>(null);
+  // Export Excel : directeurs et managers principaux (+ chef d'équipe, direction, admin IT)
+  const peutExporter =
+    ['direction', 'chef_maintenance', 'admin_it', 'directeur_parc'].includes(utilisateur?.role_code ?? '') ||
+    estManagerPrincipal(utilisateur);
 
   const comptes = useMemo(() => {
     const m = new Map<string, number>();
@@ -125,6 +130,7 @@ export function PageBlesses() {
           <p className="text-[13px] text-dim mt-1">Registre des accidents déclarés dans les parcs.</p>
         </div>
         <div className="flex gap-2 w-full sm:w-auto">
+          {peutExporter && (
           <button
             onClick={() => exporterRegistre(liste)}
             disabled={liste.length === 0}
@@ -132,6 +138,7 @@ export function PageBlesses() {
           >
             ⬇ Export Excel
           </button>
+          )}
           <button
             onClick={() => setDeclarer(true)}
             className="bg-gradient-cta text-text px-5 rounded-[10px] text-[13px] font-bold min-h-[44px] flex-1 sm:flex-none"
