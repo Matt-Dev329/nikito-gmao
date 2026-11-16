@@ -57,9 +57,9 @@ const TYPE_LABELS: Record<TypeControle, {
   autreRoute: string;
   autreLabel: string;
 }> = {
-  quotidien: { titre: "Controle d'ouverture", court: 'ouverture', valide: 'Controle ouverture valide', autreRoute: '/staff/controle-hebdo', autreLabel: 'Passer en hebdo' },
-  hebdo: { titre: 'Controle hebdomadaire', court: 'hebdo', valide: 'Controle hebdo valide', autreRoute: '/staff/controle-ouverture', autreLabel: "Passer en ouverture" },
-  mensuel: { titre: 'Controle mensuel', court: 'mensuel', valide: 'Controle mensuel valide', autreRoute: '/staff/controle-ouverture', autreLabel: 'Passer en ouverture' },
+  quotidien: { titre: "Controle d'ouverture", court: 'ouverture', valide: 'Controle ouverture valide', autreRoute: '/staff/controle-hebdo', autreLabel: '📋 Contrôle hebdo' },
+  hebdo: { titre: 'Controle hebdomadaire', court: 'hebdo', valide: 'Controle hebdo valide', autreRoute: '/staff/controle-ouverture', autreLabel: '☀️ Contrôle d’ouverture' },
+  mensuel: { titre: 'Controle mensuel', court: 'mensuel', valide: 'Controle mensuel valide', autreRoute: '/staff/controle-ouverture', autreLabel: '☀️ Contrôle d’ouverture' },
 };
 
 export function ControleOuverture({ typeControle = 'quotidien' }: { typeControle?: TypeControle } = {}) {
@@ -457,9 +457,10 @@ export function ControleOuverture({ typeControle = 'quotidien' }: { typeControle
         headerRightSlot={
           <div className="flex items-center gap-1.5">
             <BoutonActualiser className="w-8 h-8 text-[16px]" />
+            {/* Bascule ouverture ⇄ hebdo : bouton bien visible (l'ancien petit lien passait inaperçu) */}
             <button
               onClick={() => { setParcChoisi(null); navigate(L.autreRoute); }}
-              className="text-[11px] text-nikito-cyan hover:underline whitespace-nowrap"
+              className="px-3.5 rounded-[10px] text-[13px] font-semibold min-h-[40px] whitespace-nowrap bg-nikito-cyan/15 text-nikito-cyan border border-nikito-cyan/50"
             >
               {L.autreLabel}
             </button>
