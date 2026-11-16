@@ -53,6 +53,7 @@ function useRegistreBlesses() {
       const { data, error } = await supabase
         .from('declarations_blesses')
         .select('*, parcs(code, nom)')
+        .is('supprime_le', null)
         .order('survenu_le', { ascending: false });
       if (error) throw error;
       return (data ?? []) as DeclarationBlesse[];
@@ -72,6 +73,9 @@ export function PageBlesses() {
   const [recherche, setRecherche] = useState('');
   const [declarer, setDeclarer] = useState(false);
   const [ouvert, setOuvert] = useState<string | null>(null);
+  const [selection, setSelection] = useState<Set<string>>(new Set());
+  const [aSupprimer, setASupprimer] = useState<DeclarationBlesse | null>(null);
+  const peutSupprimer = utilisateur?.role_code === 'chef_maintenance';
   // Export Excel : directeurs et managers principaux (+ chef d'équipe, direction, admin IT)
   const peutExporter =
     ['direction', 'chef_maintenance', 'admin_it', 'directeur_parc'].includes(utilisateur?.role_code ?? '') ||
@@ -97,6 +101,16 @@ export function PageBlesses() {
             .includes(q))
     );
   }, [registre, parc, niveau, recherche]);
+
+  const basculer = (id: string) =>
+    setSelection((s) => {
+      const n = new Set(s);
+      if (n.has(id)) n.delete(id);
+      else n.add(id);
+      return n;
+    });
+  const selectionnes = liste.filter((d) => selection.has(d.id));
+  const toutCoche = liste.length > 0 && selectionnes.length === liste.length;
 
   const parcsFormulaire = (parcs ?? []).map((p) => ({ id: p.id as string, code: p.code as string, nom: p.nom as string }));
 
@@ -132,11 +146,11 @@ export function PageBlesses() {
         <div className="flex gap-2 w-full sm:w-auto">
           {peutExporter && (
           <button
-            onClick={() => exporterRegistre(liste)}
+            onClick={() => exporterRegistre(selectionnes.length ? selectionnes : liste)}
             disabled={liste.length === 0}
             className="bg-bg-card border border-white/[0.08] text-text px-4 rounded-[10px] text-[13px] font-semibold min-h-[44px] flex-1 sm:flex-none disabled:opacity-40"
           >
-            ⬇ Export Excel
+            ⬇ Export Excel{selectionnes.length ? ` (${selectionnes.length})` : ''}
           </button>
           )}
           <button
@@ -178,8 +192,37 @@ export function PageBlesses() {
         <div className="text-dim text-sm bg-bg-card rounded-xl p-4 border border-white/[0.06]">Aucune déclaration.</div>
       ) : (
         <div className="flex flex-col gap-2">
+          {peutExporter && (
+            <div className="flex flex-wrap items-center gap-3 text-[12px] text-dim px-1">
+              <label className="flex items-center gap-2 min-h-[36px] cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={toutCoche}
+                  onChange={() => setSelection(toutCoche ? new Set() : new Set(liste.map((d) => d.id)))}
+                  className="w-5 h-5 accent-nikito-cyan"
+                />
+                Tout sélectionner
+              </label>
+              <span>
+                {selectionnes.length
+                  ? `${selectionnes.length} sélectionnée${selectionnes.length > 1 ? 's' : ''} pour l’export`
+                  : 'Coche des déclarations pour n’exporter qu’elles (sinon : toute la liste affichée)'}
+              </span>
+              {selectionnes.length > 0 && (
+                <button onClick={() => setSelection(new Set())} className="text-nikito-cyan underline">
+                  Vider la sélection
+                </button>
+              )}
+            </div>
+          )}
           {liste.map((d) => (
-            <div key={d.id} className="bg-bg-card rounded-xl border border-white/[0.06]">
+            <div key={d.id} className={cn('bg-bg-card rounded-xl border flex', selection.has(d.id) ? 'border-nikito-cyan/50' : 'border-white/[0.06]')}>
+              {peutExporter && (
+                <label className="pl-4 pt-3.5 cursor-pointer" aria-label={`Sélectionner ${d.numero}`}>
+                  <input type="checkbox" checked={selection.has(d.id)} onChange={() => basculer(d.id)} className="w-5 h-5 accent-nikito-cyan" />
+                </label>
+              )}
+              <div className="flex-1 min-w-0">
               <button onClick={() => setOuvert(ouvert === d.id ? null : d.id)} className="w-full text-left px-4 py-3 flex flex-col gap-1">
                 <div className="flex flex-wrap items-center gap-2 text-[13px]">
                   {d.niveau && (
@@ -212,12 +255,105 @@ export function PageBlesses() {
                       <div className="whitespace-pre-wrap">{d.circonstances}</div>
                     </div>
                   )}
+                  {peutSupprimer && (
+                    <div className="sm:col-span-2 mt-2">
+                      <button
+                        onClick={() => setASupprimer(d)}
+                        className="px-3 min-h-[40px] rounded-[10px] text-[12px] font-semibold border border-red/40 text-red"
+                      >
+                        Supprimer la déclaration
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
+              </div>
             </div>
           ))}
         </div>
       )}
+
+      {aSupprimer && (
+        <ModaleSupprimerBlesse
+          declaration={aSupprimer}
+          onClose={() => setASupprimer(null)}
+          onSupprime={() => {
+            setSelection((s) => {
+              const n = new Set(s);
+              n.delete(aSupprimer.id);
+              return n;
+            });
+            setASupprimer(null);
+            qc.invalidateQueries({ queryKey: ['declarations_blesses'] });
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+/** Suppression d'une déclaration (chef d'équipe), motif obligatoire — elle est masquée, pas effacée */
+function ModaleSupprimerBlesse({
+  declaration,
+  onClose,
+  onSupprime,
+}: {
+  declaration: DeclarationBlesse;
+  onClose: () => void;
+  onSupprime: () => void;
+}) {
+  const toast = useToast();
+  const [motif, setMotif] = useState('');
+  const [envoi, setEnvoi] = useState(false);
+
+  const supprimer = async () => {
+    setEnvoi(true);
+    const { error } = await supabase.rpc('supprimer_blesse', { p_id: declaration.id, p_motif: motif });
+    setEnvoi(false);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success(`Déclaration ${declaration.numero} supprimée`);
+    onSupprime();
+  };
+
+  return (
+    <div className="fixed inset-0 z-[150] bg-black/60 flex items-end md:items-center justify-center md:p-4" onClick={onClose}>
+      <div
+        className="w-full md:max-w-[440px] bg-bg-card rounded-t-[18px] md:rounded-[18px] border border-red/30 p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] flex flex-col gap-3"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div>
+          <div className="text-[16px] font-bold">Supprimer {declaration.numero} ?</div>
+          <div className="text-[12px] text-dim">
+            {declaration.victime_prenom} {declaration.victime_nom} · {declaration.parcs?.nom} · {dateHeure(declaration.survenu_le)}
+          </div>
+        </div>
+        <label className="flex flex-col gap-1">
+          <span className="text-[12px] text-dim">Motif (obligatoire)</span>
+          <input
+            value={motif}
+            onChange={(e) => setMotif(e.target.value)}
+            placeholder="Ex. : doublon, déclaration de test, erreur de saisie"
+            className="bg-bg-app border border-white/10 rounded-lg px-3 min-h-[44px] text-[14px]"
+            autoFocus
+          />
+        </label>
+        <div className="text-[11px] text-dim">La déclaration disparaît du registre et des exports (elle reste archivée en base).</div>
+        <div className="flex gap-2 justify-end">
+          <button onClick={onClose} className="px-4 min-h-[44px] rounded-[10px] text-[13px] text-dim">
+            Annuler
+          </button>
+          <button
+            onClick={supprimer}
+            disabled={motif.trim().length < 3 || envoi}
+            className="px-4 min-h-[44px] rounded-[10px] text-[13px] font-bold bg-red/20 text-red border border-red/40 disabled:opacity-40"
+          >
+            {envoi ? 'Suppression…' : 'Supprimer'}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
