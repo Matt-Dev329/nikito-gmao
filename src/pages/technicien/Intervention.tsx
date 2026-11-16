@@ -326,34 +326,6 @@ export function Intervention() {
 
     try {
       await cloturer.mutateAsync(paramsCloture);
-
-      await exportInterventionPDF({
-        numeroBT: btNumero ?? '',
-        titre,
-        equipementLibelle: equipLibelle,
-        equipementCode: equipCode,
-        parcNom,
-        zoneNom: zoneName,
-        criticite,
-        diagnostic,
-        actions,
-        resoluPremierCoup: premierCoup,
-        debut: debutISO,
-        fin: new Date().toISOString(),
-        technicienNom: utilisateur ? `${utilisateur.prenom} ${utilisateur.nom}` : '',
-        pieces: [
-          ...piecesExistantes.map((p) => ({ nom: p.nom, reference: p.reference, quantite: p.quantite })),
-          ...piecesAjoutees.map((p) => ({ nom: p.nom, reference: p.reference, quantite: p.quantite })),
-        ],
-        photoBucket: 'alba-interventions',
-        photoAvantPath: photoAvant,
-        photoApresPath: photoApres,
-      });
-
-      draft.clear();
-      setDirty(false);
-      toast.success(`Intervention ${btNumero ?? ''} clôturée — PDF généré.`);
-      navigate(-1);
     } catch (e) {
       const msg = e instanceof Error ? e.message : '';
       // Sans réseau : la clôture est gardée sur l'appareil et envoyée automatiquement
@@ -377,7 +349,41 @@ export function Intervention() {
           ? 'Connexion instable — ta saisie est conservée, réessaie dans un instant.'
           : msg || 'Erreur lors de la clôture.'
       );
+      return;
     }
+
+    // Ticket fermé : le PDF est un bonus, son échec ne doit pas relancer la clôture
+    try {
+      await exportInterventionPDF({
+        numeroBT: btNumero ?? '',
+        titre,
+        equipementLibelle: equipLibelle,
+        equipementCode: equipCode,
+        parcNom,
+        zoneNom: zoneName,
+        criticite,
+        diagnostic,
+        actions,
+        resoluPremierCoup: premierCoup,
+        debut: debutISO,
+        fin: new Date().toISOString(),
+        technicienNom: utilisateur ? `${utilisateur.prenom} ${utilisateur.nom}` : '',
+        pieces: [
+          ...piecesExistantes.map((p) => ({ nom: p.nom, reference: p.reference, quantite: p.quantite })),
+          ...piecesAjoutees.map((p) => ({ nom: p.nom, reference: p.reference, quantite: p.quantite })),
+        ],
+        photoBucket: 'alba-interventions',
+        photoAvantPath: photoAvant,
+        photoApresPath: photoApres,
+      });
+    } catch {
+      toast.error('Ticket fermé, mais le PDF n’a pas pu être généré.');
+    }
+
+    draft.clear();
+    setDirty(false);
+    toast.success(`Intervention ${btNumero ?? ''} clôturée.`);
+    navigate(-1);
   };
 
   if (isLoading) {

@@ -29,6 +29,9 @@ export interface CloturerInterventionParams {
  * Aucune RPC dediee n'existe cote Supabase : on ecrit directement dans les tables
  * (les policies RLS autorisent le role technicien en ecriture sur les deux tables).
  */
+const INTROUVABLE =
+  "Ticket non fermé : il n'est pas modifiable avec le compte connecté sur cet appareil (reconnecte-toi avec ton compte puis réessaie)";
+
 export async function cloturerIntervention(
   params: CloturerInterventionParams,
   utilisateurId: string
@@ -43,8 +46,13 @@ export async function cloturerIntervention(
 
   let interventionId = params.interventionId ?? null;
 
+  // Session expirée (tablette sortie de veille) : on la rafraîchit avant d'écrire.
+  // Sans session valide, l'écriture serait ignorée sans erreur → on attend.
+  const { data: sess } = await supabase.auth.getSession();
+  if (!sess.session) throw new Error('Session expirée — en attente de reconnexion');
+
   if (interventionId) {
-    const { error } = await supabase
+    const { data: majIv, error } = await supabase
       .from('interventions')
       .update({
         fin: nowISO,
@@ -55,8 +63,10 @@ export async function cloturerIntervention(
         photos_apres: photosApres,
         test_activite: params.testActivite ?? null,
       })
-      .eq('id', interventionId);
+      .eq('id', interventionId)
+      .select('id');
     if (error) throw new Error(error.message);
+    if (!majIv?.length) throw new Error(INTROUVABLE);
   } else {
     const { data, error } = await supabase
       .from('interventions')
@@ -96,11 +106,15 @@ export async function cloturerIntervention(
     }
   }
 
-  const { error: incErr } = await supabase
+  const { data: majInc, error: incErr } = await supabase
     .from('incidents')
     .update({ statut: 'resolu', resolu_le: nowISO, resolu_par_id: utilisateurId, test_activite: params.testActivite ?? null })
-    .eq('id', params.incidentId);
+    .eq('id', params.incidentId)
+    .select('id');
   if (incErr) throw new Error(incErr.message);
+  // Aucune ligne modifiée = ticket non accessible avec le compte connecté :
+  // on ne laisse plus croire que le ticket est fermé.
+  if (!majInc?.length) throw new Error(INTROUVABLE);
 
   return { interventionId };
 }

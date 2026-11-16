@@ -88,11 +88,14 @@ function nouvelId(): string {
     : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
-/** Erreur due au réseau (et non refus du serveur) : on garde et on réessaiera. */
+/**
+ * Erreur passagère (réseau coupé, ou session expirée pendant la veille de la
+ * tablette) et non refus du serveur : on garde et on réessaiera.
+ */
 export function estErreurReseau(e: unknown): boolean {
   if (typeof navigator !== 'undefined' && !navigator.onLine) return true;
   const msg = e instanceof Error ? e.message : String((e as { message?: unknown })?.message ?? e ?? '');
-  return /failed to fetch|networkerror|network request failed|load failed|fetch failed|network|réseau|timeout|timed out|connexion/i.test(
+  return /failed to fetch|networkerror|network request failed|load failed|fetch failed|network|réseau|timeout|timed out|connexion|jwt|refresh token|session expirée|non connect/i.test(
     msg
   );
 }
@@ -222,7 +225,9 @@ export function rejouer(): Promise<void> {
       const actions = await lister<ActionEnAttente>(STORE_ACTIONS);
       actions.sort((a, b) => a.creeLe.localeCompare(b.creeLe));
       for (const a of actions) {
-        if (a.erreur) continue; // refusée par le serveur : attend une décision de l'utilisateur
+        // Refusée par le serveur : attend une décision de l'utilisateur. Sauf si le
+        // refus était passager (ex. session expirée) : on la renvoie toute seule.
+        if (a.erreur && !estErreurReseau(new Error(a.erreur))) continue;
         const exec = executeurs.get(a.type);
         if (!exec) continue;
         try {

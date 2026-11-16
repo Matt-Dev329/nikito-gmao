@@ -38,6 +38,23 @@ describe('file hors-ligne', () => {
   it('reconnaît les erreurs réseau', () => {
     expect(estErreurReseau(new TypeError('Failed to fetch'))).toBe(true);
     expect(estErreurReseau(new Error('Contrôle déjà validé'))).toBe(false);
+    // Session expirée pendant la veille de la tablette : passager, on réessaiera
+    expect(estErreurReseau(new Error('JWT expired'))).toBe(true);
+    expect(estErreurReseau(new Error('Session expirée — en attente de reconnexion'))).toBe(true);
+  });
+
+  it('renvoie seule une action refusée pour session expirée', async () => {
+    let appels = 0;
+    declarerExecuteur('cloture_intervention', async () => {
+      appels++;
+      if (appels === 1) throw new Error('JWT expired');
+    });
+    await mettreActionEnFile('cloture_intervention', 'BT-1', {});
+    await rejouer();
+    expect(etatCourant().actions).toHaveLength(1);
+    await rejouer();
+    expect(appels).toBe(2);
+    expect(etatCourant().actions).toHaveLength(0);
   });
 
   it('garde une photo hors connexion puis l’envoie avant les actions au retour du réseau', async () => {
