@@ -263,6 +263,7 @@ const iconMap: Record<string, (props: { className?: string }) => JSX.Element> = 
   'Commander': IconCommander,
   'Préventif': IconPreventif,
   'MAJ Laser Game': IconPreventif,
+  'Blessés': IconPreventif,
   'Certifications': IconCertifications,
   'Plaintes clients': IconPlaintes,
   'Contrôles': IconControles,

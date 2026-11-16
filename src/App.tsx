@@ -1,3 +1,4 @@
+import { ROLES_BLESSES } from '@/lib/blesses';
 import { lazy, Suspense, useEffect } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
@@ -67,6 +68,8 @@ const PageCertifications = page(() => import('@/pages/certifications/PageCertifi
 const VueManagerParc = page(() => import('@/pages/parc/VueManagerParc'), 'VueManagerParc');
 const PageProfil = page(() => import('@/pages/profil/PageProfil'), 'PageProfil');
 const MesSignalements = page(() => import('@/pages/staff/MesSignalements'), 'MesSignalements');
+const DeclarerBlesseStaff = page(() => import('@/pages/staff/DeclarerBlesseStaff'), 'DeclarerBlesseStaff');
+const PageBlesses = page(() => import('@/pages/blesses/PageBlesses'), 'PageBlesses');
 const PageAide = page(() => import('@/pages/aide/PageAide'), 'PageAide');
 const PageFormation = page(() => import('@/pages/formation/PageFormation'), 'PageFormation');
 const LayoutConformite = page(() => import('@/pages/conformite/LayoutConformite'), 'LayoutConformite');
@@ -161,6 +164,7 @@ export function App() {
           <Route path="commander" element={<PageCommander />} />
           <Route path="preventif" element={<GardeAcces roles={ROLES_PILOTAGE}><PagePreventif /></GardeAcces>} />
           <Route path="mises-a-jour" element={<GardeAcces roles={ROLES_PILOTAGE}><PageMisesAJour /></GardeAcces>} />
+          <Route path="blesses" element={<GardeAcces roles={ROLES_BLESSES}><PageBlesses /></GardeAcces>} />
           <Route path="certifications" element={<GardeAcces roles={ROLES_PILOTAGE}><PageCertifications /></GardeAcces>} />
           {/* Modules retirés (Flotte, Plaintes clients, IA prédictive) : retour à l'accueil */}
           <Route path="plaintes" element={<Navigate to="/gmao" replace />} />
@@ -220,6 +224,7 @@ export function App() {
         <Route path="/staff/controle-ouverture" element={<ControleOuverture />} />
         <Route path="/staff/controle-hebdo" element={<ControleHebdoStaff />} />
         <Route path="/staff/mes-signalements" element={<MesSignalements />} />
+        <Route path="/staff/blesse" element={<DeclarerBlesseStaff />} />
 
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

@@ -1,3 +1,4 @@
+import { ROLES_BLESSES } from '@/lib/blesses';
 import { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
@@ -86,6 +87,7 @@ const sections: { titre: string; items: NavItem[] }[] = [
       { to: '/gmao/certifications', label: 'Certifications', featureCode: 'certifications', roles: ROLES_PILOTAGE },
       { to: '/gmao/preventif', label: 'Préventif', featureCode: 'preventif', roles: ROLES_PILOTAGE },
       { to: '/gmao/mises-a-jour', label: 'MAJ Laser Game', roles: ROLES_PILOTAGE },
+      { to: '/gmao/blesses', label: 'Blessés', roles: ROLES_BLESSES },
       { to: '/gmao/stock', label: 'Stock', featureCode: 'stock', roles: ROLES_STOCK, gestionnaireCommandes: true },
       { to: '/gmao/commander', label: 'Commander', badgeKey: 'commandesATraiter', badgeTone: 'amber', roles: [], accesCommandes: true },
     ],

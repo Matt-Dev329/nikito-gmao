@@ -1,3 +1,4 @@
+import { ROLES_BLESSES } from '@/lib/blesses';
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { actualiserApplication } from '@/lib/miseAJour';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -49,6 +50,7 @@ const pilotageItems: DrawerItem[] = [
   { to: '/gmao/commander', label: 'Commander', iconLabel: 'Commander', roles: [], accesCommandes: true },
   { to: '/gmao/preventif', label: 'Preventif', iconLabel: 'Préventif', roles: ROLES_PILOTAGE },
   { to: '/gmao/mises-a-jour', label: 'MAJ Laser Game', iconLabel: 'Préventif', roles: ROLES_PILOTAGE },
+  { to: '/gmao/blesses', label: 'Blessés', iconLabel: 'Préventif', roles: ROLES_BLESSES },
   { to: '/gmao/certifications', label: 'Certifications', iconLabel: 'Certifications', roles: ROLES_PILOTAGE },
   { to: '/gmao/conformite', label: 'Conformite', iconLabel: 'Conformité', roles: ['direction', 'admin_it', 'chef_maintenance', 'directeur_parc', 'manager_parc'] },
   { to: '/gmao/controles-historique', label: 'Historique contrôles', iconLabel: 'Contrôles', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'technicien', 'manager_parc', 'admin_it'] },

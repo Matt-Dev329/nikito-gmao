@@ -407,6 +407,14 @@ export function ControleOuverture({ typeControle = 'quotidien' }: { typeControle
               Faire le contrôle hebdo
             </button>
           )}
+          {utilisateur?.role_code !== 'technicien' && (
+            <button
+              onClick={() => navigate('/staff/blesse')}
+              className="bg-red/15 text-red border border-red/50 px-6 py-3 rounded-[10px] text-[13px] font-bold min-h-[44px]"
+            >
+              🩹 Déclarer un blessé
+            </button>
+          )}
           <button
             onClick={() => navigate(retourDestination)}
             className={
@@ -464,6 +472,14 @@ export function ControleOuverture({ typeControle = 'quotidien' }: { typeControle
             >
               {L.autreLabel}
             </button>
+            {utilisateur?.role_code !== 'technicien' && (
+              <button
+                onClick={() => navigate('/staff/blesse')}
+                className="px-3.5 rounded-[10px] text-[13px] font-semibold min-h-[40px] whitespace-nowrap bg-red/15 text-red border border-red/50"
+              >
+                🩹 Blessé
+              </button>
+            )}
             {!estStaff && signalBouton}
             <BoutonRetourGmao />
           </div>
