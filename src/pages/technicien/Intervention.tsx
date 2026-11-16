@@ -14,6 +14,7 @@ import { ModaleSupprimerTicket } from '@/components/tickets/ModaleSupprimerTicke
 import { ModaleRefuserTicket } from '@/components/tickets/ModaleRefuserTicket';
 import { ModaleRouvrirTicket } from '@/components/tickets/ModaleRouvrirTicket';
 import { ModaleChangerStatut, HistoriqueStatuts } from '@/components/tickets/ModaleChangerStatut';
+import { ModaleEnvoyerTicketMail, HistoriqueEnvoisMail, type EnvoiMail } from '@/components/tickets/ModaleEnvoyerTicketMail';
 import { NotesPartagees } from '@/components/shared/NotesPartagees';
 import { peutValiderTicket, peutModifierTicket } from '@/lib/acces';
 import { useCloturerIntervention } from '@/hooks/mutations';
@@ -93,6 +94,7 @@ export function Intervention() {
   // Modifier gravité / statut : gestion — direction, chef d'équipe, directeur de parc (ses parcs), admin IT
   const peutChangerStatut = peutModifierTicket(utilisateur, (equip?.parc_id ?? incident?.parc_ticket) as string | undefined);
   const [changementStatut, setChangementStatut] = useState(false);
+  const [envoiMail, setEnvoiMail] = useState(false);
   const changementsStatut =
     (incident?.meta as { changements_statut?: { le: string; par_nom?: string; avant: string; apres: string; motif?: string | null }[] } | null)
       ?.changements_statut ?? [];
@@ -102,6 +104,7 @@ export function Intervention() {
       : !['resolu', 'ferme', 'annule'].includes(statutIncident) && incident?.externe
         ? 'exterieur'
         : statutIncident;
+  const envoisMail = ((incident?.meta as { envois_mail?: EnvoiMail[] } | null)?.envois_mail ?? []);
   const reouvertures = ((incident?.meta as { reouvertures?: { le: string; par_nom?: string; motif: string }[] } | null)?.reouvertures ?? []);
   // Intervention en cours (fin vide) ; pour un ticket résolu, la dernière intervention.
   // Une intervention déjà clôturée d'un ticket rouvert ne doit pas être reprise ni écrasée.
@@ -445,15 +448,31 @@ export function Intervention() {
             Signalé par <strong className="text-text">{(incident.declare_par_nom as string | null) || 'inconnu'}</strong>
             {incident.declare_le ? ` le ${new Date(incident.declare_le as string).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}` : ''}
           </span>
-          {peutValider && !estAnnule && (
+          <div className="ml-auto flex flex-wrap gap-2">
             <button
-              onClick={() => setSuppression(true)}
-              className="ml-auto px-3 rounded-lg text-[12px] font-semibold min-h-[36px] border border-red/40 text-red"
+              onClick={() => setEnvoiMail(true)}
+              className="px-3 rounded-lg text-[12px] font-semibold min-h-[36px] border border-nikito-cyan/40 text-nikito-cyan"
             >
-              Supprimer le ticket
+              ✉️ Envoyer par mail
             </button>
-          )}
+            {peutValider && !estAnnule && (
+              <button
+                onClick={() => setSuppression(true)}
+                className="px-3 rounded-lg text-[12px] font-semibold min-h-[36px] border border-red/40 text-red"
+              >
+                Supprimer le ticket
+              </button>
+            )}
+          </div>
+          <HistoriqueEnvoisMail envois={envoisMail} />
         </div>
+        {envoiMail && (
+          <ModaleEnvoyerTicketMail
+            incidentId={incident.id as string}
+            numeroBT={btNumero ?? ''}
+            onClose={() => setEnvoiMail(false)}
+          />
+        )}
 
         {voirProbleme && (
           <ProblemeSignale
