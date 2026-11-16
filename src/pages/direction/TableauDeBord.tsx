@@ -165,17 +165,25 @@ function ContenuTableauDeBord() {
     };
   }, [perfQ.data, mtbfQ.data, mttrQ.data, premierCoupQ.data, plaintesQ.data, parcActif]);
 
+  // Les tickets Arcade ne comptent pas dans le tableau de bord (indicateurs exclus aussi côté base)
+  const incidentsHorsArcade = useMemo(
+    () =>
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      ((incidentsQ.data ?? []) as any[]).filter(
+        (i) => i.equipements?.categories_equipement?.activite?.trim().toLowerCase() !== 'arcade'
+      ),
+    [incidentsQ.data]
+  );
+
   const alertesTotal = useMemo(() => {
     if (!incidentsQ.data) return 0;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const all = incidentsQ.data as any[];
+    const all = incidentsHorsArcade;
     return parcActif ? all.filter((i) => (i.equipements?.parc_id ?? i.parc_ticket) === parcActif).length : all.length;
-  }, [incidentsQ.data, parcActif]);
+  }, [incidentsQ.data, incidentsHorsArcade, parcActif]);
 
   const alertes = useMemo(() => {
     if (!incidentsQ.data) return [];
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let filtered = incidentsQ.data as any[];
+    let filtered = incidentsHorsArcade;
     if (parcActif) {
       filtered = filtered.filter((i) => (i.equipements?.parc_id ?? i.parc_ticket) === parcActif);
     }
@@ -185,12 +193,11 @@ function ContenuTableauDeBord() {
     return [...filtered]
       .sort((a, b) => rang(a) - rang(b))
       .slice(0, 10);
-  }, [incidentsQ.data, parcActif]);
+  }, [incidentsQ.data, incidentsHorsArcade, parcActif]);
 
   const critData = useMemo(() => {
     if (!incidentsQ.data) return [];
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let filtered = incidentsQ.data as any[];
+    let filtered = incidentsHorsArcade;
     if (parcActif) {
       filtered = filtered.filter((i) => (i.equipements?.parc_id ?? i.parc_ticket) === parcActif);
     }
@@ -206,7 +213,7 @@ function ContenuTableauDeBord() {
         value,
         color: CRIT_COLORS[name],
       }));
-  }, [incidentsQ.data, parcActif]);
+  }, [incidentsQ.data, incidentsHorsArcade, parcActif]);
 
   const totalTickets = critData.reduce((s, d) => s + d.value, 0);
   const parcs = parcsQ.data ?? [];
