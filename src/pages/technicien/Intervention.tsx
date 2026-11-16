@@ -14,6 +14,7 @@ import { ModaleSupprimerTicket } from '@/components/tickets/ModaleSupprimerTicke
 import { ModaleRefuserTicket } from '@/components/tickets/ModaleRefuserTicket';
 import { ModaleRouvrirTicket } from '@/components/tickets/ModaleRouvrirTicket';
 import { ModaleChangerStatut, HistoriqueStatuts } from '@/components/tickets/ModaleChangerStatut';
+import { SuggestionReparation } from '@/components/tickets/SuggestionReparation';
 import { ModaleEnvoyerTicketMail, HistoriqueEnvoisMail, type EnvoiMail } from '@/components/tickets/ModaleEnvoyerTicketMail';
 import { NotesPartagees } from '@/components/shared/NotesPartagees';
 import { peutValiderTicket, peutModifierTicket } from '@/lib/acces';
@@ -726,6 +727,21 @@ export function Intervention() {
             ))}
           </div>
         </div>
+
+        {/* Aide à la rédaction (IA) : proposition à vérifier par le technicien */}
+        {!estResolu && !estAnnule && (
+          <SuggestionReparation
+            incidentId={incident.id as string}
+            diagnostic={diagnostic}
+            actions={actions}
+            onUtiliser={(s) => {
+              setDiagnostic(s.diagnostic);
+              setActions(s.actions);
+              setEditionDiagnostic(true);
+              setDirty(true);
+            }}
+          />
+        )}
 
         {/* Diagnostic */}
         <div className="bg-bg-card rounded-xl p-3.5 px-4">
