@@ -37,7 +37,7 @@ function corpsMail(p: {
 </p>
 <p>La mise à jour est à faire 3 fois par an (tous les 4 mois).${p.derniere ? ` Dernière mise à jour enregistrée : ${dateFr(p.derniere)}.` : ""}</p>
 <p>Une fois faite, enregistrez-la dans le registre ALBA (date, version, remarques) : le rappel s'arrête et la prochaine échéance est calculée automatiquement.</p>
-<p><a href="${p.siteUrl}/gmao/mises-a-jour" style="display:inline-block;background:#5DE5FF;color:#0B0B2E;font-weight:700;text-decoration:none;padding:10px 22px;border-radius:8px;">Ouvrir le registre des mises à jour</a></p>
+<p><a href="${p.siteUrl}/gmao/mises-a-jour" style="display:inline-block;background:#5DE5FF;color:#0B0B2E;font-weight:700;text-decoration:none;padding:10px 22px;border-radius:8px;">Ouvrir « MAJ Laser Game » dans ALBA</a></p>
 <p style="font-size:12px;color:#888;margin-top:28px;">Rappel automatique ALBA by Nikito (GMAO) — ne pas répondre.</p>
 </body></html>`;
 }

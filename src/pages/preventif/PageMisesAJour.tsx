@@ -88,7 +88,7 @@ export function PageMisesAJour() {
   return (
     <div className="p-4 md:p-6 md:px-7 flex flex-col gap-4">
       <div>
-        <h1 className="text-xl md:text-[22px] font-semibold m-0">Mises à jour</h1>
+        <h1 className="text-xl md:text-[22px] font-semibold m-0">MAJ Laser Game</h1>
         <p className="text-[13px] text-dim mt-1">
           Mises à jour périodiques des activités (Laser Game : 3 fois par an, tous les 4 mois). Rappel automatique au chef
           d’équipe, aux directeurs et aux managers principaux du parc.

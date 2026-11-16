@@ -48,7 +48,7 @@ const pilotageItems: DrawerItem[] = [
   { to: '/gmao/stock', label: 'Stock', iconLabel: 'Stock', roles: ROLES_STOCK, gestionnaireCommandes: true },
   { to: '/gmao/commander', label: 'Commander', iconLabel: 'Commander', roles: [], accesCommandes: true },
   { to: '/gmao/preventif', label: 'Preventif', iconLabel: 'Préventif', roles: ROLES_PILOTAGE },
-  { to: '/gmao/mises-a-jour', label: 'Mises à jour', iconLabel: 'Préventif', roles: ROLES_PILOTAGE },
+  { to: '/gmao/mises-a-jour', label: 'MAJ Laser Game', iconLabel: 'Préventif', roles: ROLES_PILOTAGE },
   { to: '/gmao/certifications', label: 'Certifications', iconLabel: 'Certifications', roles: ROLES_PILOTAGE },
   { to: '/gmao/conformite', label: 'Conformite', iconLabel: 'Conformité', roles: ['direction', 'admin_it', 'chef_maintenance', 'directeur_parc', 'manager_parc'] },
   { to: '/gmao/controles-historique', label: 'Historique contrôles', iconLabel: 'Contrôles', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'technicien', 'manager_parc', 'admin_it'] },
