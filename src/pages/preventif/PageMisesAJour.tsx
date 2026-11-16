@@ -30,6 +30,13 @@ interface LigneRegistre {
   mises_a_jour_plans: { libelle: string } | null;
 }
 
+/** AAAA-MM-JJ + n mois (fin de mois si le jour n'existe pas, ex. 31/01 + 4 mois → 31/05) */
+function plusMois(d: string, n: number): string {
+  const [a, m, j] = d.split('-').map(Number);
+  const fin = new Date(Date.UTC(a, m - 1 + n + 1, 0)).getUTCDate();
+  return new Date(Date.UTC(a, m - 1 + n, Math.min(j, fin))).toISOString().slice(0, 10);
+}
+
 const dateFr = (d: string) => new Date(`${d}T12:00:00`).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
 
 function etat(p: Plan): { label: string; cls: string; bord: string } {
@@ -76,6 +83,7 @@ export function PageMisesAJour() {
   const { data: registre } = useRegistre();
   const [parc, setParc] = useFiltreParc<string | null>(null, 'code');
   const [saisie, setSaisie] = useState<Plan | null>(null);
+  const [echeance, setEcheance] = useState<Plan | null>(null);
 
   const plansFiltres = useMemo(() => (plans ?? []).filter((p) => !parc || p.parcs?.code === parc), [plans, parc]);
   const registreFiltre = useMemo(() => (registre ?? []).filter((r) => !parc || r.parcs?.code === parc), [registre, parc]);
@@ -118,12 +126,20 @@ export function PageMisesAJour() {
                   Échéance : <strong className="text-text">{dateFr(p.prochaine_echeance)}</strong>
                   {p.derniere_execution && <> · Dernière : {dateFr(p.derniere_execution)}</>}
                 </div>
-                <button
-                  onClick={() => setSaisie(p)}
-                  className="mt-1 self-start px-4 min-h-[44px] rounded-[10px] text-[13px] font-bold bg-green/15 text-green border border-green/30"
-                >
-                  ✓ Mise à jour faite
-                </button>
+                <div className="mt-1 flex flex-wrap gap-2">
+                  <button
+                    onClick={() => setSaisie(p)}
+                    className="px-4 min-h-[44px] rounded-[10px] text-[13px] font-bold bg-green/15 text-green border border-green/30"
+                  >
+                    ✓ Mise à jour faite
+                  </button>
+                  <button
+                    onClick={() => setEcheance(p)}
+                    className="px-3 min-h-[44px] rounded-[10px] text-[13px] text-nikito-cyan border border-nikito-cyan/40"
+                  >
+                    ✏️ Changer l’échéance
+                  </button>
+                </div>
               </div>
             );
           })}
@@ -155,6 +171,7 @@ export function PageMisesAJour() {
       </div>
 
       {saisie && <ModaleMiseAJourFaite plan={saisie} onClose={() => setSaisie(null)} />}
+      {echeance && <ModaleEcheance plan={echeance} onClose={() => setEcheance(null)} />}
     </div>
   );
 }
@@ -163,6 +180,9 @@ function ModaleMiseAJourFaite({ plan, onClose }: { plan: Plan; onClose: () => vo
   const toast = useToast();
   const qc = useQueryClient();
   const [date, setDate] = useState(aujourdhuiParis());
+  // Prochaine échéance : par défaut 4 mois après la mise à jour, modifiable
+  const [prochaine, setProchaine] = useState(plusMois(aujourdhuiParis(), plan.periode_mois));
+  const [prochaineModifiee, setProchaineModifiee] = useState(false);
   const [version, setVersion] = useState('');
   const [notes, setNotes] = useState('');
 
@@ -173,6 +193,7 @@ function ModaleMiseAJourFaite({ plan, onClose }: { plan: Plan; onClose: () => vo
         p_fait_le: date,
         p_version: version,
         p_notes: notes,
+        p_prochaine: prochaine || null,
       });
       if (error) throw error;
     },
@@ -201,7 +222,23 @@ function ModaleMiseAJourFaite({ plan, onClose }: { plan: Plan; onClose: () => vo
             type="date"
             value={date}
             max={aujourdhuiParis()}
-            onChange={(e) => setDate(e.target.value)}
+            onChange={(e) => {
+              setDate(e.target.value);
+              if (!prochaineModifiee && e.target.value) setProchaine(plusMois(e.target.value, plan.periode_mois));
+            }}
+            className="bg-bg-app border border-white/10 rounded-lg px-3 min-h-[44px] text-[14px]"
+          />
+        </label>
+        <label className="flex flex-col gap-1">
+          <span className="text-[12px] text-dim">Prochaine mise à jour à faire avant le (par défaut : {plan.periode_mois} mois plus tard)</span>
+          <input
+            type="date"
+            value={prochaine}
+            min={date}
+            onChange={(e) => {
+              setProchaine(e.target.value);
+              setProchaineModifiee(true);
+            }}
             className="bg-bg-app border border-white/10 rounded-lg px-3 min-h-[44px] text-[14px]"
           />
         </label>
@@ -224,6 +261,64 @@ function ModaleMiseAJourFaite({ plan, onClose }: { plan: Plan; onClose: () => vo
             className="bg-bg-app border border-white/10 rounded-lg px-3 py-2 text-[14px]"
           />
         </label>
+        <div className="flex gap-2 justify-end">
+          <button onClick={onClose} className="px-4 min-h-[44px] rounded-[10px] text-[13px] text-dim">
+            Annuler
+          </button>
+          <button
+            onClick={() => enregistrer.mutate()}
+            disabled={!date || enregistrer.isPending}
+            className="px-4 min-h-[44px] rounded-[10px] text-[13px] font-bold bg-gradient-cta text-text disabled:opacity-50"
+          >
+            {enregistrer.isPending ? 'Enregistrement…' : 'Enregistrer'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** Changer à la main la date de la prochaine mise à jour d'un parc */
+function ModaleEcheance({ plan, onClose }: { plan: Plan; onClose: () => void }) {
+  const toast = useToast();
+  const qc = useQueryClient();
+  const [date, setDate] = useState(plan.prochaine_echeance);
+
+  const enregistrer = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase.rpc('modifier_echeance_mise_a_jour', { p_plan_id: plan.id, p_echeance: date });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['mises_a_jour_plans'] });
+      toast.success(`Échéance ${plan.parcs?.code ?? ''} : ${dateFr(date)}`);
+      onClose();
+    },
+    onError: (e) => toast.error((e as Error).message),
+  });
+
+  return (
+    <div className="fixed inset-0 z-[150] bg-black/60 flex items-end md:items-center justify-center md:p-4" onClick={onClose}>
+      <div
+        className="w-full md:max-w-[420px] bg-bg-card rounded-t-[18px] md:rounded-[18px] border border-nikito-cyan/30 p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] flex flex-col gap-3"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div>
+          <div className="text-[16px] font-bold">✏️ Changer l’échéance</div>
+          <div className="text-[12px] text-dim">
+            {plan.libelle} · {plan.parcs?.nom} — actuellement le {dateFr(plan.prochaine_echeance)}
+          </div>
+        </div>
+        <label className="flex flex-col gap-1">
+          <span className="text-[12px] text-dim">Prochaine mise à jour à faire avant le</span>
+          <input
+            type="date"
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+            className="bg-bg-app border border-white/10 rounded-lg px-3 min-h-[44px] text-[14px]"
+          />
+        </label>
+        <div className="text-[11px] text-dim">Les rappels repartent de cette date (1 mois avant, 1 semaine avant, le jour J).</div>
         <div className="flex gap-2 justify-end">
           <button onClick={onClose} className="px-4 min-h-[44px] rounded-[10px] text-[13px] text-dim">
             Annuler
