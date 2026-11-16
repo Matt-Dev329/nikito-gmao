@@ -3,12 +3,27 @@
  * Microsoft Forms Nikito — parc & activité, emplacements par activité.
  */
 
-/** Activités proposées par parc (question « Choix du parc & activité ») */
+/** Hors activité : accueil, bar, vestiaires… et cas non listés */
+const ACTIVITES_COMMUNES = ['Espaces communs (accueil, bar, vestiaires, escaliers…)', 'Autre'];
+
+/**
+ * Activités proposées par parc (question « Choix du parc & activité ») :
+ * toutes les activités ouvertes au public présentes dans le parc (équipements
+ * ALBA), puis les espaces communs.
+ */
 export const ACTIVITES_PAR_PARC: Record<string, string[]> = {
-  ALF: ['Trampoline'],
-  FRA: ['Trampoline'],
-  DOM: ['Karting', 'Prison Island', 'Trampoline'],
-  SGB: ['Prison Island', 'Trampoline'],
+  ALF: ['Trampoline', 'Laser Game', 'SoftPlay', 'Château gonflable', 'Palomano', 'Arcade', ...ACTIVITES_COMMUNES],
+  FRA: ['Trampoline', 'Ninja parcours', 'Laser Game', 'SoftPlay', 'Arcade', ...ACTIVITES_COMMUNES],
+  DOM: [
+    'Trampoline', 'Prison Island', 'Karting', 'Laser Game', 'Bowling', 'Mini-golf', 'Lancer de haches',
+    'Fléchettes AR', 'Octogone', 'Réalité virtuelle', 'Karaoké', 'I-Quiz', 'SoftPlay', 'Château gonflable', 'Arcade',
+    ...ACTIVITES_COMMUNES,
+  ],
+  SGB: [
+    'Trampoline', 'Prison Island', 'Karting', 'Laser Game', 'Bowling', 'Mini-golf', 'Lancer de haches',
+    'Fléchettes AR', 'Octogone', 'SoftPlay', 'Château gonflable', 'Arcade',
+    ...ACTIVITES_COMMUNES,
+  ],
 };
 
 const ZONES_TRAMPO = [

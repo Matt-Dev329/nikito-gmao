@@ -118,7 +118,7 @@ export function FormulaireBlesse({
   const [envoi, setEnvoi] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
 
-  const activites = parc ? (ACTIVITES_PAR_PARC[parc.code] ?? ['Trampoline']) : [];
+  const activites = parc ? (ACTIVITES_PAR_PARC[parc.code] ?? ['Trampoline', 'Espaces communs (accueil, bar, vestiaires, escaliers…)', 'Autre']) : [];
   const listeEmplacements = parc && activite ? EMPLACEMENTS[`${parc.code}|${activite}`] : undefined;
   const emplacementFinal = listeEmplacements
     ? emplacement === 'Autre'
@@ -302,7 +302,7 @@ export function FormulaireBlesse({
               <input
                 value={emplacementAutre}
                 onChange={(e) => setEmplacementAutre(e.target.value)}
-                placeholder="Ex. : zone trampoline, toboggan…"
+                placeholder="Préciser l’emplacement (piste, salle, zone…)"
                 className={champ}
               />
             )}
