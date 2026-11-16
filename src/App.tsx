@@ -62,6 +62,7 @@ const PageBibliotheque = page(() => import('@/pages/bibliotheque/PageBibliothequ
 const FicheCinqPourquoi = page(() => import('@/pages/cinq-pourquoi/FicheCinqPourquoi'), 'FicheCinqPourquoi');
 const ListeCinqPourquoi = page(() => import('@/pages/cinq-pourquoi/ListeCinqPourquoi'), 'ListeCinqPourquoi');
 const PagePreventif = page(() => import('@/pages/preventif/PagePreventif'), 'PagePreventif');
+const PageMisesAJour = page(() => import('@/pages/preventif/PageMisesAJour'), 'PageMisesAJour');
 const PageCertifications = page(() => import('@/pages/certifications/PageCertifications'), 'PageCertifications');
 const VueManagerParc = page(() => import('@/pages/parc/VueManagerParc'), 'VueManagerParc');
 const PageProfil = page(() => import('@/pages/profil/PageProfil'), 'PageProfil');
@@ -159,6 +160,7 @@ export function App() {
           <Route path="stock" element={<PageStock />} />
           <Route path="commander" element={<PageCommander />} />
           <Route path="preventif" element={<GardeAcces roles={ROLES_PILOTAGE}><PagePreventif /></GardeAcces>} />
+          <Route path="mises-a-jour" element={<GardeAcces roles={ROLES_PILOTAGE}><PageMisesAJour /></GardeAcces>} />
           <Route path="certifications" element={<GardeAcces roles={ROLES_PILOTAGE}><PageCertifications /></GardeAcces>} />
           {/* Modules retirés (Flotte, Plaintes clients, IA prédictive) : retour à l'accueil */}
           <Route path="plaintes" element={<Navigate to="/gmao" replace />} />

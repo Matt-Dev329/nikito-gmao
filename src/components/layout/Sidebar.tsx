@@ -85,6 +85,7 @@ const sections: { titre: string; items: NavItem[] }[] = [
       { to: '/gmao/cinq-pourquoi', label: '5 Pourquoi', featureCode: 'cinq_pourquoi', badgeKey: 'cinqPourquoi', badgeTone: 'amber', roles: ROLES_ANALYSE_CAUSES },
       { to: '/gmao/certifications', label: 'Certifications', featureCode: 'certifications', roles: ROLES_PILOTAGE },
       { to: '/gmao/preventif', label: 'Préventif', featureCode: 'preventif', roles: ROLES_PILOTAGE },
+      { to: '/gmao/mises-a-jour', label: 'Mises à jour', roles: ROLES_PILOTAGE },
       { to: '/gmao/stock', label: 'Stock', featureCode: 'stock', roles: ROLES_STOCK, gestionnaireCommandes: true },
       { to: '/gmao/commander', label: 'Commander', badgeKey: 'commandesATraiter', badgeTone: 'amber', roles: [], accesCommandes: true },
     ],
