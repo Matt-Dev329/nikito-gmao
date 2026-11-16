@@ -21,6 +21,30 @@ const dateHeure = (iso: string) =>
 const dateCourte = (d: string | null) => (d ? new Date(`${d}T12:00:00`).toLocaleDateString('fr-FR') : '—');
 const ouiNon = (b: boolean | null) => (b === null ? '—' : b ? 'Oui' : 'Non');
 
+/** Export Excel (CSV ; séparateur point-virgule, accents compris) des déclarations affichées */
+function exporterRegistre(liste: DeclarationBlesse[]) {
+  const entetes = [
+    'Numéro', 'Parc', 'Activité', 'Emplacement', 'Date et heure', 'Niveau', 'Blessure', 'Nom', 'Prénom',
+    'Date de naissance', 'Mineur', 'Adresse', 'Code postal et ville', 'Téléphone', 'Se déplace seul',
+    'Secouristes', 'Heure prise en charge', 'Staff référent', 'Manager au courant', 'Prénom du manager',
+    'Détails', 'Déclaré par', 'Déclaré le',
+  ];
+  const lignes = liste.map((d) => [
+    d.numero, d.parcs?.nom ?? '', d.activite ?? '', d.emplacement ?? '', dateHeure(d.survenu_le), d.niveau ?? '',
+    d.blessure ?? '', d.victime_nom ?? '', d.victime_prenom ?? '', dateCourte(d.victime_date_naissance),
+    d.est_mineur ? 'Oui' : 'Non', d.victime_adresse ?? '', d.victime_cp_ville ?? '', d.contact_telephone ?? '',
+    ouiNon(d.peut_se_deplacer), ouiNon(d.secouristes), d.secouristes_heure?.slice(0, 5) ?? '', d.staff_referent ?? '',
+    ouiNon(d.manager_informe), d.manager_prenom ?? '', d.circonstances ?? '', d.declare_par_nom ?? '', dateHeure(d.declare_le),
+  ]);
+  const csv = [entetes, ...lignes].map((l) => l.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(';')).join('\r\n');
+  const lien = URL.createObjectURL(new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8' }));
+  const a = document.createElement('a');
+  a.href = lien;
+  a.download = `registre_blesses_${new Date().toISOString().slice(0, 10)}.csv`;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(lien), 60_000);
+}
+
 function useRegistreBlesses() {
   return useQuery({
     queryKey: ['declarations_blesses'],
@@ -100,12 +124,21 @@ export function PageBlesses() {
           <h1 className="text-xl md:text-[22px] font-semibold m-0">Blessés</h1>
           <p className="text-[13px] text-dim mt-1">Registre des accidents déclarés dans les parcs.</p>
         </div>
-        <button
-          onClick={() => setDeclarer(true)}
-          className="bg-gradient-cta text-text px-5 rounded-[10px] text-[13px] font-bold min-h-[44px] w-full sm:w-auto"
-        >
-          🩹 Déclarer un blessé
-        </button>
+        <div className="flex gap-2 w-full sm:w-auto">
+          <button
+            onClick={() => exporterRegistre(liste)}
+            disabled={liste.length === 0}
+            className="bg-bg-card border border-white/[0.08] text-text px-4 rounded-[10px] text-[13px] font-semibold min-h-[44px] flex-1 sm:flex-none disabled:opacity-40"
+          >
+            ⬇ Export Excel
+          </button>
+          <button
+            onClick={() => setDeclarer(true)}
+            className="bg-gradient-cta text-text px-5 rounded-[10px] text-[13px] font-bold min-h-[44px] flex-1 sm:flex-none"
+          >
+            🩹 Déclarer un blessé
+          </button>
+        </div>
       </div>
 
       <FiltreParcPills parcs={comptes} actif={parc} total={registre?.length} onChange={setParc} />
