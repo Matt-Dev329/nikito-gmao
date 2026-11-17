@@ -108,5 +108,9 @@ export interface DeclarationBlesse {
   manager_prenom: string | null;
   declare_par_nom: string | null;
   declare_le: string;
+  /** Niveau 3 : appel du client validé (les rappels tous les 3 jours s'arrêtent) */
+  client_appele_le?: string | null;
+  client_appele_par_nom?: string | null;
+  client_appel_note?: string | null;
   parcs?: { code: string; nom: string } | null;
 }

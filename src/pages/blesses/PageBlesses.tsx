@@ -28,7 +28,7 @@ function exporterRegistre(liste: DeclarationBlesse[]) {
     'Numéro', 'Parc', 'Activité', 'Emplacement', 'Date et heure', 'Niveau', 'Blessure', 'Nom', 'Prénom',
     'Date de naissance', 'Mineur', 'Adresse', 'Code postal et ville', 'Téléphone', 'Se déplace seul',
     'Secouristes', 'Heure prise en charge', 'Staff référent', 'Manager au courant', 'Prénom du manager',
-    'Détails', 'Déclaré par', 'Déclaré le',
+    'Détails', 'Déclaré par', 'Déclaré le', 'Client appelé le', 'Client appelé par', "Résultat de l'appel",
   ];
   const lignes = liste.map((d) => [
     d.numero, d.parcs?.nom ?? '', d.activite ?? '', d.emplacement ?? '', dateHeure(d.survenu_le), d.niveau ?? '',
@@ -36,6 +36,8 @@ function exporterRegistre(liste: DeclarationBlesse[]) {
     d.est_mineur ? 'Oui' : 'Non', d.victime_adresse ?? '', d.victime_cp_ville ?? '', d.contact_telephone ?? '',
     ouiNon(d.peut_se_deplacer), ouiNon(d.secouristes), d.secouristes_heure?.slice(0, 5) ?? '', d.staff_referent ?? '',
     ouiNon(d.manager_informe), d.manager_prenom ?? '', d.circonstances ?? '', d.declare_par_nom ?? '', dateHeure(d.declare_le),
+    d.client_appele_le ? dateHeure(d.client_appele_le) : d.niveau === 3 ? 'À appeler' : '',
+    d.client_appele_par_nom ?? '', d.client_appel_note ?? '',
   ]);
   const csv = [entetes, ...lignes].map((l) => l.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(';')).join('\r\n');
   const lien = URL.createObjectURL(new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8' }));
@@ -75,6 +77,7 @@ export function PageBlesses() {
   const [ouvert, setOuvert] = useState<string | null>(null);
   const [selection, setSelection] = useState<Set<string>>(new Set());
   const [aSupprimer, setASupprimer] = useState<DeclarationBlesse | null>(null);
+  const [aValiderAppel, setAValiderAppel] = useState<DeclarationBlesse | null>(null);
   const peutSupprimer = utilisateur?.role_code === 'chef_maintenance';
   // Export Excel : directeurs et managers principaux (+ chef d'équipe, direction, admin IT)
   const peutExporter =
@@ -232,6 +235,12 @@ export function PageBlesses() {
                   <span className="text-nikito-cyan font-semibold">{d.parcs?.code}</span>
                   <span>{d.activite}</span>
                   {d.est_mineur && <span className="text-[11px] bg-amber/15 text-amber px-2 py-0.5 rounded-md">Mineur</span>}
+                  {d.niveau === 3 &&
+                    (d.client_appele_le ? (
+                      <span className="text-[11px] bg-green/15 text-green px-2 py-0.5 rounded-md">📞 Client appelé</span>
+                    ) : (
+                      <span className="text-[11px] font-semibold bg-red/15 text-red px-2 py-0.5 rounded-md">📞 Client à appeler</span>
+                    ))}
                   <span className="text-dim text-[12px] ml-auto">{dateHeure(d.survenu_le)}</span>
                 </div>
                 <div className="text-[13px]">
@@ -241,6 +250,37 @@ export function PageBlesses() {
               </button>
               {ouvert === d.id && (
                 <div className="px-4 pb-4 grid gap-x-6 gap-y-1.5 sm:grid-cols-2 text-[13px] border-t border-white/[0.06] pt-3">
+                  {d.niveau === 3 && (
+                    <div
+                      className={cn(
+                        'sm:col-span-2 mb-2 rounded-[10px] border px-3 py-2.5 flex flex-wrap items-center gap-3',
+                        d.client_appele_le ? 'border-green/30 bg-green/[0.06]' : 'border-red/40 bg-red/[0.06]'
+                      )}
+                    >
+                      {d.client_appele_le ? (
+                        <div className="text-[13px]">
+                          <strong className="text-green">📞 Client appelé</strong> le {dateHeure(d.client_appele_le)}
+                          {d.client_appele_par_nom ? ` par ${d.client_appele_par_nom}` : ''}
+                          {d.client_appel_note && <div className="text-dim whitespace-pre-wrap mt-0.5">{d.client_appel_note}</div>}
+                        </div>
+                      ) : (
+                        <>
+                          <div className="text-[13px] flex-1 min-w-[200px]">
+                            <strong className="text-red">📞 Client à appeler</strong>
+                            <div className="text-[12px] text-dim">
+                              Téléphone : {d.contact_telephone || '—'} · rappel envoyé tous les 3 jours tant que ce n'est pas validé
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => setAValiderAppel(d)}
+                            className="px-4 min-h-[44px] rounded-[10px] text-[13px] font-bold bg-green/20 text-green border border-green/40"
+                          >
+                            ✓ Client appelé
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  )}
                   <Info k="Se déplace seul" v={d.peut_se_deplacer === false ? 'Non, intervention sur la structure' : ouiNon(d.peut_se_deplacer)} />
                   <Info k="Date de naissance" v={dateCourte(d.victime_date_naissance)} />
                   <Info k="Adresse" v={[d.victime_adresse, d.victime_cp_ville].filter(Boolean).join(', ')} />
@@ -271,6 +311,17 @@ export function PageBlesses() {
             </div>
           ))}
         </div>
+      )}
+
+      {aValiderAppel && (
+        <ModaleAppelClient
+          declaration={aValiderAppel}
+          onClose={() => setAValiderAppel(null)}
+          onValide={() => {
+            setAValiderAppel(null);
+            qc.invalidateQueries({ queryKey: ['declarations_blesses'] });
+          }}
+        />
       )}
 
       {aSupprimer && (
@@ -351,6 +402,73 @@ function ModaleSupprimerBlesse({
             className="px-4 min-h-[44px] rounded-[10px] text-[13px] font-bold bg-red/20 text-red border border-red/40 disabled:opacity-40"
           >
             {envoi ? 'Suppression…' : 'Supprimer'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** Niveau 3 : valider que le client a été appelé (arrête les rappels tous les 3 jours) */
+function ModaleAppelClient({
+  declaration,
+  onClose,
+  onValide,
+}: {
+  declaration: DeclarationBlesse;
+  onClose: () => void;
+  onValide: () => void;
+}) {
+  const toast = useToast();
+  const [note, setNote] = useState('');
+  const [envoi, setEnvoi] = useState(false);
+
+  const valider = async () => {
+    setEnvoi(true);
+    const { error } = await supabase.rpc('valider_appel_client_blesse', { p_id: declaration.id, p_note: note });
+    setEnvoi(false);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success(`${declaration.numero} : appel du client validé, plus de rappel`);
+    onValide();
+  };
+
+  return (
+    <div className="fixed inset-0 z-[150] bg-black/60 flex items-end md:items-center justify-center md:p-4" onClick={onClose}>
+      <div
+        className="w-full md:max-w-[440px] bg-bg-card rounded-t-[18px] md:rounded-[18px] border border-green/30 p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] flex flex-col gap-3"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div>
+          <div className="text-[16px] font-bold">📞 Client appelé · {declaration.numero}</div>
+          <div className="text-[12px] text-dim">
+            {declaration.victime_prenom} {declaration.victime_nom} · {declaration.contact_telephone || 'pas de téléphone'} ·{' '}
+            {declaration.parcs?.nom}
+          </div>
+        </div>
+        <label className="flex flex-col gap-1">
+          <span className="text-[12px] text-dim">Résultat de l'appel (facultatif)</span>
+          <textarea
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            rows={3}
+            placeholder="Ex. : va mieux, plâtre 3 semaines, pas de suite à donner"
+            className="bg-bg-app border border-white/10 rounded-lg px-3 py-2 text-[14px]"
+            autoFocus
+          />
+        </label>
+        <div className="flex gap-2 justify-end">
+          <button onClick={onClose} className="px-4 min-h-[44px] rounded-[10px] text-[13px] text-dim">
+            Annuler
+          </button>
+          <button
+            onClick={valider}
+            disabled={envoi}
+            className="px-4 min-h-[44px] rounded-[10px] text-[13px] font-bold bg-green/20 text-green border border-green/40 disabled:opacity-40"
+          >
+            {envoi ? 'Validation…' : 'Valider'}
           </button>
         </div>
       </div>

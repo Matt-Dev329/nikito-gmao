@@ -37,6 +37,44 @@ Deno.serve(async (req: Request) => {
     const siteUrl = Deno.env.get("SITE_URL") || "https://nikito.tech";
     const service = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
+    // Rappel « appeler le client » (niveau 3, tous les 3 jours tant que l'appel
+    // n'est pas validé) : déclenché par le cron rappels_appel_client_blesses
+    if (corps.rappel_appel === true) {
+      const { data: r, error: errR } = await service.rpc("reserver_mail_rappel_appel", { p_id: id });
+      if (errR) throw errR;
+      if (!r) return repondre({ success: true, envoye: 0 });
+      const { data: destR } = await service.rpc("destinataires_mise_a_jour", { p_parc: r.parc_id });
+      const emailsR = [...new Set((destR ?? []).map((x: { email: string | null }) => x.email).filter(Boolean))] as string[];
+      if (!emailsR.length) return repondre({ success: true, envoye: 0 });
+      const jours = Math.max(1, Math.round((Date.now() - new Date(r.declare_le).getTime()) / 86_400_000));
+      const htmlR = `<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"></head>
+<body style="margin:0;padding:24px;background:#ffffff;font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.55;color:#1a1a2e;">
+<p style="border-left:4px solid #d6336c;background:#f8f9fa;padding:10px 14px;margin:0 0 16px;">
+<strong>📞 Client à rappeler · ${echapper(r.parc_nom ?? "")} · ${echapper(r.numero)}</strong><br/>Blessé niveau 3 déclaré il y a ${jours} jour${jours > 1 ? "s" : ""} — appel au client pas encore validé.
+</p>
+<p>Blessé : <strong>${echapper(`${r.victime_prenom ?? ""} ${r.victime_nom ?? ""}`)}</strong> · ${echapper(r.activite ?? "")} · ${dateHeure(r.survenu_le)}<br/>Blessure : ${texte(r.blessure ?? "—")}</p>
+<p>Une fois le client appelé, ouvrez la déclaration dans ALBA et cliquez sur <strong>« Client appelé »</strong> : les rappels s'arrêtent. Sinon, un nouveau rappel part dans 3 jours.</p>
+<p style="margin-top:18px;"><a href="${siteUrl}/gmao/blesses" style="display:inline-block;background:#5DE5FF;color:#0B0B2E;font-weight:700;text-decoration:none;padding:10px 22px;border-radius:8px;">Ouvrir « Blessés » dans ALBA</a></p>
+<p style="font-size:12px;color:#888;margin-top:24px;">Le numéro du client est dans la déclaration, dans ALBA. Données personnelles et de santé : ne pas transférer ce mail.</p>
+</body></html>`;
+      const envoi = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${cle}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          from: "ALBA by Nikito <noreply@nikito.tech>",
+          to: emailsR,
+          subject: `📞 À rappeler · blessé niveau 3 · ${r.parc_nom ?? ""} (${r.numero})`,
+          html: htmlR,
+        }),
+      });
+      if (!envoi.ok) {
+        console.error("notifier-blesse rappel: Resend", envoi.status, await envoi.text());
+        await service.from("declarations_blesses").update({ appel_rappel_mail_le: null }).eq("id", id);
+        return repondre({ success: false, error: `Envoi impossible (${envoi.status})` }, 502);
+      }
+      return repondre({ success: true, envoye: emailsR.length });
+    }
+
     // Réserve l'envoi (une seule fois par déclaration)
     const { data: pris } = await service
       .from("declarations_blesses")
