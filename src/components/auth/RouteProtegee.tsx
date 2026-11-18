@@ -31,7 +31,7 @@ export function RouteProtegee({ children, rolesAutorises, skipParcCheck }: Props
     return <Navigate to="/reset-password" replace />;
   }
 
-  // Staff Arcade : uniquement sa page de consultation des tickets arcade
+  // Technicien Arcade (consultation) : uniquement sa page de consultation des tickets arcade
   if (utilisateur?.role_code === 'consultation_arcade') {
     return <Navigate to="/arcade" replace />;
   }

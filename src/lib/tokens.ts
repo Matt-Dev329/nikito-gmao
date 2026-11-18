@@ -37,7 +37,7 @@ export const roleLabels = {
   manager_parc: 'Manager parc',
   technicien: 'Technicien',
   staff_operationnel: 'Staff opérationnel',
-  consultation_arcade: 'Staff Arcade',
+  consultation_arcade: 'Technicien Arcade (consultation)',
   admin_it: 'Admin IT',
 } as const;
 

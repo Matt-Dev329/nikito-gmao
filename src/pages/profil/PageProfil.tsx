@@ -18,7 +18,7 @@ const roleLabels: Record<string, string> = {
   manager_parc: 'Manager parc',
   technicien: 'Technicien',
   staff_operationnel: 'Staff opérationnel',
-  consultation_arcade: 'Staff Arcade',
+  consultation_arcade: 'Technicien Arcade (consultation)',
 };
 
 export function PageProfil() {

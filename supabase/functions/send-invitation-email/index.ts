@@ -16,7 +16,7 @@ const LIBELLES_ROLES: Record<string, string> = {
   technicien: "Technicien",
   staff_operationnel: "Staff opérationnel",
   admin_it: "Admin IT",
-  consultation_arcade: "Staff Arcade (consultation des tickets arcade)",
+  consultation_arcade: "Technicien Arcade (consultation des tickets arcade)",
 };
 const LIBELLES_PROFILS: Record<string, string> = { arcade: "Technicien Arcade", nikito: "Technicien Nikito" };
 
