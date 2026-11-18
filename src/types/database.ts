@@ -29,7 +29,9 @@ export type RoleUtilisateur =
   | 'manager_parc'
   | 'technicien'
   | 'staff_operationnel'
-  | 'admin_it';
+  | 'admin_it'
+  /** Staff Arcade : consultation seule des tickets arcade de ses parcs */
+  | 'consultation_arcade';
 export type AuthMode = 'email_password' | 'pin_seul';
 export type StatutValidation = 'en_attente' | 'valide' | 'refuse' | 'desactive';
 export type CategorieNoteChantier =

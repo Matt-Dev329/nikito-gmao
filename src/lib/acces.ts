@@ -99,7 +99,7 @@ export function rolesAttribuables(role: RoleUtilisateur | undefined): RoleUtilis
     case 'direction':
     case 'admin_it':
     case 'chef_maintenance':
-      return ['direction', 'chef_maintenance', 'directeur_parc', 'manager_parc', 'technicien', 'admin_it', 'staff_operationnel'];
+      return ['direction', 'chef_maintenance', 'directeur_parc', 'manager_parc', 'technicien', 'admin_it', 'staff_operationnel', 'consultation_arcade'];
     case 'directeur_parc':
       return ['directeur_parc', 'manager_parc', 'staff_operationnel'];
     case 'manager_parc':

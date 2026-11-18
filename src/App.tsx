@@ -69,6 +69,7 @@ const VueManagerParc = page(() => import('@/pages/parc/VueManagerParc'), 'VueMan
 const PageProfil = page(() => import('@/pages/profil/PageProfil'), 'PageProfil');
 const MesSignalements = page(() => import('@/pages/staff/MesSignalements'), 'MesSignalements');
 const DeclarerBlesseStaff = page(() => import('@/pages/staff/DeclarerBlesseStaff'), 'DeclarerBlesseStaff');
+const PageConsultationArcade = page(() => import('@/pages/arcade/PageConsultationArcade'), 'PageConsultationArcade');
 const PageBlesses = page(() => import('@/pages/blesses/PageBlesses'), 'PageBlesses');
 const PageAide = page(() => import('@/pages/aide/PageAide'), 'PageAide');
 const PageFormation = page(() => import('@/pages/formation/PageFormation'), 'PageFormation');
@@ -87,6 +88,7 @@ function AccueilParRole() {
   if (role === 'manager_parc') return <Navigate to="/gmao/mon-parc" replace />;
   if (role === 'technicien') return <Navigate to="/gmao/operations" replace />;
   if (role === 'staff_operationnel') return <Navigate to="/staff/controle-ouverture" replace />;
+  if (role === 'consultation_arcade') return <Navigate to="/arcade" replace />;
   // Tableau de bord : Ryad uniquement ; les autres arrivent sur Opérations
   if (!voitTableauDeBord(utilisateur)) return <Navigate to="/gmao/operations" replace />;
   return <TableauDeBord />;
@@ -121,6 +123,7 @@ export function App() {
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/invitation/:token" element={<AcceptationInvitation />} />
         <Route path="/staff/login" element={<LoginStaff />} />
+        <Route path="/arcade" element={<PageConsultationArcade />} />
 
         <Route
           path="/gmao/select-parc"

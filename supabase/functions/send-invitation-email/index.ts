@@ -1,4 +1,3 @@
-import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.45.0";
 
 /**
@@ -17,6 +16,7 @@ const LIBELLES_ROLES: Record<string, string> = {
   technicien: "Technicien",
   staff_operationnel: "Staff opérationnel",
   admin_it: "Admin IT",
+  consultation_arcade: "Staff Arcade (consultation des tickets arcade)",
 };
 const LIBELLES_PROFILS: Record<string, string> = { arcade: "Technicien Arcade", nikito: "Technicien Nikito" };
 

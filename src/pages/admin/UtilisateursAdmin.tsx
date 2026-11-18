@@ -47,6 +47,7 @@ const roleBadgeColors: Record<RoleUtilisateur, string> = {
   technicien: 'bg-green/15 text-green',
   staff_operationnel: 'bg-faint/20 text-dim',
   admin_it: 'bg-nikito-violet/15 text-nikito-violet',
+  consultation_arcade: 'bg-faint/20 text-dim',
 };
 
 export function UtilisateursAdmin() {
@@ -355,6 +356,7 @@ const roleHomePage: Record<RoleUtilisateur, string> = {
   manager_parc: '/gmao/mon-parc',
   staff_operationnel: '/staff/controle-ouverture',
   admin_it: '/gmao/it-admin',
+  consultation_arcade: '/arcade',
 };
 
 function filtrerUtilisateurs(users: UtilisateurRow[], q: string): UtilisateurRow[] {

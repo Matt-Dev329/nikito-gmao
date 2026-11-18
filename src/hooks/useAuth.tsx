@@ -8,7 +8,7 @@ export interface UtilisateurMetier {
   nom: string;
   prenom: string;
   trigramme: string | null;
-  role_code: 'direction' | 'chef_maintenance' | 'directeur_parc' | 'manager_parc' | 'technicien' | 'staff_operationnel' | 'admin_it';
+  role_code: 'direction' | 'chef_maintenance' | 'directeur_parc' | 'manager_parc' | 'technicien' | 'staff_operationnel' | 'admin_it' | 'consultation_arcade';
   parc_ids: string[];
   /** Parcs où l'utilisateur est manager principal (badge MGR) */
   parcs_manager_principal: string[];
