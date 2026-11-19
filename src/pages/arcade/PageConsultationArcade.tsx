@@ -40,7 +40,7 @@ const dateHeure = (iso: string) =>
   new Date(iso).toLocaleString('fr-FR', { timeZone: 'Europe/Paris', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 
 /**
- * « Technicien Arcade (consultation) » : consultation seule des tickets arcade de ses parcs
+ * « Arcade consultation » : lecture seule des tickets arcade de ses parcs
  * (le problème et les photos). Aucune action possible : la base refuse toute
  * écriture à ce compte (garde bloquer_ancienne_adresse + stockage).
  */

@@ -30,7 +30,7 @@ export type RoleUtilisateur =
   | 'technicien'
   | 'staff_operationnel'
   | 'admin_it'
-  /** Technicien Arcade (consultation) : consultation seule des tickets arcade de ses parcs */
+  /** Arcade consultation : lecture seule des tickets arcade de ses parcs */
   | 'consultation_arcade';
 export type AuthMode = 'email_password' | 'pin_seul';
 export type StatutValidation = 'en_attente' | 'valide' | 'refuse' | 'desactive';

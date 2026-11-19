@@ -26,7 +26,7 @@ const rolesParAuth: Record<AuthMode, { value: RoleUtilisateur; label: string }[]
     { value: 'manager_parc', label: 'Manager parc' },
     { value: 'technicien', label: 'Technicien' },
     { value: 'admin_it', label: 'Admin IT' },
-    { value: 'consultation_arcade', label: 'Technicien Arcade (consultation)' },
+    { value: 'consultation_arcade', label: 'Arcade consultation' },
   ],
   pin_seul: [{ value: 'staff_operationnel', label: 'Staff opérationnel' }],
 };
