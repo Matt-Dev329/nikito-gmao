@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils';
 import { Logo } from '@/components/ui/Logo';
 import { useAuth } from '@/hooks/useAuth';
 import { ROLES_BLESSES } from '@/lib/blesses';
-import { ROLES_PILOTAGE, ROLES_BONS, ROLES_DIRECTION_PARC, ROLES_DEMANDES_PRESTA, ROLES_HISTORIQUES, ROLES_HISTORIQUE_COMMANDES, aAcces, voitTableauDeBord } from '@/lib/acces';
+import { ROLES_PILOTAGE, ROLES_BONS, ROLES_DIRECTION_PARC, ROLES_DEMANDES_PRESTA, ROLES_HISTORIQUES, ROLES_HISTORIQUE_COMMANDES, aAcces, voitDemandesPrestataires, voitTableauDeBord } from '@/lib/acces';
 
 interface MenuDrawerProps {
   open: boolean;
@@ -91,7 +91,7 @@ export function MenuDrawer({ open, onClose }: MenuDrawerProps) {
 
         <nav className="flex-1 p-3 flex flex-col gap-1">
           {menuItems
-            .filter((item) => (!item.roles || aAcces(utilisateur, item.roles)) && (!item.proprietaireSeul || voitTableauDeBord(utilisateur)))
+            .filter((item) => (!item.roles || aAcces(utilisateur, item.roles) || (item.to === '/tech/demandes-prestataires' && voitDemandesPrestataires(utilisateur))) && (!item.proprietaireSeul || voitTableauDeBord(utilisateur)))
             .map((item) => (
             <button
               key={item.to}

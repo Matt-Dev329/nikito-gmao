@@ -8,7 +8,7 @@ import { useParcs } from '@/hooks/queries/useReferentiel';
 import { useSignedUrls } from '@/hooks/useSignedUrl';
 import { useToast } from '@/components/ui/ToastProvider';
 import { Pill } from '@/components/ui/Pill';
-import { ROLES_DEMANDES_PRESTA, aAcces } from '@/lib/acces';
+import { ROLES_DEMANDES_PRESTA, aAcces, voitDemandesPrestataires } from '@/lib/acces';
 import { DOMAINES_PRESTATAIRES } from '@/lib/domainesPrestataires';
 import { useFiltreParc } from '@/hooks/useParcCourant';
 import { FiltreParcPills } from '@/components/ui/FiltreParcPills';
@@ -87,11 +87,12 @@ function useDemandes() {
 /** Demandes spécifiques et demandes d'intervention aux prestataires, réservées aux directeurs de parc. */
 export function PageDemandesPrestataires() {
   const { utilisateur } = useAuth();
-  if (utilisateur && !aAcces(utilisateur, ROLES_DEMANDES_PRESTA)) return <Navigate to="/" replace />;
-  return <ContenuDemandes />;
+  if (utilisateur && !voitDemandesPrestataires(utilisateur)) return <Navigate to="/" replace />;
+  // Accès complet (création, suivi, retrait) ou lecture seule accordée au compte
+  return <ContenuDemandes peutModifier={aAcces(utilisateur, ROLES_DEMANDES_PRESTA)} />;
 }
 
-function ContenuDemandes() {
+function ContenuDemandes({ peutModifier }: { peutModifier: boolean }) {
   const { data: demandes, isLoading, isError, error } = useDemandes();
   const [ajout, setAjout] = useState(false);
   const [filtre, setFiltre] = useState<FiltreStatut>('en_cours');
@@ -128,10 +129,10 @@ function ContenuDemandes() {
         <div>
           <h1 className="text-xl md:text-[22px] font-semibold m-0">Demandes prestataires</h1>
           <p className="text-[13px] text-dim mt-1">
-            Demandes d’intervention et demandes spécifiques aux prestataires, avec leur suivi — réservé aux directeurs de parc
+            Demandes d’intervention et demandes spécifiques aux prestataires, avec leur suivi{peutModifier ? ' — réservé aux directeurs de parc' : ' — consultation seule'}
           </p>
         </div>
-        {!ajout && (
+        {peutModifier && !ajout && (
           <button
             onClick={() => setAjout(true)}
             className="bg-gradient-cta text-text px-5 py-2.5 rounded-[10px] text-[13px] font-bold min-h-[44px]"
@@ -141,7 +142,7 @@ function ContenuDemandes() {
         )}
       </div>
 
-      {ajout && <FormulaireDemande onFini={() => setAjout(false)} />}
+      {peutModifier && ajout && <FormulaireDemande onFini={() => setAjout(false)} />}
 
       <div className="flex flex-col gap-3 mb-4">
         <input
@@ -188,7 +189,7 @@ function ContenuDemandes() {
               <h2 className="text-[13px] text-dim uppercase tracking-wider mb-2">
                 {g} <span className="text-faint">· {ds.length}</span>
               </h2>
-              <ListeDemandes demandes={ds} />
+              <ListeDemandes demandes={ds} peutModifier={peutModifier} />
             </section>
           ))}
         </div>
@@ -197,7 +198,7 @@ function ContenuDemandes() {
   );
 }
 
-function ListeDemandes({ demandes }: { demandes: Demande[] }) {
+function ListeDemandes({ demandes, peutModifier }: { demandes: Demande[]; peutModifier: boolean }) {
   const { data: urls } = useSignedUrls(
     demandes.map((d) => d.piece_chemin),
     BUCKET
@@ -205,13 +206,13 @@ function ListeDemandes({ demandes }: { demandes: Demande[] }) {
   return (
     <div className="grid gap-3 md:grid-cols-2">
       {demandes.map((d) => (
-        <CarteDemande key={d.id} demande={d} url={d.piece_chemin ? urls?.[d.piece_chemin] : undefined} />
+        <CarteDemande key={d.id} demande={d} url={d.piece_chemin ? urls?.[d.piece_chemin] : undefined} peutModifier={peutModifier} />
       ))}
     </div>
   );
 }
 
-function CarteDemande({ demande: d, url }: { demande: Demande; url?: string }) {
+function CarteDemande({ demande: d, url, peutModifier }: { demande: Demande; url?: string; peutModifier: boolean }) {
   const qc = useQueryClient();
   const toast = useToast();
   const [edition, setEdition] = useState(false);
@@ -310,7 +311,7 @@ function CarteDemande({ demande: d, url }: { demande: Demande; url?: string }) {
             </button>
           </div>
         </div>
-      ) : (
+      ) : !peutModifier ? null : (
         <div className="flex items-center justify-between gap-2 pt-1 mt-auto">
           <button
             onClick={() => setEdition(true)}

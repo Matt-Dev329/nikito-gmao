@@ -256,7 +256,8 @@ export function Sidebar({ user, roleAffiche, roleCode, realRoleCode, compact = f
               ? peutCommander || peutGererCatalogue
               : it.roles.includes(roleCode) ||
                 (roleCode === 'manager_parc' && it.roles.includes('manager_principal') && (vuePrincipal || estManagerPrincipal(utilisateur))) ||
-                (!!it.gestionnaireCommandes && estGestionnaire)) &&
+                (!!it.gestionnaireCommandes && estGestionnaire) ||
+                (it.to === '/gmao/demandes-prestataires' && !!utilisateur?.lecture_demandes_prestataires)) &&
             (!it.featureCode || hasAccess(it.featureCode) || (!!it.gestionnaireCommandes && estGestionnaire)) &&
             (!it.proprietaireSeul || voitTableauDeBord(utilisateur))
           );

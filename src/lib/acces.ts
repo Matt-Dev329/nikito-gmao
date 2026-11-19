@@ -193,3 +193,8 @@ export function peutModifierTicket(
   if (u.role_code === 'directeur_parc') return !!parcId && u.parc_ids.includes(parcId);
   return false;
 }
+
+/** Demandes prestataires : accès complet (ROLES_DEMANDES_PRESTA) ou lecture seule accordée au compte */
+export function voitDemandesPrestataires(u: (UtilisateurAcces & { lecture_demandes_prestataires?: boolean }) | null | undefined): boolean {
+  return aAcces(u, ROLES_DEMANDES_PRESTA) || !!u?.lecture_demandes_prestataires;
+}

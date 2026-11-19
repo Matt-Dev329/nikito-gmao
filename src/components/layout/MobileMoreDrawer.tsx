@@ -135,7 +135,8 @@ export function MobileMoreDrawer({ open, onClose, roleCode, onSignOut }: MobileM
           ? peutCommander || peutGererCatalogue
           : it.roles.includes(roleCode) ||
             (roleCode === 'manager_parc' && it.roles.includes('manager_principal') && (vuePrincipal || estManagerPrincipal(utilisateur))) ||
-            (!!it.gestionnaireCommandes && estGestionnaire)) &&
+            (!!it.gestionnaireCommandes && estGestionnaire) ||
+            (it.to === '/gmao/demandes-prestataires' && !!utilisateur?.lecture_demandes_prestataires)) &&
         (!it.proprietaireSeul || voitTableauDeBord(utilisateur))
     );
 
