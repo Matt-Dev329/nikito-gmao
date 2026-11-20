@@ -74,7 +74,8 @@ export function ModaleInviterUtilisateur({
 
   if (!open) return null;
 
-  const emailValide = !email || /^[^\s@]+@(nikito\.com|nikito\.fr)$/i.test(email);
+  // Adresses pro acceptées : Nikito et JA-FG
+  const emailValide = !email || /^[^\s@]+@(nikito\.com|nikito\.fr|ja-fg\.com)$/i.test(email);
   const peutEnvoyer =
     roleChoisi !== null &&
     parcsChoisis.length > 0 &&
@@ -262,7 +263,7 @@ export function ModaleInviterUtilisateur({
                 <CarteAuthMode
                   icon="📧"
                   titre="Email professionnel"
-                  description={`${rolesParAuth.email_password.filter((x) => attribuables.includes(x.value)).map((x) => x.label).join(', ')} · @nikito.com`}
+                  description={`${rolesParAuth.email_password.filter((x) => attribuables.includes(x.value)).map((x) => x.label).join(', ')} · @nikito.com ou @ja-fg.com`}
                   actif={authMode === 'email_password'}
                   onClick={() => {
                     setAuthMode('email_password');
@@ -337,12 +338,12 @@ export function ModaleInviterUtilisateur({
                   />
                   {email.length > 0 && emailValide && (
                     <div className="text-[10px] text-nikito-cyan mt-1">
-                      ✓ Format @nikito.com validé
+                      ✓ Adresse pro validée
                     </div>
                   )}
                   {email.length > 0 && !emailValide && (
                     <div className="text-[10px] text-red mt-1">
-                      Doit se terminer par @nikito.com ou @nikito.fr
+                      Doit se terminer par @nikito.com, @nikito.fr ou @ja-fg.com
                     </div>
                   )}
                 </Field>
