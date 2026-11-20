@@ -526,8 +526,13 @@ function FormulaireAjout({ type, onFini }: { type: TypeDocument; onFini: () => v
   const [dateDocument, setDateDocument] = useState(() => new Date().toISOString().slice(0, 10));
   const [echeance, setEcheance] = useState('');
   const [description, setDescription] = useState('');
-  const [fichier, setFichier] = useState<File | null>(null);
+  const [fichiers, setFichiers] = useState<File[]>([]);
   const [progression, setProgression] = useState<number | null>(null);
+  // Envoi de plusieurs rapports : fichier en cours (1-based) / total
+  const [enCours, setEnCours] = useState<{ n: number; total: number } | null>(null);
+  // Rapports prestataires : plusieurs fichiers d'un coup
+  const multiple = type === 'prestataire';
+  const fichier = fichiers[0] ?? null;
 
   const suggestions = useMemo(() => {
     const noms = (catalogue?.activites ?? []).map((a) => a.nom);
@@ -535,70 +540,107 @@ function FormulaireAjout({ type, onFini }: { type: TypeDocument; onFini: () => v
     return type === 'plan' ? [PLAN_GENERAL, ...noms] : noms;
   }, [catalogue, type]);
 
+  /** Envoie un fichier et crée le document ; renvoie l'id créé */
+  const envoyerUn = async (f: File, plusieurs: boolean): Promise<string | undefined> => {
+    // Rapports prestataires : domaine et prestataire facultatifs, l'analyse
+    // automatique range le rapport dans une catégorie (existante ou créée)
+    const nomFichier = f.name.replace(/\.[^.]+$/, '');
+    const titreFinal = plusieurs
+      ? titre.trim()
+        ? `${titre.trim()} — ${nomFichier}`
+        : nomFichier
+      : titre.trim() ||
+        (estPrestataire(type)
+          ? [type === 'contrat' ? 'Contrat' : '', activite.trim(), prestataire.trim()].filter(Boolean).join(' — ') || nomFichier
+          : '');
+    if (!titreFinal) throw new Error('Donne un titre au document');
+    if (type === 'manuel' && !activite.trim()) throw new Error('Indique l’activité du manuel');
+    if (f.size > TAILLE_MAX) throw new Error(`${f.name} : fichier trop lourd (500 Mo maximum)`);
+    const parc = (parcs as Array<{ id: string; code: string }> | undefined)?.find((p) => p.id === parcId);
+    const nomPropre = f.name.normalize('NFD').replace(/[^\w.-]+/g, '_').slice(-80);
+    const chemin = `${type}/${parc?.code ?? 'commun'}/${Date.now()}_${nomPropre}`;
+    setProgression(0);
+    const parties = await envoyerDocument(BUCKET, chemin, f, setProgression);
+    const { data: cree, error } = await supabase.from('documents_techniques').insert({
+      type,
+      parc_id: parcId || null,
+      activite: activite.trim() || null,
+      titre: titreFinal,
+      description: description.trim() || null,
+      ...(estPrestataire(type)
+        ? { prestataire: prestataire.trim(), date_document: dateDocument || null, prochaine_echeance: echeance || null }
+        : {}),
+      chemin,
+      mime: f.type || null,
+      taille: f.size,
+      parties,
+      cree_par_id: utilisateur?.id ?? null,
+    }).select('id').single();
+    if (error) throw error;
+    return cree?.id as string | undefined;
+  };
+
+  /** Analyses automatiques lancées l'une après l'autre (sans bloquer l'écran) */
+  const analyser = (ids: string[]) => {
+    if (!ids.length) return;
+    const fonction = type === 'prestataire' ? 'analyser-rapport-prestataire' : type === 'contrat' ? 'analyser-contrat' : null;
+    if (!fonction) return;
+    void (async () => {
+      for (const id of ids) {
+        await supabase.functions.invoke(fonction, { body: { document_id: id } }).catch(() => undefined);
+        // Une fois l'analyse finie, le rapport est rangé dans sa catégorie
+        qc.invalidateQueries({ queryKey: ['documents-techniques', type] });
+        if (type === 'prestataire') qc.invalidateQueries({ queryKey: ['analyses-prestataires'] });
+      }
+    })();
+  };
+
   const envoyer = useMutation({
     mutationFn: async () => {
-      if (!fichier) throw new Error('Choisis un fichier (PDF ou image)');
-      // Rapports prestataires : domaine et prestataire facultatifs, l'analyse
-      // automatique range le rapport dans une catégorie (existante ou créée)
-      const titreFinal =
-        titre.trim() ||
-        (estPrestataire(type)
-          ? [type === 'contrat' ? 'Contrat' : '', activite.trim(), prestataire.trim()].filter(Boolean).join(' — ') || fichier.name.replace(/\.[^.]+$/, '')
-          : '');
-      if (!titreFinal) throw new Error('Donne un titre au document');
-      if (type === 'manuel' && !activite.trim()) throw new Error('Indique l’activité du manuel');
-      if (fichier.size > TAILLE_MAX) throw new Error('Fichier trop lourd (500 Mo maximum)');
-      const parc = (parcs as Array<{ id: string; code: string }> | undefined)?.find((p) => p.id === parcId);
-      const nomPropre = fichier.name.normalize('NFD').replace(/[^\w.-]+/g, '_').slice(-80);
-      const chemin = `${type}/${parc?.code ?? 'commun'}/${Date.now()}_${nomPropre}`;
-      setProgression(0);
-      const parties = await envoyerDocument(BUCKET, chemin, fichier, setProgression);
-      const { data: cree, error } = await supabase.from('documents_techniques').insert({
-        type,
-        parc_id: parcId || null,
-        activite: activite.trim() || null,
-        titre: titreFinal,
-        description: description.trim() || null,
-        ...(estPrestataire(type)
-          ? { prestataire: prestataire.trim(), date_document: dateDocument || null, prochaine_echeance: echeance || null }
-          : {}),
-        chemin,
-        mime: fichier.type || null,
-        taille: fichier.size,
-        parties,
-        cree_par_id: utilisateur?.id ?? null,
-      }).select('id').single();
-      if (error) throw error;
+      if (!fichiers.length) throw new Error(multiple ? 'Choisis un ou plusieurs fichiers (PDF ou image)' : 'Choisis un fichier (PDF ou image)');
+      const plusieurs = fichiers.length > 1;
+      const ids: string[] = [];
+      const echecs: string[] = [];
+      const restants: File[] = [];
+      for (let k = 0; k < fichiers.length; k++) {
+        setEnCours(plusieurs ? { n: k + 1, total: fichiers.length } : null);
+        try {
+          const id = await envoyerUn(fichiers[k], plusieurs);
+          if (id) ids.push(id);
+        } catch (e) {
+          if (!plusieurs) throw e;
+          echecs.push(`${fichiers[k].name} (${(e as Error).message})`);
+          restants.push(fichiers[k]);
+        }
+      }
       // Rapport prestataire : analyse automatique (points conformes / non conformes, renouvellement)
-      if (type === 'prestataire' && cree?.id) {
-        // Une fois l'analyse finie, le rapport est rangé dans sa catégorie
-        void supabase.functions
-          .invoke('analyser-rapport-prestataire', { body: { document_id: cree.id } })
-          .finally(() => {
-            qc.invalidateQueries({ queryKey: ['documents-techniques', 'prestataire'] });
-            qc.invalidateQueries({ queryKey: ['analyses-prestataires'] });
-          });
-      }
       // Contrat : analyse automatique (à quoi il sert, durée, préavis, prix…)
-      if (type === 'contrat' && cree?.id) {
-        void supabase.functions
-          .invoke('analyser-contrat', { body: { document_id: cree.id } })
-          .finally(() => qc.invalidateQueries({ queryKey: ['documents-techniques', 'contrat'] }));
-      }
+      analyser(ids);
+      // Seuls les fichiers non envoyés restent sélectionnés (pas de doublon au nouvel essai)
+      if (restants.length) setFichiers(restants);
+      return { ok: ids.length, echecs };
     },
-    onSuccess: () => {
-      toast.success(
-        type === 'prestataire'
-          ? 'Rapport ajouté — analyse en cours (onglet « Analyses prestataires »)'
-          : type === 'contrat'
-            ? 'Contrat ajouté — analyse en cours'
-            : 'Document ajouté'
-      );
+    onSuccess: ({ ok, echecs }) => {
+      if (echecs.length) toast.error(`Non envoyé${echecs.length > 1 ? 's' : ''} : ${echecs.join(' · ')} — clique à nouveau sur Enregistrer pour réessayer`);
+      if (ok) {
+        toast.success(
+          type === 'prestataire'
+            ? ok > 1
+              ? `${ok} rapports ajoutés — analyses en cours (onglet « Analyses prestataires »)`
+              : 'Rapport ajouté — analyse en cours (onglet « Analyses prestataires »)'
+            : type === 'contrat'
+              ? 'Contrat ajouté — analyse en cours'
+              : 'Document ajouté'
+        );
+      }
       qc.invalidateQueries({ queryKey: ['documents-techniques', type] });
-      onFini();
+      if (!echecs.length) onFini();
     },
     onError: (e) => toast.error((e as Error).message),
-    onSettled: () => setProgression(null),
+    onSettled: () => {
+      setProgression(null);
+      setEnCours(null);
+    },
   });
 
   return (
@@ -684,18 +726,23 @@ function FormulaireAjout({ type, onFini }: { type: TypeDocument; onFini: () => v
       <input
         type="file"
         accept="application/pdf,image/*"
-        onChange={(e) => setFichier(e.target.files?.[0] ?? null)}
+        multiple={multiple}
+        onChange={(e) => setFichiers(Array.from(e.target.files ?? []))}
         className="text-[13px] text-dim file:mr-3 file:rounded-lg file:border-0 file:bg-nikito-cyan/15 file:text-nikito-cyan file:px-3 file:py-2"
       />
       <div className="text-[11px] text-faint">
-        PDF ou image, jusqu’à 500 Mo{fichier ? ` · ${(fichier.size / 1024 / 1024).toFixed(1)} Mo sélectionnés` : ''}
+        {multiple ? 'Un ou plusieurs PDF / images (sélection multiple), jusqu’à 500 Mo chacun' : 'PDF ou image, jusqu’à 500 Mo'}
+        {fichiers.length === 1 && fichier ? ` · ${(fichier.size / 1024 / 1024).toFixed(1)} Mo sélectionnés` : ''}
+        {fichiers.length > 1 ? ` · ${fichiers.length} fichiers sélectionnés (titre = nom du fichier)` : ''}
       </div>
       {progression !== null && (
         <div>
           <div className="h-2 rounded-full bg-bg-deep overflow-hidden">
             <div className="h-full bg-nikito-cyan transition-all" style={{ width: `${progression}%` }} />
           </div>
-          <div className="text-[11px] text-dim mt-1">Envoi en cours… {progression} % — garde la page ouverte</div>
+          <div className="text-[11px] text-dim mt-1">
+            Envoi en cours{enCours ? ` · fichier ${enCours.n}/${enCours.total}` : ''}… {progression} % — garde la page ouverte
+          </div>
         </div>
       )}
       <div className="flex gap-2 justify-end">
@@ -707,7 +754,15 @@ function FormulaireAjout({ type, onFini }: { type: TypeDocument; onFini: () => v
           disabled={envoyer.isPending}
           className={cn('bg-gradient-cta text-text px-5 rounded-[10px] text-[13px] font-bold min-h-[44px]', envoyer.isPending && 'opacity-40')}
         >
-          {envoyer.isPending ? (progression !== null ? `Envoi ${progression} %` : 'Envoi…') : 'Enregistrer'}
+          {envoyer.isPending
+            ? enCours
+              ? `Envoi ${enCours.n}/${enCours.total}`
+              : progression !== null
+                ? `Envoi ${progression} %`
+                : 'Envoi…'
+            : fichiers.length > 1
+              ? `Enregistrer les ${fichiers.length} rapports`
+              : 'Enregistrer'}
         </button>
       </div>
     </div>
