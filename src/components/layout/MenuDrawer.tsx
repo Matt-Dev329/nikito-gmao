@@ -29,6 +29,7 @@ const menuItems: { to: string; label: string; icon: string; roles?: string[]; pr
   { to: '/tech/formations-personnel', label: 'Formations du personnel', icon: '🎓', roles: ROLES_PILOTAGE },
   { to: '/gmao/mises-a-jour', label: 'MAJ Laser Game', icon: '🎯', roles: ROLES_PILOTAGE },
   { to: '/gmao/blesses', label: 'Blessés', icon: '🩹', roles: ROLES_BLESSES },
+  { to: '/gmao/catalogue-karting', label: 'Catalogue karting', icon: '🏎️', roles: ['direction', 'chef_maintenance', 'admin_it'] },
   { to: '/gmao/commander', label: 'Commander', icon: '🛒', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'manager_parc', 'technicien', 'admin_it'] },
   { to: '/gmao/bloc-notes', label: 'Bloc-notes', icon: '🗒️', proprietaireSeul: true },
   { to: '/gmao/projets', label: 'Projets', icon: '💡', proprietaireSeul: true },
@@ -94,7 +95,7 @@ export function MenuDrawer({ open, onClose }: MenuDrawerProps) {
 
         <nav className="flex-1 p-3 flex flex-col gap-1">
           {menuItems
-            .filter((item) => (!karting || cheminOuvertTechnicienKarting(item.to)) && (!item.roles || aAcces(utilisateur, item.roles) || (item.to === '/tech/demandes-prestataires' && voitDemandesPrestataires(utilisateur))) && (!item.proprietaireSeul || voitTableauDeBord(utilisateur)))
+            .filter((item) => (!karting || cheminOuvertTechnicienKarting(item.to)) && (!item.roles || aAcces(utilisateur, item.roles) || (item.to === '/tech/demandes-prestataires' && voitDemandesPrestataires(utilisateur)) || (item.to === '/gmao/catalogue-karting' && karting)) && (!item.proprietaireSeul || voitTableauDeBord(utilisateur)))
             .map((item) => (
             <button
               key={item.to}

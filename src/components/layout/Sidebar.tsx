@@ -89,6 +89,7 @@ const sections: { titre: string; items: NavItem[] }[] = [
       { to: '/gmao/mises-a-jour', label: 'MAJ Laser Game', roles: ROLES_PILOTAGE },
       { to: '/gmao/blesses', label: 'Blessés', roles: ROLES_BLESSES },
       { to: '/gmao/stock', label: 'Stock', featureCode: 'stock', roles: ROLES_STOCK, gestionnaireCommandes: true },
+      { to: '/gmao/catalogue-karting', label: 'Catalogue karting', roles: ['direction', 'chef_maintenance', 'admin_it'] },
       { to: '/gmao/commander', label: 'Commander', badgeKey: 'commandesATraiter', badgeTone: 'amber', roles: [], accesCommandes: true },
     ],
   },
@@ -259,7 +260,8 @@ export function Sidebar({ user, roleAffiche, roleCode, realRoleCode, compact = f
               : it.roles.includes(roleCode) ||
                 (roleCode === 'manager_parc' && it.roles.includes('manager_principal') && (vuePrincipal || estManagerPrincipal(utilisateur))) ||
                 (!!it.gestionnaireCommandes && estGestionnaire) ||
-                (it.to === '/gmao/demandes-prestataires' && !!utilisateur?.lecture_demandes_prestataires)) &&
+                (it.to === '/gmao/demandes-prestataires' && !!utilisateur?.lecture_demandes_prestataires) ||
+                (it.to === '/gmao/catalogue-karting' && karting)) &&
             (!it.featureCode || hasAccess(it.featureCode) || (!!it.gestionnaireCommandes && estGestionnaire)) &&
             (!it.proprietaireSeul || voitTableauDeBord(utilisateur))
           );

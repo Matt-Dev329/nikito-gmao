@@ -70,6 +70,7 @@ const PageProfil = page(() => import('@/pages/profil/PageProfil'), 'PageProfil')
 const MesSignalements = page(() => import('@/pages/staff/MesSignalements'), 'MesSignalements');
 const DeclarerBlesseStaff = page(() => import('@/pages/staff/DeclarerBlesseStaff'), 'DeclarerBlesseStaff');
 const PageConsultationArcade = page(() => import('@/pages/arcade/PageConsultationArcade'), 'PageConsultationArcade');
+const PageCatalogueKarting = page(() => import('@/pages/catalogue/PageCatalogueKarting'), 'PageCatalogueKarting');
 const PageBlesses = page(() => import('@/pages/blesses/PageBlesses'), 'PageBlesses');
 const PageAide = page(() => import('@/pages/aide/PageAide'), 'PageAide');
 const PageFormation = page(() => import('@/pages/formation/PageFormation'), 'PageFormation');
@@ -168,6 +169,7 @@ export function App() {
           <Route path="preventif" element={<GardeAcces roles={ROLES_PILOTAGE}><PagePreventif /></GardeAcces>} />
           <Route path="mises-a-jour" element={<GardeAcces roles={ROLES_PILOTAGE}><PageMisesAJour /></GardeAcces>} />
           <Route path="blesses" element={<GardeAcces roles={ROLES_BLESSES}><PageBlesses /></GardeAcces>} />
+          <Route path="catalogue-karting" element={<PageCatalogueKarting />} />
           <Route path="certifications" element={<GardeAcces roles={ROLES_PILOTAGE}><PageCertifications /></GardeAcces>} />
           {/* Modules retirés (Flotte, Plaintes clients, IA prédictive) : retour à l'accueil */}
           <Route path="plaintes" element={<Navigate to="/gmao" replace />} />

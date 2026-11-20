@@ -226,6 +226,7 @@ const CHEMINS_TECHNICIEN_KARTING = [
   '/gmao/rapports',
   '/gmao/equipements',
   '/gmao/stock',
+  '/gmao/catalogue-karting',
   '/gmao/commander',
   '/gmao/profil',
   '/gmao/aide',

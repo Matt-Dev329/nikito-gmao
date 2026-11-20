@@ -49,6 +49,7 @@ const pilotageItems: DrawerItem[] = [
   { to: '/gmao/recurrences', label: 'Recurrences', iconLabel: 'Récurrences', roles: ROLES_ANALYSE_CAUSES },
   { to: '/gmao/cinq-pourquoi', label: '5 Pourquoi', iconLabel: '5 Pourquoi', roles: ROLES_ANALYSE_CAUSES },
   { to: '/gmao/stock', label: 'Stock', iconLabel: 'Stock', roles: ROLES_STOCK, gestionnaireCommandes: true },
+  { to: '/gmao/catalogue-karting', label: 'Catalogue karting', iconLabel: 'Stock', roles: ['direction', 'chef_maintenance', 'admin_it'] },
   { to: '/gmao/commander', label: 'Commander', iconLabel: 'Commander', roles: [], accesCommandes: true },
   { to: '/gmao/preventif', label: 'Preventif', iconLabel: 'Préventif', roles: ROLES_PILOTAGE },
   { to: '/gmao/mises-a-jour', label: 'MAJ Laser Game', iconLabel: 'Préventif', roles: ROLES_PILOTAGE },
@@ -142,7 +143,8 @@ export function MobileMoreDrawer({ open, onClose, roleCode, onSignOut }: MobileM
           : it.roles.includes(roleCode) ||
             (roleCode === 'manager_parc' && it.roles.includes('manager_principal') && (vuePrincipal || estManagerPrincipal(utilisateur))) ||
             (!!it.gestionnaireCommandes && estGestionnaire) ||
-            (it.to === '/gmao/demandes-prestataires' && !!utilisateur?.lecture_demandes_prestataires)) &&
+            (it.to === '/gmao/demandes-prestataires' && !!utilisateur?.lecture_demandes_prestataires) ||
+            (it.to === '/gmao/catalogue-karting' && karting)) &&
         (!it.proprietaireSeul || voitTableauDeBord(utilisateur))
     );
 
