@@ -3,8 +3,9 @@ import { actualiserApplication } from '@/lib/miseAJour';
 import { cn } from '@/lib/utils';
 import { Logo } from '@/components/ui/Logo';
 import { useAuth } from '@/hooks/useAuth';
+import { useViewAs } from '@/hooks/useViewAs';
 import { ROLES_BLESSES } from '@/lib/blesses';
-import { ROLES_PILOTAGE, ROLES_BONS, ROLES_DIRECTION_PARC, ROLES_DEMANDES_PRESTA, ROLES_HISTORIQUES, ROLES_HISTORIQUE_COMMANDES, aAcces, voitDemandesPrestataires, voitTableauDeBord } from '@/lib/acces';
+import { ROLES_PILOTAGE, ROLES_BONS, ROLES_DIRECTION_PARC, ROLES_DEMANDES_PRESTA, ROLES_HISTORIQUES, ROLES_HISTORIQUE_COMMANDES, aAcces, estTechnicienArcade, voitDemandesPrestataires, voitTableauDeBord } from '@/lib/acces';
 
 interface MenuDrawerProps {
   open: boolean;
@@ -36,6 +37,7 @@ const menuItems: { to: string; label: string; icon: string; roles?: string[]; pr
 export function MenuDrawer({ open, onClose }: MenuDrawerProps) {
   const navigate = useNavigate();
   const { utilisateur, signOut } = useAuth();
+  const activerVue = useViewAs((v) => v.activate);
 
   const handleNav = (to: string) => {
     onClose();
@@ -105,6 +107,19 @@ export function MenuDrawer({ open, onClose }: MenuDrawerProps) {
         </nav>
 
         <div className="p-3 border-t border-white/[0.06]">
+          {estTechnicienArcade(utilisateur) && (
+            <button
+              onClick={() => {
+                onClose();
+                activerVue('consultation_arcade');
+                navigate('/arcade');
+              }}
+              className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl text-left text-sm font-medium text-amber hover:bg-amber/10 transition-colors"
+            >
+              <span className="text-base">👁</span>
+              Voir comme : Arcade consultation
+            </button>
+          )}
           <button
             onClick={() => {
               onClose();

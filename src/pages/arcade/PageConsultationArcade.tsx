@@ -48,7 +48,7 @@ const dateHeure = (iso: string) =>
 export function PageConsultationArcade() {
   const { authUser, utilisateur, loading, signOut } = useAuth();
   // « Voir comme : Arcade consultation » (chef d'équipe, direction, admin IT) : parc choisi
-  const vueSimulee = useVueSimulee(utilisateur?.role_code);
+  const vueSimulee = useVueSimulee(utilisateur);
   const enVue = vueSimulee?.role === 'consultation_arcade';
   const parcVue = enVue ? vueSimulee?.parcLabel?.split(' - ')[0] ?? null : null;
   const resetVue = useViewAs((v) => v.reset);

@@ -15,7 +15,7 @@ import { useViewAs } from '@/hooks/useViewAs';
 import { useParcCourant } from '@/hooks/useParcCourant';
 import { useFeatureFlags } from '@/hooks/useFeatureFlags';
 import { useAccesCommandes } from '@/hooks/queries/useCommandes';
-import { ROLES_STOCK, ROLES_PILOTAGE, ROLES_DIRECTION_PARC, ROLES_DEMANDES_PRESTA, ROLES_ANALYSE_CAUSES, ROLES_BONS, ROLES_HISTORIQUES, ROLES_HISTORIQUE_COMMANDES, estManagerPrincipal, rolesAttribuables, voitTableauDeBord } from '@/lib/acces';
+import { ROLES_STOCK, ROLES_PILOTAGE, ROLES_DIRECTION_PARC, ROLES_DEMANDES_PRESTA, ROLES_ANALYSE_CAUSES, ROLES_BONS, ROLES_HISTORIQUES, ROLES_HISTORIQUE_COMMANDES, estManagerPrincipal, estTechnicienArcade, rolesAttribuables, voitTableauDeBord } from '@/lib/acces';
 import type { RoleUtilisateur } from '@/types/database';
 
 const TOUR_KEYS: Record<string, string> = {
@@ -155,9 +155,9 @@ export function Sidebar({ user, roleAffiche, roleCode, realRoleCode, compact = f
   const formationActive = useFormation((s) => s.active);
   const startTour = useTour((s) => s.start);
   const roleReel = realRoleCode ?? roleCode;
-  const showViewAs = rolesAttribuables(roleReel).length > 0;
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const { utilisateur } = useAuth();
+  const showViewAs = rolesAttribuables(roleReel).length > 0 || estTechnicienArcade(utilisateur);
   const vuePrincipal = useViewAs((s) => s.principal);
   const parcChoisi = useParcCourant((s) => s.parc);
   const vueTousParcs = useParcCourant((s) => s.tous);

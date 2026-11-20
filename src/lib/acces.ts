@@ -137,11 +137,11 @@ export function peutGererCompte(
  * La vue « manager principal » n'est proposée à un manager que s'il l'est lui-même.
  */
 export function peutVoirComme(
-  g: { role_code: RoleUtilisateur; parcs_manager_principal?: string[] } | null | undefined,
+  g: { role_code: RoleUtilisateur; parcs_manager_principal?: string[]; profil_technicien?: string | null } | null | undefined,
   role: RoleUtilisateur,
   principal = false
 ): boolean {
-  if (!g || !rolesAttribuables(g.role_code).includes(role)) return false;
+  if (!g || !rolesSimulables(g).includes(role)) return false;
   return !(principal && g.role_code === 'manager_parc' && (g.parcs_manager_principal?.length ?? 0) === 0);
 }
 
@@ -197,4 +197,16 @@ export function peutModifierTicket(
 /** Demandes prestataires : accès complet (ROLES_DEMANDES_PRESTA) ou lecture seule accordée au compte */
 export function voitDemandesPrestataires(u: (UtilisateurAcces & { lecture_demandes_prestataires?: boolean }) | null | undefined): boolean {
   return aAcces(u, ROLES_DEMANDES_PRESTA) || !!u?.lecture_demandes_prestataires;
+}
+
+/**
+ * Vues « Voir comme » possibles : celles de son niveau et en dessous
+ * (rolesAttribuables), plus « Arcade consultation » pour les techniciens Arcade.
+ */
+export function rolesSimulables(
+  u: { role_code: RoleUtilisateur; profil_technicien?: string | null } | null | undefined
+): RoleUtilisateur[] {
+  if (!u) return [];
+  const roles = rolesAttribuables(u.role_code);
+  return estTechnicienArcade(u) ? [...roles, 'consultation_arcade'] : roles;
 }

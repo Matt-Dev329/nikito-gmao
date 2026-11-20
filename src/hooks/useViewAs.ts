@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import type { RoleUtilisateur } from '@/types/database';
-import { estTechnicienArcade, rolesAttribuables } from '@/lib/acces';
+import { estTechnicienArcade, rolesAttribuables, rolesSimulables } from '@/lib/acces';
 
 interface ViewAsState {
   role: RoleUtilisateur | null;
@@ -48,9 +48,11 @@ export function useEffectiveRole(realRole: RoleUtilisateur): RoleUtilisateur {
 }
 
 /** Vue « Voir comme » active et autorisée pour ce compte (son niveau ou en dessous) */
-export function useVueSimulee(realRole: RoleUtilisateur | undefined) {
+export function useVueSimulee(
+  u: { role_code: RoleUtilisateur; profil_technicien?: string | null } | null | undefined
+) {
   const vue = useViewAs();
-  const autorisee = !!vue.role && !!realRole && rolesAttribuables(realRole).includes(vue.role);
+  const autorisee = !!vue.role && rolesSimulables(u).includes(vue.role);
   return autorisee ? vue : null;
 }
 
@@ -58,7 +60,7 @@ export function useVueSimulee(realRole: RoleUtilisateur | undefined) {
 export function useTechnicienArcadeEffectif(
   u: { role_code: RoleUtilisateur; profil_technicien?: string | null } | null | undefined
 ): boolean {
-  const vue = useVueSimulee(u?.role_code);
+  const vue = useVueSimulee(u);
   if (vue) return vue.role === 'technicien' && vue.profil === 'arcade';
   return estTechnicienArcade(u);
 }

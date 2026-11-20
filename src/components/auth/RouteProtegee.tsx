@@ -15,7 +15,7 @@ export function RouteProtegee({ children, rolesAutorises, skipParcCheck }: Props
   const { authUser, utilisateur, loading, mustChangePassword } = useAuth();
   const location = useLocation();
   const { data: allParcs, isLoading: parcsLoading } = useParcs();
-  const vueSimulee = useVueSimulee(utilisateur?.role_code);
+  const vueSimulee = useVueSimulee(utilisateur);
 
   if (loading || parcsLoading) {
     return (
