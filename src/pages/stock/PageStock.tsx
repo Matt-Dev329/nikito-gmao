@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
+import { BoutonCatalogueKarting } from '@/components/karting/BoutonCatalogueKarting';
 import { useAccesCommandes } from '@/hooks/queries/useCommandes';
 import { estTechnicienArcade, peutEntrerStock, peutVoirStock } from '@/lib/acces';
 import { useTechnicienArcadeEffectif } from '@/hooks/useViewAs';
@@ -241,6 +242,8 @@ function ContenuStock() {
             <span className="text-red font-medium">{kpis.critique} en rupture</span>
           </p>
         </div>
+        {/* Karting : catalogue des pièces du kart (références à reprendre dans le stock) */}
+        <BoutonCatalogueKarting className="sm:max-w-[420px] sm:ml-auto" />
         <div className="flex flex-wrap items-center gap-2">
           {gestionnaireStock && (
             <button

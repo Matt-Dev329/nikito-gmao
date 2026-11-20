@@ -17,6 +17,7 @@ import { ModaleChangerStatut, HistoriqueStatuts } from '@/components/tickets/Mod
 import { SuggestionReparation } from '@/components/tickets/SuggestionReparation';
 import { ModaleEnvoyerTicketMail, HistoriqueEnvoisMail, type EnvoiMail } from '@/components/tickets/ModaleEnvoyerTicketMail';
 import { NotesPartagees } from '@/components/shared/NotesPartagees';
+import { BoutonCatalogueKarting } from '@/components/karting/BoutonCatalogueKarting';
 import { peutValiderTicket, peutModifierTicket } from '@/lib/acces';
 import { useCloturerIntervention } from '@/hooks/mutations';
 import { ChoixTestActivite } from '@/components/tickets/ChoixTestActivite';
@@ -484,6 +485,11 @@ export function Intervention() {
             categorie={((equip?.categories_equipement as Record<string, unknown> | null)?.nom as string | undefined) ?? null}
             lieu={[zone?.nom, parc?.nom ?? incident.parc_ticket_code].filter(Boolean).join(' · ') || null}
           />
+        )}
+
+        {/* Kart : catalogue des pièces (vues éclatées, références) */}
+        {((equip?.categories_equipement as Record<string, unknown> | null)?.nom as string | undefined) === 'Karting kart' && (
+          <BoutonCatalogueKarting />
         )}
 
         {estAnnule && (

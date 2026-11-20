@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
+import { BoutonCatalogueKarting } from '@/components/karting/BoutonCatalogueKarting';
 import { useParcs, useCategoriesEquipement, useZonesParc, useModifierEquipement } from '@/hooks/queries/useReferentiel';
 import type { EquipementAvecJoins, StatutEquipement } from '@/types/database';
 
@@ -105,6 +106,8 @@ function VueDetail({
           danger={isGarantieExpiree(eq.date_fin_garantie)}
         />
       </div>
+
+      {eq.categories_equipement?.nom === 'Karting kart' && <BoutonCatalogueKarting className="mb-5" />}
 
       <div className="bg-bg-deep rounded-[10px] p-3.5 mb-5 border border-white/[0.04]">
         <div className="text-[11px] text-dim tracking-[1.2px] uppercase mb-2">Historique</div>
