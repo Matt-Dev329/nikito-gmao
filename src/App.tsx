@@ -3,7 +3,7 @@ import { lazy, Suspense, useEffect } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { TabletLayout } from '@/components/layout/TabletLayout';
-import { RouteProtegee } from '@/components/auth/RouteProtegee';
+import { FermeAuTechnicienKarting, RouteProtegee } from '@/components/auth/RouteProtegee';
 import { Login } from '@/pages/auth/Login';
 import { useAuth } from '@/hooks/useAuth';
 import { rattacherAbonnementPush } from '@/lib/push';
@@ -224,8 +224,8 @@ export function App() {
           <Route path="stock" element={<PageStock />} />
         </Route>
 
-        <Route path="/staff/controle-ouverture" element={<ControleOuverture />} />
-        <Route path="/staff/controle-hebdo" element={<ControleHebdoStaff />} />
+        <Route path="/staff/controle-ouverture" element={<FermeAuTechnicienKarting><ControleOuverture /></FermeAuTechnicienKarting>} />
+        <Route path="/staff/controle-hebdo" element={<FermeAuTechnicienKarting><ControleHebdoStaff /></FermeAuTechnicienKarting>} />
         <Route path="/staff/mes-signalements" element={<MesSignalements />} />
         <Route path="/staff/blesse" element={<DeclarerBlesseStaff />} />
 

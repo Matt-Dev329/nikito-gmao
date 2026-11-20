@@ -6,10 +6,10 @@ import { cn } from '@/lib/utils';
 import { getNavIcon } from './NavIcons';
 import type { RoleUtilisateur } from '@/types/database';
 import { useAccesCommandes } from '@/hooks/queries/useCommandes';
-import { ROLES_STOCK, ROLES_PILOTAGE, ROLES_DIRECTION_PARC, ROLES_DEMANDES_PRESTA, ROLES_ANALYSE_CAUSES, ROLES_BONS, ROLES_HISTORIQUES, ROLES_HISTORIQUE_COMMANDES, estManagerPrincipal, rolesSimulables, voitTableauDeBord } from '@/lib/acces';
+import { ROLES_STOCK, ROLES_PILOTAGE, ROLES_DIRECTION_PARC, ROLES_DEMANDES_PRESTA, ROLES_ANALYSE_CAUSES, ROLES_BONS, ROLES_HISTORIQUES, ROLES_HISTORIQUE_COMMANDES, cheminOuvertTechnicienKarting, estManagerPrincipal, rolesSimulables, voitTableauDeBord } from '@/lib/acces';
 import { useAuth } from '@/hooks/useAuth';
 import { ViewAsSelector } from './ViewAsSelector';
-import { useViewAs } from '@/hooks/useViewAs';
+import { useTechnicienKartingEffectif, useViewAs } from '@/hooks/useViewAs';
 
 interface MobileMoreDrawerProps {
   open: boolean;
@@ -82,6 +82,7 @@ export function MobileMoreDrawer({ open, onClose, roleCode, onSignOut }: MobileM
   const { peutCommander, estGestionnaire, peutGererCatalogue } = useAccesCommandes();
   const { utilisateur } = useAuth();
   const vuePrincipal = useViewAs((s) => s.principal);
+  const karting = useTechnicienKartingEffectif(utilisateur);
   const sheetRef = useRef<HTMLDivElement>(null);
   const [dragY, setDragY] = useState(0);
   const [dragging, setDragging] = useState(false);
@@ -132,6 +133,7 @@ export function MobileMoreDrawer({ open, onClose, roleCode, onSignOut }: MobileM
   const filterByRole = (items: DrawerItem[]) =>
     items.filter(
       (it) =>
+        (!karting || cheminOuvertTechnicienKarting(it.to)) &&
         (it.accesCommandes
           ? peutCommander || peutGererCatalogue
           : it.roles.includes(roleCode) ||

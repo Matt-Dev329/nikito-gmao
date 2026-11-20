@@ -210,3 +210,32 @@ export function rolesSimulables(
   const roles = rolesAttribuables(u.role_code);
   return estTechnicienArcade(u) ? [...roles, 'consultation_arcade'] : roles;
 }
+
+/** Technicien Karting : n'a accès qu'à ce qui concerne le karting */
+export function estTechnicienKarting(u: { role_code: string; profil_technicien?: string | null } | null | undefined): boolean {
+  return u?.role_code === 'technicien' && u.profil_technicien === 'karting';
+}
+
+/**
+ * Pages ouvertes au technicien Karting (tickets, rapports, équipements, stock
+ * et commandes — tous limités au karting en base —, profil, aide). Pas de
+ * plans, manuels, contrôles, bons, fournisseurs.
+ */
+const CHEMINS_TECHNICIEN_KARTING = [
+  '/gmao/operations',
+  '/gmao/rapports',
+  '/gmao/equipements',
+  '/gmao/stock',
+  '/gmao/commander',
+  '/gmao/profil',
+  '/gmao/aide',
+  '/gmao/formation',
+  '/gmao/select-parc',
+  '/tech/operations',
+  '/tech/rapports',
+  '/tech/stock',
+];
+export function cheminOuvertTechnicienKarting(chemin: string): boolean {
+  const c = chemin.replace(/\/+$/, '');
+  return c === '/gmao' || c === '/tech' || CHEMINS_TECHNICIEN_KARTING.some((p) => c === p || c.startsWith(`${p}/`));
+}

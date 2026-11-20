@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import type { RoleUtilisateur } from '@/types/database';
-import { estTechnicienArcade, rolesAttribuables, rolesSimulables } from '@/lib/acces';
+import { estTechnicienArcade, estTechnicienKarting, rolesAttribuables, rolesSimulables } from '@/lib/acces';
 
 interface ViewAsState {
   role: RoleUtilisateur | null;
@@ -63,4 +63,13 @@ export function useTechnicienArcadeEffectif(
   const vue = useVueSimulee(u);
   if (vue) return vue.role === 'technicien' && vue.profil === 'arcade';
   return estTechnicienArcade(u);
+}
+
+/** Technicien Karting, réel ou simulé par « Voir comme » */
+export function useTechnicienKartingEffectif(
+  u: { role_code: RoleUtilisateur; profil_technicien?: string | null } | null | undefined
+): boolean {
+  const vue = useVueSimulee(u);
+  if (vue) return vue.role === 'technicien' && vue.profil === 'karting';
+  return estTechnicienKarting(u);
 }

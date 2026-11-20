@@ -1,6 +1,7 @@
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
-import { useVueSimulee } from '@/hooks/useViewAs';
+import { useTechnicienKartingEffectif, useVueSimulee } from '@/hooks/useViewAs';
+import { cheminOuvertTechnicienKarting } from '@/lib/acces';
 import { useParcs } from '@/hooks/queries/useReferentiel';
 import { resolveParcCourant } from '@/hooks/useParcCourant';
 import type { ReactNode } from 'react';
@@ -16,6 +17,7 @@ export function RouteProtegee({ children, rolesAutorises, skipParcCheck }: Props
   const location = useLocation();
   const { data: allParcs, isLoading: parcsLoading } = useParcs();
   const vueSimulee = useVueSimulee(utilisateur);
+  const karting = useTechnicienKartingEffectif(utilisateur);
 
   if (loading || parcsLoading) {
     return (
@@ -38,6 +40,11 @@ export function RouteProtegee({ children, rolesAutorises, skipParcCheck }: Props
     return <Navigate to="/arcade" replace />;
   }
 
+  // Technicien Karting : uniquement les pages qui concernent le karting
+  if (karting && !cheminOuvertTechnicienKarting(location.pathname)) {
+    return <Navigate to="/gmao/operations" replace />;
+  }
+
   if (rolesAutorises && utilisateur && !rolesAutorises.includes(utilisateur.role_code)) {
     return <Navigate to="/gmao" replace />;
   }
@@ -57,5 +64,13 @@ export function RouteProtegee({ children, rolesAutorises, skipParcCheck }: Props
     }
   }
 
+  return <>{children}</>;
+}
+
+/** Pages staff (contrôle d'ouverture, hebdo staff) : fermées au technicien Karting */
+export function FermeAuTechnicienKarting({ children }: { children: ReactNode }) {
+  const { utilisateur } = useAuth();
+  const karting = useTechnicienKartingEffectif(utilisateur);
+  if (karting) return <Navigate to="/gmao/operations" replace />;
   return <>{children}</>;
 }

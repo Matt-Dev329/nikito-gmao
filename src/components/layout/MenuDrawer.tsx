@@ -4,8 +4,9 @@ import { cn } from '@/lib/utils';
 import { Logo } from '@/components/ui/Logo';
 import { useAuth } from '@/hooks/useAuth';
 import { ViewAsSelector } from './ViewAsSelector';
+import { useTechnicienKartingEffectif } from '@/hooks/useViewAs';
 import { ROLES_BLESSES } from '@/lib/blesses';
-import { ROLES_PILOTAGE, ROLES_BONS, ROLES_DIRECTION_PARC, ROLES_DEMANDES_PRESTA, ROLES_HISTORIQUES, ROLES_HISTORIQUE_COMMANDES, aAcces, rolesSimulables, voitDemandesPrestataires, voitTableauDeBord } from '@/lib/acces';
+import { ROLES_PILOTAGE, ROLES_BONS, ROLES_DIRECTION_PARC, ROLES_DEMANDES_PRESTA, ROLES_HISTORIQUES, ROLES_HISTORIQUE_COMMANDES, aAcces, cheminOuvertTechnicienKarting, rolesSimulables, voitDemandesPrestataires, voitTableauDeBord } from '@/lib/acces';
 
 interface MenuDrawerProps {
   open: boolean;
@@ -37,6 +38,7 @@ const menuItems: { to: string; label: string; icon: string; roles?: string[]; pr
 export function MenuDrawer({ open, onClose }: MenuDrawerProps) {
   const navigate = useNavigate();
   const { utilisateur, signOut } = useAuth();
+  const karting = useTechnicienKartingEffectif(utilisateur);
 
   const handleNav = (to: string) => {
     onClose();
@@ -92,7 +94,7 @@ export function MenuDrawer({ open, onClose }: MenuDrawerProps) {
 
         <nav className="flex-1 p-3 flex flex-col gap-1">
           {menuItems
-            .filter((item) => (!item.roles || aAcces(utilisateur, item.roles) || (item.to === '/tech/demandes-prestataires' && voitDemandesPrestataires(utilisateur))) && (!item.proprietaireSeul || voitTableauDeBord(utilisateur)))
+            .filter((item) => (!karting || cheminOuvertTechnicienKarting(item.to)) && (!item.roles || aAcces(utilisateur, item.roles) || (item.to === '/tech/demandes-prestataires' && voitDemandesPrestataires(utilisateur))) && (!item.proprietaireSeul || voitTableauDeBord(utilisateur)))
             .map((item) => (
             <button
               key={item.to}

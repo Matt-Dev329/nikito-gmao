@@ -10,6 +10,7 @@ import { useIncidents, useNombreTicketsParParc, useReprendreIncident, useTickets
 import { ModaleSupprimerTicket } from '@/components/tickets/ModaleSupprimerTicket';
 import { ModaleRefuserTicket } from '@/components/tickets/ModaleRefuserTicket';
 import { ModaleClotureRapide } from '@/components/tickets/ModaleClotureRapide';
+import { useTechnicienKartingEffectif } from '@/hooks/useViewAs';
 import { peutValiderTicket, voitDemandesPrestataires, voitToutLeParc } from '@/lib/acces';
 import { useAuth } from '@/hooks/useAuth';
 import { useParcs } from '@/hooks/queries/useReferentiel';
@@ -191,6 +192,7 @@ export function Operations() {
 
   // Demandes spécifiques et prestataires en cours (directeurs de parc, managers principaux, chef d'équipe, direction, admin IT)
   const voitDemandes = voitDemandesPrestataires(utilisateur);
+  const karting = useTechnicienKartingEffectif(utilisateur);
   const demandesQ = useDemandesEnCours(voitDemandes);
   const demandes = useMemo(
     () => (demandesQ.data ?? []).filter((d) => !parcIdEffectif || d.parc_id === parcIdEffectif),
@@ -364,8 +366,13 @@ export function Operations() {
           ...(voitDemandes
             ? [{ code: 'demandes' as Onglet, label: 'Demandes presta', badge: demandes.length, badgeTone: 'amber' }]
             : []),
-          { code: 'controles' as Onglet, label: 'Contrôles' },
-          { code: 'preventif' as Onglet, label: 'Préventif' },
+          // Technicien Karting : uniquement les tickets karting
+          ...(karting
+            ? []
+            : [
+                { code: 'controles' as Onglet, label: 'Contrôles' },
+                { code: 'preventif' as Onglet, label: 'Préventif' },
+              ]),
         ].map((o) => (
           <button
             key={o.code}
