@@ -388,18 +388,59 @@ function CarteDocument({
     }
   };
 
-  // Rapports prestataires : changer la catégorie proposée par l'analyse
-  const [reclasser, setReclasser] = useState(false);
-  const [nouvelleCategorie, setNouvelleCategorie] = useState(doc.activite ?? '');
-  const enregistrerCategorie = async () => {
-    const valeur = nouvelleCategorie.trim();
-    const { error } = await supabase.from('documents_techniques').update({ activite: valeur || null }).eq('id', doc.id);
+  // Rapports prestataires / contrats : corriger le parc, la catégorie (proposée
+  // par l'analyse), le prestataire, le titre et les dates
+  const { data: parcs } = useParcs();
+  const [edition, setEdition] = useState(false);
+  const [modif, setModif] = useState({
+    titre: doc.titre,
+    parc_id: doc.parc_id ?? '',
+    activite: doc.activite ?? '',
+    prestataire: doc.prestataire ?? '',
+    date_document: doc.date_document ?? '',
+    prochaine_echeance: doc.prochaine_echeance ?? '',
+  });
+  const [enregistrement, setEnregistrement] = useState(false);
+  const ouvrirEdition = () => {
+    setModif({
+      titre: doc.titre,
+      parc_id: doc.parc_id ?? '',
+      activite: doc.activite ?? '',
+      prestataire: doc.prestataire ?? '',
+      date_document: doc.date_document ?? '',
+      prochaine_echeance: doc.prochaine_echeance ?? '',
+    });
+    setEdition(true);
+  };
+  const enregistrerModif = async () => {
+    if (!modif.titre.trim()) {
+      toast.error('Le titre ne peut pas être vide');
+      return;
+    }
+    setEnregistrement(true);
+    const { error } = await supabase
+      .from('documents_techniques')
+      .update({
+        titre: modif.titre.trim(),
+        parc_id: modif.parc_id || null,
+        activite: modif.activite.trim() || null,
+        prestataire: modif.prestataire.trim() || null,
+        date_document: modif.date_document || null,
+        prochaine_echeance: modif.prochaine_echeance || null,
+      })
+      .eq('id', doc.id);
+    setEnregistrement(false);
     if (error) {
       toast.error(error.message);
       return;
     }
-    setReclasser(false);
-    toast.success(valeur ? `Rangé dans « ${valeur} »` : 'Catégorie retirée');
+    const parc = ((parcs ?? []) as Array<{ id: string; code: string }>).find((p) => p.id === modif.parc_id);
+    setEdition(false);
+    toast.success(
+      modif.parc_id !== (doc.parc_id ?? '')
+        ? `« ${modif.titre.trim()} » réattribué à ${parc?.code ?? 'tous les parcs'}`
+        : 'Modifications enregistrées'
+    );
     qc.invalidateQueries({ queryKey: ['documents-techniques', type] });
     qc.invalidateQueries({ queryKey: ['analyses-prestataires'] });
   };
@@ -448,27 +489,90 @@ function CarteDocument({
         </div>
         {estPrestataire(type) && doc.prochaine_echeance && <BadgeEcheance date={doc.prochaine_echeance} contrat={type === 'contrat'} />}
         {estPrestataire(type) && peutEditer && (
-          reclasser ? (
-            <div className="mt-2 flex gap-1.5">
-              <input
-                value={nouvelleCategorie}
-                onChange={(e) => setNouvelleCategorie(e.target.value)}
-                list={`categories-${doc.id}`}
-                autoFocus
-                className="flex-1 min-w-0 bg-bg-deep border border-white/[0.08] rounded-lg px-2 py-1.5 text-[12px] text-text outline-none focus:border-nikito-cyan"
-              />
-              <datalist id={`categories-${doc.id}`}>
-                {categories.map((c) => (
-                  <option key={c} value={c} />
-                ))}
-              </datalist>
-              <button onClick={enregistrerCategorie} className="text-nikito-cyan text-[12px] font-semibold px-1.5">
-                OK
-              </button>
+          edition ? (
+            <div className="mt-2 grid gap-1.5 rounded-lg border border-nikito-cyan/30 p-2">
+              <label className="grid gap-0.5">
+                <span className="text-[10px] text-dim uppercase tracking-wider">Parc</span>
+                <select
+                  value={modif.parc_id}
+                  onChange={(e) => setModif((m) => ({ ...m, parc_id: e.target.value }))}
+                  autoFocus
+                  className="w-full min-w-0 bg-bg-deep border border-white/[0.08] rounded-lg px-2 py-1.5 text-[12px] text-text outline-none focus:border-nikito-cyan"
+                >
+                  <option value="">Tous les parcs</option>
+                  {((parcs ?? []) as Array<{ id: string; code: string; nom: string }>).map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.code} · {p.nom}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="grid gap-0.5">
+                <span className="text-[10px] text-dim uppercase tracking-wider">{type === 'contrat' ? 'Domaine' : 'Catégorie'}</span>
+                <input
+                  value={modif.activite}
+                  onChange={(e) => setModif((m) => ({ ...m, activite: e.target.value }))}
+                  list={`categories-${doc.id}`}
+                  className="w-full min-w-0 bg-bg-deep border border-white/[0.08] rounded-lg px-2 py-1.5 text-[12px] text-text outline-none focus:border-nikito-cyan"
+                />
+                <datalist id={`categories-${doc.id}`}>
+                  {categories.map((c) => (
+                    <option key={c} value={c} />
+                  ))}
+                </datalist>
+              </label>
+              <label className="grid gap-0.5">
+                <span className="text-[10px] text-dim uppercase tracking-wider">Prestataire</span>
+                <input
+                  value={modif.prestataire}
+                  onChange={(e) => setModif((m) => ({ ...m, prestataire: e.target.value }))}
+                  className="w-full min-w-0 bg-bg-deep border border-white/[0.08] rounded-lg px-2 py-1.5 text-[12px] text-text outline-none focus:border-nikito-cyan"
+                />
+              </label>
+              <label className="grid gap-0.5">
+                <span className="text-[10px] text-dim uppercase tracking-wider">Titre</span>
+                <input
+                  value={modif.titre}
+                  onChange={(e) => setModif((m) => ({ ...m, titre: e.target.value }))}
+                  className="w-full min-w-0 bg-bg-deep border border-white/[0.08] rounded-lg px-2 py-1.5 text-[12px] text-text outline-none focus:border-nikito-cyan"
+                />
+              </label>
+              <div className="grid grid-cols-2 gap-1.5">
+                <label className="grid gap-0.5">
+                  <span className="text-[10px] text-dim uppercase tracking-wider">{type === 'contrat' ? 'Début' : 'Intervention'}</span>
+                  <input
+                    type="date"
+                    value={modif.date_document}
+                    onChange={(e) => setModif((m) => ({ ...m, date_document: e.target.value }))}
+                    className="w-full min-w-0 bg-bg-deep border border-white/[0.08] rounded-lg px-2 py-1.5 text-[12px] text-text outline-none focus:border-nikito-cyan"
+                  />
+                </label>
+                <label className="grid gap-0.5">
+                  <span className="text-[10px] text-dim uppercase tracking-wider">{type === 'contrat' ? 'Fin' : 'Prochaine visite'}</span>
+                  <input
+                    type="date"
+                    value={modif.prochaine_echeance}
+                    onChange={(e) => setModif((m) => ({ ...m, prochaine_echeance: e.target.value }))}
+                    className="w-full min-w-0 bg-bg-deep border border-white/[0.08] rounded-lg px-2 py-1.5 text-[12px] text-text outline-none focus:border-nikito-cyan"
+                  />
+                </label>
+              </div>
+              <div className="flex justify-end gap-2 pt-0.5">
+                <button onClick={() => setEdition(false)} className="text-dim text-[12px] px-2 min-h-[36px]">
+                  Annuler
+                </button>
+                <button
+                  onClick={enregistrerModif}
+                  disabled={enregistrement}
+                  className={cn('bg-nikito-cyan text-bg-app px-3 rounded-lg text-[12px] font-bold min-h-[36px]', enregistrement && 'opacity-50')}
+                >
+                  {enregistrement ? '…' : 'Enregistrer'}
+                </button>
+              </div>
             </div>
           ) : (
-            <button onClick={() => setReclasser(true)} className="mt-1.5 self-start text-[11px] text-dim underline-offset-2 hover:underline">
-              Changer de catégorie
+            <button onClick={ouvrirEdition} className="mt-1.5 self-start text-[11px] text-nikito-cyan underline-offset-2 hover:underline">
+              ✏️ Modifier (parc, catégorie…)
             </button>
           )
         )}
