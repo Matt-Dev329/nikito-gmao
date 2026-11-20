@@ -11,7 +11,7 @@ const roleLabelsUpper: Record<string, string> = {
   admin_it: 'ADMIN IT',
   consultation_arcade: 'ARCADE CONSULTATION',
 };
-const profilsUpper: Record<string, string> = { arcade: 'TECHNICIEN ARCADE', nikito: 'TECHNICIEN NIKITO', polyvalent: 'TECHNICIEN POLYVALENT' };
+const profilsUpper: Record<string, string> = { arcade: 'TECHNICIEN ARCADE', nikito: 'TECHNICIEN NIKITO', karting: 'TECHNICIEN KARTING', polyvalent: 'TECHNICIEN POLYVALENT' };
 
 export function ViewAsBanner({ topOffset = 0 }: { topOffset?: number }) {
   const { role, principal, profil, parcLabel, userLabel, reset } = useViewAs();

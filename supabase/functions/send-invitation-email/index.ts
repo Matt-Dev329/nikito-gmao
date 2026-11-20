@@ -18,7 +18,7 @@ const LIBELLES_ROLES: Record<string, string> = {
   admin_it: "Admin IT",
   consultation_arcade: "Arcade consultation",
 };
-const LIBELLES_PROFILS: Record<string, string> = { arcade: "Technicien Arcade", nikito: "Technicien Nikito" };
+const LIBELLES_PROFILS: Record<string, string> = { arcade: "Technicien Arcade", nikito: "Technicien Nikito", karting: "Technicien Karting" };
 
 const esc = (t: string | null | undefined) =>
   (t ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);

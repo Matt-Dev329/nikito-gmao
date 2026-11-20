@@ -26,6 +26,7 @@ const simulableRoles: RoleSimulable[] = [
   { code: 'technicien', label: 'Technicien polyvalent', needsParc: false, profil: 'polyvalent' },
   { code: 'technicien', label: 'Technicien Nikito', needsParc: false, profil: 'nikito' },
   { code: 'technicien', label: 'Technicien Arcade', needsParc: false, profil: 'arcade' },
+  { code: 'technicien', label: 'Technicien Karting', needsParc: false, profil: 'karting' },
   { code: 'staff_operationnel', label: 'Staff opérationnel', needsParc: true },
   { code: 'consultation_arcade', label: 'Arcade consultation', needsParc: true },
   { code: 'admin_it', label: 'Admin IT', needsParc: false },

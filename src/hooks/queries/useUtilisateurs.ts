@@ -23,12 +23,13 @@ export interface UtilisateurRow {
   peut_intervenir?: boolean;
 }
 
-export type ProfilTechnicien = 'polyvalent' | 'arcade' | 'nikito';
+export type ProfilTechnicien = 'polyvalent' | 'arcade' | 'nikito' | 'karting';
 
 export const PROFILS_TECHNICIEN: { code: ProfilTechnicien; label: string; detail: string }[] = [
   { code: 'polyvalent', label: 'Polyvalent', detail: 'Tout, sur ses parcs' },
   { code: 'arcade', label: 'Technicien Arcade', detail: 'Uniquement les arcades' },
   { code: 'nikito', label: 'Technicien Nikito', detail: 'Tout sauf les arcades' },
+  { code: 'karting', label: 'Technicien Karting', detail: 'Uniquement le karting' },
 ];
 
 export interface InvitationRow {

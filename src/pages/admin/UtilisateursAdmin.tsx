@@ -251,7 +251,7 @@ function UserRow({
             <RoleBadge code={user.role_code} />
             {user.role_code === 'technicien' && user.profil_technicien && user.profil_technicien !== 'polyvalent' && (
               <span className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-nikito-cyan/15 text-nikito-cyan">
-                {user.profil_technicien === 'arcade' ? 'Arcade' : 'Nikito'}
+                {user.profil_technicien === 'arcade' ? 'Arcade' : user.profil_technicien === 'karting' ? 'Karting' : 'Nikito'}
               </span>
             )}
             {user.parcs.some((p) => p.est_manager) && (

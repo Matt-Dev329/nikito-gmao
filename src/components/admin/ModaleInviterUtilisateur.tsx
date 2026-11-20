@@ -386,7 +386,7 @@ export function ModaleInviterUtilisateur({
                 </label>
               )}
               {roleChoisi === 'technicien' && (
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-1.5 mt-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 mt-3">
                   {PROFILS_TECHNICIEN.map((p) => (
                     <button
                       key={p.code}

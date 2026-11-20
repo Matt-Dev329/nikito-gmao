@@ -158,7 +158,7 @@ export function ModaleEditerUtilisateur({ open, onClose, utilisateur }: Props) {
         {roleCode === 'technicien' && peutReglerProfil && (
           <div className="mb-4">
             <label className="block text-[11px] text-dim uppercase tracking-wider mb-2">Type de technicien</label>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-1.5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
               {PROFILS_TECHNICIEN.map((p) => (
                 <button
                   key={p.code}
