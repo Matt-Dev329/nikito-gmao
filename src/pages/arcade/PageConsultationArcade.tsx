@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
+import { useViewAs, useVueSimulee } from '@/hooks/useViewAs';
 import { Logo } from '@/components/ui/Logo';
 import { PhotosTicket } from '@/components/tickets/PhotosTicket';
 
@@ -46,6 +47,11 @@ const dateHeure = (iso: string) =>
  */
 export function PageConsultationArcade() {
   const { authUser, utilisateur, loading, signOut } = useAuth();
+  // « Voir comme : Arcade consultation » (chef d'équipe, direction, admin IT) : parc choisi
+  const vueSimulee = useVueSimulee(utilisateur?.role_code);
+  const enVue = vueSimulee?.role === 'consultation_arcade';
+  const parcVue = enVue ? vueSimulee?.parcLabel?.split(' - ')[0] ?? null : null;
+  const resetVue = useViewAs((v) => v.reset);
   const navigate = useNavigate();
   const [ouvert, setOuvert] = useState<string | null>(null);
   const [voirTermines, setVoirTermines] = useState(false);
@@ -61,8 +67,9 @@ export function PageConsultationArcade() {
     refetchInterval: 60_000,
   });
 
-  const enCours = useMemo(() => (tickets ?? []).filter((t) => !estTermine(t.statut)), [tickets]);
-  const termines = useMemo(() => (tickets ?? []).filter((t) => estTermine(t.statut)), [tickets]);
+  const visibles = useMemo(() => (tickets ?? []).filter((t) => !parcVue || t.parc_code === parcVue), [tickets, parcVue]);
+  const enCours = useMemo(() => visibles.filter((t) => !estTermine(t.statut)), [visibles]);
+  const termines = useMemo(() => visibles.filter((t) => estTermine(t.statut)), [visibles]);
   const liste = voirTermines ? termines : enCours;
 
   if (loading) {
@@ -77,6 +84,20 @@ export function PageConsultationArcade() {
 
   return (
     <div className="min-h-screen bg-bg-app text-text">
+      {enVue && (
+        <div className="bg-amber/90 text-bg-app text-[13px] font-semibold px-4 py-2 flex items-center justify-center gap-3">
+          <span>Vue simulée : Arcade consultation{vueSimulee?.parcLabel ? ` — ${vueSimulee.parcLabel}` : ''}</span>
+          <button
+            onClick={() => {
+              resetVue();
+              navigate('/gmao', { replace: true });
+            }}
+            className="bg-black/15 rounded-md px-2.5 py-1 text-[12px] font-bold"
+          >
+            ✕ Revenir à ma vue
+          </button>
+        </div>
+      )}
       <header className="sticky top-0 z-10 bg-bg-sidebar border-b border-white/[0.06] px-4 py-3 flex items-center gap-3">
         <Logo size="sm" subtitle="Arcade" />
         <div className="ml-auto text-right min-w-0">

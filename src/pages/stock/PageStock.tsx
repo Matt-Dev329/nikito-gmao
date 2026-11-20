@@ -3,6 +3,7 @@ import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useAccesCommandes } from '@/hooks/queries/useCommandes';
 import { estTechnicienArcade, peutEntrerStock, peutVoirStock } from '@/lib/acces';
+import { useTechnicienArcadeEffectif } from '@/hooks/useViewAs';
 import { ModaleImportFacture } from './ModaleImportFacture';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
@@ -621,7 +622,7 @@ function ChampsRangement({
   const { data: tousDomaines } = useDomaines();
   // Technicien Arcade : domaine imposé (Arcade)
   const { utilisateur } = useAuth();
-  const arcadeSeul = estTechnicienArcade(utilisateur);
+  const arcadeSeul = useTechnicienArcadeEffectif(utilisateur);
   const domaines = arcadeSeul ? (tousDomaines ?? []).filter((d) => d.nom === 'Arcade') : tousDomaines;
   const idArcade = arcadeSeul ? domaines?.[0]?.id : undefined;
   useEffect(() => {

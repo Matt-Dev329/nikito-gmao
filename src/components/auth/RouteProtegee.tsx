@@ -1,5 +1,6 @@
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
+import { useVueSimulee } from '@/hooks/useViewAs';
 import { useParcs } from '@/hooks/queries/useReferentiel';
 import { resolveParcCourant } from '@/hooks/useParcCourant';
 import type { ReactNode } from 'react';
@@ -14,6 +15,7 @@ export function RouteProtegee({ children, rolesAutorises, skipParcCheck }: Props
   const { authUser, utilisateur, loading, mustChangePassword } = useAuth();
   const location = useLocation();
   const { data: allParcs, isLoading: parcsLoading } = useParcs();
+  const vueSimulee = useVueSimulee(utilisateur?.role_code);
 
   if (loading || parcsLoading) {
     return (
@@ -32,7 +34,7 @@ export function RouteProtegee({ children, rolesAutorises, skipParcCheck }: Props
   }
 
   // Arcade consultation : uniquement sa page de consultation des tickets arcade
-  if (utilisateur?.role_code === 'consultation_arcade') {
+  if (utilisateur?.role_code === 'consultation_arcade' || vueSimulee?.role === 'consultation_arcade') {
     return <Navigate to="/arcade" replace />;
   }
 

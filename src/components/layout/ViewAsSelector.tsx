@@ -13,15 +13,21 @@ interface RoleSimulable {
   needsParc: boolean;
   /** Manager principal (badge MGR) */
   principal?: boolean;
+  /** Technicien : type (arcade, nikito, polyvalent) */
+  profil?: string;
 }
 
 const simulableRoles: RoleSimulable[] = [
-  { code: 'chef_maintenance', label: "Chef d'equipe", needsParc: false },
+  { code: 'direction', label: 'Direction', needsParc: false },
+  { code: 'chef_maintenance', label: "Chef d'équipe", needsParc: false },
   { code: 'directeur_parc', label: 'Directeur de parc', needsParc: true },
-  { code: 'technicien', label: 'Technicien', needsParc: false },
   { code: 'manager_parc', label: 'Manager principal (MGR)', needsParc: true, principal: true },
-  { code: 'manager_parc', label: 'Manager Parc', needsParc: true },
-  { code: 'staff_operationnel', label: 'Staff operationnel', needsParc: true },
+  { code: 'manager_parc', label: 'Manager parc', needsParc: true },
+  { code: 'technicien', label: 'Technicien polyvalent', needsParc: false, profil: 'polyvalent' },
+  { code: 'technicien', label: 'Technicien Nikito', needsParc: false, profil: 'nikito' },
+  { code: 'technicien', label: 'Technicien Arcade', needsParc: false, profil: 'arcade' },
+  { code: 'staff_operationnel', label: 'Staff opérationnel', needsParc: true },
+  { code: 'consultation_arcade', label: 'Arcade consultation', needsParc: true },
   { code: 'admin_it', label: 'Admin IT', needsParc: false },
 ];
 
@@ -30,13 +36,14 @@ interface ViewAsSelectorProps {
 }
 
 export function ViewAsSelector({ compact = false }: ViewAsSelectorProps) {
-  const { role, principal, activate, reset } = useViewAs();
+  const { role, principal, profil, activate, reset } = useViewAs();
   const { utilisateur } = useAuth();
   // Seulement les vues de son niveau et en dessous
   const rolesProposes = simulableRoles.filter((r) => peutVoirComme(utilisateur, r.code, !!r.principal));
   const maVue = utilisateur ? roleLabels[utilisateur.role_code] : '';
   const activeRole = role;
-  const actif = simulableRoles.find((r) => r.code === role && !!r.principal === principal) ?? null;
+  const actif =
+    simulableRoles.find((r) => r.code === role && !!r.principal === principal && (r.profil ?? null) === (profil ?? null)) ?? null;
   const [open, setOpen] = useState(false);
   const [parcPickerFor, setParcPickerFor] = useState<RoleSimulable | null>(null);
   const ref = useRef<HTMLDivElement>(null);
@@ -58,14 +65,14 @@ export function ViewAsSelector({ compact = false }: ViewAsSelectorProps) {
       setParcPickerFor(r);
       return;
     }
-    activate(r.code);
+    activate(r.code, null, null, null, false, r.profil ?? null);
     setOpen(false);
     setParcPickerFor(null);
   };
 
   const handleSelectParc = (parcId: string, parcLabel: string) => {
     if (!parcPickerFor) return;
-    activate(parcPickerFor.code, parcId, parcLabel, null, !!parcPickerFor.principal);
+    activate(parcPickerFor.code, parcId, parcLabel, null, !!parcPickerFor.principal, parcPickerFor.profil ?? null);
     setOpen(false);
     setParcPickerFor(null);
   };

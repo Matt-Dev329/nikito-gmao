@@ -7,14 +7,22 @@ const roleLabelsUpper: Record<string, string> = {
   directeur_parc: 'DIRECTEUR DE PARC',
   manager_parc: 'MANAGER PARC',
   technicien: 'TECHNICIEN',
-  staff_operationnel: 'STAFF OPERATIONNEL',
+  staff_operationnel: 'STAFF OPÉRATIONNEL',
+  admin_it: 'ADMIN IT',
+  consultation_arcade: 'ARCADE CONSULTATION',
 };
+const profilsUpper: Record<string, string> = { arcade: 'TECHNICIEN ARCADE', nikito: 'TECHNICIEN NIKITO', polyvalent: 'TECHNICIEN POLYVALENT' };
 
 export function ViewAsBanner({ topOffset = 0 }: { topOffset?: number }) {
-  const { role, principal, parcLabel, userLabel, reset } = useViewAs();
+  const { role, principal, profil, parcLabel, userLabel, reset } = useViewAs();
   if (!role) return null;
 
-  const label = role === 'manager_parc' && principal ? 'MANAGER PRINCIPAL' : roleLabelsUpper[role] ?? roleLabels[role] ?? role;
+  const label =
+    role === 'manager_parc' && principal
+      ? 'MANAGER PRINCIPAL'
+      : role === 'technicien' && profil
+        ? profilsUpper[profil] ?? 'TECHNICIEN'
+        : roleLabelsUpper[role] ?? roleLabels[role] ?? role;
   const details = [userLabel, parcLabel].filter(Boolean).join(' - ');
 
   return (
