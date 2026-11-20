@@ -1,4 +1,3 @@
-import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.45.0";
 
 const corsHeaders = {
@@ -161,13 +160,15 @@ Deno.serve(async (req: Request) => {
 
     const { data: destinataires, error: errDest } = await supabase
       .from("utilisateurs")
-      .select("email, roles!inner(code)")
+      .select("email, profil_technicien, roles!inner(code)")
       .eq("actif", true)
       .in("roles.code", ["technicien", "chef_maintenance", "directeur_parc", "direction"]);
 
     if (errDest) throw errDest;
 
+    // Techniciens Karting : pas concernés par le contrôle mensuel du parc
     const emails = (destinataires ?? [])
+      .filter((d: { profil_technicien: string | null }) => d.profil_technicien !== "karting")
       .map((d: { email: string }) => d.email)
       .filter((e: string) => e && e.includes("@"));
 
