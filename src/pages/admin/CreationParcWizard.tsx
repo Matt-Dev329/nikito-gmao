@@ -1,69 +1,150 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/lib/supabase';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/hooks/useAuth';
 import { useCategoriesEquipement } from '@/hooks/queries/useReferentiel';
+import { useToast } from '@/components/ui/ToastProvider';
 
 // ============================================================
-// Wizard création/configuration parc · admin
-// 6 étapes · sauvegarde auto à chaque étape
-//
-// Branchement Supabase :
-//   1. Identité     → INSERT parcs
-//   2. Plan & zones → INSERT zones (coordonnees_plan en JSONB)
-//   3. Attractions  → INSERT parc_attractions
-//   4. Équipements  → INSERT equipements (en lot via CSV ou unitaire)
-//   5. Équipe       → INSERT parcs_utilisateurs
-//   6. Mise service → UPDATE parcs SET actif=true + génération contrôles auto
+// Création d'un parc (chef d'équipe, direction) :
+//   1. Identité    → INSERT parcs (actif, en pré-lancement : en_production = false)
+//   2. Attractions → INSERT parc_attractions
+// Ensuite la fiche du parc s'ouvre : zones, équipements, équipe, contrôles,
+// notes… La mise en production se fait depuis la liste des parcs.
 // ============================================================
 
-type EtapeCode = 'identite' | 'plan' | 'attractions' | 'equipements' | 'equipe' | 'mise_service';
+const ROLES_CREATION = ['direction', 'chef_maintenance'];
 
+type EtapeCode = 'identite' | 'attractions';
 const etapes: { code: EtapeCode; label: string }[] = [
   { code: 'identite', label: 'Identité' },
-  { code: 'plan', label: 'Plan & zones' },
   { code: 'attractions', label: 'Attractions' },
-  { code: 'equipements', label: 'Équipements' },
-  { code: 'equipe', label: 'Équipe' },
-  { code: 'mise_service', label: 'Mise en service' },
 ];
 
-interface ParcDraft {
-  id?: string; // Set après save étape 1
+interface Identite {
   code: string;
   nom: string;
   adresse: string;
   ville: string;
   code_postal: string;
-  latitude: number | null;
-  longitude: number | null;
-  surface_m2: number | null;
+  latitude: string;
+  longitude: string;
+  surface_m2: string;
   ouvert_7j7: boolean;
-  zones: Array<{ nom: string; ordre: number; coordonnees_plan: { x: number; y: number; w: number; h: number } }>;
-  attractions: Array<{ categorie_id: string; quantite: number; meta: Record<string, unknown> }>;
-  // Équipements et équipe gérés en sous-tables séparées
 }
 
+const champ = 'w-full bg-bg-deep border border-white/[0.08] rounded-lg p-3 text-text outline-none focus:border-nikito-cyan min-h-[44px]';
+const nombre = (t: string) => {
+  const v = parseFloat(t.replace(',', '.'));
+  return Number.isFinite(v) ? v : null;
+};
+
 export function CreationParcWizard() {
+  const { utilisateur } = useAuth();
+  if (utilisateur && !ROLES_CREATION.includes(utilisateur.role_code)) return <Navigate to="/gmao/parcs" replace />;
+  return <Assistant />;
+}
+
+function Assistant() {
   const navigate = useNavigate();
-  const [etapeActive, setEtapeActive] = useState<EtapeCode>('identite');
-  const [draft, setDraft] = useState<ParcDraft>({
+  const qc = useQueryClient();
+  const toast = useToast();
+  const [etape, setEtape] = useState<EtapeCode>('identite');
+  const [parcId, setParcId] = useState<string | null>(null);
+  const [identite, setIdentite] = useState<Identite>({
     code: '',
     nom: '',
     adresse: '',
     ville: '',
     code_postal: '',
-    latitude: null,
-    longitude: null,
-    surface_m2: null,
+    latitude: '',
+    longitude: '',
+    surface_m2: '',
     ouvert_7j7: false,
-    zones: [],
-    attractions: [],
   });
+  const [attractions, setAttractions] = useState<Map<string, number>>(new Map());
+  const [enCours, setEnCours] = useState(false);
+  const [geoloc, setGeoloc] = useState<'idle' | 'recherche' | 'ok' | 'introuvable'>('idle');
 
-  const etapeIndex = etapes.findIndex((e) => e.code === etapeActive);
+  // Coordonnées GPS depuis l'adresse (Base Adresse Nationale, service public)
+  const localiser = async () => {
+    const q = [identite.adresse, identite.code_postal, identite.ville].filter((x) => x.trim()).join(' ');
+    if (q.trim().length < 5) return;
+    setGeoloc('recherche');
+    try {
+      const r = await fetch(`https://api-adresse.data.gouv.fr/search/?q=${encodeURIComponent(q)}&limit=1`);
+      const d = (await r.json()) as { features?: { geometry: { coordinates: [number, number] } }[] };
+      const c = d.features?.[0]?.geometry.coordinates;
+      if (!c) {
+        setGeoloc('introuvable');
+        return;
+      }
+      setIdentite((i) => ({ ...i, longitude: String(c[0]), latitude: String(c[1]) }));
+      setGeoloc('ok');
+    } catch {
+      setGeoloc('introuvable');
+    }
+  };
+
+  const enregistrerIdentite = async () => {
+    const code = identite.code.trim().toUpperCase();
+    const lat = nombre(identite.latitude);
+    const lng = nombre(identite.longitude);
+    if (!/^[A-Z]{3}$/.test(code)) return toast.error('Le code parc doit faire 3 lettres (ex. TLS)');
+    if (!identite.nom.trim() || !identite.adresse.trim() || !identite.ville.trim() || !identite.code_postal.trim())
+      return toast.error('Nom, adresse, ville et code postal sont obligatoires');
+    if (lat === null || lng === null) return toast.error('Coordonnées GPS manquantes : clique sur « 📍 Localiser l’adresse »');
+    setEnCours(true);
+    const valeurs = {
+      code,
+      nom: identite.nom.trim(),
+      adresse: identite.adresse.trim(),
+      ville: identite.ville.trim(),
+      code_postal: identite.code_postal.trim(),
+      latitude: lat,
+      longitude: lng,
+      surface_m2: nombre(identite.surface_m2),
+      ouvert_7j7: identite.ouvert_7j7,
+    };
+    const { data, error } = parcId
+      ? await supabase.from('parcs').update(valeurs).eq('id', parcId).select('id').single()
+      : await supabase.from('parcs').insert({ ...valeurs, actif: true, en_production: false }).select('id').single();
+    setEnCours(false);
+    if (error) {
+      toast.error(error.code === '23505' ? `Le code ${code} est déjà utilisé par un autre parc` : error.message);
+      return;
+    }
+    setParcId(data.id as string);
+    qc.invalidateQueries({ queryKey: ['parcs'] });
+    toast.success(parcId ? 'Identité mise à jour' : `Parc ${code} créé (pré-lancement)`);
+    setEtape('attractions');
+  };
+
+  const terminer = async () => {
+    if (!parcId) return;
+    setEnCours(true);
+    if (attractions.size) {
+      const { error } = await supabase.from('parc_attractions').insert(
+        [...attractions.entries()].map(([categorie_id, quantite]) => ({ parc_id: parcId, categorie_id, quantite, meta: {} }))
+      );
+      if (error) {
+        setEnCours(false);
+        toast.error(error.message);
+        return;
+      }
+    }
+    setEnCours(false);
+    qc.invalidateQueries({ queryKey: ['parcs'] });
+    toast.success('Parc configuré — complète zones, équipements et équipe depuis sa fiche');
+    navigate(`/gmao/parcs/${parcId}`);
+  };
+
+  const index = etapes.findIndex((e) => e.code === etape);
 
   return (
-    <div className="p-6 px-7 overflow-hidden">
+    <div className="p-4 md:p-6 md:px-7">
       <div className="flex items-center gap-2 mb-1.5 text-[11px] text-dim">
         <span>Configuration</span>
         <span>›</span>
@@ -71,336 +152,152 @@ export function CreationParcWizard() {
         <span>›</span>
         <span className="text-nikito-cyan">Nouveau parc</span>
       </div>
-
-      <div className="flex justify-between items-start mb-[22px]">
+      <div className="flex justify-between items-start mb-5 gap-3">
         <div>
-          <h1 className="text-[22px] font-semibold m-0">Créer un nouveau parc</h1>
+          <h1 className="text-xl md:text-[22px] font-semibold m-0">Créer un nouveau parc</h1>
           <div className="text-[13px] text-dim mt-1">
-            Configuration complète · sauvegarde automatique à chaque étape
+            Le parc est créé en pré-lancement ; la mise en production se fait ensuite depuis la liste des parcs.
           </div>
         </div>
-        <button
-          onClick={() => navigate('/gmao/parcs')}
-          className="bg-transparent border border-white/15 text-dim px-3.5 py-2 rounded-lg text-xs"
-        >
+        <button onClick={() => navigate('/gmao/parcs')} className="border border-white/15 text-dim px-3.5 py-2 rounded-lg text-xs min-h-[40px]">
           Quitter
         </button>
       </div>
 
-      <Stepper etapes={etapes} index={etapeIndex} />
-
-      <div className="mb-[18px]">
-        {etapeActive === 'identite' && <EtapeIdentite draft={draft} setDraft={setDraft} />}
-        {etapeActive === 'plan' && <EtapePlanZones draft={draft} setDraft={setDraft} />}
-        {etapeActive === 'attractions' && <EtapeAttractions draft={draft} setDraft={setDraft} />}
-        {etapeActive === 'equipements' && <EtapeEquipements draft={draft} />}
-        {etapeActive === 'equipe' && <EtapeEquipe draft={draft} />}
-        {etapeActive === 'mise_service' && <EtapeMiseEnService draft={draft} />}
-      </div>
-
-      <div className="flex justify-between mt-[18px]">
-        <button
-          onClick={() => {
-            if (etapeIndex > 0) setEtapeActive(etapes[etapeIndex - 1].code);
-          }}
-          disabled={etapeIndex === 0}
-          className={cn(
-            'bg-transparent border border-white/15 text-text px-5 py-2.5 rounded-[10px] text-[13px]',
-            etapeIndex === 0 && 'opacity-40 cursor-not-allowed'
-          )}
-        >
-          ‹ Étape précédente
-        </button>
-        <div className="flex gap-2.5 items-center">
-          <button
-            onClick={() => {
-              if (etapeIndex < etapes.length - 1) setEtapeActive(etapes[etapeIndex + 1].code);
-              else navigate('/gmao/parcs');
-            }}
-            className="bg-gradient-cta text-text px-6 py-2.5 rounded-[10px] text-[13px] font-bold"
+      <div className="flex gap-2 mb-5">
+        {etapes.map((e, i) => (
+          <div
+            key={e.code}
+            className={cn(
+              'flex-1 rounded-xl px-4 py-3 text-[13px] border',
+              i === index ? 'border-nikito-cyan/50 bg-nikito-cyan/10 text-nikito-cyan font-semibold' : i < index ? 'border-green/30 text-green' : 'border-white/[0.06] text-dim'
+            )}
           >
-            {etapeIndex === etapes.length - 1
-              ? 'Activer le parc ›'
-              : `Étape suivante · ${etapes[etapeIndex + 1].label} ›`}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ============================================================
-// Stepper
-// ============================================================
-function Stepper({ etapes, index }: { etapes: { code: string; label: string }[]; index: number }) {
-  return (
-    <div className="bg-bg-card rounded-2xl py-[18px] px-[22px] mb-[18px]">
-      <div className="flex items-center gap-0">
-        {etapes.map((e, i) => {
-          const done = i < index;
-          const current = i === index;
-          return (
-            <div key={e.code} className="contents">
-              <div className="flex flex-col items-center gap-1.5 flex-shrink-0">
-                <div
-                  className={cn(
-                    'w-8 h-8 rounded-full flex items-center justify-center font-bold text-[13px]',
-                    done && 'bg-green text-bg-app',
-                    current && 'bg-gradient-to-br from-nikito-pink to-nikito-violet text-text',
-                    !done && !current && 'bg-[#2A2A5A] text-dim'
-                  )}
-                >
-                  {done ? '✓' : i + 1}
-                </div>
-                <div
-                  className={cn(
-                    'text-[10px] text-center w-20',
-                    done && 'text-green font-semibold',
-                    current && 'text-text font-semibold',
-                    !done && !current && 'text-dim'
-                  )}
-                >
-                  {e.label}
-                </div>
-              </div>
-              {i < etapes.length - 1 && (
-                <div
-                  className={cn(
-                    'flex-1 h-0.5 mx-1 mb-[18px]',
-                    done ? 'bg-green' : 'bg-[#2A2A5A]'
-                  )}
-                />
-              )}
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-// ============================================================
-// Étape 1 · Identité
-// ============================================================
-function EtapeIdentite({ draft, setDraft }: { draft: ParcDraft; setDraft: (d: ParcDraft) => void }) {
-  return (
-    <div className="bg-bg-card rounded-2xl p-6 max-w-3xl">
-      <h2 className="text-base font-semibold mb-4">Identité du parc</h2>
-      <div className="grid grid-cols-2 gap-4">
-        <Field label="Code parc · 3 lettres">
-          <input
-            type="text"
-            value={draft.code}
-            onChange={(e) => setDraft({ ...draft, code: e.target.value.toUpperCase().slice(0, 3) })}
-            placeholder="ex: TLS"
-            maxLength={3}
-            className="w-full bg-bg-deep border border-white/[0.08] rounded-lg p-3 text-text font-mono outline-none focus:border-nikito-cyan"
-          />
-        </Field>
-        <Field label="Nom complet">
-          <input
-            type="text"
-            value={draft.nom}
-            onChange={(e) => setDraft({ ...draft, nom: e.target.value })}
-            placeholder="ex: Nikito Toulouse"
-            className="w-full bg-bg-deep border border-white/[0.08] rounded-lg p-3 text-text outline-none focus:border-nikito-cyan"
-          />
-        </Field>
-        <Field label="Adresse" wide>
-          <input
-            type="text"
-            value={draft.adresse}
-            onChange={(e) => setDraft({ ...draft, adresse: e.target.value })}
-            className="w-full bg-bg-deep border border-white/[0.08] rounded-lg p-3 text-text outline-none focus:border-nikito-cyan"
-          />
-        </Field>
-        <Field label="Ville">
-          <input
-            type="text"
-            value={draft.ville}
-            onChange={(e) => setDraft({ ...draft, ville: e.target.value })}
-            className="w-full bg-bg-deep border border-white/[0.08] rounded-lg p-3 text-text outline-none focus:border-nikito-cyan"
-          />
-        </Field>
-        <Field label="Code postal">
-          <input
-            type="text"
-            value={draft.code_postal}
-            onChange={(e) => setDraft({ ...draft, code_postal: e.target.value })}
-            className="w-full bg-bg-deep border border-white/[0.08] rounded-lg p-3 text-text outline-none focus:border-nikito-cyan"
-          />
-        </Field>
-        <Field label="Latitude GPS">
-          <input
-            type="number"
-            step="any"
-            value={draft.latitude ?? ''}
-            onChange={(e) =>
-              setDraft({ ...draft, latitude: e.target.value ? parseFloat(e.target.value) : null })
-            }
-            placeholder="48.8566"
-            className="w-full bg-bg-deep border border-white/[0.08] rounded-lg p-3 text-text outline-none focus:border-nikito-cyan"
-          />
-        </Field>
-        <Field label="Longitude GPS">
-          <input
-            type="number"
-            step="any"
-            value={draft.longitude ?? ''}
-            onChange={(e) =>
-              setDraft({ ...draft, longitude: e.target.value ? parseFloat(e.target.value) : null })
-            }
-            placeholder="2.3522"
-            className="w-full bg-bg-deep border border-white/[0.08] rounded-lg p-3 text-text outline-none focus:border-nikito-cyan"
-          />
-        </Field>
-        <Field label="Surface (m²)">
-          <input
-            type="number"
-            value={draft.surface_m2 ?? ''}
-            onChange={(e) =>
-              setDraft({ ...draft, surface_m2: e.target.value ? parseInt(e.target.value) : null })
-            }
-            className="w-full bg-bg-deep border border-white/[0.08] rounded-lg p-3 text-text outline-none focus:border-nikito-cyan"
-          />
-        </Field>
-        <Field label="Ouverture 7j/7">
-          <label className="flex items-center gap-2 mt-3">
-            <input
-              type="checkbox"
-              checked={draft.ouvert_7j7}
-              onChange={(e) => setDraft({ ...draft, ouvert_7j7: e.target.checked })}
-              className="w-4 h-4 accent-nikito-pink"
-            />
-            <span className="text-sm">Le parc est ouvert tous les jours (astreinte)</span>
-          </label>
-        </Field>
-      </div>
-    </div>
-  );
-}
-
-// ============================================================
-// Étape 2 · Plan & zones (TODO · éditeur SVG complet)
-// ============================================================
-function EtapePlanZones({ draft, setDraft: _setDraft }: { draft: ParcDraft; setDraft: (d: ParcDraft) => void }) {
-  return (
-    <div className="grid grid-cols-[1.4fr_1fr] gap-[18px]">
-      <div className="bg-bg-card rounded-2xl p-5">
-        <div className="flex justify-between items-center mb-3.5">
-          <div>
-            <div className="text-[13px] font-semibold">Plan du parc</div>
-            <div className="text-[11px] text-dim mt-0.5">
-              Importe ton plan ou dessine les zones manuellement
-            </div>
+            {i < index ? '✓ ' : `${i + 1}. `}
+            {e.label}
           </div>
-          <div className="flex gap-1.5">
-            <button className="bg-bg-deep border border-nikito-cyan/40 text-nikito-cyan px-3 py-1.5 rounded-lg text-[11px]">
-              ⬆ Importer SVG/PNG
+        ))}
+      </div>
+
+      {etape === 'identite' && (
+        <div className="bg-bg-card rounded-2xl p-4 md:p-6 max-w-3xl grid gap-4">
+          <div className="grid sm:grid-cols-2 gap-4">
+            <Champ label="Code parc · 3 lettres">
+              <input
+                value={identite.code}
+                onChange={(e) => setIdentite({ ...identite, code: e.target.value.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 3) })}
+                placeholder="ex. TLS"
+                className={cn(champ, 'font-mono')}
+              />
+            </Champ>
+            <Champ label="Nom complet">
+              <input value={identite.nom} onChange={(e) => setIdentite({ ...identite, nom: e.target.value })} placeholder="ex. Nikito Toulouse" className={champ} />
+            </Champ>
+          </div>
+          <Champ label="Adresse">
+            <input value={identite.adresse} onChange={(e) => setIdentite({ ...identite, adresse: e.target.value })} className={champ} />
+          </Champ>
+          <div className="grid grid-cols-[120px_minmax(0,1fr)] gap-4">
+            <Champ label="Code postal">
+              <input value={identite.code_postal} onChange={(e) => setIdentite({ ...identite, code_postal: e.target.value })} inputMode="numeric" className={champ} />
+            </Champ>
+            <Champ label="Ville">
+              <input value={identite.ville} onChange={(e) => setIdentite({ ...identite, ville: e.target.value })} className={champ} />
+            </Champ>
+          </div>
+          <div className="grid sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] gap-4 items-end">
+            <Champ label="Latitude">
+              <input value={identite.latitude} onChange={(e) => setIdentite({ ...identite, latitude: e.target.value })} placeholder="48.8566" inputMode="decimal" className={champ} />
+            </Champ>
+            <Champ label="Longitude">
+              <input value={identite.longitude} onChange={(e) => setIdentite({ ...identite, longitude: e.target.value })} placeholder="2.3522" inputMode="decimal" className={champ} />
+            </Champ>
+            <button
+              onClick={localiser}
+              disabled={geoloc === 'recherche'}
+              className="bg-bg-deep border border-nikito-cyan/40 text-nikito-cyan px-4 rounded-lg text-[13px] font-semibold min-h-[44px] disabled:opacity-50"
+            >
+              {geoloc === 'recherche' ? 'Recherche…' : '📍 Localiser l’adresse'}
             </button>
-            <button className="bg-bg-deep border border-white/10 text-dim px-3 py-1.5 rounded-lg text-[11px]">
-              📐 Mode dessin
+          </div>
+          {geoloc === 'ok' && <div className="text-[12px] text-green -mt-2">Coordonnées trouvées depuis l’adresse ✓</div>}
+          {geoloc === 'introuvable' && <div className="text-[12px] text-amber -mt-2">Adresse introuvable : saisis la latitude et la longitude à la main.</div>}
+          <div className="grid sm:grid-cols-2 gap-4 items-end">
+            <Champ label="Surface (m², facultatif)">
+              <input value={identite.surface_m2} onChange={(e) => setIdentite({ ...identite, surface_m2: e.target.value })} inputMode="numeric" className={champ} />
+            </Champ>
+            <label className="flex items-center gap-2 text-[13px] min-h-[44px]">
+              <input type="checkbox" checked={identite.ouvert_7j7} onChange={(e) => setIdentite({ ...identite, ouvert_7j7: e.target.checked })} className="w-4 h-4 accent-nikito-pink" />
+              Ouvert 7 jours sur 7
+            </label>
+          </div>
+          <div className="flex justify-end">
+            <button onClick={enregistrerIdentite} disabled={enCours} className="bg-gradient-cta text-text px-6 rounded-[10px] text-[13px] font-bold min-h-[44px] disabled:opacity-40">
+              {enCours ? 'Enregistrement…' : parcId ? 'Mettre à jour et continuer ›' : 'Créer le parc et continuer ›'}
             </button>
           </div>
         </div>
+      )}
 
-        <div className="bg-bg-deep border border-dashed border-nikito-violet/30 rounded-[10px] p-2 min-h-[300px] flex items-center justify-center text-dim text-sm">
-          {draft.zones.length === 0
-            ? '🖼️ Importer un plan ou dessiner pour commencer'
-            : `${draft.zones.length} zone(s) dessinée(s)`}
-          {/* TODO · Composant éditeur SVG interactif (drag-resize, drag-create) */}
-        </div>
-      </div>
-
-      <div className="bg-bg-card rounded-2xl p-5">
-        <div className="flex justify-between items-center mb-3.5">
-          <div className="text-[13px] font-semibold">Zones du parc</div>
-          <span className="bg-bg-deep text-nikito-cyan px-2.5 py-0.5 rounded-lg text-[11px] font-semibold">
-            {draft.zones.length} zones
-          </span>
-        </div>
-
-        <div className="text-dim text-xs">
-          Liste des zones synchronisée avec le plan. Cliquer sur une zone pour l'éditer.
-        </div>
-
-        <button className="bg-transparent border border-dashed border-nikito-cyan/30 text-nikito-cyan px-3 py-2.5 rounded-[10px] text-xs mt-3 w-full">
-          + Ajouter une zone
-        </button>
-      </div>
+      {etape === 'attractions' && (
+        <EtapeAttractions
+          attractions={attractions}
+          setAttractions={setAttractions}
+          enCours={enCours}
+          onRetour={() => setEtape('identite')}
+          onTerminer={terminer}
+        />
+      )}
     </div>
   );
 }
 
-// ============================================================
-// Étape 3 · Attractions (sélection catégories + quantités)
-// ============================================================
-function EtapeAttractions({ draft, setDraft }: { draft: ParcDraft; setDraft: (d: ParcDraft) => void }) {
+function EtapeAttractions({
+  attractions,
+  setAttractions,
+  enCours,
+  onRetour,
+  onTerminer,
+}: {
+  attractions: Map<string, number>;
+  setAttractions: (m: Map<string, number>) => void;
+  enCours: boolean;
+  onRetour: () => void;
+  onTerminer: () => void;
+}) {
   const { data: categories } = useCategoriesEquipement();
-
+  const basculer = (id: string, coche: boolean) => {
+    const m = new Map(attractions);
+    if (coche) m.set(id, 1);
+    else m.delete(id);
+    setAttractions(m);
+  };
   return (
-    <div className="bg-bg-card rounded-2xl p-6">
-      <h2 className="text-base font-semibold mb-2">Attractions du parc</h2>
+    <div className="bg-bg-card rounded-2xl p-4 md:p-6">
+      <h2 className="text-base font-semibold mb-1">Attractions du parc</h2>
       <p className="text-dim text-xs mb-4">
-        Coche les types d'attractions présents et indique les quantités. Les équipements détaillés
-        seront créés à l'étape suivante.
+        Coche les types d’attractions présents et indique les quantités (facultatif, modifiable ensuite). Les équipements détaillés se créent
+        depuis la fiche du parc.
       </p>
-
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid sm:grid-cols-2 gap-2">
         {categories?.map((c) => {
-          const existing = draft.attractions.find((a) => a.categorie_id === c.id);
+          const quantite = attractions.get(c.id);
           return (
             <div
               key={c.id}
-              className={cn(
-                'flex items-center gap-3 p-3 rounded-lg border',
-                existing
-                  ? 'bg-bg-deep border-nikito-cyan/40'
-                  : 'bg-bg-deep border-white/[0.06]'
-              )}
+              className={cn('flex items-center gap-3 p-3 rounded-lg border', quantite !== undefined ? 'bg-bg-deep border-nikito-cyan/40' : 'bg-bg-deep border-white/[0.06]')}
             >
-              <input
-                type="checkbox"
-                checked={!!existing}
-                onChange={(e) => {
-                  if (e.target.checked) {
-                    setDraft({
-                      ...draft,
-                      attractions: [
-                        ...draft.attractions,
-                        { categorie_id: c.id, quantite: 1, meta: {} },
-                      ],
-                    });
-                  } else {
-                    setDraft({
-                      ...draft,
-                      attractions: draft.attractions.filter((a) => a.categorie_id !== c.id),
-                    });
-                  }
-                }}
-                className="w-4 h-4 accent-nikito-pink"
-              />
+              <input type="checkbox" checked={quantite !== undefined} onChange={(e) => basculer(c.id, e.target.checked)} className="w-4 h-4 accent-nikito-pink" />
               <div className="flex-1 min-w-0">
                 <div className="text-xs font-medium truncate">{c.nom}</div>
-                {c.norme_associee && (
-                  <div className="text-[10px] text-dim truncate">{c.norme_associee}</div>
-                )}
+                {c.norme_associee && <div className="text-[10px] text-dim truncate">{c.norme_associee}</div>}
               </div>
-              {existing && (
+              {quantite !== undefined && (
                 <input
                   type="number"
                   min="1"
-                  value={existing.quantite}
-                  onChange={(e) =>
-                    setDraft({
-                      ...draft,
-                      attractions: draft.attractions.map((a) =>
-                        a.categorie_id === c.id
-                          ? { ...a, quantite: parseInt(e.target.value) || 1 }
-                          : a
-                      ),
-                    })
-                  }
+                  value={quantite}
+                  onChange={(e) => setAttractions(new Map(attractions).set(c.id, Math.max(1, parseInt(e.target.value) || 1)))}
                   className="w-16 bg-bg-app border border-white/10 rounded p-1.5 text-text text-xs text-center"
                 />
               )}
@@ -408,105 +305,23 @@ function EtapeAttractions({ draft, setDraft }: { draft: ParcDraft; setDraft: (d:
           );
         })}
       </div>
-    </div>
-  );
-}
-
-// ============================================================
-// Étape 4 · Équipements (CRUD ou import CSV)
-// ============================================================
-function EtapeEquipements({ draft }: { draft: ParcDraft }) {
-  return (
-    <div className="bg-bg-card rounded-2xl p-6">
-      <h2 className="text-base font-semibold mb-2">Équipements détaillés</h2>
-      <p className="text-dim text-xs mb-4">
-        D'après tes attractions, on attend{' '}
-        <span className="text-nikito-cyan font-semibold">
-          {draft.attractions.reduce((sum, a) => sum + a.quantite, 0)} équipements
-        </span>
-        . Tu peux les créer un par un ou importer un fichier CSV.
-      </p>
-
-      <div className="flex gap-3">
-        <button className="bg-bg-deep border border-nikito-cyan/40 text-nikito-cyan px-4 py-3 rounded-lg text-sm">
-          ⬆ Importer CSV
+      <div className="flex justify-between mt-5">
+        <button onClick={onRetour} className="border border-white/15 text-text px-5 rounded-[10px] text-[13px] min-h-[44px]">
+          ‹ Identité
         </button>
-        <button className="bg-gradient-cta text-text px-4 py-3 rounded-lg text-sm font-semibold">
-          + Ajouter un équipement
+        <button onClick={onTerminer} disabled={enCours} className="bg-gradient-cta text-text px-6 rounded-[10px] text-[13px] font-bold min-h-[44px] disabled:opacity-40">
+          {enCours ? 'Enregistrement…' : 'Terminer et ouvrir la fiche du parc ›'}
         </button>
       </div>
-
-      {/* TODO · liste équipements créés + form modal */}
     </div>
   );
 }
 
-// ============================================================
-// Étape 5 · Équipe
-// ============================================================
-function EtapeEquipe({ draft: _draft }: { draft: ParcDraft }) {
+function Champ({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="bg-bg-card rounded-2xl p-6">
-      <h2 className="text-base font-semibold mb-2">Équipe du parc</h2>
-      <p className="text-dim text-xs mb-4">
-        Assigne les utilisateurs qui auront accès à ce parc (manager + staff opérationnel +
-        techniciens).
-      </p>
-      {/* TODO · sélecteur multi-utilisateurs avec rôles */}
-    </div>
-  );
-}
-
-// ============================================================
-// Étape 6 · Mise en service (récap + activation)
-// ============================================================
-function EtapeMiseEnService({ draft }: { draft: ParcDraft }) {
-  return (
-    <div className="bg-bg-card rounded-2xl p-6">
-      <h2 className="text-base font-semibold mb-4">Mise en service du parc</h2>
-      <div className="bg-bg-deep rounded-lg p-4 mb-4">
-        <div className="text-xs text-dim uppercase tracking-wider mb-3">Récapitulatif</div>
-        <dl className="grid grid-cols-2 gap-2 text-sm">
-          <dt className="text-dim">Code · Nom</dt>
-          <dd className="font-mono">
-            {draft.code} · {draft.nom}
-          </dd>
-          <dt className="text-dim">Localisation</dt>
-          <dd>
-            {draft.ville} ({draft.code_postal})
-          </dd>
-          <dt className="text-dim">Surface</dt>
-          <dd>{draft.surface_m2} m²</dd>
-          <dt className="text-dim">Zones</dt>
-          <dd>{draft.zones.length}</dd>
-          <dt className="text-dim">Attractions</dt>
-          <dd>{draft.attractions.reduce((s, a) => s + a.quantite, 0)} équipements prévus</dd>
-        </dl>
-      </div>
-      <div className="text-xs text-dim border-l-2 border-nikito-violet pl-3 py-1">
-        À l'activation, le parc sera visible dans le tableau de bord et les premiers contrôles
-        quotidiens seront générés automatiquement pour demain matin.
-      </div>
-    </div>
-  );
-}
-
-// ============================================================
-// Helper Field
-// ============================================================
-function Field({
-  label,
-  children,
-  wide,
-}: {
-  label: string;
-  children: React.ReactNode;
-  wide?: boolean;
-}) {
-  return (
-    <div className={wide ? 'col-span-2' : ''}>
-      <label className="block text-[11px] text-dim uppercase tracking-wider mb-2">{label}</label>
+    <label className="grid gap-1.5">
+      <span className="text-[11px] text-dim uppercase tracking-wider">{label}</span>
       {children}
-    </div>
+    </label>
   );
 }

@@ -450,6 +450,8 @@ export function ListeParcs() {
   const isDirection = utilisateur?.role_code === 'direction' || utilisateur?.role_code === 'admin_it' as string;
   // RLS parcs (direction_total_access) : écriture réservée à ces rôles
   const peutEcrireParcs = ['direction', 'chef_maintenance', 'directeur_parc'].includes(utilisateur?.role_code ?? '');
+  // Création d'un parc : chef d'équipe et direction (un directeur n'a la main que sur ses parcs)
+  const peutCreerParc = ['direction', 'chef_maintenance'].includes(utilisateur?.role_code ?? '');
 
   const [modaleActiver, setModaleActiver] = useState<ParcProduction | null>(null);
   const [modaleDesactiver, setModaleDesactiver] = useState<ParcProduction | null>(null);
@@ -502,13 +504,14 @@ export function ListeParcs() {
             )}
           </div>
         </div>
-        <button
-          disabled
-          title="Bientôt disponible"
-          className="bg-gradient-cta text-text px-4 py-2.5 rounded-lg text-[13px] font-bold min-h-[44px] w-full sm:w-auto opacity-40 cursor-not-allowed"
-        >
-          + Creer un parc
-        </button>
+        {peutCreerParc && (
+          <button
+            onClick={() => navigate('/gmao/parcs/nouveau')}
+            className="bg-gradient-cta text-text px-4 py-2.5 rounded-lg text-[13px] font-bold min-h-[44px] w-full sm:w-auto"
+          >
+            + Créer un parc
+          </button>
+        )}
       </div>
 
       {isDirection && <ConfigLancement />}
