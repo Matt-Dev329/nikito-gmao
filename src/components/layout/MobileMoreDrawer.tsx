@@ -8,6 +8,7 @@ import type { RoleUtilisateur } from '@/types/database';
 import { useAccesCommandes } from '@/hooks/queries/useCommandes';
 import { ROLES_STOCK, ROLES_PILOTAGE, ROLES_DIRECTION_PARC, ROLES_DEMANDES_PRESTA, ROLES_ANALYSE_CAUSES, ROLES_BONS, ROLES_HISTORIQUES, ROLES_HISTORIQUE_COMMANDES, cheminOuvertTechnicienKarting, estManagerPrincipal, rolesSimulables, voitTableauDeBord } from '@/lib/acces';
 import { useAuth } from '@/hooks/useAuth';
+import { useFeatureFlags } from '@/hooks/useFeatureFlags';
 import { ViewAsSelector } from './ViewAsSelector';
 import { useTechnicienKartingEffectif, useViewAs } from '@/hooks/useViewAs';
 
@@ -83,6 +84,7 @@ export function MobileMoreDrawer({ open, onClose, roleCode, onSignOut }: MobileM
   const { utilisateur } = useAuth();
   const vuePrincipal = useViewAs((s) => s.principal);
   const karting = useTechnicienKartingEffectif(utilisateur);
+  const { hasAccess } = useFeatureFlags();
   const sheetRef = useRef<HTMLDivElement>(null);
   const [dragY, setDragY] = useState(0);
   const [dragging, setDragging] = useState(false);
@@ -134,6 +136,7 @@ export function MobileMoreDrawer({ open, onClose, roleCode, onSignOut }: MobileM
     items.filter(
       (it) =>
         (!karting || cheminOuvertTechnicienKarting(it.to)) &&
+        (it.to !== '/gmao/cinq-pourquoi' || hasAccess('cinq_pourquoi')) &&
         (it.accesCommandes
           ? peutCommander || peutGererCatalogue
           : it.roles.includes(roleCode) ||

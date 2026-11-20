@@ -7,6 +7,7 @@ import { Pill } from '@/components/ui/Pill';
 import { useRecurrencesActives } from '@/hooks/queries/useKpi';
 import { useFiches5Pourquoi } from '@/hooks/queries/useTickets';
 import { useCreerFiche5PDepuisRecurrence } from '@/hooks/queries/useFiches5P';
+import { useFeatureFlags } from '@/hooks/useFeatureFlags';
 import { useParcs } from '@/hooks/queries/useReferentiel';
 import { useAuth } from '@/hooks/useAuth';
 import { SignalerInlineButton } from '@/components/shared/SignalerInlineButton';
@@ -53,6 +54,9 @@ export function Recurrences() {
   const fiches5pQ = useFiches5Pourquoi();
   const parcsQ = useParcs();
   const creer5P = useCreerFiche5PDepuisRecurrence();
+  // 5 Pourquoi désactivable (Administration IT → fonctionnalités)
+  const { hasAccess } = useFeatureFlags();
+  const actif5P = hasAccess('cinq_pourquoi');
 
   const loading = recurrencesQ.isLoading || fiches5pQ.isLoading;
 
@@ -197,7 +201,7 @@ export function Recurrences() {
 
               return (
                 <Card key={equipId} borderLeft={borderColor as 'pink' | 'amber' | 'cyan'} className="mb-3">
-                  {idx === 0 && fiche5p ? (
+                  {idx === 0 && fiche5p && actif5P ? (
                     <RecurrenceDetaillée
                       rec={rec}
                       fiche5p={fiche5p}
@@ -213,8 +217,8 @@ export function Recurrences() {
                       criticite={criticite}
                       pannes30j={pannes30j}
                       plaintes7j={plaintes7j}
-                      a5p={a5p}
-                      onOuvrir5P={() => a5p ? handleVoir5P(equipId) : handleOuvrir5P(equipId)}
+                      a5p={actif5P && a5p}
+                      onOuvrir5P={actif5P ? () => (a5p ? handleVoir5P(equipId) : handleOuvrir5P(equipId)) : undefined}
                       loading5P={creer5P.isPending}
                     />
                   )}
@@ -379,7 +383,8 @@ function RecurrenceCompacte({
   pannes30j: number;
   plaintes7j: number;
   a5p: boolean;
-  onOuvrir5P: () => void;
+  /** Absent : 5 Pourquoi désactivé, pas de bouton */
+  onOuvrir5P?: () => void;
   loading5P: boolean;
 }) {
   return (
@@ -398,13 +403,15 @@ function RecurrenceCompacte({
         </span>
       </div>
       <div className="mt-2.5 flex gap-2">
-        <button
-          onClick={onOuvrir5P}
-          disabled={loading5P}
-          className="bg-gradient-cta text-text py-2 px-3.5 rounded-lg text-xs font-medium min-h-[44px] disabled:opacity-40"
-        >
-          {loading5P ? 'Creation...' : a5p ? 'Voir 5 Pourquoi' : 'Ouvrir 5 Pourquoi'}
-        </button>
+        {onOuvrir5P && (
+          <button
+            onClick={onOuvrir5P}
+            disabled={loading5P}
+            className="bg-gradient-cta text-text py-2 px-3.5 rounded-lg text-xs font-medium min-h-[44px] disabled:opacity-40"
+          >
+            {loading5P ? 'Creation...' : a5p ? 'Voir 5 Pourquoi' : 'Ouvrir 5 Pourquoi'}
+          </button>
+        )}
         <button className="bg-bg-deep border border-white/10 text-dim py-2 px-3.5 rounded-lg text-xs min-h-[44px]">
           Historique
         </button>

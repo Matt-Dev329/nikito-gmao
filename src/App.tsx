@@ -9,7 +9,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { rattacherAbonnementPush } from '@/lib/push';
 import { useDeconnexionInactivite } from '@/hooks/useDeconnexionInactivite';
 import { useEffectiveRole } from '@/hooks/useViewAs';
-import { GardeAcces } from '@/components/auth/GardeAcces';
+import { GardeAcces, GardeFonction } from '@/components/auth/GardeAcces';
 import { ROLES_ANALYSE_CAUSES, ROLES_PILOTAGE, voitTableauDeBord } from '@/lib/acces';
 
 // Helper : lazy-load d'un export nommé
@@ -161,8 +161,8 @@ export function App() {
           <Route path="projets" element={<PageProjets />} />
           <Route path="equipements" element={<PageEquipements />} />
           <Route path="recurrences" element={<GardeAcces roles={ROLES_ANALYSE_CAUSES}><Recurrences /></GardeAcces>} />
-          <Route path="cinq-pourquoi" element={<GardeAcces roles={ROLES_ANALYSE_CAUSES}><ListeCinqPourquoi /></GardeAcces>} />
-          <Route path="cinq-pourquoi/:id" element={<GardeAcces roles={ROLES_ANALYSE_CAUSES}><FicheCinqPourquoi /></GardeAcces>} />
+          <Route path="cinq-pourquoi" element={<GardeFonction code="cinq_pourquoi"><GardeAcces roles={ROLES_ANALYSE_CAUSES}><ListeCinqPourquoi /></GardeAcces></GardeFonction>} />
+          <Route path="cinq-pourquoi/:id" element={<GardeFonction code="cinq_pourquoi"><GardeAcces roles={ROLES_ANALYSE_CAUSES}><FicheCinqPourquoi /></GardeAcces></GardeFonction>} />
           <Route path="stock" element={<PageStock />} />
           <Route path="commander" element={<PageCommander />} />
           <Route path="preventif" element={<GardeAcces roles={ROLES_PILOTAGE}><PagePreventif /></GardeAcces>} />

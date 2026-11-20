@@ -4,6 +4,7 @@ import { useFormationFilter } from '@/hooks/useFormation';
 import { useConfig } from '@/hooks/useConfig';
 import { useEstGestionnaireCommandes } from '@/hooks/queries/useCommandes';
 import { useAuth } from '@/hooks/useAuth';
+import { useFeatureFlags } from '@/hooks/useFeatureFlags';
 import { useEffectiveRole } from '@/hooks/useViewAs';
 import { ROLES_ANALYSE_CAUSES } from '@/lib/acces';
 
@@ -27,12 +28,15 @@ export function useSidebarBadges() {
   const role = useEffectiveRole(utilisateur?.role_code ?? 'staff_operationnel');
   // Récurrences et 5 Pourquoi : compteurs seulement pour ceux qui ont ces onglets
   const voitAnalyseCauses = ROLES_ANALYSE_CAUSES.includes(role);
+  // 5 Pourquoi désactivable (Administration IT → fonctionnalités)
+  const { hasAccess } = useFeatureFlags();
+  const voitCinqPourquoi = voitAnalyseCauses && hasAccess('cinq_pourquoi');
   const now = new Date();
   const heure = now.getHours();
   const today = now.toISOString().slice(0, 10);
 
   return useQuery({
-    queryKey: ['sidebar-badges', estFormation, enProduction, today, gestionnaireCommandes, voitAnalyseCauses],
+    queryKey: ['sidebar-badges', estFormation, enProduction, today, gestionnaireCommandes, voitAnalyseCauses, voitCinqPourquoi],
     queryFn: async (): Promise<SidebarBadges> => {
       const [recRes, fpRes, incRes, invRes, notifRes, enCoursRes, plaintesRes] = await Promise.all([
         supabase
@@ -104,7 +108,7 @@ export function useSidebarBadges() {
 
       return {
         recurrences: voitAnalyseCauses ? recRes.count ?? 0 : 0,
-        cinqPourquoi: voitAnalyseCauses ? fpRes.count ?? 0 : 0,
+        cinqPourquoi: voitCinqPourquoi ? fpRes.count ?? 0 : 0,
         operations: incRes.count ?? 0,
         invitationsPending: invRes.count ?? 0,
         controlesManquants,
