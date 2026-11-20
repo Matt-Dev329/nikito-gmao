@@ -6,8 +6,9 @@ import { cn } from '@/lib/utils';
 import { getNavIcon } from './NavIcons';
 import type { RoleUtilisateur } from '@/types/database';
 import { useAccesCommandes } from '@/hooks/queries/useCommandes';
-import { ROLES_STOCK, ROLES_PILOTAGE, ROLES_DIRECTION_PARC, ROLES_DEMANDES_PRESTA, ROLES_ANALYSE_CAUSES, ROLES_BONS, ROLES_HISTORIQUES, ROLES_HISTORIQUE_COMMANDES, estManagerPrincipal, estTechnicienArcade, voitTableauDeBord } from '@/lib/acces';
+import { ROLES_STOCK, ROLES_PILOTAGE, ROLES_DIRECTION_PARC, ROLES_DEMANDES_PRESTA, ROLES_ANALYSE_CAUSES, ROLES_BONS, ROLES_HISTORIQUES, ROLES_HISTORIQUE_COMMANDES, estManagerPrincipal, rolesSimulables, voitTableauDeBord } from '@/lib/acces';
 import { useAuth } from '@/hooks/useAuth';
+import { ViewAsSelector } from './ViewAsSelector';
 import { useViewAs } from '@/hooks/useViewAs';
 
 interface MobileMoreDrawerProps {
@@ -80,7 +81,6 @@ export function MobileMoreDrawer({ open, onClose, roleCode, onSignOut }: MobileM
   const { pathname } = useLocation();
   const { peutCommander, estGestionnaire, peutGererCatalogue } = useAccesCommandes();
   const { utilisateur } = useAuth();
-  const activerVue = useViewAs((v) => v.activate);
   const vuePrincipal = useViewAs((s) => s.principal);
   const sheetRef = useRef<HTMLDivElement>(null);
   const [dragY, setDragY] = useState(0);
@@ -228,18 +228,10 @@ export function MobileMoreDrawer({ open, onClose, roleCode, onSignOut }: MobileM
                 onClick={() => handleNav(item.to)}
               />
             ))}
-            {estTechnicienArcade(utilisateur) && (
-              <button
-                onClick={() => {
-                  onClose();
-                  activerVue('consultation_arcade');
-                  navigate('/arcade');
-                }}
-                className="flex items-center gap-3 w-full px-3 min-h-[48px] rounded-lg text-amber hover:bg-amber/10 transition-colors"
-              >
-                <span className="w-5 text-center text-[18px] leading-none">👁</span>
-                <span className="text-[14px] font-medium">Voir comme : Arcade consultation</span>
-              </button>
+            {rolesSimulables(utilisateur).length > 0 && (
+              <div className="px-1">
+                <ViewAsSelector inline onChoisi={onClose} />
+              </div>
             )}
             <button
               onClick={() => {

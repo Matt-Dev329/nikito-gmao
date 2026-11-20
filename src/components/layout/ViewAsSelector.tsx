@@ -34,9 +34,13 @@ const simulableRoles: RoleSimulable[] = [
 
 interface ViewAsSelectorProps {
   compact?: boolean;
+  /** Menus téléphone / tablette : liste dépliée dans le menu (pas de fenêtre flottante) */
+  inline?: boolean;
+  /** Appelé après le choix d'une vue (ex. fermer le menu) */
+  onChoisi?: () => void;
 }
 
-export function ViewAsSelector({ compact = false }: ViewAsSelectorProps) {
+export function ViewAsSelector({ compact = false, inline = false, onChoisi }: ViewAsSelectorProps) {
   const { role, principal, profil, activate, reset } = useViewAs();
   const { utilisateur } = useAuth();
   // Seulement les vues de son niveau et en dessous
@@ -69,6 +73,7 @@ export function ViewAsSelector({ compact = false }: ViewAsSelectorProps) {
     activate(r.code, null, null, null, false, r.profil ?? null);
     setOpen(false);
     setParcPickerFor(null);
+    onChoisi?.();
   };
 
   const handleSelectParc = (parcId: string, parcLabel: string) => {
@@ -76,12 +81,14 @@ export function ViewAsSelector({ compact = false }: ViewAsSelectorProps) {
     activate(parcPickerFor.code, parcId, parcLabel, null, !!parcPickerFor.principal, parcPickerFor.profil ?? null);
     setOpen(false);
     setParcPickerFor(null);
+    onChoisi?.();
   };
 
   const handleReset = () => {
     reset();
     setOpen(false);
     setParcPickerFor(null);
+    onChoisi?.();
   };
 
   if (compact) {
@@ -123,7 +130,8 @@ export function ViewAsSelector({ compact = false }: ViewAsSelectorProps) {
       <button
         onClick={() => setOpen(!open)}
         className={cn(
-          'flex items-center gap-2 rounded-[10px] px-3 py-2 text-[12px] transition-colors w-full min-h-[40px]',
+          'flex items-center gap-2 rounded-[10px] px-3 py-2 transition-colors w-full',
+          inline ? 'text-[14px] font-medium min-h-[48px]' : 'text-[12px] min-h-[40px]',
           activeRole
             ? 'bg-amber/15 text-amber font-medium'
             : 'text-dim hover:text-text hover:bg-white/[0.04]'
@@ -147,7 +155,7 @@ export function ViewAsSelector({ compact = false }: ViewAsSelectorProps) {
           onSelectParc={handleSelectParc}
           onReset={handleReset}
           onBack={() => setParcPickerFor(null)}
-          position="bottom"
+          position={inline ? 'inline' : 'bottom'}
         />
       )}
     </div>
@@ -177,12 +185,14 @@ function DropdownPanel({
   onSelectParc: (parcId: string, parcLabel: string) => void;
   onReset: () => void;
   onBack: () => void;
-  position: 'left' | 'bottom';
+  position: 'left' | 'bottom' | 'inline';
 }) {
   const posClass =
     position === 'left'
       ? 'absolute left-full top-0 ml-2'
-      : 'absolute left-0 right-0 bottom-full mb-1';
+      : position === 'inline'
+        ? 'relative mt-1 mb-2'
+        : 'absolute left-0 right-0 bottom-full mb-1';
 
   if (parcPickerFor) {
     const roleLabel = parcPickerFor.label;
