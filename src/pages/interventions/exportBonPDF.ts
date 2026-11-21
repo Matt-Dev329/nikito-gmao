@@ -60,7 +60,11 @@ export function formatDuree(min: number | null): string {
   return `${Math.floor(min / 60)} h ${String(min % 60).padStart(2, '0')}`;
 }
 
-export async function exportBonPDF(bon: BonIntervention): Promise<void> {
+/**
+ * PDF du bon. Téléchargé par défaut ; avec { telecharger: false }, seulement
+ * renvoyé (ex. pièce jointe d'un mail).
+ */
+export async function exportBonPDF(bon: BonIntervention, options: { telecharger?: boolean } = {}): Promise<Blob> {
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
   const pageW = doc.internal.pageSize.getWidth();
   const pageH = doc.internal.pageSize.getHeight();
@@ -202,5 +206,6 @@ export async function exportBonPDF(bon: BonIntervention): Promise<void> {
   doc.setTextColor(120);
   doc.text(`Edite le ${new Date().toLocaleString('fr-FR')} - ALBA by Nikito`, margin, pageH - 8);
 
-  doc.save(`${bon.numero ?? 'bon-intervention'}.pdf`);
+  if (options.telecharger !== false) doc.save(`${bon.numero ?? 'bon-intervention'}.pdf`);
+  return doc.output('blob');
 }

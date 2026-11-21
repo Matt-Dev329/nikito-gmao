@@ -7,6 +7,9 @@ import { useAuth } from '@/hooks/useAuth';
 import { useParcs } from '@/hooks/queries/useReferentiel';
 import { useSignedUrls } from '@/hooks/useSignedUrl';
 import { useToast } from '@/components/ui/ToastProvider';
+import { ZoneSignature } from '@/components/ui/ZoneSignature';
+import { ChoixTestActivite } from '@/components/tickets/ChoixTestActivite';
+import { BUCKET_BONS, exportBonPDF, type BonIntervention } from './exportBonPDF';
 
 // ============================================================
 // Interventions d'urgence — registre personnel de Ryad, et de lui seul
@@ -31,6 +34,10 @@ interface Urgence {
   pieces: string | null;
   medias: string[];
   cree_le: string;
+  /** Envoyée comme bon d'intervention : bon créé et date du mail */
+  bon_id: string | null;
+  envoye_le: string | null;
+  bon?: { numero: string | null } | null;
 }
 
 interface Saisie {
@@ -99,11 +106,11 @@ function useUrgences() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('interventions_urgence')
-        .select('id, parc_id, activite, equipement, appelant, heure_appel, debut_intervention, fin_intervention, probleme, details, pieces, medias, cree_le')
+        .select('id, parc_id, activite, equipement, appelant, heure_appel, debut_intervention, fin_intervention, probleme, details, pieces, medias, cree_le, bon_id, envoye_le, bon:bons_intervention(numero)')
         .eq('actif', true)
         .order('heure_appel', { ascending: false, nullsFirst: false });
       if (error) throw error;
-      return (data ?? []) as Urgence[];
+      return (data ?? []) as unknown as Urgence[];
     },
   });
 }
@@ -156,6 +163,7 @@ function CarteUrgence({ urgence: u, onModifier }: { urgence: Urgence; onModifier
   const toast = useToast();
   const { data: parcs } = useParcs();
   const [ouvert, setOuvert] = useState(false);
+  const [envoi, setEnvoi] = useState(false);
   const { data: urls } = useSignedUrls(ouvert ? u.medias : [], BUCKET);
   const parc = ((parcs ?? []) as Array<{ id: string; code: string }>).find((p) => p.id === u.parc_id);
   const arrivee = duree(u.heure_appel, u.debut_intervention);
@@ -181,6 +189,11 @@ function CarteUrgence({ urgence: u, onModifier }: { urgence: Urgence; onModifier
           {parc && <span className="text-nikito-cyan font-semibold">{parc.code}</span>}
           <strong>{[u.activite, u.equipement].filter(Boolean).join(' · ') || 'Urgence'}</strong>
           {u.medias.length > 0 && <span className="text-dim text-[12px]">📷 {u.medias.length}</span>}
+          {u.envoye_le && (
+            <span className="text-[11px] font-semibold px-2 py-0.5 rounded-md bg-nikito-cyan/15 text-nikito-cyan">
+              ✉️ Envoyé{u.bon?.numero ? ` · ${u.bon.numero}` : ''}
+            </span>
+          )}
           <span className="text-dim text-[12px] ml-auto">Appel {dateHeure(u.heure_appel)}</span>
         </div>
         <div className="text-[12px] text-dim">
@@ -214,7 +227,21 @@ function CarteUrgence({ urgence: u, onModifier }: { urgence: Urgence; onModifier
               })}
             </div>
           )}
-          <div className="flex justify-end gap-3 mt-1">
+          {u.envoye_le && (
+            <div className="text-[12px] text-nikito-cyan">
+              ✉️ Envoyé au parc le {dateHeure(u.envoye_le)}
+              {u.bon?.numero ? ` · bon ${u.bon.numero} (liste des bons d'intervention)` : ''}
+            </div>
+          )}
+          <div className="flex flex-wrap justify-end gap-3 mt-1">
+            {!u.envoye_le && (
+              <button
+                onClick={() => setEnvoi(true)}
+                className="bg-red/15 border border-red/45 text-red px-3 rounded-lg text-[12px] font-semibold min-h-[36px]"
+              >
+                {u.bon_id ? '📤 Renvoyer le mail au parc' : '📤 Envoyer comme bon d’intervention'}
+              </button>
+            )}
             <button onClick={retirer} className="text-dim text-[12px] min-h-[36px]">
               Retirer
             </button>
@@ -227,6 +254,176 @@ function CarteUrgence({ urgence: u, onModifier }: { urgence: Urgence; onModifier
           </div>
         </div>
       )}
+      {envoi && <ModaleEnvoiBon urgence={u} onClose={() => setEnvoi(false)} />}
+    </div>
+  );
+}
+
+const enBase64 = (blob: Blob) =>
+  new Promise<string>((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(String(r.result).split(',')[1] ?? '');
+    r.onerror = () => reject(r.error);
+    r.readAsDataURL(blob);
+  });
+
+/**
+ * Envoi d'une intervention d'urgence comme bon d'intervention normal : bon créé
+ * (numéro BI-…, signatures, photos copiées), visible dans la liste des bons, et
+ * mail avec le PDF au parc (chef d'équipe, directeurs, managers principaux).
+ */
+function ModaleEnvoiBon({ urgence: u, onClose }: { urgence: Urgence; onClose: () => void }) {
+  const qc = useQueryClient();
+  const toast = useToast();
+  const { utilisateur } = useAuth();
+  const dejaCree = !!u.bon_id;
+  const [technicien, setTechnicien] = useState(utilisateur ? `${utilisateur.prenom} ${utilisateur.nom}`.trim() : '');
+  const [signatureTech, setSignatureTech] = useState<Blob | null>(null);
+  const [responsable, setResponsable] = useState('');
+  const [signatureResp, setSignatureResp] = useState<Blob | null>(null);
+  const [testActivite, setTestActivite] = useState<boolean | null>(null);
+  const [etape, setEtape] = useState<string | null>(null);
+
+  const envoyer = async () => {
+    try {
+      let bon: BonIntervention;
+      if (dejaCree) {
+        // Bon déjà créé, seul le mail avait échoué : on le renvoie
+        const { data, error } = await supabase.from('bons_intervention').select('*, parc:parcs(code, nom)').eq('id', u.bon_id!).single();
+        if (error) throw error;
+        bon = data as BonIntervention;
+      } else {
+        if (!u.parc_id) throw new Error('Indique le parc de l’intervention (Modifier) avant de l’envoyer');
+        if (!u.details?.trim()) throw new Error('Décris l’intervention (Modifier → Détails) avant de l’envoyer');
+        if (testActivite === null) throw new Error('Indique si le test de l’activité a été fait (oui ou non)');
+        if (!technicien.trim() || !signatureTech) throw new Error('Nom et signature du technicien obligatoires');
+        if (!responsable.trim() || !signatureResp) throw new Error('Nom et signature du responsable obligatoires');
+        const dossier = `${new Date().getFullYear()}/${crypto.randomUUID()}`;
+        // Photos / vidéos : copiées du dossier personnel vers les bons
+        const medias: string[] = [];
+        for (let i = 0; i < u.medias.length; i++) {
+          setEtape(`Photos ${i + 1}/${u.medias.length}…`);
+          const { data: fichier, error } = await supabase.storage.from(BUCKET).download(u.medias[i]);
+          if (error || !fichier) throw new Error(`Photo ${i + 1} illisible : ${error?.message ?? ''}`);
+          const nom = u.medias[i].split('/').pop() ?? `media_${i + 1}`;
+          const chemin = `${dossier}/${i + 1}_${nom}`;
+          const { error: errUp } = await supabase.storage.from(BUCKET_BONS).upload(chemin, fichier, { contentType: fichier.type || undefined });
+          if (errUp) throw errUp;
+          medias.push(chemin);
+        }
+        setEtape('Signatures…');
+        const sigTech = `${dossier}/signature_technicien.png`;
+        const sigResp = `${dossier}/signature_responsable.png`;
+        for (const [chemin, blob] of [
+          [sigTech, signatureTech],
+          [sigResp, signatureResp],
+        ] as const) {
+          const { error } = await supabase.storage.from(BUCKET_BONS).upload(chemin, blob, { contentType: 'image/png' });
+          if (error) throw error;
+        }
+        setEtape('Création du bon…');
+        const debut = u.debut_intervention ?? u.heure_appel ?? new Date().toISOString();
+        const minutes =
+          u.debut_intervention && u.fin_intervention
+            ? Math.max(0, Math.round((new Date(u.fin_intervention).getTime() - new Date(u.debut_intervention).getTime()) / 60000))
+            : null;
+        const entete = [
+          "INTERVENTION D'URGENCE",
+          u.appelant ? `Appel de : ${u.appelant}` : null,
+          `Appel : ${dateHeure(u.heure_appel)} · début : ${dateHeure(u.debut_intervention)} · fin : ${dateHeure(u.fin_intervention)}`,
+        ]
+          .filter(Boolean)
+          .join('\n');
+        const { data, error } = await supabase
+          .from('bons_intervention')
+          .insert({
+            parc_id: u.parc_id,
+            activite: u.activite,
+            equipement: u.equipement,
+            date_intervention: debut,
+            duree_minutes: minutes,
+            probleme: u.probleme,
+            travaux: `${entete}\n\n${u.details!.trim()}`,
+            test_activite: testActivite,
+            pieces: u.pieces,
+            medias,
+            technicien_nom: technicien.trim(),
+            signature_technicien: sigTech,
+            responsable_nom: responsable.trim(),
+            signature_responsable: sigResp,
+            cree_par_id: utilisateur?.id ?? null,
+          })
+          .select('*, parc:parcs(code, nom)')
+          .single();
+        if (error) throw error;
+        bon = data as BonIntervention;
+        await supabase.from('interventions_urgence').update({ bon_id: bon.id }).eq('id', u.id);
+      }
+      setEtape('PDF et envoi du mail…');
+      const pdf = await exportBonPDF(bon, { telecharger: false });
+      const { data: rep, error: errMail } = await supabase.functions.invoke('envoyer-bon-intervention', {
+        body: {
+          bon_id: bon.id,
+          pdf_base64: await enBase64(pdf),
+          urgence: { heure_appel: u.heure_appel, debut_intervention: u.debut_intervention, fin_intervention: u.fin_intervention, appelant: u.appelant },
+        },
+      });
+      if (errMail || rep?.success === false) throw new Error(`Bon ${bon.numero ?? ''} créé, mais mail non envoyé : ${rep?.error ?? errMail?.message ?? ''}`);
+      await supabase.from('interventions_urgence').update({ envoye_le: new Date().toISOString() }).eq('id', u.id);
+      toast.success(`Bon ${bon.numero ?? ''} envoyé au parc (${rep?.envoye ?? 0} destinataire${(rep?.envoye ?? 0) > 1 ? 's' : ''})`);
+      qc.invalidateQueries({ queryKey: ['interventions-urgence'] });
+      qc.invalidateQueries({ queryKey: ['bons-intervention'] });
+      onClose();
+    } catch (e) {
+      toast.error((e as Error).message);
+      qc.invalidateQueries({ queryKey: ['interventions-urgence'] });
+    } finally {
+      setEtape(null);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[150] bg-black/60 flex items-end md:items-center justify-center md:p-4" onClick={onClose}>
+      <div
+        className="w-full md:max-w-[640px] bg-bg-card rounded-t-[18px] md:rounded-[18px] border border-red/30 p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] flex flex-col gap-3 max-h-[92vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="text-[16px] font-bold">📤 Envoyer comme bon d’intervention</div>
+        <div className="text-[12px] text-dim">
+          Un bon d’intervention (numéro BI-…) est créé avec cette urgence, ses photos et les signatures, et un mail avec le PDF part au
+          parc : directeur(s), managers principaux et chef d’équipe.
+        </div>
+        {dejaCree ? (
+          <div className="text-[13px]">Le bon est déjà créé ; seul le mail sera renvoyé.</div>
+        ) : (
+          <>
+            <ChoixTestActivite valeur={testActivite} onChange={setTestActivite} />
+            <div className="grid sm:grid-cols-2 gap-3">
+              <div className="grid gap-2">
+                <input value={technicien} onChange={(e) => setTechnicien(e.target.value)} placeholder="Nom du technicien" className={champ} />
+                <ZoneSignature libelle="Signature du technicien" onChange={setSignatureTech} />
+              </div>
+              <div className="grid gap-2">
+                <input value={responsable} onChange={(e) => setResponsable(e.target.value)} placeholder="Nom du responsable" className={champ} />
+                <ZoneSignature libelle="Signature du responsable" onChange={setSignatureResp} />
+              </div>
+            </div>
+          </>
+        )}
+        {etape && <div className="text-[12px] text-dim">{etape} — garde la page ouverte</div>}
+        <div className="flex justify-end gap-2">
+          <button onClick={onClose} disabled={!!etape} className="text-dim text-[13px] px-3 min-h-[44px]">
+            Annuler
+          </button>
+          <button
+            onClick={envoyer}
+            disabled={!!etape}
+            className="bg-red/20 border border-red/50 text-red px-5 rounded-[10px] text-[13px] font-bold min-h-[44px] disabled:opacity-50"
+          >
+            {etape ? 'Envoi…' : dejaCree ? 'Renvoyer le mail' : 'Créer le bon et l’envoyer'}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
