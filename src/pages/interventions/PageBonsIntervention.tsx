@@ -17,7 +17,8 @@ import { useToast } from '@/components/ui/ToastProvider';
 import { Pill } from '@/components/ui/Pill';
 import { ZoneSignature } from '@/components/ui/ZoneSignature';
 import { BoutonTelecharger } from '@/components/ui/BoutonTelecharger';
-import { ROLES_BONS } from '@/lib/acces';
+import { ROLES_BONS, voitTableauDeBord } from '@/lib/acces';
+import { SectionUrgences } from './InterventionsUrgence';
 import { BUCKET_BONS, exportBonPDF, formatDuree, type BonIntervention } from './exportBonPDF';
 import { useFiltreParc } from '@/hooks/useParcCourant';
 import { FiltreParcPills } from '@/components/ui/FiltreParcPills';
@@ -205,6 +206,9 @@ function ContenuBons() {
       </div>
 
       {nouveau && <FormulaireBon onFini={() => setNouveau(false)} />}
+
+      {/* Interventions d'urgence : Ryad uniquement (verrou aussi en base) */}
+      {voitTableauDeBord(utilisateur) && <SectionUrgences />}
 
       <div className="flex flex-col gap-3 mb-4">
         <div className="flex gap-1.5 overflow-x-auto pb-1">
