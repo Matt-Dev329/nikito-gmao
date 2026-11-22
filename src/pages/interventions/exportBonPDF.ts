@@ -26,6 +26,8 @@ export interface BonIntervention {
   est_urgence?: boolean;
   heure_panne?: string | null;
   fin_intervention?: string | null;
+  /** Dernier envoi par mail au parc */
+  envoye_le?: string | null;
   cree_le: string;
   parc?: { code: string; nom: string } | null;
 }

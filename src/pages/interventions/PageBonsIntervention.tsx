@@ -322,8 +322,27 @@ function CarteEnCours({ ticket: t }: { ticket: TicketEnCours }) {
 
 function CarteBon({ bon: b }: { bon: BonIntervention }) {
   const toast = useToast();
+  const qc = useQueryClient();
+  const { utilisateur } = useAuth();
   const [ouvert, setOuvert] = useState(false);
   const [pdf, setPdf] = useState(false);
+  const [envoi, setEnvoi] = useState(false);
+  // Envoi au parc : chef d'équipe, direction, admin IT, ou l'auteur du bon
+  const peutEnvoyer =
+    !!b.parc_id &&
+    (['chef_maintenance', 'direction', 'admin_it'].includes(utilisateur?.role_code ?? '') || (b as { cree_par_id?: string | null }).cree_par_id === utilisateur?.id);
+  const envoyer = async () => {
+    if (!window.confirm(`Envoyer le bon ${b.numero ?? ''} par mail au parc ${b.parc?.nom ?? ''} (directeurs, managers principaux, chef d’équipe) ?`)) return;
+    setEnvoi(true);
+    try {
+      const fichier = await exportBonPDF(b, { telecharger: false });
+      if (await envoyerBonAuParc(b, fichier, toast)) qc.invalidateQueries({ queryKey: ['bons-intervention'] });
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setEnvoi(false);
+    }
+  };
   const { data: urls } = useSignedUrls(ouvert ? b.medias : [], BUCKET_BONS);
 
   const telechargerPdf = async () => {
@@ -408,7 +427,7 @@ function CarteBon({ bon: b }: { bon: BonIntervention }) {
               })}
             </div>
           )}
-          <div>
+          <div className="flex flex-wrap items-center gap-2">
             <button
               onClick={telechargerPdf}
               disabled={pdf}
@@ -416,6 +435,20 @@ function CarteBon({ bon: b }: { bon: BonIntervention }) {
             >
               {pdf ? 'PDF…' : '⬇ Télécharger le bon (PDF)'}
             </button>
+            {peutEnvoyer && (
+              <button
+                onClick={envoyer}
+                disabled={envoi}
+                className="bg-gradient-cta text-text px-4 rounded-[10px] text-[13px] font-bold min-h-[44px] disabled:opacity-50"
+              >
+                {envoi ? 'Envoi…' : b.envoye_le ? '✉️ Renvoyer au parc' : '✉️ Envoyer au parc'}
+              </button>
+            )}
+            {b.envoye_le && (
+              <span className="text-[12px] text-dim">
+                Envoyé le {new Date(b.envoye_le).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })}
+              </span>
+            )}
           </div>
         </div>
       )}
@@ -443,8 +476,8 @@ type BrouillonBon = {
   fin?: string;
 };
 
-/** Bon d'urgence : mail au parc (directeurs, managers principaux, chef d'équipe) avec le PDF */
-async function envoyerBonAuParc(bon: BonIntervention, pdf: Blob, toast: ReturnType<typeof useToast>) {
+/** Mail du bon au parc (directeurs, managers principaux, chef d'équipe) avec le PDF ; true si envoyé */
+async function envoyerBonAuParc(bon: BonIntervention, pdf: Blob, toast: ReturnType<typeof useToast>): Promise<boolean> {
   const base64 = await new Promise<string>((resolve, reject) => {
     const r = new FileReader();
     r.onload = () => resolve(String(r.result).split(',')[1] ?? '');
@@ -455,14 +488,17 @@ async function envoyerBonAuParc(bon: BonIntervention, pdf: Blob, toast: ReturnTy
     body: {
       bon_id: bon.id,
       pdf_base64: base64,
-      urgence: { heure_appel: bon.heure_panne ?? null, debut_intervention: bon.date_intervention, fin_intervention: bon.fin_intervention ?? null },
+      ...(bon.est_urgence
+        ? { urgence: { heure_appel: bon.heure_panne ?? null, debut_intervention: bon.date_intervention, fin_intervention: bon.fin_intervention ?? null } }
+        : {}),
     },
   });
   if (error || data?.success === false) {
-    toast.error(`Bon ${bon.numero ?? ''} enregistré, mais mail au parc non envoyé : ${data?.error ?? error?.message ?? ''}`);
-    return;
+    toast.error(`Bon ${bon.numero ?? ''} : mail au parc non envoyé — ${data?.error ?? error?.message ?? ''}`);
+    return false;
   }
-  toast.success(`Bon d’urgence ${bon.numero ?? ''} envoyé au parc (${data?.envoye ?? 0} destinataire${(data?.envoye ?? 0) > 1 ? 's' : ''})`);
+  toast.success(`Bon ${bon.numero ?? ''} envoyé au parc (${data?.envoye ?? 0} destinataire${(data?.envoye ?? 0) > 1 ? 's' : ''})`);
+  return true;
 }
 
 function maintenantLocal(): string {

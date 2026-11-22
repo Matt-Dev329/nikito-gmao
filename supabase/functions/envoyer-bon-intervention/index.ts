@@ -4,7 +4,7 @@ import { createClient } from "npm:@supabase/supabase-js@2.45.0";
  * Envoi d'un bon d'intervention par mail au parc concerné : chef d'équipe,
  * directeur(s) et managers principaux du parc (destinataires_mise_a_jour),
  * avec le PDF du bon en pièce jointe et les photos / vidéos en liens (7 jours).
- * Utilisé pour les interventions d'urgence envoyées comme bon.
+ * Bouton « Envoyer au parc » des bons, et envoi automatique des bons d'urgence.
  *
  * Appel : POST { bon_id, pdf_base64, urgence? } avec le jeton de l'utilisateur
  * connecté ; le bon doit lui être lisible (règles de la base).
@@ -127,6 +127,7 @@ ${liens.length ? `<p><strong>Photos / vidéos :</strong><br/>${liens.map((l, i) 
       console.error("envoyer-bon-intervention: Resend", r.status, detail);
       return repondre({ success: false, error: `Envoi impossible (${r.status})` }, 502);
     }
+    await service.from("bons_intervention").update({ envoye_le: new Date().toISOString() }).eq("id", bonId);
     return repondre({ success: true, envoye: emails.length });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
