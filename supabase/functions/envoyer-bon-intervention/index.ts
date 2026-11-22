@@ -86,7 +86,7 @@ Deno.serve(async (req: Request) => {
       ["Parc", parc],
       ...(quoi ? [["Équipement", quoi] as [string, string]] : []),
       ...(urgence?.appelant ? [["Appel de", urgence.appelant] as [string, string]] : []),
-      ...(urgence ? [["Heure d'appel", dateHeure(urgence.heure_appel)] as [string, string]] : []),
+      ...(urgence ? [["Heure de la panne / de l'appel", dateHeure(urgence.heure_appel)] as [string, string]] : []),
       [urgence ? "Début d'intervention" : "Date", dateHeure(urgence?.debut_intervention ?? bon.date_intervention)],
       ...(urgence ? [["Fin d'intervention", dateHeure(urgence.fin_intervention)] as [string, string]] : []),
       ["Durée", duree(bon.duree_minutes)],

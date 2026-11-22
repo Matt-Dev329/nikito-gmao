@@ -117,43 +117,28 @@ function useUrgences() {
 
 /** Bouton + formulaire + liste des interventions d'urgence (à n'afficher qu'à Ryad) */
 export function SectionUrgences() {
-  const { data: urgences, isLoading } = useUrgences();
-  const [edition, setEdition] = useState<{ urgence: Urgence | null } | null>(null);
-  const enCours = (urgences ?? []).filter((u) => !u.fin_intervention).length;
+  const { data: urgences } = useUrgences();
+  const [edition, setEdition] = useState<{ urgence: Urgence } | null>(null);
+  // Les urgences se font désormais comme des bons d'intervention (case « urgence »).
+  // Ne restent ici que les anciennes fiches pas encore envoyées comme bon.
+  const aEnvoyer = (urgences ?? []).filter((u) => !u.envoye_le);
+  if (!aEnvoyer.length) return null;
 
   return (
     <div className="mb-6 rounded-2xl border border-red/30 bg-red/[0.04] p-3 md:p-4">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-3">
-        <div>
-          <div className="text-[15px] font-semibold">🚨 Interventions d'urgence</div>
-          <div className="text-[12px] text-dim">
-            Visible par toi seul · {(urgences ?? []).length} enregistrée{(urgences ?? []).length > 1 ? 's' : ''}
-            {enCours ? ` · ${enCours} sans heure de fin` : ''}
-          </div>
+      <div className="mb-3">
+        <div className="text-[15px] font-semibold">🚨 Anciennes fiches d'urgence à envoyer</div>
+        <div className="text-[12px] text-dim">
+          Visible par toi seul · les nouvelles urgences se font avec « + Nouveau bon » → case « 🚨 Intervention d’urgence ». Envoie
+          ces fiches comme bon pour les transformer en bon d’intervention.
         </div>
-        {!edition && (
-          <button
-            onClick={() => setEdition({ urgence: null })}
-            className="bg-red/20 border border-red/50 text-red px-4 py-2.5 rounded-[10px] text-[13px] font-bold min-h-[44px]"
-          >
-            🚨 Intervention d'urgence
-          </button>
-        )}
       </div>
-
       {edition && <FormulaireUrgence urgence={edition.urgence} onFini={() => setEdition(null)} />}
-
-      {isLoading ? (
-        <div className="text-dim text-[13px]">Chargement…</div>
-      ) : (urgences ?? []).length === 0 ? (
-        !edition && <div className="text-dim text-[13px]">Aucune intervention d'urgence enregistrée.</div>
-      ) : (
-        <div className="grid gap-2">
-          {(urgences ?? []).map((u) => (
-            <CarteUrgence key={u.id} urgence={u} onModifier={() => setEdition({ urgence: u })} />
-          ))}
-        </div>
-      )}
+      <div className="grid gap-2">
+        {aEnvoyer.map((u) => (
+          <CarteUrgence key={u.id} urgence={u} onModifier={() => setEdition({ urgence: u })} />
+        ))}
+      </div>
     </div>
   );
 }
@@ -327,13 +312,6 @@ function ModaleEnvoiBon({ urgence: u, onClose }: { urgence: Urgence; onClose: ()
           u.debut_intervention && u.fin_intervention
             ? Math.max(0, Math.round((new Date(u.fin_intervention).getTime() - new Date(u.debut_intervention).getTime()) / 60000))
             : null;
-        const entete = [
-          "INTERVENTION D'URGENCE",
-          u.appelant ? `Appel de : ${u.appelant}` : null,
-          `Appel : ${dateHeure(u.heure_appel)} · début : ${dateHeure(u.debut_intervention)} · fin : ${dateHeure(u.fin_intervention)}`,
-        ]
-          .filter(Boolean)
-          .join('\n');
         const { data, error } = await supabase
           .from('bons_intervention')
           .insert({
@@ -343,7 +321,10 @@ function ModaleEnvoiBon({ urgence: u, onClose }: { urgence: Urgence; onClose: ()
             date_intervention: debut,
             duree_minutes: minutes,
             probleme: u.probleme,
-            travaux: `${entete}\n\n${u.details!.trim()}`,
+            travaux: u.appelant ? `Appel de : ${u.appelant}\n\n${u.details!.trim()}` : u.details!.trim(),
+            est_urgence: true,
+            heure_panne: u.heure_appel,
+            fin_intervention: u.fin_intervention,
             test_activite: testActivite,
             pieces: u.pieces,
             medias,

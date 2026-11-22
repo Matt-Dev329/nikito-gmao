@@ -22,6 +22,10 @@ export interface BonIntervention {
   signature_responsable: string;
   /** Test de l'activité fait après l'intervention (null : bon antérieur à la question) */
   test_activite?: boolean | null;
+  /** Bon d'urgence : heure de la panne / de l'appel et fin d'intervention */
+  est_urgence?: boolean;
+  heure_panne?: string | null;
+  fin_intervention?: string | null;
   cree_le: string;
   parc?: { code: string; nom: string } | null;
 }
@@ -86,7 +90,15 @@ export async function exportBonPDF(bon: BonIntervention, options: { telecharger?
   doc.text(sansAccents(`Bon d'intervention ${bon.numero ?? ''}`), margin, y + 7);
   doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
-  doc.text('Reparation realisee hors ticket', margin, y + 12);
+  if (bon.est_urgence) {
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(200, 30, 60);
+    doc.text("INTERVENTION D'URGENCE", margin, y + 12);
+    doc.setTextColor(0);
+    doc.setFont('helvetica', 'normal');
+  } else {
+    doc.text('Reparation realisee hors ticket', margin, y + 12);
+  }
   y += 18;
   doc.setDrawColor(200);
   doc.line(margin, y, pageW - margin, y);
@@ -96,7 +108,13 @@ export async function exportBonPDF(bon: BonIntervention, options: { telecharger?
     ['Parc', bon.parc ? `${bon.parc.code} - ${bon.parc.nom}` : '-'],
     ['Activite', bon.activite || '-'],
     ['Equipement', bon.equipement || '-'],
-    ['Date', new Date(bon.date_intervention).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })],
+    ...(bon.est_urgence
+      ? ([
+          ['Heure de la panne', bon.heure_panne ? new Date(bon.heure_panne).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' }) : '-'],
+          ['Debut d\'intervention', new Date(bon.date_intervention).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })],
+          ['Fin d\'intervention', bon.fin_intervention ? new Date(bon.fin_intervention).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' }) : '-'],
+        ] as [string, string][])
+      : ([['Date', new Date(bon.date_intervention).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })]] as [string, string][])),
     ['Duree', formatDuree(bon.duree_minutes)],
     ['Technicien', bon.technicien_nom],
   ];

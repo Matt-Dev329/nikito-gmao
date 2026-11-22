@@ -341,7 +341,10 @@ function CarteBon({ bon: b }: { bon: BonIntervention }) {
     <div className="bg-bg-card rounded-xl border border-white/[0.06]">
       <button onClick={() => setOuvert((o) => !o)} className="w-full text-left p-3.5 px-4 flex gap-3 items-start">
         <div className="flex-1 min-w-0">
-          <div className="text-[14px] font-semibold truncate">{[b.activite, b.equipement].filter(Boolean).join(' · ') || 'Réparation'}</div>
+          <div className="text-[14px] font-semibold truncate">
+            {b.est_urgence && <span className="text-[11px] font-bold px-1.5 py-0.5 rounded-md bg-red/15 text-red mr-1.5 align-middle">🚨 Urgence</span>}
+            {[b.activite, b.equipement].filter(Boolean).join(' · ') || 'Réparation'}
+          </div>
           <div className="text-[12px] text-dim mt-0.5">
             <span className="font-mono">{b.numero}</span>
             {b.parc?.code ? ` · ${b.parc.code}` : ''} ·{' '}
@@ -371,6 +374,13 @@ function CarteBon({ bon: b }: { bon: BonIntervention }) {
             <div>
               <div className="text-[11px] text-dim uppercase tracking-wider mb-1">Pièces utilisées</div>
               <div className="whitespace-pre-line">{b.pieces}</div>
+            </div>
+          )}
+          {b.est_urgence && (
+            <div className="text-[12px] text-red">
+              Panne : {b.heure_panne ? new Date(b.heure_panne).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' }) : '—'} · début :{' '}
+              {new Date(b.date_intervention).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })} · fin :{' '}
+              {b.fin_intervention ? new Date(b.fin_intervention).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' }) : '—'}
             </div>
           )}
           <div className="text-[12px] text-dim">
@@ -428,7 +438,32 @@ type BrouillonBon = {
   technicien: string;
   responsable: string;
   testActivite?: boolean | null;
+  urgence?: boolean;
+  heurePanne?: string;
+  fin?: string;
 };
+
+/** Bon d'urgence : mail au parc (directeurs, managers principaux, chef d'équipe) avec le PDF */
+async function envoyerBonAuParc(bon: BonIntervention, pdf: Blob, toast: ReturnType<typeof useToast>) {
+  const base64 = await new Promise<string>((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(String(r.result).split(',')[1] ?? '');
+    r.onerror = () => reject(r.error);
+    r.readAsDataURL(pdf);
+  });
+  const { data, error } = await supabase.functions.invoke('envoyer-bon-intervention', {
+    body: {
+      bon_id: bon.id,
+      pdf_base64: base64,
+      urgence: { heure_appel: bon.heure_panne ?? null, debut_intervention: bon.date_intervention, fin_intervention: bon.fin_intervention ?? null },
+    },
+  });
+  if (error || data?.success === false) {
+    toast.error(`Bon ${bon.numero ?? ''} enregistré, mais mail au parc non envoyé : ${data?.error ?? error?.message ?? ''}`);
+    return;
+  }
+  toast.success(`Bon d’urgence ${bon.numero ?? ''} envoyé au parc (${data?.envoye ?? 0} destinataire${(data?.envoye ?? 0) > 1 ? 's' : ''})`);
+}
 
 function maintenantLocal(): string {
   const d = new Date();
@@ -469,6 +504,11 @@ function FormulaireBon({ onFini }: { onFini: () => void }) {
   const [equipement, setEquipement] = useState(repris?.equipement ?? '');
   const [date, setDate] = useState(repris?.date ?? maintenantLocal);
   const [duree, setDuree] = useState(repris?.duree ?? '');
+  // Bon d'urgence (Ryad uniquement) : heure de la panne et fin d'intervention, durée calculée
+  const peutUrgence = voitTableauDeBord(utilisateur);
+  const [urgence, setUrgence] = useState(peutUrgence && !!repris?.urgence);
+  const [heurePanne, setHeurePanne] = useState(repris?.heurePanne ?? '');
+  const [fin, setFin] = useState(repris?.fin ?? '');
   const [probleme, setProbleme] = useState(repris?.probleme ?? '');
   const [travaux, setTravaux] = useState(repris?.travaux ?? '');
   const [pieces, setPieces] = useState(repris?.pieces ?? '');
@@ -481,8 +521,8 @@ function FormulaireBon({ onFini }: { onFini: () => void }) {
   const [progression, setProgression] = useState<string | null>(null);
 
   const valeursBrouillon = useMemo<BrouillonBon>(
-    () => ({ parcId, activite, activiteLibre, equipement, date, duree, probleme, travaux, pieces, technicien, responsable, testActivite }),
-    [parcId, activite, activiteLibre, equipement, date, duree, probleme, travaux, pieces, technicien, responsable, testActivite]
+    () => ({ parcId, activite, activiteLibre, equipement, date, duree, probleme, travaux, pieces, technicien, responsable, testActivite, urgence, heurePanne, fin }),
+    [parcId, activite, activiteLibre, equipement, date, duree, probleme, travaux, pieces, technicien, responsable, testActivite, urgence, heurePanne, fin]
   );
   const commence = [activite, equipement, duree, probleme, travaux, pieces, responsable].some((v) => v.trim() !== '');
   useAutoSaveDraft(brouillon.save, valeursBrouillon, commence);
@@ -506,6 +546,11 @@ function FormulaireBon({ onFini }: { onFini: () => void }) {
   const enregistrer = useMutation({
     mutationFn: async () => {
       if (!travaux.trim()) throw new Error('Décris les travaux réalisés');
+      if (urgence) {
+        if (!parcId) throw new Error('Choisis le parc : le bon d’urgence est envoyé au parc');
+        if (!fin) throw new Error('Indique la fin de l’intervention');
+        if (new Date(fin) < new Date(date)) throw new Error('La fin doit être après le début de l’intervention');
+      }
       if (testActivite === null) throw new Error('Indique si le test de l’activité a été fait (oui ou non)');
       if (!technicien.trim() || !signatureTech) throw new Error('Nom et signature du technicien obligatoires');
       if (!responsable.trim() || !signatureResp) throw new Error('Nom et signature du responsable obligatoires');
@@ -541,7 +586,15 @@ function FormulaireBon({ onFini }: { onFini: () => void }) {
           activite: activite.trim() || null,
           equipement: equipement.trim() || null,
           date_intervention: new Date(date).toISOString(),
-          duree_minutes: duree ? Math.max(0, Math.round(Number(duree))) : null,
+          duree_minutes:
+            urgence && fin
+              ? Math.max(0, Math.round((new Date(fin).getTime() - new Date(date).getTime()) / 60000))
+              : duree
+                ? Math.max(0, Math.round(Number(duree)))
+                : null,
+          est_urgence: urgence,
+          heure_panne: urgence && heurePanne ? new Date(heurePanne).toISOString() : null,
+          fin_intervention: urgence && fin ? new Date(fin).toISOString() : null,
           probleme: probleme.trim() || null,
           travaux: travaux.trim(),
           test_activite: testActivite,
@@ -565,7 +618,9 @@ function FormulaireBon({ onFini }: { onFini: () => void }) {
       qc.invalidateQueries({ queryKey: ['bons-intervention'] });
       onFini();
       try {
-        await exportBonPDF(bon);
+        const pdf = await exportBonPDF(bon);
+        // Bon d'urgence : envoyé au parc (directeurs, managers principaux, chef d'équipe) avec le PDF
+        if (bon.est_urgence) await envoyerBonAuParc(bon, pdf, toast);
       } catch {
         // le PDF reste téléchargeable depuis la liste
       }
@@ -576,7 +631,26 @@ function FormulaireBon({ onFini }: { onFini: () => void }) {
 
   return (
     <div className="bg-bg-card rounded-xl border border-nikito-cyan/30 p-4 mb-5 grid gap-3 max-w-[720px]">
-      <div className="text-[15px] font-semibold">Nouveau bon d'intervention</div>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="text-[15px] font-semibold">{urgence ? '🚨 Bon d’intervention d’urgence' : 'Nouveau bon d\'intervention'}</div>
+        {peutUrgence && (
+          <label
+            className={cn(
+              'flex items-center gap-2 rounded-[10px] border px-3 min-h-[40px] text-[13px] cursor-pointer',
+              urgence ? 'border-red/50 bg-red/15 text-red font-semibold' : 'border-white/[0.08] text-dim'
+            )}
+          >
+            <input type="checkbox" checked={urgence} onChange={(e) => setUrgence(e.target.checked)} className="accent-red w-4 h-4" />
+            🚨 Intervention d’urgence
+          </label>
+        )}
+      </div>
+      {urgence && (
+        <div className="text-[12px] text-dim -mt-1">
+          Même bon qu’un bon normal, marqué urgence, avec l’heure de la panne et la fin d’intervention (durée calculée). À
+          l’enregistrement, il est aussi envoyé au parc par mail (directeurs, managers principaux, chef d’équipe) avec le PDF.
+        </div>
+      )}
       {repris && (
         <div className="text-[12px] text-amber bg-amber/10 rounded-lg p-2.5">
           Bon repris là où tu l’avais laissé. Les photos et les signatures sont à refaire.
@@ -616,18 +690,40 @@ function FormulaireBon({ onFini }: { onFini: () => void }) {
           </select>
         )}
         <input value={equipement} onChange={(e) => setEquipement(e.target.value)} placeholder="Équipement / pièce concernée" className={champ} />
-        <div className="grid grid-cols-[1fr_110px] gap-2.5">
-          <input type="datetime-local" value={date} onChange={(e) => setDate(e.target.value)} className={champ} aria-label="Date de l'intervention" />
-          <input
-            type="number"
-            inputMode="numeric"
-            min={0}
-            value={duree}
-            onChange={(e) => setDuree(e.target.value)}
-            placeholder="Durée (min)"
-            className={champ}
-          />
-        </div>
+        {urgence ? (
+          <div className="grid sm:grid-cols-3 gap-2.5 sm:col-span-2">
+            <label className="grid gap-1">
+              <span className="text-[11px] text-red">Heure de la panne / de l’appel</span>
+              <input type="datetime-local" value={heurePanne} onChange={(e) => setHeurePanne(e.target.value)} className={champ} />
+            </label>
+            <label className="grid gap-1">
+              <span className="text-[11px] text-red">Début d’intervention</span>
+              <input type="datetime-local" value={date} onChange={(e) => setDate(e.target.value)} className={champ} />
+            </label>
+            <label className="grid gap-1">
+              <span className="text-[11px] text-red flex justify-between">
+                Fin d’intervention
+                <button type="button" onClick={() => setFin(maintenantLocal())} className="text-nikito-cyan font-semibold">
+                  maintenant
+                </button>
+              </span>
+              <input type="datetime-local" value={fin} onChange={(e) => setFin(e.target.value)} className={champ} />
+            </label>
+          </div>
+        ) : (
+          <div className="grid grid-cols-[1fr_110px] gap-2.5">
+            <input type="datetime-local" value={date} onChange={(e) => setDate(e.target.value)} className={champ} aria-label="Date de l'intervention" />
+            <input
+              type="number"
+              inputMode="numeric"
+              min={0}
+              value={duree}
+              onChange={(e) => setDuree(e.target.value)}
+              placeholder="Durée (min)"
+              className={champ}
+            />
+          </div>
+        )}
       </div>
 
       <textarea value={probleme} onChange={(e) => setProbleme(e.target.value)} rows={2} placeholder="Problème constaté" className={cn(champ, 'resize-none')} />
