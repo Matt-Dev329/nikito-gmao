@@ -20,6 +20,8 @@ import { NotesPartagees } from '@/components/shared/NotesPartagees';
 import { BoutonCatalogueKarting } from '@/components/karting/BoutonCatalogueKarting';
 import { peutValiderTicket, peutModifierTicket } from '@/lib/acces';
 import { useCloturerIntervention } from '@/hooks/mutations';
+import { cloturerIntervention } from '@/hooks/mutations/useCloturerIntervention';
+import { TicketsMemeCause, type TicketLie } from '@/components/tickets/TicketsMemeCause';
 import { ChoixTestActivite } from '@/components/tickets/ChoixTestActivite';
 import { useAuth } from '@/hooks/useAuth';
 import { useDraftPersistence, useAutoSaveDraft } from '@/hooks/useDraftPersistence';
@@ -215,6 +217,8 @@ export function Intervention() {
   const [actions, setActions] = useState('');
   const [premierCoup, setPremierCoup] = useState<boolean | null>(null);
   const [testActivite, setTestActivite] = useState<boolean | null>(null);
+  // Clôture groupée : autres tickets réglés par la même réparation
+  const [ticketsLies, setTicketsLies] = useState<TicketLie[]>([]);
   // Plusieurs photos avant / après : la première est obligatoire
   const [photosAvant, setPhotosAvant] = useState<string[]>([]);
   const photoAvant = photosAvant[0] ?? null;
@@ -319,7 +323,9 @@ export function Intervention() {
       incidentId: incident.id as string,
       interventionId: (latestIntervention?.id as string) ?? null,
       diagnostic,
-      actions,
+      actions: ticketsLies.length
+        ? `${actions}\n\nMême cause, clôturés en même temps : ${ticketsLies.map((t) => t.numeroBT).join(', ')}`
+        : actions,
       resoluPremierCoup: premierCoup,
       testActivite,
       photoAvantUrl: photoAvant,
@@ -328,6 +334,21 @@ export function Intervention() {
       photosApresUrls: photosApres,
       pieces: piecesAjoutees.map((p) => ({ pieceId: p.pieceId, quantite: p.quantite })),
     };
+
+    const paramsLies = ticketsLies.map((t) => ({
+      ticket: t,
+      params: {
+        incidentId: t.id,
+        interventionId: null,
+        diagnostic: `Même cause que ${btNumero ?? ''} : ${diagnostic}`,
+        actions: `${actions}\n\nClôturé avec ${btNumero ?? ''} (même cause) — rapport complet et pièces sur ${btNumero ?? ''}.`,
+        resoluPremierCoup: premierCoup,
+        testActivite,
+        photosAvantUrls: photosAvant,
+        photosApresUrls: photosApres,
+        pieces: [],
+      },
+    }));
 
     try {
       await cloturer.mutateAsync(paramsCloture);
@@ -340,6 +361,13 @@ export function Intervention() {
             params: paramsCloture,
             utilisateurId: utilisateur.id,
           });
+          // Tickets de même cause : gardés aussi, envoyés au retour du réseau
+          for (const l of paramsLies) {
+            await mettreActionEnFile('cloture_intervention', `${l.ticket.numeroBT} · même cause que ${btNumero ?? ''}`, {
+              params: l.params,
+              utilisateurId: utilisateur.id,
+            });
+          }
           draft.clear();
           setDirty(false);
           toast.info(`Hors connexion : clôture de ${btNumero ?? ''} enregistrée, envoi automatique au retour du réseau.`);
@@ -355,6 +383,21 @@ export function Intervention() {
           : msg || 'Erreur lors de la clôture.'
       );
       return;
+    }
+
+    // Tickets de même cause : clôturés avec le même rapport (un échec n'annule pas les autres)
+    if (paramsLies.length && utilisateur?.id) {
+      const echecs: string[] = [];
+      for (const l of paramsLies) {
+        try {
+          await cloturerIntervention(l.params, utilisateur.id);
+        } catch (e) {
+          echecs.push(`${l.ticket.numeroBT} (${(e as Error).message})`);
+        }
+      }
+      const ok = paramsLies.length - echecs.length;
+      if (ok) toast.success(`${ok} ticket${ok > 1 ? 's' : ''} de même cause clôturé${ok > 1 ? 's' : ''} : ${paramsLies.filter((l) => !echecs.some((x) => x.startsWith(l.ticket.numeroBT))).map((l) => l.ticket.numeroBT).join(', ')}`);
+      if (echecs.length) toast.error(`Non clôturé${echecs.length > 1 ? 's' : ''} : ${echecs.join(' · ')}`);
     }
 
     // Ticket fermé : le PDF est un bonus, son échec ne doit pas relancer la clôture
@@ -928,6 +971,16 @@ export function Intervention() {
           desactive={estResolu}
         />
 
+        {!estResolu && (
+          <TicketsMemeCause
+            incidentId={incident.id as string}
+            parcId={(equip?.parc_id as string | undefined) ?? null}
+            activite={activite}
+            selection={ticketsLies}
+            onChange={setTicketsLies}
+          />
+        )}
+
         {erreur && (
           <div className="bg-red/10 border border-red/30 text-red text-[13px] rounded-xl p-3 text-center">
             {erreur}
@@ -939,7 +992,11 @@ export function Intervention() {
           disabled={cloturer.isPending}
           className="bg-gradient-cta text-text py-4 rounded-2xl text-base font-bold mt-1 disabled:opacity-60"
         >
-          {cloturer.isPending ? 'Clôture en cours…' : 'Clôturer · générer PDF'}
+          {cloturer.isPending
+            ? 'Clôture en cours…'
+            : ticketsLies.length
+              ? `Clôturer ${ticketsLies.length + 1} tickets · générer PDF`
+              : 'Clôturer · générer PDF'}
         </button>
         </fieldset>
 
