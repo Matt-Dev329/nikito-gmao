@@ -906,6 +906,7 @@ function EtapePhoto({
 }) {
   const photoRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLInputElement>(null);
+  const galerieRef = useRef<HTMLInputElement>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [estVideo, setEstVideo] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -950,6 +951,7 @@ function EtapePhoto({
     if (file.size > VIDEO_MAX_MO * 1024 * 1024) {
       setError(`Vidéo trop lourde (${Math.round(file.size / 1024 / 1024)} Mo, max ${VIDEO_MAX_MO} Mo) : filme environ 30 secondes.`);
       if (videoRef.current) videoRef.current.value = '';
+      if (galerieRef.current) galerieRef.current.value = '';
       return;
     }
     const apercu = URL.createObjectURL(file);
@@ -984,12 +986,22 @@ function EtapePhoto({
     setError(null);
     if (photoRef.current) photoRef.current.value = '';
     if (videoRef.current) videoRef.current.value = '';
+    if (galerieRef.current) galerieRef.current.value = '';
+  };
+
+  // Photo ou vidéo déjà dans la galerie du téléphone / de la tablette
+  const handleGalerie = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.type.startsWith('video/')) void handleVideo(e);
+    else void handlePhoto(e);
   };
 
   return (
     <div className="p-4 pb-24 flex flex-col items-center">
       <input ref={photoRef} type="file" accept="image/*" capture="environment" onChange={handlePhoto} className="hidden" />
       <input ref={videoRef} type="file" accept="video/*" capture="environment" onChange={handleVideo} className="hidden" />
+      <input ref={galerieRef} type="file" accept="image/*,video/*" onChange={handleGalerie} className="hidden" />
 
       {!preview ? (
         <div className="flex-1 flex flex-col items-center justify-center py-8 w-full">
@@ -1008,6 +1020,12 @@ function EtapePhoto({
               className="bg-[#131836] border border-[#5DE5FF]/40 text-[#5DE5FF] px-6 py-4 rounded-2xl text-base font-bold active:scale-95 transition-transform min-h-[64px]"
             >
               {'\u{1F3A5}'} Filmer une vidéo
+            </button>
+            <button
+              onClick={() => galerieRef.current?.click()}
+              className="border border-white/10 text-dim px-6 py-4 rounded-2xl text-base font-semibold active:scale-95 transition-transform min-h-[56px]"
+            >
+              {'\u{1F5BC}\u{FE0F}'} Depuis la galerie
             </button>
           </div>
           {error && <div className="text-[#FF4D6D] text-xs mt-4 text-center max-w-[300px]">{error}</div>}
