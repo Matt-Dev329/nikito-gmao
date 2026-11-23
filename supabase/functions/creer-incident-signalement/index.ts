@@ -1,4 +1,3 @@
-import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.45.0";
 
 const corsHeaders = {
@@ -82,23 +81,42 @@ Deno.serve(async (req: Request) => {
     // 2. Get user role to determine validation_manager
     const { data: user } = await supabase
       .from("utilisateurs")
-      .select("id, prenom, nom, role_id, roles:role_id(code)")
+      .select("id, prenom, nom, actif, signalement_karting, role_id, roles:role_id(code)")
       .eq("id", body.declare_par_id)
       .maybeSingle();
 
     const roleCode = (user?.roles as any)?.code ?? "staff_operationnel";
-    // Le staff fait les contrôles mais ne crée pas de tickets
-    if (!user || roleCode === "staff_operationnel") {
-      return jsonResponse({ success: false, error: "Le staff ne peut pas créer de ticket : préviens ton manager" }, 403);
-    }
-    const needsManagerApproval = roleCode === "staff_operationnel";
 
     // 3. Determine priorite_id from categorie criticite_defaut
     const { data: categorie } = await supabase
       .from("categories_equipement")
-      .select("criticite_defaut")
+      .select("criticite_defaut, activite")
       .eq("id", body.categorie_id)
       .maybeSingle();
+
+    // Le staff fait les contrôles mais ne crée pas de tickets, sauf les staff
+    // autorisés au karting (signalement_karting), et uniquement pour le karting
+    if (!user || roleCode === "staff_operationnel") {
+      const kartingAutorise = !!user && user.actif === true && user.signalement_karting === true;
+      if (!kartingAutorise) {
+        return jsonResponse({ success: false, error: "Le staff ne peut pas créer de ticket : préviens ton manager" }, 403);
+      }
+      let estKarting = categorie?.activite === "Karting";
+      if (estKarting && body.equipement_id) {
+        const { data: eq } = await supabase
+          .from("equipements")
+          .select("categorie_id, parc_id")
+          .eq("id", body.equipement_id)
+          .maybeSingle();
+        estKarting = eq?.categorie_id === body.categorie_id && eq?.parc_id === body.parc_id;
+      }
+      if (!estKarting) {
+        return jsonResponse({ success: false, error: "Tu peux signaler uniquement des pannes du karting" }, 403);
+      }
+      body.mode_expert = null;
+    }
+    // Ticket karting du staff autorisé : envoyé directement aux techniciens
+    const needsManagerApproval = false;
 
     const criticiteCode = body.mode_expert?.priorite_override
       ?? (body.priorite_escaladee ? "bloquant" : (categorie?.criticite_defaut ?? "mineur"));

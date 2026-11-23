@@ -392,6 +392,7 @@ export function ModaleSignalerV2({ open, onClose, via, parcId: propParcId, modeE
           {etape === 'categorie' && (
             <EtapeCategorie
               parcId={parcId}
+              seulementKarting={!!userCtx?.isStaff}
               recherche={recherche}
               onRecherche={setRecherche}
               onSelect={(cat) => { update({ categorie: cat }); setEtape('equipement'); setRecherche(''); }}
@@ -534,11 +535,14 @@ function EtapeParc({ parcIds, onSelect }: { parcIds: string[]; onSelect: (p: Par
 
 function EtapeCategorie({
   parcId,
+  seulementKarting,
   recherche,
   onRecherche,
   onSelect,
 }: {
   parcId: string | null;
+  /** Staff autorisé au karting : ne signale que le karting */
+  seulementKarting?: boolean;
   recherche: string;
   onRecherche: (v: string) => void;
   onSelect: (cat: Categorie) => void;
@@ -552,7 +556,7 @@ function EtapeCategorie({
     chargerToutesLesPages<any>((debut, fin) =>
       supabase
         .from('equipements')
-        .select('categorie_id, categories_equipement!inner(id, nom, criticite_defaut)')
+        .select('categorie_id, categories_equipement!inner(id, nom, criticite_defaut, activite)')
         .eq('parc_id', parcId)
         .eq('statut', 'actif')
         .order('id')
@@ -562,6 +566,7 @@ function EtapeCategorie({
         const map = new Map<string, Categorie>();
         for (const row of data) {
           const cat = row.categories_equipement as any;
+          if (seulementKarting && cat.activite !== 'Karting') continue;
           const existing = map.get(cat.id);
           if (existing) { existing.nb++; } else {
             map.set(cat.id, { id: cat.id, nom: cat.nom, criticite_defaut: cat.criticite_defaut, nb: 1 });
@@ -571,7 +576,7 @@ function EtapeCategorie({
         setLoading(false);
       })
       .catch(() => setLoading(false));
-  }, [parcId]);
+  }, [parcId, seulementKarting]);
 
   const filtered = recherche
     ? categories.filter((c) => c.nom.toLowerCase().includes(recherche.toLowerCase()))

@@ -84,6 +84,18 @@ export function ControleOuverture({ typeControle = 'quotidien' }: { typeControle
     staffSession?.parc ?? null
   );
 
+  const staffId = utilisateur?.role_code === 'staff_operationnel' ? utilisateur.id : null;
+  const { data: signaleKarting = false } = useQuery({
+    queryKey: ['staff-signalement-karting', staffId],
+    enabled: !!staffId,
+    staleTime: 5 * 60_000,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('staff_signalement_karting', { p_utilisateur: staffId! });
+      if (error) throw error;
+      return data === true;
+    },
+  });
+
   const handleSelectParc = useCallback((p: { id: string; code: string; nom: string }) => {
     setParcChoisi(p);
   }, []);
@@ -346,7 +358,8 @@ export function ControleOuverture({ typeControle = 'quotidien' }: { typeControle
     );
   }
 
-  // Le staff fait les contrôles mais ne crée pas de tickets
+  // Le staff fait les contrôles mais ne crée pas de tickets, sauf les staff
+  // autorisés au karting (uniquement pour le karting, contrôlé côté serveur)
   const estStaff = utilisateur?.role_code === 'staff_operationnel';
   const signalBouton = (
     <button
@@ -480,7 +493,7 @@ export function ControleOuverture({ typeControle = 'quotidien' }: { typeControle
                 🩹 Blessé
               </button>
             )}
-            {!estStaff && signalBouton}
+            {(!estStaff || signaleKarting) && signalBouton}
             <BoutonRetourGmao />
           </div>
         }
