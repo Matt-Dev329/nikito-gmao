@@ -7,6 +7,7 @@ import {
   useModifierUtilisateur,
   useDefinirProfilTechnicien,
   useDefinirPeutIntervenir,
+  useDefinirSignalementKarting,
   useUtilisateursActifs,
   PROFILS_TECHNICIEN,
   type ProfilTechnicien,
@@ -33,6 +34,8 @@ export function ModaleEditerUtilisateur({ open, onClose, utilisateur }: Props) {
   const [profil, setProfil] = useState<ProfilTechnicien>(utilisateur.profil_technicien ?? 'polyvalent');
   const intervenirMutation = useDefinirPeutIntervenir();
   const [peutIntervenir, setPeutIntervenir] = useState(utilisateur.peut_intervenir ?? false);
+  const kartingMutation = useDefinirSignalementKarting();
+  const [signaleKarting, setSignaleKarting] = useState(utilisateur.signalement_karting ?? false);
   // Texte indicatif : techniciens déjà dans chaque type (ex. Baptiste, Samy pour Nikito)
   const { data: actifs } = useUtilisateursActifs();
   const membresDuProfil = (code: ProfilTechnicien) =>
@@ -65,6 +68,7 @@ export function ModaleEditerUtilisateur({ open, onClose, utilisateur }: Props) {
     setActif(utilisateur.actif);
     setProfil(utilisateur.profil_technicien ?? 'polyvalent');
     setPeutIntervenir(utilisateur.peut_intervenir ?? false);
+    setSignaleKarting(utilisateur.signalement_karting ?? false);
     setErreur(null);
     setResetSent(false);
   }, [utilisateur]);
@@ -90,6 +94,9 @@ export function ModaleEditerUtilisateur({ open, onClose, utilisateur }: Props) {
       }
       if (peutReglerProfil && peutIntervenir !== (utilisateur.peut_intervenir ?? false)) {
         await intervenirMutation.mutateAsync({ utilisateur_id: utilisateur.id, autorise: peutIntervenir });
+      }
+      if (peutReglerProfil && signaleKarting !== (utilisateur.signalement_karting ?? false)) {
+        await kartingMutation.mutateAsync({ utilisateur_id: utilisateur.id, autorise: roleCode === 'staff_operationnel' && signaleKarting });
       }
       onClose();
     } catch (e) {
@@ -195,6 +202,21 @@ export function ModaleEditerUtilisateur({ open, onClose, utilisateur }: Props) {
             <span>
               Peut intervenir sur les tickets
               <span className="block text-[10px] text-faint">Démarrer, mettre en attente de pièce et clôturer les tickets de ses parcs</span>
+            </span>
+          </label>
+        )}
+
+        {peutReglerProfil && roleCode === 'staff_operationnel' && (
+          <label className="flex items-start gap-2 mb-4 text-xs cursor-pointer">
+            <input
+              type="checkbox"
+              checked={signaleKarting}
+              onChange={(e) => setSignaleKarting(e.target.checked)}
+              className="accent-nikito-pink mt-0.5"
+            />
+            <span>
+              Peut signaler les pannes du karting
+              <span className="block text-[10px] text-faint">Bouton « Signaler une panne » sur la tablette, uniquement pour le karting</span>
             </span>
           </label>
         )}
@@ -328,7 +350,7 @@ export function ModaleEditerUtilisateur({ open, onClose, utilisateur }: Props) {
           </button>
           <button
             onClick={enregistrer}
-            disabled={!peutValider || modifierMutation.isPending || profilMutation.isPending || intervenirMutation.isPending}
+            disabled={!peutValider || modifierMutation.isPending || profilMutation.isPending || intervenirMutation.isPending || kartingMutation.isPending}
             className={cn(
               'bg-gradient-cta text-text px-6 py-2.5 rounded-[10px] text-[13px] font-bold min-h-[44px]',
               (!peutValider || modifierMutation.isPending) && 'opacity-40 cursor-not-allowed'

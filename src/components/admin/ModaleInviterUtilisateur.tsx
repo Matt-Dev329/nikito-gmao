@@ -52,6 +52,9 @@ export function ModaleInviterUtilisateur({
   const [estManager, setEstManager] = useState(false);
   // Technicien : type (Arcade / Nikito), appliqué quand il accepte l'invitation
   const [profil, setProfil] = useState<ProfilTechnicien>('polyvalent');
+  // Staff : peut signaler les pannes du karting (chef d'équipe, direction, admin IT)
+  const peutDonnerKarting = ['chef_maintenance', 'direction', 'admin_it'].includes(roleInviteur ?? '');
+  const [signaleKarting, setSignaleKarting] = useState(false);
   const [methodeEnvoi, setMethodeEnvoi] = useState<'email' | 'lien'>('email');
   const [submitting, setSubmitting] = useState(false);
   const [lienGenere, setLienGenere] = useState<string | null>(null);
@@ -113,6 +116,13 @@ export function ModaleInviterUtilisateur({
         toast.error(`Impossible de créer le compte : ${userErr?.message ?? 'erreur inconnue'}`);
         setSubmitting(false);
         return;
+      }
+      if (peutDonnerKarting && signaleKarting) {
+        const { error: errKarting } = await supabase.rpc('definir_signalement_karting', {
+          p_utilisateur_id: nouvelId,
+          p_autorise: true,
+        });
+        if (errKarting) toast.error(`Compte créé, mais le droit karting n'a pas été donné : ${errKarting.message}`);
       }
 
       // Avec un email : le code part directement par mail, sans s'afficher ici
@@ -319,6 +329,21 @@ export function ModaleInviterUtilisateur({
                   />
                 </Field>
               </div>
+            )}
+
+            {authMode === 'pin_seul' && peutDonnerKarting && (
+              <label className="flex items-start gap-2 mb-3.5 text-xs cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={signaleKarting}
+                  onChange={(e) => setSignaleKarting(e.target.checked)}
+                  className="accent-nikito-pink mt-0.5"
+                />
+                <span>
+                  Peut signaler les pannes du karting
+                  <span className="block text-[10px] text-faint">Bouton « Signaler une panne » sur la tablette, uniquement pour le karting</span>
+                </span>
+              </label>
             )}
 
             {authMode === 'email_password' && (

@@ -21,6 +21,7 @@ export interface UtilisateurRow {
   profil_technicien?: ProfilTechnicien;
   /** Non-technicien autorisé à intervenir sur les tickets de ses parcs */
   peut_intervenir?: boolean;
+  signalement_karting?: boolean;
 }
 
 export type ProfilTechnicien = 'polyvalent' | 'arcade' | 'nikito' | 'karting';
@@ -93,7 +94,7 @@ export function useUtilisateursActifs() {
       const { data, error } = await supabase
         .from('utilisateurs')
         .select(
-          `id, email, prenom, nom, trigramme, actif, statut_validation, auth_mode, cree_le, role_id, profil_technicien, peut_intervenir, code_pin_genere_le,
+          `id, email, prenom, nom, trigramme, actif, statut_validation, auth_mode, cree_le, role_id, profil_technicien, peut_intervenir, signalement_karting, code_pin_genere_le,
            roles!inner(code),
            parcs_utilisateurs(parc_id, est_manager, parcs(code))`
         )
@@ -123,7 +124,7 @@ export function useUtilisateursAValider() {
       const { data, error } = await supabase
         .from('utilisateurs')
         .select(
-          `id, email, prenom, nom, trigramme, actif, statut_validation, auth_mode, cree_le, role_id, profil_technicien, peut_intervenir,
+          `id, email, prenom, nom, trigramme, actif, statut_validation, auth_mode, cree_le, role_id, profil_technicien, peut_intervenir, signalement_karting,
            roles!inner(code),
            parcs_utilisateurs(parc_id, est_manager, parcs(code))`
         )
@@ -152,7 +153,7 @@ export function useUtilisateursDesactives() {
       const { data, error } = await supabase
         .from('utilisateurs')
         .select(
-          `id, email, prenom, nom, trigramme, actif, statut_validation, auth_mode, cree_le, role_id, profil_technicien, peut_intervenir,
+          `id, email, prenom, nom, trigramme, actif, statut_validation, auth_mode, cree_le, role_id, profil_technicien, peut_intervenir, signalement_karting,
            roles!inner(code),
            parcs_utilisateurs(parc_id, est_manager, parcs(code))`
         )
@@ -246,6 +247,19 @@ export function useDefinirPeutIntervenir() {
   return useMutation({
     mutationFn: async ({ utilisateur_id, autorise }: { utilisateur_id: string; autorise: boolean }) => {
       const { error } = await supabase.rpc('definir_peut_intervenir', { p_utilisateur_id: utilisateur_id, p_autorise: autorise });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['utilisateurs'] });
+    },
+  });
+}
+
+export function useDefinirSignalementKarting() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ utilisateur_id, autorise }: { utilisateur_id: string; autorise: boolean }) => {
+      const { error } = await supabase.rpc('definir_signalement_karting', { p_utilisateur_id: utilisateur_id, p_autorise: autorise });
       if (error) throw error;
     },
     onSuccess: () => {

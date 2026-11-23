@@ -254,6 +254,11 @@ function UserRow({
                 {user.profil_technicien === 'arcade' ? 'Arcade' : user.profil_technicien === 'karting' ? 'Karting' : 'Nikito'}
               </span>
             )}
+            {user.role_code === 'staff_operationnel' && user.signalement_karting && (
+              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-nikito-cyan/15 text-nikito-cyan">
+                Signale le karting
+              </span>
+            )}
             {user.parcs.some((p) => p.est_manager) && (
               <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber/15 text-amber">
                 MGR
