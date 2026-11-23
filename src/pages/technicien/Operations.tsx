@@ -5,7 +5,7 @@ import { TicketCard, type TicketSummary } from '@/components/tickets/TicketCard'
 import { useNombreNotes } from '@/hooks/queries/useNotesPartagees';
 import { ModaleReassignerTicket } from '@/components/tickets/ModaleReassignerTicket';
 import { Pill } from '@/components/ui/Pill';
-import { cn, estCheminVideo, formatDateCourt, formatDuree } from '@/lib/utils';
+import { cn, estCheminVideo, formatDateCourt } from '@/lib/utils';
 import { useIncidents, useNombreTicketsParParc, useReprendreIncident, useTicketsAValider, useValiderTicket } from '@/hooks/queries/useTickets';
 import { ModaleSupprimerTicket } from '@/components/tickets/ModaleSupprimerTicket';
 import { ModaleRefuserTicket } from '@/components/tickets/ModaleRefuserTicket';
@@ -58,7 +58,6 @@ function incidentToTicket(inc: Record<string, unknown>): TicketSummary {
   const cat = equip?.categories_equipement as Record<string, unknown> | null;
   const criticite = mapCriticite(priorite);
   const declareLe = inc.declare_le as string;
-  const ouvert = !['resolu', 'ferme', 'annule'].includes(inc.statut as string);
 
   const badges: TicketSummary['badges'] = [];
   if (cat?.nom) badges.push({ label: cat.nom as string });
@@ -85,11 +84,11 @@ function incidentToTicket(inc: Record<string, unknown>): TicketSummary {
     zone: (zone?.nom as string) ?? undefined,
     activite: (cat?.activite as string) ?? 'Autres',
     description: inc.statut === 'ouvert' && criticite === 'bloquant'
-      ? `${equip?.code as string ?? ''} · signalé ${formatDuree(declareLe)}`
+      ? `${equip?.code as string ?? ''} · signalé ${formatDateCourt(declareLe)}`
       : undefined,
     badges: badges.length > 0 ? badges : undefined,
     declareLe,
-    meta: [(parc?.code ?? inc.parc_ticket_code) as string | undefined, inc.numero_bt as string, ouvert ? `depuis ${formatDuree(declareLe)}` : formatDuree(declareLe), inc.declare_par_nom ? `par ${inc.declare_par_nom as string}` : null]
+    meta: [(parc?.code ?? inc.parc_ticket_code) as string | undefined, inc.numero_bt as string, `le ${formatDateCourt(declareLe)}`, inc.declare_par_nom ? `par ${inc.declare_par_nom as string}` : null]
       .filter(Boolean)
       .join(' · '),
     enAttente: inc.statut === 'assigne',

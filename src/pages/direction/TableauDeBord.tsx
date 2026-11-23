@@ -11,7 +11,7 @@ import { SignalerInlineButton } from '@/components/shared/SignalerInlineButton';
 import { Pill } from '@/components/ui/Pill';
 import { Card, CardHead } from '@/components/ui/Card';
 import { CritTag } from '@/components/ui/CritTag';
-import { formatDateLong, formatHeure, formatDuree } from '@/lib/utils';
+import { formatDateCourt, formatDateLong, formatHeure } from '@/lib/utils';
 import { kpiLabels } from '@/lib/tokens';
 import {
   useKpiPerformance, useKpiMtbf, useKpiMttr,
@@ -81,14 +81,6 @@ const statutToneClass = {
 
 function getStatutInfo(incident: Record<string, unknown>): { texte: string; tone: 'amber' | 'pink' | 'dim' } {
   const statut = incident.statut as string;
-  const priorite = incident.niveaux_priorite as Record<string, unknown> | null;
-  const slaH = (priorite?.sla_h as number) ?? 24;
-  const declareLe = incident.declare_le as string;
-  const elapsed = (Date.now() - new Date(declareLe).getTime()) / 3_600_000;
-
-  if (elapsed > slaH) {
-    return { texte: 'SLA dépassé · escalade', tone: 'amber' };
-  }
   if (statut === 'assigne') {
     return { texte: 'Assigné', tone: 'dim' };
   }
@@ -505,7 +497,7 @@ function ContenuTableauDeBord() {
                   <div className="flex items-center gap-2">
                     <CritTag niveau={criticite} />
                     <span className={`text-[11px] ${statutToneClass[statutInfo.tone]}`}>{statutInfo.texte}</span>
-                    <span className="text-[11px] text-dim ml-auto">{formatDuree(declareLe)}</span>
+                    <span className="text-[11px] text-dim ml-auto">{formatDateCourt(declareLe)}</span>
                   </div>
                   <div className="text-[13px] font-medium">
                     {equip?.libelle as string ?? equip?.code as string ?? 'N/A'}
@@ -550,7 +542,7 @@ function ContenuTableauDeBord() {
                           {parc?.code as string ?? ''} · {parc?.nom as string ?? ''}{zone ? ` · ${zone.nom as string}` : ''}
                         </div>
                       </td>
-                      <td className="py-3 text-[11px] text-dim whitespace-nowrap">depuis {formatDuree(declareLe)}</td>
+                      <td className="py-3 text-[11px] text-dim whitespace-nowrap">{formatDateCourt(declareLe)}</td>
                       <td className={`py-3 text-[11px] whitespace-nowrap ${statutToneClass[statutInfo.tone]}`}>{statutInfo.texte}</td>
                       <td className="py-3 pr-3.5 rounded-r-lg">
                         <button
