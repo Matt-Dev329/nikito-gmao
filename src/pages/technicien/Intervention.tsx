@@ -1,5 +1,5 @@
-import { useState, useCallback, useMemo } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { TabletHeader } from '@/components/layout/TabletHeader';
 import { ChoixGravite } from '@/components/tickets/ChoixGravite';
 import { PhotoCapture } from '@/components/shared/PhotoCapture';
@@ -219,6 +219,38 @@ export function Intervention() {
   const [testActivite, setTestActivite] = useState<boolean | null>(null);
   // Clôture groupée : autres tickets réglés par la même réparation
   const [ticketsLies, setTicketsLies] = useState<TicketLie[]>([]);
+  // Tickets cochés dans la liste (« Sélectionner plusieurs tickets ») : pré-cochés ici
+  const [searchParams] = useSearchParams();
+  const liesUrl = searchParams.get('lies');
+  useEffect(() => {
+    const ids = (liesUrl ?? '').split(',').filter((x) => /^[0-9a-f-]{36}$/i.test(x));
+    if (!ids.length) return;
+    let annule = false;
+    supabase
+      .from('incidents')
+      .select('id, numero_bt, titre, statut, equipements(code, libelle)')
+      .in('id', ids)
+      .then(({ data }) => {
+        if (annule || !data) return;
+        const lignes = (data as unknown as {
+          id: string;
+          numero_bt: string;
+          titre: string | null;
+          statut: string;
+          equipements: { code: string | null; libelle: string | null } | null;
+        }[])
+          .filter((t) => ['ouvert', 'assigne', 'en_cours', 'en_pause'].includes(t.statut))
+          .map<TicketLie>((t) => ({
+            id: t.id,
+            numeroBT: t.numero_bt,
+            libelle: [t.equipements?.code, t.equipements?.libelle].filter(Boolean).join(' · ') || t.titre || t.numero_bt,
+          }));
+        setTicketsLies((actuels) => [...actuels, ...lignes.filter((l) => !actuels.some((a) => a.id === l.id))]);
+      });
+    return () => {
+      annule = true;
+    };
+  }, [liesUrl]);
   // Plusieurs photos avant / après : la première est obligatoire
   const [photosAvant, setPhotosAvant] = useState<string[]>([]);
   const photoAvant = photosAvant[0] ?? null;

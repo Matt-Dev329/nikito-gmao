@@ -281,6 +281,25 @@ export function Operations() {
   );
   const ticketsFiltres = ticketsZone.map((t) => (t.photoPath && urlsPhotos?.[t.photoPath] ? { ...t, photoUrl: urlsPhotos[t.photoPath] } : t));
 
+  // Clôture groupée : sélection de plusieurs tickets ouverts, clôturés avec un
+  // seul rapport (le premier coché porte le rapport, les autres « même cause »)
+  const [modeSelection, setModeSelection] = useState(false);
+  const [selection, setSelection] = useState<TicketSummary[]>([]);
+  const selectionPossible =
+    !lectureSeule && (onglet === 'a_faire' || onglet === 'en_cours' || onglet === 'attente_piece' || onglet === 'exterieur');
+  const basculerSelection = (t: TicketSummary) =>
+    setSelection((sel) => (sel.some((x) => x.id === t.id) ? sel.filter((x) => x.id !== t.id) : [...sel, t]));
+  const quitterSelection = () => {
+    setModeSelection(false);
+    setSelection([]);
+  };
+  const cloturerSelection = () => {
+    const [principal, ...autresSel] = selection;
+    if (!principal) return;
+    const lies = autresSel.map((t) => t.id).join(',');
+    navigate(`/tech/operations/${principal.numeroBT}${lies ? `?lies=${lies}` : ''}`);
+  };
+
   const compteurs = useMemo(() => {
     if (!allIncidentsQ.data) return { aFaire: 0, enCours: 0, attentePiece: 0, exterieur: 0, resolus: 0 };
     const all = allIncidentsQ.data as Record<string, unknown>[];
@@ -446,6 +465,31 @@ export function Operations() {
         </div>
       )}
 
+      {selectionPossible && ticketsFiltres.length > 1 && (
+        <div className="px-3 md:px-[18px] pt-3 bg-bg-app flex items-center gap-2 flex-wrap">
+          {modeSelection ? (
+            <>
+              <span className="text-[12px] text-dim flex-1">
+                Coche les tickets réglés par la même réparation. Le premier coché porte le rapport.
+              </span>
+              <button
+                onClick={quitterSelection}
+                className="px-4 rounded-[10px] text-[12px] min-h-[40px] bg-bg-card border border-white/[0.08] text-dim"
+              >
+                Annuler
+              </button>
+            </>
+          ) : (
+            <button
+              onClick={() => setModeSelection(true)}
+              className="px-4 rounded-[10px] text-[12px] font-semibold min-h-[40px] bg-bg-card border border-nikito-cyan/40 text-nikito-cyan"
+            >
+              ☑️ Sélectionner plusieurs tickets
+            </button>
+          )}
+        </div>
+      )}
+
       <div className="p-3 px-3 md:p-3.5 md:px-[18px] flex flex-col gap-2.5 bg-bg-app">
         {incidentsQ.isLoading ? (
           <>
@@ -507,6 +551,49 @@ export function Operations() {
           <div className="text-center py-12 text-dim text-sm">
             Aucun ticket {onglet === 'en_cours' ? 'en cours' : onglet === 'resolus' ? 'résolu' : onglet === 'exterieur' ? 'confié à un intervenant extérieur' : onglet === 'attente_piece' ? 'en attente de pièce' : 'à traiter'}
           </div>
+        ) : modeSelection && selectionPossible ? (
+          <>
+            {ticketsFiltres.map((t) => {
+              const rang = selection.findIndex((x) => x.id === t.id);
+              return (
+                <div
+                  key={t.numeroBT}
+                  className={cn(
+                    'flex items-stretch gap-2 rounded-xl border p-1.5',
+                    rang >= 0 ? 'border-nikito-cyan/60 bg-nikito-cyan/[0.06]' : 'border-transparent'
+                  )}
+                >
+                  <button
+                    type="button"
+                    onClick={() => basculerSelection(t)}
+                    aria-label={rang >= 0 ? `Retirer ${t.numeroBT}` : `Sélectionner ${t.numeroBT}`}
+                    className={cn(
+                      'w-11 flex-shrink-0 rounded-lg flex items-center justify-center text-[13px] font-bold',
+                      rang >= 0 ? 'bg-nikito-cyan text-bg-app' : 'bg-bg-card border border-white/15 text-dim'
+                    )}
+                  >
+                    {rang >= 0 ? rang + 1 : ''}
+                  </button>
+                  <div className="flex-1 min-w-0">
+                    <TicketCard ticket={t} variant="compact" onClick={() => basculerSelection(t)} />
+                  </div>
+                </div>
+              );
+            })}
+            {selection.length > 0 && (
+              <div className="sticky bottom-3 z-10 mt-1 flex items-center gap-2 rounded-2xl bg-bg-card border border-nikito-cyan/40 p-2.5 shadow-lg">
+                <span className="text-[13px] flex-1 pl-1">
+                  {selection.length} ticket{selection.length > 1 ? 's' : ''} sélectionné{selection.length > 1 ? 's' : ''}
+                </span>
+                <button
+                  onClick={cloturerSelection}
+                  className="px-4 rounded-[10px] text-[13px] font-bold min-h-[44px] bg-gradient-cta text-text"
+                >
+                  {selection.length > 1 ? `Clôturer les ${selection.length} ensemble` : 'Ouvrir pour clôturer'}
+                </button>
+              </div>
+            )}
+          </>
         ) : onglet === 'resolus' || onglet === 'exterieur' || onglet === 'attente_piece' ? (
           <>
             {ticketsFiltres.map((t) => (
