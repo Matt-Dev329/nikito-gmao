@@ -420,6 +420,8 @@ export function ControleOuverture({ typeControle = 'quotidien' }: { typeControle
               Faire le contrôle hebdo
             </button>
           )}
+          {/* Staff autorisé au karting : signaler une panne même après le contrôle */}
+          {estStaff && signaleKarting && signalBouton}
           {utilisateur?.role_code !== 'technicien' && (
             <button
               onClick={() => navigate('/staff/blesse')}
@@ -439,6 +441,12 @@ export function ControleOuverture({ typeControle = 'quotidien' }: { typeControle
             Retour
           </button>
         </div>
+        <ModaleSignalerV2
+          open={showSignaler}
+          onClose={() => setShowSignaler(false)}
+          via="tablette_signalement"
+          parcId={parcId}
+        />
       </div>
     );
   }
