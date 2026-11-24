@@ -395,6 +395,7 @@ export function ControleOuverture({ typeControle = 'quotidien' }: { typeControle
 
   if (validated || toutesZonesValidees) {
     return (
+      <>
       <div className="p-6 text-center">
         <div className="text-4xl mb-3">OK</div>
         <div className="text-lg font-semibold mb-1">{L.valide}</div>
@@ -441,13 +442,14 @@ export function ControleOuverture({ typeControle = 'quotidien' }: { typeControle
             Retour
           </button>
         </div>
-        <ModaleSignalerV2
-          open={showSignaler}
-          onClose={() => setShowSignaler(false)}
-          via="tablette_signalement"
-          parcId={parcId}
-        />
       </div>
+      <ModaleSignalerV2
+        open={showSignaler}
+        onClose={() => setShowSignaler(false)}
+        via="tablette_signalement"
+        parcId={parcId}
+      />
+      </>
     );
   }
 

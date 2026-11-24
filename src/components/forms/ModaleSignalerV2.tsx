@@ -392,7 +392,7 @@ export function ModaleSignalerV2({ open, onClose, via, parcId: propParcId, modeE
           {etape === 'categorie' && (
             <EtapeCategorie
               parcId={parcId}
-              seulementKarting={!!userCtx?.isStaff}
+              staffKartingId={userCtx?.isStaff ? userCtx.userId : null}
               recherche={recherche}
               onRecherche={setRecherche}
               onSelect={(cat) => { update({ categorie: cat }); setEtape('equipement'); setRecherche(''); }}
@@ -401,6 +401,7 @@ export function ModaleSignalerV2({ open, onClose, via, parcId: propParcId, modeE
           {etape === 'equipement' && state.categorie && (
             <EtapeEquipement
               parcId={parcId}
+              staffKartingId={userCtx?.isStaff ? userCtx.userId : null}
               categorie={state.categorie}
               recherche={recherche}
               onRecherche={setRecherche}
@@ -419,6 +420,7 @@ export function ModaleSignalerV2({ open, onClose, via, parcId: propParcId, modeE
           {etape === 'symptome' && state.categorie && (
             <EtapeSymptome
               categorieId={state.categorie.id}
+              staffKartingId={userCtx?.isStaff ? userCtx.userId : null}
               onSelect={(s, libre) => { update({ symptome: s, symptomeLibre: libre }); setEtape('photo'); }}
             />
           )}
@@ -494,6 +496,24 @@ function StepIndicator({ current, total }: { current: number; total: number }) {
 
 // ─── Step 0: Parc (conditional) ────────────────────────────────
 
+interface EquipementKartingStaff {
+  id: string;
+  code: string;
+  libelle: string;
+  photo_url: string | null;
+  zone_nom: string | null;
+  categorie_id: string;
+  categorie_nom: string;
+  criticite_defaut: string;
+}
+
+/** Équipements karting du parc, pour le staff autorisé (connecté par code PIN, sans compte) */
+async function equipementsKartingStaff(staffId: string, parcId: string): Promise<EquipementKartingStaff[]> {
+  const { data, error } = await supabase.rpc('staff_karting_equipements', { p_utilisateur: staffId, p_parc: parcId });
+  if (error) return [];
+  return (data ?? []) as EquipementKartingStaff[];
+}
+
 function EtapeParc({ parcIds, onSelect }: { parcIds: string[]; onSelect: (p: ParcOption) => void }) {
   const [parcs, setParcs] = useState<ParcOption[]>([]);
   const [loading, setLoading] = useState(true);
@@ -535,14 +555,14 @@ function EtapeParc({ parcIds, onSelect }: { parcIds: string[]; onSelect: (p: Par
 
 function EtapeCategorie({
   parcId,
-  seulementKarting,
+  staffKartingId,
   recherche,
   onRecherche,
   onSelect,
 }: {
   parcId: string | null;
-  /** Staff autorisé au karting : ne signale que le karting */
-  seulementKarting?: boolean;
+  /** Staff autorisé au karting (connecté par code PIN) : uniquement le karting */
+  staffKartingId?: string | null;
   recherche: string;
   onRecherche: (v: string) => void;
   onSelect: (cat: Categorie) => void;
@@ -553,6 +573,19 @@ function EtapeCategorie({
   useEffect(() => {
     if (!parcId) return;
     setLoading(true);
+    if (staffKartingId) {
+      void equipementsKartingStaff(staffKartingId, parcId).then((rows) => {
+        const map = new Map<string, Categorie>();
+        for (const r of rows) {
+          const existing = map.get(r.categorie_id);
+          if (existing) existing.nb++;
+          else map.set(r.categorie_id, { id: r.categorie_id, nom: r.categorie_nom, criticite_defaut: r.criticite_defaut, nb: 1 });
+        }
+        setCategories(Array.from(map.values()).sort((a, b) => a.nom.localeCompare(b.nom)));
+        setLoading(false);
+      });
+      return;
+    }
     chargerToutesLesPages<any>((debut, fin) =>
       supabase
         .from('equipements')
@@ -566,7 +599,6 @@ function EtapeCategorie({
         const map = new Map<string, Categorie>();
         for (const row of data) {
           const cat = row.categories_equipement as any;
-          if (seulementKarting && cat.activite !== 'Karting') continue;
           const existing = map.get(cat.id);
           if (existing) { existing.nb++; } else {
             map.set(cat.id, { id: cat.id, nom: cat.nom, criticite_defaut: cat.criticite_defaut, nb: 1 });
@@ -576,7 +608,7 @@ function EtapeCategorie({
         setLoading(false);
       })
       .catch(() => setLoading(false));
-  }, [parcId, seulementKarting]);
+  }, [parcId, staffKartingId]);
 
   const filtered = recherche
     ? categories.filter((c) => c.nom.toLowerCase().includes(recherche.toLowerCase()))
@@ -621,6 +653,7 @@ function EtapeCategorie({
 
 function EtapeEquipement({
   parcId,
+  staffKartingId,
   categorie,
   recherche,
   onRecherche,
@@ -628,6 +661,7 @@ function EtapeEquipement({
   onManquant,
 }: {
   parcId: string | null;
+  staffKartingId?: string | null;
   categorie: Categorie;
   recherche: string;
   onRecherche: (v: string) => void;
@@ -642,6 +676,15 @@ function EtapeEquipement({
   useEffect(() => {
     if (!parcId) return;
     setLoading(true);
+    if (staffKartingId) {
+      void equipementsKartingStaff(staffKartingId, parcId).then((rows) => {
+        setEquipements(rows.filter((r) => r.categorie_id === categorie.id).map((r) => ({
+          id: r.id, code: r.code, libelle: r.libelle, photo_url: r.photo_url, zone_nom: r.zone_nom,
+        })));
+        setLoading(false);
+      });
+      return;
+    }
     chargerToutesLesPages<any>((debut, fin) =>
       supabase
         .from('equipements')
@@ -663,7 +706,7 @@ function EtapeEquipement({
         setLoading(false);
       })
       .catch(() => setLoading(false));
-  }, [parcId, categorie.id]);
+  }, [parcId, categorie.id, staffKartingId]);
 
   const filtered = recherche
     ? equipements.filter((e) =>
@@ -760,9 +803,11 @@ function EtapeEquipement({
 
 function EtapeSymptome({
   categorieId,
+  staffKartingId,
   onSelect,
 }: {
   categorieId: string;
+  staffKartingId?: string | null;
   onSelect: (symptome: Symptome | null, libre: string | null) => void;
 }) {
   const [symptomes, setSymptomes] = useState<Symptome[]>([]);
@@ -774,6 +819,15 @@ function EtapeSymptome({
   const recognitionRef = useRef<any>(null);
 
   useEffect(() => {
+    if (staffKartingId) {
+      void supabase
+        .rpc('staff_karting_symptomes', { p_utilisateur: staffKartingId, p_categorie: categorieId })
+        .then(({ data }) => {
+          if (data) setSymptomes(data as Symptome[]);
+          setLoading(false);
+        });
+      return;
+    }
     supabase
       .from('symptomes')
       .select('id, libelle, icone')
@@ -785,7 +839,7 @@ function EtapeSymptome({
         if (data) setSymptomes(data);
         setLoading(false);
       });
-  }, [categorieId]);
+  }, [categorieId, staffKartingId]);
 
   const toggleVoice = useCallback(() => {
     const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
