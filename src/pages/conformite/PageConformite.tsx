@@ -53,7 +53,7 @@ export function PageConformite() {
           color="text-amber"
         />
         <KpiCard
-          label="Reserves en retard"
+          label="Réserves à relancer"
           value={kpi?.reservesRetard ?? 0}
           color={kpi?.reservesRetard && kpi.reservesRetard > 0 ? 'text-red' : 'text-dim'}
           alert={!!kpi?.reservesRetard && kpi.reservesRetard > 0}
@@ -116,7 +116,7 @@ export function PageConformite() {
                   <div className="mt-3 pt-2 border-t border-white/[0.06] flex flex-wrap gap-1.5">
                     {retard > 0 && (
                       <span className="text-[10px] font-bold bg-red/15 text-red px-2 py-0.5 rounded">
-                        {retard} reserve{retard > 1 ? 's' : ''} en retard
+                        {retard} réserve{retard > 1 ? 's' : ''} à relancer
                       </span>
                     )}
                     {prochaineComm && isImminent(prochaineComm.date_visite) && (

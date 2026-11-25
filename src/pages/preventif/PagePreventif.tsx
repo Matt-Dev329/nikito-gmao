@@ -100,7 +100,7 @@ function getStatut(m: MaintenancePreventiveAvecJoins): 'planifie' | 'en_retard' 
 
 const STATUT_BADGE = {
   planifie: { label: 'Planifie', cls: 'bg-nikito-cyan/15 text-nikito-cyan' },
-  en_retard: { label: 'En retard', cls: 'bg-red/15 text-red' },
+  en_retard: { label: 'À faire', cls: 'bg-red/15 text-red' },
   fait: { label: 'Fait', cls: 'bg-green/15 text-green' },
 };
 
@@ -163,7 +163,7 @@ export function PagePreventif() {
 
       <div className="flex flex-wrap gap-2.5 mb-4">
         <Compteur label="Total" value={compteurs.total} />
-        <Compteur label="En retard" value={compteurs.enRetard} color="red" />
+        <Compteur label="À faire" value={compteurs.enRetard} color="red" />
         <Compteur label="Planifie" value={compteurs.planifie} color="cyan" />
         <Compteur label="Fait auj." value={compteurs.fait} color="green" />
       </div>
@@ -191,7 +191,7 @@ export function PagePreventif() {
         <div className="flex gap-1.5 overflow-x-auto pb-px">
           {(['tous', 'en_retard', 'planifie', 'fait'] as FiltreStatut[]).map((v) => (
             <Pill key={v} active={statutFilter === v} variant="cyan" onClick={() => setStatutFilter(v)} className="min-h-[36px]">
-              {v === 'tous' ? 'Tous' : v === 'en_retard' ? 'En retard' : v === 'planifie' ? 'Planifie' : 'Fait'}
+              {v === 'tous' ? 'Tous' : v === 'en_retard' ? 'À faire' : v === 'planifie' ? 'Planifie' : 'Fait'}
             </Pill>
           ))}
         </div>

@@ -1,4 +1,3 @@
-import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.45.0";
 
 const corsHeaders = {
@@ -214,9 +213,8 @@ Deno.serve(async (req: Request) => {
       for (const d of destinataires) {
         if (await notificationExists(supabase, d.id, "prescription_retard", p.id, null, null, startOfDayIso)) continue;
 
-        const joursRetard = Math.floor((today.getTime() - new Date(p.delai_levee).getTime()) / 86400000);
-        const titre = `Reserve EN RETARD : ${p.numero_prescription ?? ""}`;
-        const message = `${p.parcs?.nom ?? ""} - ${p.intitule ?? ""} - ${joursRetard} jour${joursRetard > 1 ? "s" : ""} de retard`;
+        const titre = `Réserve à relancer : ${p.numero_prescription ?? ""}`;
+        const message = `${p.parcs?.nom ?? ""} - ${p.intitule ?? ""} - date de levée : ${new Date(p.delai_levee).toLocaleDateString("fr-FR")}`;
 
         const { data: notif } = await supabase
           .from("notifications_conformite")

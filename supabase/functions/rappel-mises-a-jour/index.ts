@@ -32,8 +32,8 @@ function corpsMail(p: {
 <body style="margin:0;padding:24px;background:#ffffff;font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.55;color:#1a1a2e;">
 <p>Bonjour,</p>
 <p style="background:${p.enRetard ? "#fdecef" : "#fff4e5"};border-left:4px solid ${p.enRetard ? "#d6336c" : "#e8590c"};padding:10px 14px;">
-<strong>${p.enRetard ? "En retard" : "Rappel"} : ${echapper(p.libelle)} — ${echapper(p.parc)}</strong><br/>
-À faire ${p.enRetard ? "depuis" : "avant"} le <strong>${dateFr(p.echeance)}</strong>.
+<strong>${p.enRetard ? "À faire maintenant" : "Rappel"} : ${echapper(p.libelle)} — ${echapper(p.parc)}</strong><br/>
+${p.enRetard ? "Prévue le" : "À faire avant le"} <strong>${dateFr(p.echeance)}</strong>.
 </p>
 <p>La mise à jour est à faire 3 fois par an (tous les 4 mois).${p.derniere ? ` Dernière mise à jour enregistrée : ${dateFr(p.derniere)}.` : ""}</p>
 <p>Une fois faite, enregistrez-la dans le registre ALBA (date, version, remarques) : le rappel s'arrête et la prochaine échéance est calculée automatiquement.</p>
@@ -82,7 +82,7 @@ Deno.serve(async (req: Request) => {
         body: JSON.stringify({
           from: "ALBA by Nikito <noreply@nikito.tech>",
           to: emails,
-          subject: `${enRetard ? "En retard" : "Rappel"} : ${plan.libelle} — ${parc} (avant le ${dateFr(plan.prochaine_echeance)})`,
+          subject: `${enRetard ? "À faire maintenant" : "Rappel"} : ${plan.libelle} — ${parc} (avant le ${dateFr(plan.prochaine_echeance)})`,
           html: corpsMail({
             libelle: plan.libelle,
             parc,

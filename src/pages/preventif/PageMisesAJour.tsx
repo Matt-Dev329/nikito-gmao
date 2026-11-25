@@ -42,7 +42,7 @@ const dateFr = (d: string) => new Date(`${d}T12:00:00`).toLocaleDateString('fr-F
 function etat(p: Plan): { label: string; cls: string; bord: string } {
   const auj = aujourdhuiParis();
   const jours = Math.round((new Date(`${p.prochaine_echeance}T12:00:00`).getTime() - new Date(`${auj}T12:00:00`).getTime()) / 86400000);
-  if (jours < 0) return { label: `En retard de ${-jours} j`, cls: 'bg-red/15 text-red', bord: 'border-red/40' };
+  if (jours < 0) return { label: 'À faire maintenant', cls: 'bg-red/15 text-red', bord: 'border-red/40' };
   if (jours <= 30) return { label: `À faire · ${jours} j`, cls: 'bg-amber/15 text-amber', bord: 'border-amber/40' };
   return { label: 'À jour', cls: 'bg-green/15 text-green', bord: 'border-white/[0.06]' };
 }

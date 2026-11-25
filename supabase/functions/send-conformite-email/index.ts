@@ -1,4 +1,3 @@
-import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.45.0";
 
 const corsHeaders = {
@@ -64,7 +63,7 @@ function toneColor(type: NotificationType): string {
 function subjectFor(p: Payload): string {
   switch (p.type_notification) {
     case "prescription_retard":
-      return `[ALBA] Reserve en RETARD - ${p.prescription?.numero ?? ""}`;
+      return `[ALBA] Réserve à relancer - ${p.prescription?.numero ?? ""}`;
     case "prescription_j1":
       return `[ALBA] Reserve echeance DEMAIN - ${p.prescription?.numero ?? ""}`;
     case "prescription_j7":
