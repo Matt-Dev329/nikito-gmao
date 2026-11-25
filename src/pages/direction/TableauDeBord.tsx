@@ -2,10 +2,7 @@ import { useMemo } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { voitTableauDeBord } from '@/lib/acces';
-import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer,
-  ReferenceLine, Cell, PieChart, Pie, Cell as PieCell, Tooltip,
-} from 'recharts';
+import { ResponsiveContainer, PieChart, Pie, Cell as PieCell } from 'recharts';
 import { KpiCard } from '@/components/kpi/KpiCard';
 import { SignalerInlineButton } from '@/components/shared/SignalerInlineButton';
 import { Pill } from '@/components/ui/Pill';
@@ -14,7 +11,7 @@ import { CritTag } from '@/components/ui/CritTag';
 import { formatDateCourt, formatDateLong, formatHeure } from '@/lib/utils';
 import { kpiLabels } from '@/lib/tokens';
 import {
-  useKpiPerformance, useKpiMtbf, useKpiMttr,
+  useKpiMtbf, useKpiMttr,
   useKpiPremierCoup, useKpiPlaintes,
 } from '@/hooks/queries/useKpi';
 import { useIncidents } from '@/hooks/queries/useTickets';
@@ -46,10 +43,6 @@ function avg(values: number[]): number {
 
 function sum(values: number[]): number {
   return values.reduce((a, b) => a + b, 0);
-}
-
-function clampPct(n: number): number {
-  return Math.min(100, Math.max(0, n));
 }
 
 function fmtNum(n: number, decimals = 1): string {
@@ -108,7 +101,6 @@ function ContenuTableauDeBord() {
   const navigate = useNavigate();
   const [parcActif, setParcActif] = useFiltreParc(null);
 
-  const perfQ = useKpiPerformance();
   const mtbfQ = useKpiMtbf();
   const mttrQ = useKpiMttr();
   const premierCoupQ = useKpiPremierCoup();
@@ -117,21 +109,8 @@ function ContenuTableauDeBord() {
   const incidentsQ = useIncidents({ statuts: ['ouvert', 'assigne', 'en_pause', 'en_cours'] });
   const { data: controlesManquants } = useControlesOuvertureManquants();
 
-  const kpiLoading = perfQ.isLoading || mtbfQ.isLoading || mttrQ.isLoading
+  const kpiLoading = mtbfQ.isLoading || mttrQ.isLoading
     || premierCoupQ.isLoading || plaintesQ.isLoading;
-
-  const perfData = useMemo(() => {
-    if (!perfQ.data) return [];
-    return perfQ.data.map((r: Record<string, unknown>) => ({
-      parc: (r.parc_nom as string) ?? '',
-      parc_id: r.parc_id as string,
-      perf: clampPct((r.performance_pct as number) ?? 0),
-    }));
-  }, [perfQ.data]);
-
-  const perfFiltered = parcActif
-    ? perfData.filter((d) => d.parc_id === parcActif)
-    : perfData;
 
   const kpiAgreg = useMemo(() => {
     const filterByParc = <T extends Record<string, unknown>>(data: T[] | undefined) => {
@@ -140,7 +119,6 @@ function ContenuTableauDeBord() {
       return data.filter((r) => r.parc_id === parcActif);
     };
 
-    const perf = filterByParc(perfQ.data as Record<string, unknown>[] | undefined);
     const mtbf = filterByParc(mtbfQ.data as Record<string, unknown>[] | undefined);
     const mttr = filterByParc(mttrQ.data as Record<string, unknown>[] | undefined);
     const pc = filterByParc(premierCoupQ.data as Record<string, unknown>[] | undefined);
@@ -149,13 +127,12 @@ function ContenuTableauDeBord() {
     // Pas de donnée (aucune panne répétée, aucune intervention…) : « — » plutôt que 0
     const moyenne = (vals: number[], f: (n: number) => string) => (vals.length ? f(avg(vals)) : '—');
     return {
-      performance: moyenne(valeurs(perf, 'performance_pct').map(clampPct), (n) => fmtNum(n)),
       mtbf: moyenne(valeurs(mtbf, 'mtbf_jours'), (n) => fmtNum(n)),
       mttr: moyenne(valeurs(mttr, 'mttr_minutes'), (n) => Math.round(n).toString()),
       premierCoup: moyenne(valeurs(pc, 'premier_coup_pct'), (n) => Math.round(n).toString()),
       plaintes: sum(plaintes.map((r) => Number(r.plaintes_7j ?? 0))).toString(),
     };
-  }, [perfQ.data, mtbfQ.data, mttrQ.data, premierCoupQ.data, plaintesQ.data, parcActif]);
+  }, [mtbfQ.data, mttrQ.data, premierCoupQ.data, plaintesQ.data, parcActif]);
 
   // Les tickets Arcade ne comptent pas dans le tableau de bord (indicateurs exclus aussi côté base)
   const incidentsHorsArcade = useMemo(
@@ -332,8 +309,7 @@ function ContenuTableauDeBord() {
 
       {kpiLoading ? (
         <div className="space-y-3 mb-5">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <KpiSkeleton />
+          <div className="grid grid-cols-1 gap-4">
             <KpiSkeleton />
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -344,14 +320,7 @@ function ContenuTableauDeBord() {
         </div>
       ) : (
         <div className="space-y-3 mb-5">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <KpiCard
-              label={kpiLabels.performance}
-              valeur={kpiAgreg.performance}
-              unite="%"
-              delta={{ texte: 'tickets traités dans les délais · 30 derniers jours', tone: 'neutre' }}
-              couleur="lime"
-            />
+          <div className="grid grid-cols-1 gap-4">
             <KpiCard
               label={kpiLabels.plaintes}
               valeur={kpiAgreg.plaintes}
@@ -388,41 +357,7 @@ function ContenuTableauDeBord() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-[1.5fr_1fr] gap-3.5 mb-[18px]">
-        <Card>
-          <CardHead titre="Performance par parc · 30 derniers jours" meta="% de tickets traités dans les délais" />
-          <div className="h-[200px]">
-            {perfQ.isLoading ? (
-              <div className="flex items-center justify-center h-full">
-                <SkeletonBlock className="h-[160px] w-full" />
-              </div>
-            ) : perfFiltered.length === 0 ? (
-              <div className="flex items-center justify-center h-full text-dim text-sm">
-                Aucune donnée
-              </div>
-            ) : (
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={perfFiltered} margin={{ top: 5, right: 8, left: -10, bottom: 0 }}>
-                  <CartesianGrid stroke="rgba(255,255,255,.06)" vertical={false} />
-                  <XAxis dataKey="parc" axisLine={false} tickLine={false} tick={{ fill: '#A8A8C8', fontSize: 11 }} />
-                  <YAxis domain={[0, 100]} axisLine={false} tickLine={false} tick={{ fill: '#A8A8C8', fontSize: 11 }} tickFormatter={(v) => `${v}%`} />
-                  <ReferenceLine y={95} stroke="#45D7F5" strokeDasharray="6 4" />
-                  <Bar dataKey="perf" radius={[6, 6, 0, 0]}>
-                    {perfFiltered.map((d) => (
-                      <Cell key={d.parc} fill={d.perf >= 95 ? '#D4F542' : d.perf >= 60 ? '#FFB547' : '#FF4D6D'} />
-                    ))}
-                  </Bar>
-                  <Tooltip
-                    contentStyle={{ background: '#111722', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 8, color: '#fff', fontSize: 12 }}
-                    cursor={{ fill: 'rgba(255,255,255,0.04)' }}
-                    formatter={(value: number) => [`${fmtNum(value)}%`, 'Performance']}
-                  />
-                </BarChart>
-              </ResponsiveContainer>
-            )}
-          </div>
-        </Card>
-
+      <div className="grid grid-cols-1 gap-3.5 mb-[18px]">
         <Card>
           <CardHead titre="Tickets ouverts par criticité" meta={`${totalTickets} au total`} />
           <div className="h-[200px] flex items-center gap-4">
