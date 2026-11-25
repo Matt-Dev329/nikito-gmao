@@ -18,7 +18,7 @@ import { SuggestionReparation } from '@/components/tickets/SuggestionReparation'
 import { ModaleEnvoyerTicketMail, HistoriqueEnvoisMail, type EnvoiMail } from '@/components/tickets/ModaleEnvoyerTicketMail';
 import { NotesPartagees } from '@/components/shared/NotesPartagees';
 import { BoutonCatalogueKarting } from '@/components/karting/BoutonCatalogueKarting';
-import { peutValiderTicket, peutModifierTicket } from '@/lib/acces';
+import { estTechnicienKarting, peutValiderTicket, peutModifierTicket } from '@/lib/acces';
 import { useCloturerIntervention } from '@/hooks/mutations';
 import { cloturerIntervention } from '@/hooks/mutations/useCloturerIntervention';
 import { TicketsMemeCause, type TicketLie } from '@/components/tickets/TicketsMemeCause';
@@ -70,8 +70,10 @@ export function Intervention() {
   const photosFacultatives =
     utilisateur?.role_code === 'chef_maintenance' ||
     (utilisateur?.role_code === 'technicien' && utilisateur?.profil_technicien === 'arcade');
-  // Phase de test : la saisie des pièces utilisées n'est ouverte qu'aux chefs d'équipe
-  const { estGestionnaire: saisiePiecesActive } = useAccesCommandes();
+  // Phase de test : la saisie des pièces utilisées est ouverte aux gestionnaires du
+  // stock et au technicien Karting (stock karting uniquement, règles de la base)
+  const { estGestionnaire } = useAccesCommandes();
+  const saisiePiecesActive = estGestionnaire || estTechnicienKarting(utilisateur);
   const cloturer = useCloturerIntervention();
 
   const { data: incident, isLoading } = useIncident(btNumero);
