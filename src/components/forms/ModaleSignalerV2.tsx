@@ -108,10 +108,6 @@ function getCategorieIcon(nom: string): string {
   return '\u{1F4E6}';
 }
 
-const SLA_MAP: Record<string, string> = {
-  bloquant: '1h', majeur: '4h', mineur: '48h',
-};
-
 function useUserContext() {
   const { utilisateur } = useAuth();
   const [staffSession, setStaffSession] = useState<{
@@ -1233,7 +1229,6 @@ function EtapeRecap({
           <span className={cn('text-xs font-bold px-3 py-1.5 rounded-lg border', prioriteColors[prioriteCode] ?? prioriteColors.mineur)}>
             {prioriteCode.toUpperCase()}
           </span>
-          <span className="text-dim text-[11px]">SLA {SLA_MAP[prioriteCode] ?? '?'}</span>
         </div>
         {!state.prioriteEscaladee && !state.prioriteOverride && prioriteCode !== 'bloquant' && (
           <button
@@ -1506,7 +1501,7 @@ function EtapeSucces({
         <div className="text-sm text-dim mb-6 max-w-[300px]">
           {isBloquant || isMajeur
             ? 'Un technicien a ete notifie et va intervenir rapidement.'
-            : `Sera traite dans les ${SLA_MAP[prioriteCode ?? 'mineur'] ?? '48h'}.`}
+            : 'Le ticket a été transmis aux techniciens.'}
         </div>
       )}
 
