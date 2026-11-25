@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { CorrectionIA } from '@/components/ui/CorrectionIA';
 import { cn } from '@/lib/utils';
 import { supabase, supabaseUrl, supabaseAnonKey } from '@/lib/supabase';
 import { envoyerPhotoOuMettreEnFile, estErreurReseau, mettreActionEnFile } from '@/lib/horsLigne/file';
@@ -898,6 +899,7 @@ function EtapeSymptome({
               {'\u{1F3A4}'}
             </button>
           </div>
+          <CorrectionIA valeur={commentaire} onChange={setCommentaire} />
         </div>
         <div className="flex gap-3">
           <button

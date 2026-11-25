@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
+import { CorrectionIA } from '@/components/ui/CorrectionIA';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { TabletHeader } from '@/components/layout/TabletHeader';
 import { ChoixGravite } from '@/components/tickets/ChoixGravite';
@@ -867,6 +868,9 @@ export function Intervention() {
               className="w-full bg-bg-deep border border-white/[0.08] rounded-lg text-text p-3 text-[13px] resize-y min-h-[90px] outline-none focus:border-nikito-cyan"
             />
           )}
+          {!(existingDiagnostic && !editionDiagnostic) && !estResolu && (
+            <CorrectionIA valeur={diagnostic} onChange={(t) => { setDiagnostic(t); setDirty(true); }} desactive={verrouPhoto} />
+          )}
         </div>
 
         {/* Tout le reste est verrouillé tant que la photo AVANT n'est pas prise */}
@@ -956,6 +960,9 @@ export function Intervention() {
             placeholder="Décrire les actions réalisées..."
             className="w-full bg-bg-deep border border-white/[0.08] rounded-lg text-text p-3 text-[13px] resize-y min-h-[90px] outline-none focus:border-nikito-cyan"
           />
+          {!estResolu && (
+            <CorrectionIA valeur={actions} onChange={(t) => { setActions(t); setDirty(true); }} desactive={verrouPhoto} />
+          )}
           <div className="mt-3.5">
             <div className="text-[12px] text-dim mb-1.5">Photos APRÈS réparation</div>
             <PhotosMultiples

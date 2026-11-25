@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { CorrectionIA } from '@/components/ui/CorrectionIA';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
@@ -762,14 +763,20 @@ function FormulaireBon({ onFini }: { onFini: () => void }) {
         )}
       </div>
 
-      <textarea value={probleme} onChange={(e) => setProbleme(e.target.value)} rows={2} placeholder="Problème constaté" className={cn(champ, 'resize-none')} />
-      <textarea
-        value={travaux}
-        onChange={(e) => setTravaux(e.target.value)}
-        rows={4}
-        placeholder="Travaux réalisés (obligatoire)"
-        className={cn(champ, 'resize-none')}
-      />
+      <div>
+        <textarea value={probleme} onChange={(e) => setProbleme(e.target.value)} rows={2} placeholder="Problème constaté" className={cn(champ, 'resize-none')} />
+        <CorrectionIA valeur={probleme} onChange={setProbleme} />
+      </div>
+      <div>
+        <textarea
+          value={travaux}
+          onChange={(e) => setTravaux(e.target.value)}
+          rows={4}
+          placeholder="Travaux réalisés (obligatoire)"
+          className={cn(champ, 'resize-none')}
+        />
+        <CorrectionIA valeur={travaux} onChange={setTravaux} />
+      </div>
       <textarea value={pieces} onChange={(e) => setPieces(e.target.value)} rows={2} placeholder="Pièces utilisées (facultatif)" className={cn(champ, 'resize-none')} />
 
       {/* Photos et vidéos (facultatif) */}
