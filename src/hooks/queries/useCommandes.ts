@@ -252,7 +252,8 @@ export function usePasserCommandeSpecifique() {
         p_commentaire: params.commentaire || null,
       });
       if (error) throw error;
-      return data as { id: string; numero: string };
+      // directe : activité sans validation (ex. Arcade), envoyée tout de suite
+      return data as { id: string; numero: string; directe?: boolean };
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['commandes'] }),
   });

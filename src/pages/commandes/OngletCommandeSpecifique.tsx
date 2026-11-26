@@ -58,7 +58,11 @@ export function OngletCommandeSpecifique({ onEnvoyee }: { onEnvoyee: () => void 
         lien: lien.trim(),
         commentaire: commentaire.trim(),
       });
-      toast.success(`Commande spécifique ${res.numero} envoyée`);
+      toast.success(
+        res.directe
+          ? `Commande spécifique ${res.numero} envoyée directement (sans validation)`
+          : `Commande spécifique ${res.numero} envoyée`
+      );
       setDesignation('');
       setQuantite(1);
       setReference('');
