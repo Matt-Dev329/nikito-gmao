@@ -27,6 +27,8 @@ interface LigneStat {
   minutes_controles: number;
   bons: number;
   minutes_bons: number;
+  blesses_declares: number;
+  appels_clients: number;
   connexions: number;
   derniere_connexion: string | null;
 }
@@ -38,7 +40,17 @@ const PERIODES = [
   { code: '365', label: '1 an', jours: 365 },
 ];
 
-type Tri = 'tickets_clotures' | 'tickets_ouverts' | 'minutes_intervention' | 'minutes_controles' | 'minutes_bons' | 'connexions' | 'derniere_connexion' | 'nom';
+interface LigneBlesses {
+  parc: string;
+  niveau: string;
+  activite: string;
+  blesses: number;
+  hopital: number;
+  client_appele: number;
+  appel_attendu: number;
+}
+
+type Tri = 'tickets_clotures' | 'tickets_ouverts' | 'minutes_intervention' | 'minutes_controles' | 'minutes_bons' | 'blesses_declares' | 'connexions' | 'derniere_connexion' | 'nom';
 
 const COLONNES: { code: Tri; label: string }[] = [
   { code: 'tickets_ouverts', label: 'Tickets ouverts' },
@@ -46,6 +58,7 @@ const COLONNES: { code: Tri; label: string }[] = [
   { code: 'minutes_intervention', label: 'Réparations' },
   { code: 'minutes_controles', label: 'Contrôles' },
   { code: 'minutes_bons', label: 'Bons' },
+  { code: 'blesses_declares', label: 'Blessés' },
   { code: 'connexions', label: 'Connexions' },
   { code: 'derniere_connexion', label: 'Dernière connexion' },
 ];
@@ -93,6 +106,35 @@ function ContenuStats() {
     },
   });
 
+  const blessesQ = useQuery({
+    queryKey: ['stats-blesses', jours],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('stats_blesses', {
+        p_depuis: new Date(Date.now() - jours * 86_400_000).toISOString(),
+      });
+      if (error) throw error;
+      return (data ?? []) as LigneBlesses[];
+    },
+  });
+  const blesses = useMemo(() => {
+    const lignes = (blessesQ.data ?? []).filter((l) => parc === 'tous' || l.parc === parc);
+    const grouper = (cle: (l: LigneBlesses) => string) => {
+      const m = new Map<string, number>();
+      lignes.forEach((l) => m.set(cle(l), (m.get(cle(l)) ?? 0) + Number(l.blesses)));
+      return [...m.entries()].sort((a, b) => b[1] - a[1]);
+    };
+    const somme = (k: keyof LigneBlesses) => lignes.reduce((n, l) => n + Number(l[k]), 0);
+    return {
+      total: somme('blesses'),
+      hopital: somme('hopital'),
+      appeles: somme('client_appele'),
+      aAppeler: somme('appel_attendu'),
+      parParc: grouper((l) => l.parc),
+      parNiveau: grouper((l) => `Niveau ${l.niveau}`).sort((a, b) => a[0].localeCompare(b[0])),
+      parActivite: grouper((l) => l.activite),
+    };
+  }, [blessesQ.data, parc]);
+
   const roles = useMemo(() => [...new Set((data ?? []).map((l) => l.role_code))].sort(), [data]);
   const parcs = useMemo(
     () => [...new Set((data ?? []).flatMap((l) => (l.parcs ?? '').split(', ').filter(Boolean)))].sort(),
@@ -135,7 +177,7 @@ function ContenuStats() {
       <div>
         <h1 className="text-xl font-semibold">Stats</h1>
         <p className="text-[13px] text-dim mt-0.5">
-          Activité de chaque compte : tickets, réparations, contrôles, bons et connexions. Visible par toi seul.
+          Blessés et activité de chaque compte : tickets, réparations, contrôles, bons, blessés et connexions. Visible par toi seul.
         </p>
       </div>
 
@@ -175,6 +217,38 @@ function ContenuStats() {
         </label>
       </div>
 
+      {/* Blessés de la période (en haut) */}
+      <div className="bg-bg-card rounded-xl border border-red/30 p-3.5 flex flex-col gap-3">
+        <div className="flex flex-wrap items-baseline gap-x-5 gap-y-1">
+          <div className="text-[13px] font-semibold">🩹 Blessés</div>
+          <div className="text-[22px] font-semibold text-red">{blessesQ.isLoading ? '…' : blesses.total}</div>
+          <div className="text-[12px] text-dim">
+            {blesses.hopital > 0 && <>{blesses.hopital} évacué{blesses.hopital > 1 ? 's' : ''} à l’hôpital · </>}
+            {blesses.appeles} client{blesses.appeles > 1 ? 's' : ''} rappelé{blesses.appeles > 1 ? 's' : ''}
+            {blesses.aAppeler > 0 && <span className="text-amber"> · {blesses.aAppeler} niveau 3 à rappeler</span>}
+          </div>
+        </div>
+        {blesses.total > 0 && (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-[12px]">
+            {[
+              ['Par parc', blesses.parParc],
+              ['Par niveau', blesses.parNiveau],
+              ['Par activité', blesses.parActivite],
+            ].map(([titre, liste]) => (
+              <div key={titre as string}>
+                <div className="text-[11px] text-dim uppercase tracking-wider mb-1">{titre as string}</div>
+                {(liste as [string, number][]).map(([k, n]) => (
+                  <div key={k} className="flex justify-between gap-2 py-0.5 border-b border-white/[0.04]">
+                    <span>{k}</span>
+                    <span className="font-semibold">{n}</span>
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
       <div className="grid grid-cols-2 md:grid-cols-5 gap-2.5">
         {[
           ['Tickets ouverts', String(totaux.ouverts)],
@@ -196,7 +270,7 @@ function ContenuStats() {
         <div className="text-dim text-[13px] py-8 text-center">Chargement…</div>
       ) : (
         <div className="bg-bg-card rounded-xl border border-white/[0.06] overflow-x-auto">
-          <table className="w-full text-[13px] min-w-[860px]">
+          <table className="w-full text-[13px] min-w-[940px]">
             <thead>
               <tr className="text-[11px] text-dim uppercase tracking-wider border-b border-white/[0.06]">
                 <th className="text-left px-3 py-2.5 font-normal">
@@ -237,6 +311,10 @@ function ContenuStats() {
                   <td className="px-3 py-2.5 text-right whitespace-nowrap">
                     {duree(Number(l.minutes_bons))}
                     {l.bons > 0 && <div className="text-[11px] text-dim">{l.bons} bon{l.bons > 1 ? 's' : ''}</div>}
+                  </td>
+                  <td className="px-3 py-2.5 text-right whitespace-nowrap">
+                    {l.blesses_declares || '—'}
+                    {l.appels_clients > 0 && <div className="text-[11px] text-dim">{l.appels_clients} appel{l.appels_clients > 1 ? 's' : ''} client</div>}
                   </td>
                   <td className="px-3 py-2.5 text-right">{l.connexions || '—'}</td>
                   <td className="px-3 py-2.5 text-right whitespace-nowrap text-dim">{depuis(l.derniere_connexion)}</td>
