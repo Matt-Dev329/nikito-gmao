@@ -3,8 +3,8 @@ import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { BoutonCatalogueKarting } from '@/components/karting/BoutonCatalogueKarting';
 import { useAccesCommandes } from '@/hooks/queries/useCommandes';
-import { estTechnicienArcade, peutEntrerStock, peutVoirStock } from '@/lib/acces';
-import { useTechnicienArcadeEffectif } from '@/hooks/useViewAs';
+import { estTechnicienArcade, estTechnicienKarting, peutEntrerStock, peutVoirStock } from '@/lib/acces';
+import { useTechnicienArcadeEffectif, useTechnicienKartingEffectif } from '@/hooks/useViewAs';
 import { ModaleImportFacture } from './ModaleImportFacture';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
@@ -141,10 +141,10 @@ function ContenuStock() {
   const toast = useToast();
   const { estGestionnaire } = useAccesCommandes();
   // Sorties : tout le monde ; entrées et nouvelles pièces : chef d'équipe / gestionnaires,
-  // et techniciens Arcade pour le stock Arcade (le seul qu'ils voient)
+  // et techniciens Arcade / Karting pour leur stock (le seul qu'ils voient)
   const peutSortir = peutVoirStock(utilisateur?.role_code, estGestionnaire);
   const gestionnaireStock = peutEntrerStock(utilisateur?.role_code, estGestionnaire);
-  const peutEntrer = gestionnaireStock || estTechnicienArcade(utilisateur);
+  const peutEntrer = gestionnaireStock || estTechnicienArcade(utilisateur) || estTechnicienKarting(utilisateur);
   const { data: pieces, isLoading } = usePiecesDetachees();
   const { data: fournisseurs } = useFournisseurs();
   const modStock = useModifierStock();
@@ -623,11 +623,13 @@ function ChampsRangement({
 }) {
   const { data: parcs } = useParcs();
   const { data: tousDomaines } = useDomaines();
-  // Technicien Arcade : domaine imposé (Arcade)
+  // Technicien Arcade / Karting : domaine imposé (Arcade ou Karting)
   const { utilisateur } = useAuth();
   const arcadeSeul = useTechnicienArcadeEffectif(utilisateur);
-  const domaines = arcadeSeul ? (tousDomaines ?? []).filter((d) => d.nom === 'Arcade') : tousDomaines;
-  const idArcade = arcadeSeul ? domaines?.[0]?.id : undefined;
+  const kartingSeul = useTechnicienKartingEffectif(utilisateur);
+  const domaineImpose = arcadeSeul ? 'Arcade' : kartingSeul ? 'Karting' : null;
+  const domaines = domaineImpose ? (tousDomaines ?? []).filter((d) => d.nom === domaineImpose) : tousDomaines;
+  const idArcade = domaineImpose ? domaines?.[0]?.id : undefined;
   useEffect(() => {
     if (idArcade && activiteId !== idArcade) setActiviteId(idArcade);
   }, [idArcade, activiteId, setActiviteId]);
@@ -645,7 +647,7 @@ function ChampsRangement({
       </Field>
       <Field label="Domaine">
         <select value={activiteId} onChange={(e) => setActiviteId(e.target.value)} className={CLASSE_CHAMP}>
-          {!arcadeSeul && <option value="">À classer</option>}
+          {!domaineImpose && <option value="">À classer</option>}
           {(domaines ?? []).map((d) => (
             <option key={d.id} value={d.id}>
               {d.nom}
