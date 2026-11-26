@@ -1,3 +1,4 @@
+import { EcranChargement } from '@/components/ui/EcranChargement';
 import { useEffect, useState, useCallback } from 'react';
 import { Outlet, useNavigate } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
@@ -113,11 +114,7 @@ export function DashboardLayout() {
   const formationActive = useFormation((s) => s.active);
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-transparent text-text flex items-center justify-center">
-        <div className="text-dim text-sm">Chargement...</div>
-      </div>
-    );
+    return <EcranChargement />;
   }
 
   const sidebarWidth = expanded ? SIDEBAR_W_EXPANDED : SIDEBAR_W_COMPACT;

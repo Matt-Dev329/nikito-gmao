@@ -1,3 +1,4 @@
+import { EcranChargement } from '@/components/ui/EcranChargement';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useTechnicienKartingEffectif, useVueSimulee } from '@/hooks/useViewAs';
@@ -20,11 +21,7 @@ export function RouteProtegee({ children, rolesAutorises, skipParcCheck }: Props
   const karting = useTechnicienKartingEffectif(utilisateur);
 
   if (loading || parcsLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-bg-app">
-        <div className="text-dim text-sm">Chargement...</div>
-      </div>
-    );
+    return <EcranChargement />;
   }
 
   if (!authUser) {

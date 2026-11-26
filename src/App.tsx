@@ -1,3 +1,4 @@
+import { EcranChargement } from '@/components/ui/EcranChargement';
 import { ROLES_BLESSES } from '@/lib/blesses';
 import { lazy, Suspense, useEffect } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
@@ -96,11 +97,7 @@ function AccueilParRole() {
 }
 
 function ChargementPage() {
-  return (
-    <div className="min-h-screen bg-transparent flex items-center justify-center">
-      <div className="text-dim text-sm animate-pulse">Chargement…</div>
-    </div>
-  );
+  return <EcranChargement />;
 }
 
 // Un appareil déjà abonné aux notifications est rattaché au compte connecté ;
