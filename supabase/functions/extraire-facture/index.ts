@@ -1,4 +1,3 @@
-import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.45.0";
 import Anthropic from "npm:@anthropic-ai/sdk@0.135.0";
 
@@ -98,19 +97,20 @@ Deno.serve(async (req: Request) => {
   let factureId: string | null = null;
 
   try {
-    // Appelant autorisé à faire des entrées de stock (même règle que la base)
+    // Appelant autorisé à importer une facture (chef d'équipe, gestionnaires, technicien Karting)
     const jeton = (req.headers.get("Authorization") ?? "").replace(/^Bearer\s+/i, "");
     const utilisateur = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!, {
       global: { headers: { Authorization: `Bearer ${jeton}` } },
     });
-    const { data: autorise, error: errDroit } = await utilisateur.rpc("peut_entrer_stock");
+    const { data: autorise, error: errDroit } = await utilisateur.rpc("peut_importer_facture");
     if (errDroit || autorise !== true) return repondre({ success: false, error: "Réservé au chef d'équipe" }, 403);
 
     const corps = await req.json().catch(() => ({}));
     factureId = typeof corps.facture_id === "string" ? corps.facture_id : null;
     if (!factureId) return repondre({ success: false, error: "facture_id requis" }, 400);
 
-    const { data: facture } = await service
+    // Lue avec les droits de l'appelant (le technicien Karting ne voit que ses factures)
+    const { data: facture } = await utilisateur
       .from("factures_stock")
       .select("id, fichier, mime, taille")
       .eq("id", factureId)

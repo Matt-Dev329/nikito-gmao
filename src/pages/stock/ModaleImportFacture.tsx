@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { estTechnicienKarting } from '@/lib/acces';
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { cn } from '@/lib/utils';
@@ -42,7 +43,10 @@ export function ModaleImportFacture({ onClose }: { onClose: () => void }) {
   const toast = useToast();
   const { utilisateur } = useAuth();
   const { data: catalogue } = useCatalogueCommandes();
-  const activites = catalogue?.activites ?? [];
+  // Technicien Karting : tout va dans le Karting (imposé aussi en base)
+  const karting = estTechnicienKarting(utilisateur);
+  const activites = (catalogue?.activites ?? []).filter((a) => !karting || a.nom === 'Karting');
+  const activiteImposee = karting ? activites[0]?.id ?? '' : '';
   const { data: parcsData } = useParcs();
   const parcs = (parcsData ?? []) as { id: string; code: string; nom: string }[];
   // Parc qui reçoit les pièces (vide = stock commun) ; un seul parc : choisi d'office
@@ -84,7 +88,7 @@ export function ModaleImportFacture({ onClose }: { onClose: () => void }) {
           designation: (l.designation as string) ?? '',
           quantite: Math.max(1, Math.round(Number(l.quantite ?? 1))),
           prix_unitaire_ht: l.prix_unitaire_ht == null ? null : Number(l.prix_unitaire_ht),
-          activite_id: (l.activite_id as string) ?? '',
+          activite_id: activiteImposee || ((l.activite_id as string) ?? ''),
           categorie: (l.categorie as string) ?? '',
           ajouter_catalogue: true,
           ajouter_stock: false,
@@ -112,7 +116,7 @@ export function ModaleImportFacture({ onClose }: { onClose: () => void }) {
         designation: '',
         quantite: 1,
         prix_unitaire_ht: null,
-        activite_id: '',
+        activite_id: activiteImposee,
         categorie: '',
         ajouter_catalogue: true,
         ajouter_stock: choixStock ?? false,

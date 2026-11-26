@@ -245,7 +245,7 @@ function ContenuStock() {
         {/* Karting : catalogue des pièces du kart (références à reprendre dans le stock) */}
         <BoutonCatalogueKarting className="sm:max-w-[420px] sm:ml-auto" />
         <div className="flex flex-wrap items-center gap-2">
-          {gestionnaireStock && (
+          {(gestionnaireStock || estTechnicienKarting(utilisateur)) && (
             <button
               onClick={() => setImportFacture(true)}
               className="bg-bg-deep border border-nikito-cyan/40 text-nikito-cyan px-4 py-2.5 rounded-[10px] text-[13px] font-semibold min-h-[44px] w-full sm:w-auto"
