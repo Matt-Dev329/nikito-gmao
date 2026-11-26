@@ -70,12 +70,12 @@ Deno.serve(async (req: Request) => {
       .eq("auth_user_id", auth?.user?.id ?? "")
       .maybeSingle();
 
-    const [{ data: dest }, { data: liens }, { data: direction }] = await Promise.all([
+    const [{ data: dest }, { data: liensParc }, { data: direction }] = await Promise.all([
       service.rpc("destinataires_mise_a_jour", { p_parc: bon.parc_id }),
       service.from("parcs_utilisateurs").select("utilisateur_id").eq("parc_id", bon.parc_id),
       service.from("utilisateurs").select("email, roles!inner(code)").eq("actif", true).eq("roles.code", "direction"),
     ]);
-    const idsParc = (liens ?? []).map((l: { utilisateur_id: string }) => l.utilisateur_id);
+    const idsParc = (liensParc ?? []).map((l: { utilisateur_id: string }) => l.utilisateur_id);
     const { data: managers } = idsParc.length
       ? await service.from("utilisateurs").select("email, roles!inner(code)").eq("actif", true)
         .in("id", idsParc).eq("roles.code", "manager_parc")
