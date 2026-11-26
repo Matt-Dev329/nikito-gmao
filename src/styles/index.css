@@ -4,25 +4,32 @@
 
 @layer base {
   html, body {
-    @apply bg-bg-app text-text font-sans antialiased;
+    @apply text-text font-sans antialiased;
     -webkit-tap-highlight-color: transparent;
     -webkit-text-size-adjust: 100%;
     overflow-x: hidden;
   }
+  html {
+    background-color: theme('colors.fond-nuit-haut');
+  }
   body {
     margin: 0;
     min-height: 100vh;
-    /* Fond Nikito Maintenance (fourgon-fusée sur fond étoilé) : vertical sur
-       téléphone, horizontal sur ordinateur / tablette en largeur */
-    background-color: theme('colors.fond-nuit-haut');
-    background-image: url('/chargement-portrait-v2.webp');
-    background-size: cover;
-    background-position: center;
-    background-repeat: no-repeat;
-    background-attachment: fixed;
+    /* transparent : le fond fixe (body::before) passe derrière le contenu */
+    background: transparent;
   }
-  @media (orientation: landscape) {
-    body { background-image: url('/chargement-paysage-v2.webp'); }
+  /* Fond Nikito Maintenance (fourgon-fusée sur fond étoilé), fixé à l'écran :
+     version verticale sur téléphone, horizontale sur écran large en largeur */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background: theme('colors.fond-nuit-haut') url('/chargement-portrait-v2.webp') center / cover no-repeat;
+  }
+  @media (min-width: 768px) and (min-height: 600px) and (orientation: landscape) {
+    body::before { background-image: url('/chargement-paysage-v2.webp'); }
   }
   /* Disable text selection on UI surfaces (tablette terrain) */
   button, .nav-item {

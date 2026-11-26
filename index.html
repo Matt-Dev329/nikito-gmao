@@ -15,7 +15,7 @@
     <style>
       /* Écran de démarrage (avant le chargement de l'appli) */
       .alba-demarrage { position: fixed; inset: 0; background: #0A0B26 url('/chargement-portrait-v2.webp') center / cover no-repeat; }
-      @media (orientation: landscape) { .alba-demarrage { background-image: url('/chargement-paysage-v2.webp'); } }
+      @media (min-width: 768px) and (min-height: 600px) and (orientation: landscape) { .alba-demarrage { background-image: url('/chargement-paysage-v2.webp'); } }
     </style>
   </head>
   <body>
