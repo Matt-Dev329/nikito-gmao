@@ -12,17 +12,17 @@
   body {
     margin: 0;
     min-height: 100vh;
-    /* Fond étoilé Nikito : étoiles (motif répété) sur un dégradé bleu nuit */
-    background-color: theme('colors.fond-nuit-bas');
-    /* + logo Nikito Maintenance en filigrane au centre de l'écran */
-    background-image:
-      url('/fond-etoiles.png'),
-      url('/logo-filigrane.webp'),
-      linear-gradient(180deg, theme('colors.fond-nuit-haut') 0%, theme('colors.fond-nuit-bas') 100%);
-    background-size: 900px 900px, min(70vw, 620px) auto, 100% 100%;
-    background-position: 0 0, center, 0 0;
-    background-repeat: repeat, no-repeat, no-repeat;
-    background-attachment: fixed, fixed, fixed;
+    /* Fond Nikito Maintenance (fourgon-fusée sur fond étoilé) : vertical sur
+       téléphone, horizontal sur ordinateur / tablette en largeur */
+    background-color: theme('colors.fond-nuit-haut');
+    background-image: url('/chargement-portrait-v2.webp');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+  }
+  @media (orientation: landscape) {
+    body { background-image: url('/chargement-paysage-v2.webp'); }
   }
   /* Disable text selection on UI surfaces (tablette terrain) */
   button, .nav-item {
