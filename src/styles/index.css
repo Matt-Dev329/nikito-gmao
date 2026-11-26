@@ -14,12 +14,15 @@
     min-height: 100vh;
     /* Fond étoilé Nikito : étoiles (motif répété) sur un dégradé bleu nuit */
     background-color: theme('colors.fond-nuit-bas');
+    /* + logo Nikito Maintenance en filigrane au centre de l'écran */
     background-image:
       url('/fond-etoiles.png'),
+      url('/logo-filigrane.webp'),
       linear-gradient(180deg, theme('colors.fond-nuit-haut') 0%, theme('colors.fond-nuit-bas') 100%);
-    background-size: 900px 900px, 100% 100%;
-    background-repeat: repeat, no-repeat;
-    background-attachment: fixed, fixed;
+    background-size: 900px 900px, min(70vw, 620px) auto, 100% 100%;
+    background-position: 0 0, center, 0 0;
+    background-repeat: repeat, no-repeat, no-repeat;
+    background-attachment: fixed, fixed, fixed;
   }
   /* Disable text selection on UI surfaces (tablette terrain) */
   button, .nav-item {

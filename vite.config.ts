@@ -30,7 +30,7 @@ export default defineConfig({
       registerType: 'autoUpdate',
       // Enregistrement fait par l'appli (src/lib/miseAJour.ts) pour vérifier les mises à jour
       injectRegister: false,
-      includeAssets: ['favicon.png', 'apple-touch-icon.png', 'logo-engrenage.png', 'logo-nikito-maintenance.jpg', 'fond-etoiles.png'],
+      includeAssets: ['favicon.png', 'apple-touch-icon.png', 'logo-engrenage.png', 'logo-nikito-maintenance.jpg', 'fond-etoiles.png', 'logo-filigrane.webp'],
       manifest: {
         name: 'ALBA by Nikito',
         short_name: 'ALBA',
@@ -49,7 +49,7 @@ export default defineConfig({
         // Réception des notifications push (public/push-sw.js)
         importScripts: ['push-sw.js'],
         maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
-        globPatterns: ['**/*.{js,css,html,svg,png,jpg,ico}'],
+        globPatterns: ['**/*.{js,css,html,svg,png,jpg,webp,ico}'],
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/.*\.supabase\.co\/rest\/v1\/.*/,
