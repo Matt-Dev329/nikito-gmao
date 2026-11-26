@@ -255,7 +255,7 @@ const enBase64 = (blob: Blob) =>
 /**
  * Envoi d'une intervention d'urgence comme bon d'intervention normal : bon créé
  * (numéro BI-…, signatures, photos copiées), visible dans la liste des bons, et
- * mail avec le PDF au parc (chef d'équipe, directeurs, managers principaux).
+ * mail avec le PDF au parc (chef d'équipe, directeurs, managers, direction).
  */
 function ModaleEnvoiBon({ urgence: u, onClose }: { urgence: Urgence; onClose: () => void }) {
   const qc = useQueryClient();
@@ -372,7 +372,7 @@ function ModaleEnvoiBon({ urgence: u, onClose }: { urgence: Urgence; onClose: ()
         <div className="text-[16px] font-bold">📤 Envoyer comme bon d’intervention</div>
         <div className="text-[12px] text-dim">
           Un bon d’intervention (numéro BI-…) est créé avec cette urgence, ses photos et les signatures, et un mail avec le PDF part au
-          parc : directeur(s), managers principaux et chef d’équipe.
+          parc : directeur(s), managers, chef d’équipe et direction.
         </div>
         {dejaCree ? (
           <div className="text-[13px]">Le bon est déjà créé ; seul le mail sera renvoyé.</div>

@@ -333,7 +333,7 @@ function CarteBon({ bon: b }: { bon: BonIntervention }) {
     !!b.parc_id &&
     (['chef_maintenance', 'direction', 'admin_it'].includes(utilisateur?.role_code ?? '') || (b as { cree_par_id?: string | null }).cree_par_id === utilisateur?.id);
   const envoyer = async () => {
-    if (!window.confirm(`Envoyer le bon ${b.numero ?? ''} par mail au parc ${b.parc?.nom ?? ''} (directeurs, managers principaux, chef d’équipe) ?`)) return;
+    if (!window.confirm(`Envoyer le bon ${b.numero ?? ''} par mail au parc ${b.parc?.nom ?? ''} (directeurs, managers, chef d’équipe, direction) ?`)) return;
     setEnvoi(true);
     try {
       const fichier = await exportBonPDF(b, { telecharger: false });
@@ -477,7 +477,7 @@ type BrouillonBon = {
   fin?: string;
 };
 
-/** Mail du bon au parc (directeurs, managers principaux, chef d'équipe) avec le PDF ; true si envoyé */
+/** Mail du bon au parc (directeurs, managers, chef d'équipe, direction) avec le PDF ; true si envoyé */
 async function envoyerBonAuParc(bon: BonIntervention, pdf: Blob, toast: ReturnType<typeof useToast>): Promise<boolean> {
   const base64 = await new Promise<string>((resolve, reject) => {
     const r = new FileReader();
@@ -656,7 +656,7 @@ function FormulaireBon({ onFini }: { onFini: () => void }) {
       onFini();
       try {
         const pdf = await exportBonPDF(bon);
-        // Bon d'urgence : envoyé au parc (directeurs, managers principaux, chef d'équipe) avec le PDF
+        // Bon d'urgence : envoyé au parc (directeurs, managers, chef d'équipe, direction) avec le PDF
         if (bon.est_urgence) await envoyerBonAuParc(bon, pdf, toast);
       } catch {
         // le PDF reste téléchargeable depuis la liste
@@ -685,7 +685,7 @@ function FormulaireBon({ onFini }: { onFini: () => void }) {
       {urgence && (
         <div className="text-[12px] text-dim -mt-1">
           Même bon qu’un bon normal, marqué urgence, avec l’heure de la panne et la fin d’intervention (durée calculée). À
-          l’enregistrement, il est aussi envoyé au parc par mail (directeurs, managers principaux, chef d’équipe) avec le PDF.
+          l’enregistrement, il est aussi envoyé au parc par mail (directeurs, managers, chef d’équipe, direction) avec le PDF.
         </div>
       )}
       {repris && (
