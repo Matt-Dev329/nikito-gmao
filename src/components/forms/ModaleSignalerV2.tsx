@@ -865,16 +865,18 @@ function EtapeSymptome({
 
   if (loading) return <Loading />;
 
-  const autreSymptome = symptomes.find((s) => s.libelle === 'Autre (d\u00e9crire)');
-  const normalSymptomes = symptomes.filter((s) => s.libelle !== 'Autre (d\u00e9crire)');
+  // Plus de choix « Autre » : on choisit un problème de la liste. Catégorie sans
+  // liste de problèmes : on décrit directement le problème.
+  const normalSymptomes = symptomes.filter((s) => !/^autre\b/i.test(s.libelle.trim()));
+  const sansListe = normalSymptomes.length === 0;
 
-  if (selected || isAutre) {
+  if (selected || isAutre || sansListe) {
     return (
       <div className="p-4 pb-24">
         <div className="bg-[#131836] rounded-2xl p-4 mb-4 border border-[#5DE5FF]/20">
           <div className="flex items-center gap-2 mb-3">
-            <span className="text-xl">{isAutre ? '\u270F\uFE0F' : selected?.icone}</span>
-            <span className="text-sm font-semibold text-white">{isAutre ? 'Autre (decrivez)' : selected?.libelle}</span>
+            <span className="text-xl">{selected ? selected.icone : '\u270F\uFE0F'}</span>
+            <span className="text-sm font-semibold text-white">{selected ? selected.libelle : 'Décris le problème'}</span>
           </div>
           <div className="relative">
             <textarea
@@ -898,17 +900,19 @@ function EtapeSymptome({
           <CorrectionIA valeur={commentaire} onChange={setCommentaire} />
         </div>
         <div className="flex gap-3">
-          <button
-            onClick={() => { setSelected(null); setIsAutre(false); setCommentaire(''); }}
-            className="flex-1 bg-[#131836] border border-white/[0.08] rounded-xl py-3.5 text-dim text-sm min-h-[56px]"
-          >
-            Changer
-          </button>
+          {!sansListe && (
+            <button
+              onClick={() => { setSelected(null); setIsAutre(false); setCommentaire(''); }}
+              className="flex-1 bg-[#131836] border border-white/[0.08] rounded-xl py-3.5 text-dim text-sm min-h-[56px]"
+            >
+              Changer
+            </button>
+          )}
           <button
             onClick={() => {
               // Description du problème obligatoire pour tout ticket
               if (!commentaire.trim()) return;
-              onSelect(isAutre ? null : selected, commentaire.trim());
+              onSelect(selected, commentaire.trim());
             }}
             disabled={!commentaire.trim()}
             className={cn(
@@ -937,15 +941,6 @@ function EtapeSymptome({
           </button>
         ))}
       </div>
-      {autreSymptome && (
-        <button
-          onClick={() => setIsAutre(true)}
-          className="w-full bg-[#131836] border border-dashed border-white/[0.12] rounded-2xl p-4 text-center active:scale-[0.98] transition-all min-h-[72px] flex items-center justify-center gap-2"
-        >
-          <span className="text-xl">{'\u270F\uFE0F'}</span>
-          <span className="text-[13px] text-dim">Autre (decrire)</span>
-        </button>
-      )}
     </div>
   );
 }
@@ -1217,7 +1212,7 @@ function EtapeRecap({
         <div className="flex items-center gap-2">
           <span className="text-lg">{state.symptome?.icone ?? '\u270F\uFE0F'}</span>
           <div>
-            <div className="text-sm font-semibold text-white">{state.symptome?.libelle ?? 'Autre'}</div>
+            <div className="text-sm font-semibold text-white">{state.symptome?.libelle ?? 'Problème décrit'}</div>
             {state.symptomeLibre && <div className="text-[11px] text-dim">{state.symptomeLibre}</div>}
           </div>
         </div>

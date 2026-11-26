@@ -1,4 +1,6 @@
 import { useState, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/lib/supabase';
 import { useNavigate } from 'react-router-dom';
 import { TabletHeader } from '@/components/layout/TabletHeader';
 import { TicketCard, type TicketSummary } from '@/components/tickets/TicketCard';
@@ -6,7 +8,7 @@ import { useNombreNotes } from '@/hooks/queries/useNotesPartagees';
 import { ModaleReassignerTicket } from '@/components/tickets/ModaleReassignerTicket';
 import { Pill } from '@/components/ui/Pill';
 import { cn, estCheminVideo, formatDateCourt } from '@/lib/utils';
-import { useIncidents, useNombreTicketsParParc, useReprendreIncident, useTicketsAValider, useValiderTicket } from '@/hooks/queries/useTickets';
+import { useIncidents, useNombreTicketsParParc, useTicketsAValider, useValiderTicket } from '@/hooks/queries/useTickets';
 import { ModaleSupprimerTicket } from '@/components/tickets/ModaleSupprimerTicket';
 import { ModaleRefuserTicket } from '@/components/tickets/ModaleRefuserTicket';
 import { ModaleClotureRapide } from '@/components/tickets/ModaleClotureRapide';
@@ -23,7 +25,25 @@ import { ModaleRouvrirTicket } from '@/components/tickets/ModaleRouvrirTicket';
 import { useDemandesEnCours } from '@/hooks/queries/useDemandesEnCours';
 import { ListeDemandesPresta } from '@/components/tickets/ListeDemandesPresta';
 
-type Onglet = 'a_valider' | 'a_faire' | 'en_cours' | 'attente_piece' | 'exterieur' | 'resolus' | 'demandes' | 'controles' | 'preventif';
+type Onglet = 'a_valider' | 'tickets' | 'resolus' | 'demandes' | 'controles' | 'preventif';
+
+/** Anciens onglets par statut (liens et adresses gardés) : tous regroupés dans « Tickets » */
+const ANCIENS_ONGLETS = ['a_faire', 'en_cours', 'attente_piece', 'exterieur'];
+
+/** Groupes d'un ticket ouvert, dans l'ordre d'affichage au sein de chaque activité */
+type Groupe = 'a_faire' | 'en_cours' | 'attente_piece' | 'exterieur';
+const GROUPES: { code: Groupe; label: string }[] = [
+  { code: 'a_faire', label: 'À faire' },
+  { code: 'en_cours', label: 'En cours' },
+  { code: 'attente_piece', label: 'Pièce en attente' },
+  { code: 'exterieur', label: 'Extérieur' },
+];
+function groupeIncident(i: Record<string, unknown>): Groupe {
+  if (i.externe === true) return 'exterieur';
+  if (i.attente_piece === true) return 'attente_piece';
+  if (i.statut === 'en_cours') return 'en_cours';
+  return 'a_faire';
+}
 
 interface ParcOption {
   id: string;
@@ -50,12 +70,14 @@ function mapCriticite(priorite: Record<string, unknown> | null): Criticite {
   return 'mineur';
 }
 
-function incidentToTicket(inc: Record<string, unknown>): TicketSummary {
+function incidentToTicket(inc: Record<string, unknown>, categories?: Map<string, { nom: string; activite: string | null }>): TicketSummary {
   const equip = inc.equipements as Record<string, unknown> | null;
   const priorite = inc.niveaux_priorite as Record<string, unknown> | null;
   const zone = equip?.zones as Record<string, unknown> | null;
   const parc = equip?.parcs as Record<string, unknown> | null;
-  const cat = equip?.categories_equipement as Record<string, unknown> | null;
+  // Équipement saisi à la main (pas d'équipement) : catégorie choisie au signalement
+  const catSignalee = categories?.get(((inc.meta as Record<string, unknown> | null)?.categorie_id as string | undefined) ?? '');
+  const cat = (equip?.categories_equipement as Record<string, unknown> | null) ?? (catSignalee as Record<string, unknown> | undefined) ?? null;
   const criticite = mapCriticite(priorite);
   const declareLe = inc.declare_le as string;
 
@@ -82,7 +104,7 @@ function incidentToTicket(inc: Record<string, unknown>): TicketSummary {
       .filter(Boolean)
       .join(' · '),
     zone: (zone?.nom as string) ?? undefined,
-    activite: (cat?.activite as string) ?? 'Autres',
+    activite: (cat?.activite as string | undefined) ?? (cat?.nom as string | undefined) ?? 'Équipement non précisé',
     description: inc.statut === 'ouvert' && criticite === 'bloquant'
       ? `${equip?.code as string ?? ''} · signalé ${formatDateCourt(declareLe)}`
       : undefined,
@@ -123,9 +145,19 @@ export function Operations() {
   const navigate = useNavigate();
   const { utilisateur } = useAuth();
   const toast = useToast();
-  const reprendre = useReprendreIncident();
   // Onglet, parc et filtres gardés dans l'adresse : le retour depuis un ticket les retrouve
-  const [onglet, setOnglet] = useEtatUrl<Onglet>('onglet', 'a_faire');
+  const [ongletUrl, setOnglet] = useEtatUrl<string>('onglet', 'tickets');
+  const onglet = (ANCIENS_ONGLETS.includes(ongletUrl) ? 'tickets' : ongletUrl) as Onglet;
+  // Catégories (activité des tickets signalés sans équipement)
+  const { data: categories } = useQuery({
+    queryKey: ['categories_equipement', 'activites'],
+    staleTime: 10 * 60_000,
+    queryFn: async () => {
+      const { data, error } = await supabase.from('categories_equipement').select('id, nom, activite');
+      if (error) throw error;
+      return new Map((data ?? []).map((c) => [c.id as string, { nom: c.nom as string, activite: (c.activite as string | null) ?? null }]));
+    },
+  });
   const [zoneFiltre, setZoneFiltre] = useEtatUrl<string>('zone', 'toutes');
   const [activiteFiltre, setActiviteFiltre] = useEtatUrl<string>('activite', 'toutes');
   // Parc : celui choisi en haut à gauche, sauf si un autre a été choisi sur la page
@@ -172,13 +204,9 @@ export function Operations() {
     ? { nom: parcActuel.nom, code: parcActuel.code }
     : { nom: 'Tous les parcs', code: 'ALL' };
 
-  const statutsFiltres = onglet === 'en_cours'
-    ? ['en_cours' as const]
-    : onglet === 'resolus'
+  const statutsFiltres = onglet === 'resolus'
     ? ['resolu' as const, 'ferme' as const]
-    : onglet === 'exterieur' || onglet === 'attente_piece'
-    ? ['ouvert' as const, 'assigne' as const, 'en_pause' as const, 'en_cours' as const]
-    : ['ouvert' as const, 'assigne' as const, 'en_pause' as const];
+    : ['ouvert' as const, 'assigne' as const, 'en_pause' as const, 'en_cours' as const];
 
   const incidentsQ = useIncidents({
     parcId: parcIdEffectif,
@@ -214,10 +242,10 @@ export function Operations() {
           const parcId = (i.equipements as { parc_id?: string } | null)?.parc_id ?? (i.parc_ticket as string | undefined);
           return (!parcIdEffectif || parcId === parcIdEffectif) && (peutValiderTicket(utilisateur, parcId) || voitToutLeParc(utilisateur, parcId));
         })
-        .map(incidentToTicket)
+        .map((i) => incidentToTicket(i, categories))
         .map(sansProblemeSiNonDirecteur),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [aValiderQ.data, parcIdEffectif, utilisateur]
+    [aValiderQ.data, parcIdEffectif, utilisateur, categories]
   );
 
   const valider = (t: TicketSummary) =>
@@ -228,34 +256,28 @@ export function Operations() {
 
   const tickets = useMemo(() => {
     if (!incidentsQ.data) return [];
-    // Tickets confiés à un intervenant extérieur : seulement dans l'onglet « Extérieur »
     return (incidentsQ.data as Record<string, unknown>[])
-      .filter((i) =>
-        onglet === 'resolus'
-          ? true
-          : onglet === 'exterieur'
-          ? i.externe === true
-          : onglet === 'attente_piece'
-          ? i.attente_piece === true
-          : i.externe !== true && i.attente_piece !== true
-      )
-      .map(incidentToTicket)
+      .map((i) => incidentToTicket(i, categories))
       .map(sansProblemeSiNonDirecteur);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [incidentsQ.data, onglet, utilisateur?.role_code]);
+  }, [incidentsQ.data, onglet, utilisateur?.role_code, categories]);
+
+  // Groupe de chaque ticket ouvert (À faire, En cours, Pièce en attente, Extérieur)
+  const groupeParTicket = useMemo(
+    () => new Map(((incidentsQ.data ?? []) as Record<string, unknown>[]).map((i) => [i.id as string, groupeIncident(i)])),
+    [incidentsQ.data]
+  );
 
   const { data: nbNotes } = useNombreNotes(
     'ticket',
     tickets.map((t) => t.id)
   );
 
-  // Activités présentes dans l'onglet, avec leur nombre de tickets (« Autres » en dernier)
+  // Activités présentes dans l'onglet, avec leur nombre de tickets (ordre alphabétique)
   const activites = useMemo(() => {
     const m = new Map<string, number>();
-    tickets.forEach((t) => m.set(t.activite ?? 'Autres', (m.get(t.activite ?? 'Autres') ?? 0) + 1));
-    return [...m.entries()].sort((a, b) =>
-      a[0] === 'Autres' ? 1 : b[0] === 'Autres' ? -1 : a[0].localeCompare(b[0], 'fr')
-    );
+    tickets.forEach((t) => m.set(t.activite ?? '', (m.get(t.activite ?? '') ?? 0) + 1));
+    return [...m.entries()].sort((a, b) => a[0].localeCompare(b[0], 'fr'));
   }, [tickets]);
   const activiteActive = activites.some(([a]) => a === activiteFiltre) ? activiteFiltre : 'toutes';
 
@@ -286,7 +308,7 @@ export function Operations() {
   const [modeSelection, setModeSelection] = useState(false);
   const [selection, setSelection] = useState<TicketSummary[]>([]);
   const selectionPossible =
-    !lectureSeule && (onglet === 'a_faire' || onglet === 'en_cours' || onglet === 'attente_piece' || onglet === 'exterieur');
+    !lectureSeule && onglet === 'tickets';
   const basculerSelection = (t: TicketSummary) =>
     setSelection((sel) => (sel.some((x) => x.id === t.id) ? sel.filter((x) => x.id !== t.id) : [...sel, t]));
   const quitterSelection = () => {
@@ -316,14 +338,24 @@ export function Operations() {
     };
   }, [allIncidentsQ.data]);
 
-  const reprendreTicket = (id: string) => {
-    reprendre.mutate(id, {
-      onSuccess: () => toast.success('Intervention reprise'),
-      onError: () => toast.error('Impossible de reprendre le ticket'),
-    });
-  };
 
-  const [premier, ...autres] = ticketsFiltres;
+  const parActivite = useMemo(() => {
+    const m = new Map<string, TicketSummary[]>();
+    ticketsFiltres.forEach((t) => m.set(t.activite ?? '', [...(m.get(t.activite ?? '') ?? []), t]));
+    return [...m.entries()]
+      .sort((a, b) => a[0].localeCompare(b[0], 'fr'))
+      .map(([activite, liste]) => ({
+        activite,
+        total: liste.length,
+        groupes: GROUPES.map((g) => ({
+          ...g,
+          // À faire : les plus anciens d'abord ; ailleurs, les plus récents
+          liste: liste
+            .filter((t) => (groupeParTicket.get(t.id) ?? 'a_faire') === g.code)
+            .sort((a, b) => (g.code === 'a_faire' ? (a.declareLe ?? '').localeCompare(b.declareLe ?? '') : (b.declareLe ?? '').localeCompare(a.declareLe ?? ''))),
+        })).filter((g) => g.liste.length > 0),
+      }));
+  }, [ticketsFiltres, groupeParTicket]);
   // Suppression (avec motif) : directeurs et managers principaux de leur parc
   // Clôture rapide (justification obligatoire) : chef d'équipe, direction, admin IT, directeurs sur leurs parcs
   const cloturerSiAutorise = (t: TicketSummary) =>
@@ -376,10 +408,12 @@ export function Operations() {
           ...(estValideur
             ? [{ code: 'a_valider' as Onglet, label: 'À valider', badge: ticketsAValider.length, badgeTone: 'amber' }]
             : []),
-          { code: 'a_faire' as Onglet, label: 'À faire', badge: compteurs.aFaire, badgeTone: 'white' },
-          { code: 'en_cours' as Onglet, label: 'En cours', badge: compteurs.enCours, badgeTone: 'amber' },
-          { code: 'attente_piece' as Onglet, label: 'Pièce en attente', badge: compteurs.attentePiece, badgeTone: 'amber' },
-          { code: 'exterieur' as Onglet, label: 'Extérieur', badge: compteurs.exterieur, badgeTone: 'amber' },
+          {
+            code: 'tickets' as Onglet,
+            label: 'Tickets',
+            badge: compteurs.aFaire + compteurs.enCours + compteurs.attentePiece + compteurs.exterieur,
+            badgeTone: 'white',
+          },
           { code: 'resolus' as Onglet, label: 'Résolus', badge: compteurs.resolus, badgeTone: 'white' },
           ...(voitDemandes
             ? [{ code: 'demandes' as Onglet, label: 'Demandes presta', badge: demandes.length, badgeTone: 'amber' }]
@@ -549,7 +583,7 @@ export function Operations() {
           </div>
         ) : ticketsFiltres.length === 0 ? (
           <div className="text-center py-12 text-dim text-sm">
-            Aucun ticket {onglet === 'en_cours' ? 'en cours' : onglet === 'resolus' ? 'résolu' : onglet === 'exterieur' ? 'confié à un intervenant extérieur' : onglet === 'attente_piece' ? 'en attente de pièce' : 'à traiter'}
+            Aucun ticket {onglet === 'resolus' ? 'résolu' : 'à traiter'}
           </div>
         ) : modeSelection && selectionPossible ? (
           <>
@@ -594,7 +628,7 @@ export function Operations() {
               </div>
             )}
           </>
-        ) : onglet === 'resolus' || onglet === 'exterieur' || onglet === 'attente_piece' ? (
+        ) : onglet === 'resolus' ? (
           <>
             {ticketsFiltres.map((t) => (
               <TicketCard
@@ -613,29 +647,35 @@ export function Operations() {
             ))}
           </>
         ) : (
+          // Rangés par activité, puis dans chaque activité : À faire, En cours, Pièce en attente, Extérieur
           <>
-            {premier && (
-              <TicketCard
-                ticket={premier}
-                variant="expanded"
-                onDemarrer={lectureSeule ? undefined : () => navigate(`/tech/operations/${premier.numeroBT}`)}
-                onClick={() => navigate(`/tech/operations/${premier.numeroBT}`)}
-                onReassigner={lectureSeule ? undefined : () => setReassignerCible({ id: premier.id, numeroBT: premier.numeroBT })}
-                onReprendre={lectureSeule ? undefined : () => reprendreTicket(premier.id)}
-                reprenant={reprendre.isPending}
-                onSupprimer={supprimerSiAutorise(premier)}
-                onCloturer={cloturerSiAutorise(premier)}
-              />
-            )}
-            {autres.map((t) => (
-              <TicketCard
-                key={t.numeroBT}
-                ticket={t}
-                variant="compact"
-                onClick={() => navigate(`/tech/operations/${t.numeroBT}`)}
-                onSupprimer={supprimerSiAutorise(t)}
-                onCloturer={cloturerSiAutorise(t)}
-              />
+            {parActivite.map(({ activite, total, groupes }) => (
+              <section key={activite} className="flex flex-col gap-2">
+                <div className="flex items-center gap-2 pt-2">
+                  <h2 className="text-[15px] font-semibold">{activite}</h2>
+                  <span className="text-[12px] text-dim">{total} ticket{total > 1 ? 's' : ''}</span>
+                </div>
+                {groupes.map(({ code, label, liste }) => (
+                  <div key={code} className="flex flex-col gap-1.5 pl-2 border-l-2 border-white/[0.06]">
+                    <div className={cn('text-[11px] uppercase tracking-wider', code === 'a_faire' ? 'text-dim' : 'text-amber')}>
+                      {label} · {liste.length}
+                    </div>
+                    {liste.map((t) => (
+                      <TicketCard
+                        key={t.numeroBT}
+                        ticket={t}
+                        variant="compact"
+                        onClick={() => navigate(`/tech/operations/${t.numeroBT}`)}
+                        onReassigner={
+                          lectureSeule || code !== 'a_faire' ? undefined : () => setReassignerCible({ id: t.id, numeroBT: t.numeroBT })
+                        }
+                        onSupprimer={supprimerSiAutorise(t)}
+                        onCloturer={cloturerSiAutorise(t)}
+                      />
+                    ))}
+                  </div>
+                ))}
+              </section>
             ))}
           </>
         )}

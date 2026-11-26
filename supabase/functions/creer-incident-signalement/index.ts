@@ -131,8 +131,9 @@ Deno.serve(async (req: Request) => {
       return jsonResponse({ success: false, error: "Priorite introuvable" }, 500);
     }
 
-    // 4. Get symptome label
-    let symptomeLabel = "Autre";
+    // 4. Get symptome label (sans problème de la liste : début de la description,
+    // jamais « Autre »)
+    let symptomeLabel = (body.symptome_libre ?? "").replace(/\s+/g, " ").trim().slice(0, 60) || "Problème signalé";
     if (body.symptome_id) {
       const { data: symptome } = await supabase
         .from("symptomes")

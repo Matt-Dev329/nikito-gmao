@@ -100,10 +100,20 @@ export function TicketCard({ ticket, variant, onDemarrer, onReassigner, onRepren
         <span className="text-nikito-cyan text-lg">›</span>
       </button>
     );
-    if (!onSupprimer && !onCloturer && !onRouvrir) return carte;
+    if (!onSupprimer && !onCloturer && !onRouvrir && !onReassigner) return carte;
     return (
       <div className="flex items-stretch gap-1.5">
         <div className="flex-1 min-w-0">{carte}</div>
+        {onReassigner && (
+          <button
+            onClick={onReassigner}
+            title="Réassigner le ticket"
+            aria-label="Réassigner le ticket"
+            className="bg-bg-card rounded-xl px-3 text-nikito-cyan border border-nikito-cyan/30 flex-shrink-0 min-w-[44px] text-[16px] font-bold"
+          >
+            ⇄
+          </button>
+        )}
         {onRouvrir && (
           <button
             onClick={onRouvrir}
