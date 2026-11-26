@@ -48,9 +48,10 @@ async function appliquerSiNouvelleVersion(immediat: boolean): Promise<void> {
     if (nouvelleVersionEnLigne) window.dispatchEvent(new Event(EVT_NOUVELLE_VERSION));
   }
   if (!nouvelleVersionEnLigne) return;
-  // Mise à jour d'office dès 45 s sans toucher l'écran (saisies gardées en brouillon)
-  const inactif = Date.now() - derniereActivite > 45 * 1000;
-  if (!immediat && !inactif) return;
+  // Mise à jour d'office dès qu'une nouvelle version est en ligne, sauf pendant
+  // qu'on tape dans un champ (attendu jusqu'à la sortie du champ ; les saisies
+  // sont de toute façon gardées en brouillon)
+  if (!immediat && saisieEnCours()) return;
   // Garde-fou : une seule tentative toutes les 10 minutes (évite une boucle de rechargements)
   try {
     const derniere = Number(sessionStorage.getItem(CLE_TENTATIVE) ?? 0);
@@ -62,6 +63,12 @@ async function appliquerSiNouvelleVersion(immediat: boolean): Promise<void> {
   await actualiserApplication();
 }
 
+function saisieEnCours(): boolean {
+  const el = document.activeElement as HTMLElement | null;
+  const champ = !!el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT' || el.isContentEditable);
+  return champ && Date.now() - derniereActivite < 2 * 60 * 1000;
+}
+
 function surveillerNouvelleVersion(): void {
   for (const evt of ['pointerdown', 'keydown', 'touchstart']) {
     window.addEventListener(evt, () => (derniereActivite = Date.now()), { passive: true });
@@ -69,9 +76,9 @@ function surveillerNouvelleVersion(): void {
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') void appliquerSiNouvelleVersion(true);
   });
-  // Vérification toutes les 2 minutes ; une fois la nouvelle version repérée,
-  // essai toutes les 15 s jusqu'à ce que l'écran soit inactif
-  window.setInterval(() => void appliquerSiNouvelleVersion(false), 2 * 60 * 1000);
+  // Vérification toutes les minutes ; une fois la nouvelle version repérée,
+  // essai toutes les 15 s jusqu'à la sortie du champ en cours de saisie
+  window.setInterval(() => void appliquerSiNouvelleVersion(false), 60 * 1000);
   window.setInterval(() => {
     if (nouvelleVersionEnLigne) void appliquerSiNouvelleVersion(false);
   }, 15 * 1000);

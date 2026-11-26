@@ -43,7 +43,7 @@ export const ROLES_DIRECTION_PARC: RoleUtilisateur[] = ['direction', 'chef_maint
  * managers principaux sur leurs parcs (même règle en base :
  * acces_demandes_prestataires).
  */
-export const ROLES_DEMANDES_PRESTA: string[] = [...ROLES_DIRECTION_PARC, 'manager_principal'];
+export const ROLES_DEMANDES_PRESTA: string[] = [...ROLES_DIRECTION_PARC, 'manager_principal', 'manager_parc'];
 
 /**
  * Tableau de bord (indicateurs de performance) : réservé à Ryad, et à lui seul
@@ -194,9 +194,19 @@ export function peutModifierTicket(
   return false;
 }
 
-/** Demandes prestataires : accès complet (ROLES_DEMANDES_PRESTA) ou lecture seule accordée au compte */
-export function voitDemandesPrestataires(u: (UtilisateurAcces & { lecture_demandes_prestataires?: boolean }) | null | undefined): boolean {
-  return aAcces(u, ROLES_DEMANDES_PRESTA) || !!u?.lecture_demandes_prestataires;
+/**
+ * Demandes prestataires : accès complet (ROLES_DEMANDES_PRESTA, dont tous les
+ * managers de parc) ; lecture seule pour les techniciens Nikito et les comptes
+ * à qui elle a été accordée.
+ */
+export function voitDemandesPrestataires(
+  u: (UtilisateurAcces & { lecture_demandes_prestataires?: boolean; profil_technicien?: string | null }) | null | undefined
+): boolean {
+  return (
+    aAcces(u, ROLES_DEMANDES_PRESTA) ||
+    !!u?.lecture_demandes_prestataires ||
+    (u?.role_code === 'technicien' && u.profil_technicien === 'nikito')
+  );
 }
 
 /**

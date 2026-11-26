@@ -3,7 +3,7 @@ import { actualiserApplication, EVT_NOUVELLE_VERSION, nouvelleVersionDisponible 
 
 /**
  * Bandeau « Nouvelle version d'ALBA » : affiché dès qu'une nouvelle version est
- * en ligne. L'appli se met à jour seule dès que l'écran n'est plus touché ;
+ * en ligne. L'appli se met à jour seule (après la saisie en cours) ;
  * le bouton permet de le faire tout de suite.
  */
 export function BandeauMiseAJour() {
@@ -22,7 +22,7 @@ export function BandeauMiseAJour() {
       <div className="pointer-events-auto flex items-center gap-3 rounded-xl bg-bg-card border border-nikito-cyan/50 shadow-lg px-3.5 py-2.5 max-w-[520px] w-full">
         <span className="text-[13px] flex-1">
           Nouvelle version d’ALBA disponible
-          <span className="block text-[11px] text-dim">Mise à jour automatique dans un instant</span>
+          <span className="block text-[11px] text-dim">Mise à jour automatique dès la fin de ta saisie</span>
         </span>
         <button
           onClick={() => {
