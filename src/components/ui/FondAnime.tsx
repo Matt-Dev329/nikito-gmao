@@ -1,23 +1,29 @@
+import { useEcranLarge } from '@/hooks/useEcranLarge';
+
 /**
  * Fond de l'application : logo animé Nikito Maintenance en boucle (sans son),
- * fixé derrière le contenu. Plein écran en largeur ; sur téléphone tenu droit,
- * bandeau centré. Image fixe si les animations sont réduites.
+ * fixé derrière le contenu. Version verticale sur téléphone, horizontale sur
+ * écran large (ordinateur, tablette en largeur). Image fixe si animations réduites.
  */
 export function FondAnime() {
+  const large = useEcranLarge();
+  const video = large ? '/logo-anime.mp4' : '/logo-anime-tel.mp4';
+  const image = large ? '/logo-anime.jpg' : '/logo-anime-tel.jpg';
   return (
     <div aria-hidden className="fixed inset-0 -z-10 pointer-events-none bg-fond-nuit-haut">
       <video
-        src="/logo-anime.mp4"
-        poster="/logo-anime.jpg"
+        key={video}
+        src={video}
+        poster={image}
         autoPlay
         muted
         loop
         playsInline
         disablePictureInPicture
         tabIndex={-1}
-        className="w-full h-full object-contain landscape:object-cover motion-reduce:hidden"
+        className="w-full h-full object-cover motion-reduce:hidden"
       />
-      <img src="/logo-anime.jpg" alt="" className="w-full h-full object-contain landscape:object-cover hidden motion-reduce:block" />
+      <img src={image} alt="" className="w-full h-full object-cover hidden motion-reduce:block" />
     </div>
   );
 }
