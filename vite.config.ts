@@ -30,7 +30,7 @@ export default defineConfig({
       registerType: 'autoUpdate',
       // Enregistrement fait par l'appli (src/lib/miseAJour.ts) pour vérifier les mises à jour
       injectRegister: false,
-      includeAssets: ['favicon.png', 'apple-touch-icon.png', 'logo-engrenage.png', 'logo-nikito-maintenance.jpg', 'fond-etoiles.png', 'logo-filigrane.webp', 'chargement-portrait.webp', 'chargement-paysage.webp'],
+      includeAssets: ['favicon.png', 'apple-touch-icon.png', 'logo-engrenage.png', 'logo-nikito-maintenance.jpg', 'fond-etoiles.png', 'logo-filigrane.webp', 'chargement-portrait-v2.webp', 'chargement-paysage-v2.webp'],
       manifest: {
         name: 'ALBA by Nikito',
         short_name: 'ALBA',
