@@ -1,5 +1,32 @@
 import { createClient } from "npm:@supabase/supabase-js@2.45.0";
 
+// Bandeau Nikito Maintenance en tête de chaque mail ALBA : ajouté au HTML de
+// tout envoi Resend de cette fonction (même bloc dans toutes les fonctions).
+const BANDEAU_ALBA =
+  '<table role="presentation" data-alba-bandeau="1" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#0A0B26;"><tr><td align="center" style="padding:0;">' +
+  '<img src="https://nikito.tech/email-bandeau.jpg" width="600" alt="Nikito Maintenance" style="display:block;width:100%;max-width:600px;height:auto;border:0;" />' +
+  "</td></tr></table>";
+const avecBandeauAlba = (html: unknown) =>
+  typeof html !== "string" || html.includes("data-alba-bandeau")
+    ? html
+    : /<body[^>]*>/i.test(html)
+      ? html.replace(/<body[^>]*>/i, (b) => b + BANDEAU_ALBA)
+      : BANDEAU_ALBA + html;
+const fetchSansBandeau = globalThis.fetch;
+globalThis.fetch = (entree: Request | URL | string, init?: RequestInit) => {
+  try {
+    const url = typeof entree === "string" ? entree : entree instanceof URL ? entree.href : entree.url;
+    if (url.startsWith("https://api.resend.com/emails") && typeof init?.body === "string") {
+      const corps = JSON.parse(init.body);
+      const maj = (m: { html?: unknown }) => (m && typeof m === "object" ? { ...m, html: avecBandeauAlba(m.html) } : m);
+      init = { ...init, body: JSON.stringify(Array.isArray(corps) ? corps.map(maj) : maj(corps)) };
+    }
+  } catch {
+    // corps non JSON : envoyé tel quel
+  }
+  return fetchSansBandeau(entree, init);
+};
+
 /**
  * Mail à chaque déclaration de blessé (formulaire d'accident), au chef
  * d'équipe, aux directeurs et aux managers principaux du parc.
