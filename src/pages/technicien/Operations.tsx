@@ -500,7 +500,7 @@ export function Operations() {
       )}
 
       {selectionPossible && ticketsFiltres.length > 1 && (
-        <div className="px-3 md:px-[18px] pt-3 bg-bg-app flex items-center gap-2 flex-wrap">
+        <div className="px-3 md:px-[18px] pt-3 flex items-center gap-2 flex-wrap">
           {modeSelection ? (
             <>
               <span className="text-[12px] text-dim flex-1">
@@ -524,7 +524,7 @@ export function Operations() {
         </div>
       )}
 
-      <div className="p-3 px-3 md:p-3.5 md:px-[18px] flex flex-col gap-2.5 bg-bg-app">
+      <div className="p-3 px-3 md:p-3.5 md:px-[18px] flex flex-col gap-2.5">
         {incidentsQ.isLoading ? (
           <>
             <TicketSkeleton />

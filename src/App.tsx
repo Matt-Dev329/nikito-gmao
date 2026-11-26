@@ -97,7 +97,7 @@ function AccueilParRole() {
 
 function ChargementPage() {
   return (
-    <div className="min-h-screen bg-bg-app flex items-center justify-center">
+    <div className="min-h-screen bg-transparent flex items-center justify-center">
       <div className="text-dim text-sm animate-pulse">Chargement…</div>
     </div>
   );

@@ -24,7 +24,7 @@ export function TabletLayout() {
   const parcId = utilisateur?.parc_ids?.length === 1 ? utilisateur.parc_ids[0] : undefined;
 
   return (
-    <div className="min-h-screen bg-bg-app text-text flex flex-col max-w-[820px] mx-auto">
+    <div className="min-h-screen bg-transparent text-text flex flex-col max-w-[820px] mx-auto">
       <main className="flex-1 overflow-y-auto pb-20">
         <Outlet />
       </main>

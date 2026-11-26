@@ -94,7 +94,7 @@ export function LoginStaff() {
 
   if (etape === 'parc') {
     return (
-      <div className="min-h-screen bg-bg-app text-text">
+      <div className="min-h-screen bg-transparent text-text">
         <header className="px-[22px] py-[18px] bg-bg-sidebar flex items-center gap-3.5 border-b border-white/[0.06]">
           <Logo size="md" withText={false} />
           <div className="flex-1">
@@ -145,7 +145,7 @@ export function LoginStaff() {
 
   // Étape PIN
   return (
-    <div className="min-h-screen bg-bg-app text-text">
+    <div className="min-h-screen bg-transparent text-text">
       <header className="px-[22px] py-[18px] bg-bg-sidebar flex items-center gap-3.5 border-b border-white/[0.06]">
         <button
           onClick={() => {

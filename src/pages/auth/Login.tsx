@@ -87,7 +87,7 @@ export function Login() {
 
   if (authLoading) {
     return (
-      <div className="min-h-screen bg-bg-app text-text flex items-center justify-center">
+      <div className="min-h-screen bg-transparent text-text flex items-center justify-center">
         <div className="text-dim text-sm">Chargement...</div>
       </div>
     );
@@ -255,7 +255,7 @@ export function Login() {
 
   if (screen === 'forgot') {
     return (
-      <div className="min-h-screen bg-bg-app text-text flex items-center justify-center p-4 md:p-6">
+      <div className="min-h-screen bg-transparent text-text flex items-center justify-center p-4 md:p-6">
         <div className="w-full max-w-md">
           <div className="flex justify-center mb-8 md:mb-10">
             <AlbaLoginHero />
@@ -317,7 +317,7 @@ export function Login() {
 
   if (screen === 'forgot-sent') {
     return (
-      <div className="min-h-screen bg-bg-app text-text flex items-center justify-center p-4 md:p-6">
+      <div className="min-h-screen bg-transparent text-text flex items-center justify-center p-4 md:p-6">
         <div className="w-full max-w-md">
           <div className="flex justify-center mb-8 md:mb-10">
             <AlbaLoginHero />
@@ -364,7 +364,7 @@ export function Login() {
   }
 
   return (
-    <div className="min-h-screen bg-bg-app text-text flex items-center justify-center p-4 md:p-6">
+    <div className="min-h-screen bg-transparent text-text flex items-center justify-center p-4 md:p-6">
       <div className="w-full max-w-md">
         <div className="flex justify-center mb-8 md:mb-10">
           <AlbaLoginHero />

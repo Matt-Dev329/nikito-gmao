@@ -9,6 +9,9 @@ export default {
         'bg-card': '#171C24',
         'bg-sidebar': '#0B0F16',
         'bg-deep': '#111722',
+        // Fond de l'application : bleu nuit dégradé + étoiles (public/fond-etoiles.png)
+        'fond-nuit-haut': '#0A0B26',
+        'fond-nuit-bas': '#0C1938',
 
         // Marque Nikito
         nikito: {

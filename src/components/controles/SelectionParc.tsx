@@ -48,7 +48,7 @@ export function SelectionParc({ titre, onSelect, onSelectTous }: SelectionParcPr
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-bg-app text-text flex items-center justify-center">
+      <div className="min-h-screen bg-transparent text-text flex items-center justify-center">
         <div className="text-dim text-sm">Chargement...</div>
       </div>
     );
@@ -56,14 +56,14 @@ export function SelectionParc({ titre, onSelect, onSelectTous }: SelectionParcPr
 
   if (parcsVisibles.length === 1) {
     return (
-      <div className="min-h-screen bg-bg-app text-text flex items-center justify-center">
+      <div className="min-h-screen bg-transparent text-text flex items-center justify-center">
         <div className="text-dim text-sm">Chargement...</div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-bg-app text-text">
+    <div className="min-h-screen bg-transparent text-text">
       <header className="px-[22px] py-[18px] bg-bg-sidebar flex items-center gap-3.5 border-b border-white/[0.06]">
         <Logo size="md" withText={false} />
         <div className="flex-1">

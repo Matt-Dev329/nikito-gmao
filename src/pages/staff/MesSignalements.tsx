@@ -66,7 +66,7 @@ export function MesSignalements() {
   const signalements = data ?? [];
 
   return (
-    <div className="min-h-screen bg-bg-app text-text p-4 md:p-6 md:px-7 max-w-[820px] mx-auto">
+    <div className="min-h-screen bg-transparent text-text p-4 md:p-6 md:px-7 max-w-[820px] mx-auto">
       <button onClick={() => navigate(-1)} className="text-nikito-cyan text-sm mb-3">
         &lsaquo; Retour
       </button>

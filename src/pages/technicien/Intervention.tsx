@@ -471,7 +471,7 @@ export function Intervention() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-bg-app flex items-center justify-center">
+      <div className="min-h-screen bg-transparent flex items-center justify-center">
         <div className="text-dim text-sm animate-pulse">Chargement de l'intervention...</div>
       </div>
     );
@@ -479,7 +479,7 @@ export function Intervention() {
 
   if (!incident) {
     return (
-      <div className="min-h-screen bg-bg-app flex flex-col items-center justify-center gap-3">
+      <div className="min-h-screen bg-transparent flex flex-col items-center justify-center gap-3">
         <div className="text-dim text-sm">Incident introuvable : {btNumero}</div>
         <button onClick={() => navigate(-1)} className="text-nikito-cyan text-sm underline">
           Retour
@@ -522,7 +522,7 @@ export function Intervention() {
         )}
       </div>
 
-      <main className="p-4 px-[18px] bg-bg-app flex flex-col gap-3.5">
+      <main className="p-4 px-[18px] flex flex-col gap-3.5">
         <div className="bg-bg-card rounded-xl px-4 py-3 border border-white/[0.06] flex flex-wrap items-center gap-2 text-[13px]">
           <span className="text-dim">
             Signalé par <strong className="text-text">{(incident.declare_par_nom as string | null) || 'inconnu'}</strong>

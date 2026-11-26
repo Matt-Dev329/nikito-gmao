@@ -73,7 +73,7 @@ export function PageConsultationArcade() {
   const liste = voirTermines ? termines : enCours;
 
   if (loading) {
-    return <div className="min-h-screen bg-bg-app flex items-center justify-center text-dim text-sm">Chargement…</div>;
+    return <div className="min-h-screen bg-transparent flex items-center justify-center text-dim text-sm">Chargement…</div>;
   }
   if (!authUser) return <Navigate to="/" replace />;
 
@@ -83,7 +83,7 @@ export function PageConsultationArcade() {
   };
 
   return (
-    <div className="min-h-screen bg-bg-app text-text">
+    <div className="min-h-screen bg-transparent text-text">
       {enVue && (
         <div className="bg-amber/90 text-bg-app text-[13px] font-semibold px-4 py-2 flex items-center justify-center gap-3">
           <span>Vue simulée : Arcade consultation{vueSimulee?.parcLabel ? ` — ${vueSimulee.parcLabel}` : ''}</span>

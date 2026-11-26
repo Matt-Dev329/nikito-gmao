@@ -30,13 +30,13 @@ export default defineConfig({
       registerType: 'autoUpdate',
       // Enregistrement fait par l'appli (src/lib/miseAJour.ts) pour vérifier les mises à jour
       injectRegister: false,
-      includeAssets: ['favicon.svg'],
+      includeAssets: ['favicon.png', 'apple-touch-icon.png', 'logo-engrenage.png', 'logo-nikito-maintenance.jpg', 'fond-etoiles.png'],
       manifest: {
         name: 'ALBA by Nikito',
         short_name: 'ALBA',
         description: 'ALBA — Gestion de maintenance des parcs Nikito. On prot\u00e8ge les familles d\u00e8s l\u2019aube.',
-        theme_color: '#0B0B2E',
-        background_color: '#0B0B2E',
+        theme_color: '#0A0B26',
+        background_color: '#0A0B26',
         display: 'standalone',
         orientation: 'portrait',
         icons: [
@@ -49,7 +49,7 @@ export default defineConfig({
         // Réception des notifications push (public/push-sw.js)
         importScripts: ['push-sw.js'],
         maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
-        globPatterns: ['**/*.{js,css,html,svg,png,ico}'],
+        globPatterns: ['**/*.{js,css,html,svg,png,jpg,ico}'],
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/.*\.supabase\.co\/rest\/v1\/.*/,

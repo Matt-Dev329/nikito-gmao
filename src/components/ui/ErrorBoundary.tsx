@@ -31,7 +31,7 @@ export class ErrorBoundary extends Component<Props, State> {
   render() {
     if (this.state.hasError) {
       return (
-        <div className="min-h-screen bg-bg-app text-text flex flex-col items-center justify-center gap-4 p-6 text-center">
+        <div className="min-h-screen bg-transparent text-text flex flex-col items-center justify-center gap-4 p-6 text-center">
           <div className="text-2xl font-semibold">Une erreur est survenue</div>
           <p className="text-dim text-sm max-w-md">
             L'application a rencontré un problème inattendu. Tu peux recharger la page ; si le problème persiste,

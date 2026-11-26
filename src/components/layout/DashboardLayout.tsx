@@ -114,7 +114,7 @@ export function DashboardLayout() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-bg-app text-text flex items-center justify-center">
+      <div className="min-h-screen bg-transparent text-text flex items-center justify-center">
         <div className="text-dim text-sm">Chargement...</div>
       </div>
     );
@@ -131,7 +131,7 @@ export function DashboardLayout() {
     const bottomBarH = 70;
 
     return (
-      <div className="min-h-screen bg-bg-app text-text">
+      <div className="min-h-screen bg-transparent text-text">
         <TourOverlay />
         <FormationBanner />
         <ViewAsBanner topOffset={formationBannerH} />
@@ -187,7 +187,7 @@ export function DashboardLayout() {
   }
 
   return (
-      <div className="min-h-screen bg-bg-app text-text">
+      <div className="min-h-screen bg-transparent text-text">
       <TourOverlay />
       <FormationBanner />
       <ViewAsBanner topOffset={formationBannerH} />

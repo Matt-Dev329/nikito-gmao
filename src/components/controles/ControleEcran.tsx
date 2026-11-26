@@ -135,7 +135,7 @@ export function ControleEcran({
   }, []);
 
   return (
-    <div className="bg-bg-app text-text">
+    <div className="text-text">
       <header className="px-3 md:px-[18px] py-3 md:py-3.5 bg-bg-sidebar flex items-center gap-2.5 md:gap-3.5 border-b border-white/[0.06]">
         {onRetour && (
           <button

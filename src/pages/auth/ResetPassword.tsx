@@ -123,7 +123,7 @@ export function ResetPassword() {
 
   if (tokenError) {
     return (
-      <div className="min-h-screen bg-bg-app text-text flex items-center justify-center p-4 md:p-6">
+      <div className="min-h-screen bg-transparent text-text flex items-center justify-center p-4 md:p-6">
         <div className="w-full max-w-md">
           <div className="flex justify-center mb-8 md:mb-10">
             <AlbaLoginHero />
@@ -154,7 +154,7 @@ export function ResetPassword() {
 
   if (success) {
     return (
-      <div className="min-h-screen bg-bg-app text-text flex items-center justify-center p-4 md:p-6">
+      <div className="min-h-screen bg-transparent text-text flex items-center justify-center p-4 md:p-6">
         <div className="w-full max-w-md">
           <div className="flex justify-center mb-8 md:mb-10">
             <AlbaLoginHero />
@@ -186,14 +186,14 @@ export function ResetPassword() {
 
   if (!ready) {
     return (
-      <div className="min-h-screen bg-bg-app text-text flex items-center justify-center">
+      <div className="min-h-screen bg-transparent text-text flex items-center justify-center">
         <div className="text-dim text-sm">Verification du lien...</div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-bg-app text-text flex items-center justify-center p-4 md:p-6">
+    <div className="min-h-screen bg-transparent text-text flex items-center justify-center p-4 md:p-6">
       <div className="w-full max-w-md">
         <div className="flex justify-center mb-8 md:mb-10">
           <AlbaLoginHero />

@@ -43,7 +43,7 @@ export function DeclarerBlesseStaff() {
   const interdit = utilisateur?.role_code === 'technicien' || (!estConnecte && !staffId);
 
   return (
-    <div className="min-h-screen bg-bg-app text-text p-4 md:p-6 max-w-[820px] mx-auto flex flex-col gap-4">
+    <div className="min-h-screen bg-transparent text-text p-4 md:p-6 max-w-[820px] mx-auto flex flex-col gap-4">
       <button onClick={() => navigate(-1)} className="text-nikito-cyan text-sm self-start min-h-[44px]">
         ‹ Retour
       </button>
