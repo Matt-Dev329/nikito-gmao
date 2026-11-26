@@ -44,7 +44,7 @@ export function TabletHeader({
         </button>
       ) : (
         <button onClick={() => navigate('/tech/operations')} className="appearance-none border-none bg-transparent cursor-pointer p-0">
-          <Logo withText={false} />
+          <Logo anime size="sm" />
         </button>
       )}
 

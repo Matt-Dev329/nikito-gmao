@@ -174,7 +174,7 @@ export function Sidebar({ user, roleAffiche, roleCode, realRoleCode, compact = f
         {compact ? (
           <Logo size="sm" withText={false} />
         ) : (
-          <Logo subtitle={`by Nikito · ${roleAffiche}`} />
+          <Logo anime subtitle={`by Nikito · ${roleAffiche}`} />
         )}
       </div>
 

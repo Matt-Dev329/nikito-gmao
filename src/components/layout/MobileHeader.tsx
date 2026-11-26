@@ -56,7 +56,7 @@ export function MobileHeader({ initiales, couleurAvatar, topOffset = 0 }: Mobile
       }}
     >
       <div className="flex-shrink-0">
-        <Logo size="sm" withText={false} />
+        <Logo anime size="sm" />
       </div>
 
       <div className="flex-1 text-center">

@@ -15,22 +15,10 @@
   body {
     margin: 0;
     min-height: 100vh;
-    /* transparent : le fond fixe (body::before) passe derrière le contenu */
+    /* transparent : le fond animé (FondAnime) passe derrière le contenu */
     background: transparent;
   }
-  /* Fond Nikito Maintenance (fourgon-fusée sur fond étoilé), fixé à l'écran :
-     version verticale sur téléphone, horizontale sur écran large en largeur */
-  body::before {
-    content: '';
-    position: fixed;
-    inset: 0;
-    z-index: -1;
-    pointer-events: none;
-    background: theme('colors.fond-nuit-haut') url('/chargement-portrait-v2.webp') center / cover no-repeat;
-  }
-  @media (min-width: 768px) and (min-height: 600px) and (orientation: landscape) {
-    body::before { background-image: url('/chargement-paysage-v2.webp'); }
-  }
+  /* Fond : logo animé (FondAnime), fixé derrière le contenu */
   /* Disable text selection on UI surfaces (tablette terrain) */
   button, .nav-item {
     user-select: none;

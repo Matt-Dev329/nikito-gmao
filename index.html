@@ -13,15 +13,15 @@
     <title>ALBA by Nikito</title>
     <meta name="description" content="ALBA — Gestion de maintenance des parcs Nikito. On prot&#232;ge les familles d&#232;s l'aube." />
     <style>
-      /* Écran de démarrage (avant le chargement de l'appli) */
-      .alba-demarrage { position: fixed; inset: 0; background: #0A0B26 url('/chargement-portrait-v2.webp') center / cover no-repeat; }
-      @media (min-width: 768px) and (min-height: 600px) and (orientation: landscape) { .alba-demarrage { background-image: url('/chargement-paysage-v2.webp'); } }
+      /* Écran de démarrage (avant le chargement de l'appli) : logo animé */
+      .alba-demarrage { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: #0A0B26; }
+      .alba-demarrage video { width: min(92vw, 720px); border-radius: 16px; }
     </style>
   </head>
   <body>
     <div id="root">
       <!-- Écran de démarrage : remplacé par l'application dès qu'elle est chargée -->
-      <div class="alba-demarrage"></div>
+      <div class="alba-demarrage"><video src="/logo-anime.mp4" poster="/logo-anime.jpg" autoplay muted loop playsinline></video></div>
     </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

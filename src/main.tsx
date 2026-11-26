@@ -7,6 +7,7 @@ import { AuthProvider } from './hooks/useAuth';
 import { ErrorBoundary } from './components/ui/ErrorBoundary';
 import { OfflineBanner } from './components/ui/OfflineBanner';
 import { BandeauMiseAJour } from './components/ui/BandeauMiseAJour';
+import { FondAnime } from './components/ui/FondAnime';
 import { TirerPourRafraichir } from './components/ui/TirerPourRafraichir';
 import { initialiserMisesAJour } from './lib/miseAJour';
 import { ToastProvider } from './components/ui/ToastProvider';
@@ -51,6 +52,7 @@ createRoot(document.getElementById('root')!).render(
           <AuthProvider>
             <OfflineBanner />
             <BandeauMiseAJour />
+            <FondAnime />
             <TirerPourRafraichir />
             <ToastProvider>
               <App />
