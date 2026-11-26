@@ -1,9 +1,9 @@
-import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.45.0";
 
 /**
- * Ticket résolu : notification dans l'appli + mail au chef d'équipe, aux
- * directeurs de parc et aux managers (principaux ou non) du parc du ticket.
+ * Ticket résolu : notification dans l'appli + mail au chef d'équipe, à la
+ * direction (Matthieu), aux directeurs de parc et aux managers (principaux ou
+ * non) du parc du ticket.
  * Appelé par le trigger trg_notifier_ticket_resolu : POST { incident_id }.
  * Un seul envoi par ticket (table notifications_tickets_envoyees).
  */
@@ -95,11 +95,11 @@ Deno.serve(async (req: Request) => {
         ? service.from("utilisateurs").select("id, email, roles!inner(code)").eq("actif", true)
           .in("id", ids).in("roles.code", ["directeur_parc", "manager_parc"])
         : Promise.resolve({ data: [] }),
-      // Chef d'équipe : tous les parcs
+      // Chef d'équipe et direction : tous les parcs
       service.from("utilisateurs").select("id, email, roles!inner(code)").eq("actif", true)
-        .eq("roles.code", "chef_maintenance"),
+        .in("roles.code", ["chef_maintenance", "direction"]),
     ]);
-    const users = [...(equipeParc ?? []), ...(chefs ?? [])];
+    const users = [...new Map([...(equipeParc ?? []), ...(chefs ?? [])].map((u: { id: string }) => [u.id, u])).values()];
 
     const nomParc = (parcs ?? []).map((p: { nom: string }) => p.nom).join(", ");
     const equipement = [equip?.code, equip?.libelle].filter(Boolean).join(" · ");
@@ -118,7 +118,7 @@ Deno.serve(async (req: Request) => {
       ["Ticket", `${inc.numero_bt} · ${inc.titre}`],
       ...(equipement ? [["Équipement", equipement] as [string, string]] : []),
       ["Résolu par", technicien],
-      ...(dureeTexte ? [["Délai", dureeTexte] as [string, string]] : []),
+      ...(dureeTexte ? [["Durée", dureeTexte] as [string, string]] : []),
       ...(iv?.diagnostic ? [["Diagnostic", iv.diagnostic] as [string, string]] : []),
       ...(iv?.actions_realisees ? [["Actions", iv.actions_realisees] as [string, string]] : []),
     ];

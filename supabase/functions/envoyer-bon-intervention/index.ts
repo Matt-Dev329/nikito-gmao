@@ -3,6 +3,7 @@ import { createClient } from "npm:@supabase/supabase-js@2.45.0";
 /**
  * Envoi d'un bon d'intervention par mail au parc concerné : chef d'équipe,
  * directeur(s) et managers principaux du parc (destinataires_mise_a_jour),
+ * plus la direction (Matthieu) et tous les managers du parc,
  * avec le PDF du bon en pièce jointe et les photos / vidéos en liens (7 jours).
  * Bouton « Envoyer au parc » des bons, et envoi automatique des bons d'urgence.
  *
@@ -69,8 +70,21 @@ Deno.serve(async (req: Request) => {
       .eq("auth_user_id", auth?.user?.id ?? "")
       .maybeSingle();
 
-    const { data: dest } = await service.rpc("destinataires_mise_a_jour", { p_parc: bon.parc_id });
-    const emails = [...new Set((dest ?? []).map((x: { email: string | null }) => x.email).filter(Boolean))] as string[];
+    const [{ data: dest }, { data: liens }, { data: direction }] = await Promise.all([
+      service.rpc("destinataires_mise_a_jour", { p_parc: bon.parc_id }),
+      service.from("parcs_utilisateurs").select("utilisateur_id").eq("parc_id", bon.parc_id),
+      service.from("utilisateurs").select("email, roles!inner(code)").eq("actif", true).eq("roles.code", "direction"),
+    ]);
+    const idsParc = (liens ?? []).map((l: { utilisateur_id: string }) => l.utilisateur_id);
+    const { data: managers } = idsParc.length
+      ? await service.from("utilisateurs").select("email, roles!inner(code)").eq("actif", true)
+        .in("id", idsParc).eq("roles.code", "manager_parc")
+      : { data: [] };
+    const emails = [...new Set(
+      [...(dest ?? []), ...(direction ?? []), ...(managers ?? [])]
+        .map((x: { email: string | null }) => x.email?.trim().toLowerCase())
+        .filter(Boolean),
+    )] as string[];
     if (!emails.length) return repondre({ success: false, error: "Aucun destinataire pour ce parc" }, 400);
 
     // Photos / vidéos : liens signés valables 7 jours
