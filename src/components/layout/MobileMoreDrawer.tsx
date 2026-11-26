@@ -32,6 +32,7 @@ interface DrawerItem {
 }
 
 const pilotageItems: DrawerItem[] = [
+  { to: '/gmao/stats', label: 'Stats', iconLabel: 'Tableau de bord', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'admin_it'], proprietaireSeul: true },
   { to: '/gmao/mon-parc', label: 'Mon parc', iconLabel: 'Mon parc', roles: ['manager_parc'] },
   { to: '/gmao/historique-tickets', label: 'Historique des tickets', iconLabel: 'Historique des tickets', roles: ROLES_HISTORIQUES },
   { to: '/gmao/historique-commandes', label: 'Historique des commandes', iconLabel: 'Historique des commandes', roles: ROLES_HISTORIQUE_COMMANDES },

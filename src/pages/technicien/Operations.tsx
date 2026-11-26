@@ -178,9 +178,9 @@ export function Operations() {
   const lectureSeule =
     (utilisateur?.role_code === 'manager_parc' || utilisateur?.role_code === 'directeur_parc') && !utilisateur?.peut_intervenir;
 
-  // Problème signalé affiché sur les cartes : uniquement pour les directeurs de parc
+  // Problème signalé affiché sur les cartes : directeurs de parc, techniciens et chef d'équipe
   const sansProblemeSiNonDirecteur = (t: TicketSummary): TicketSummary =>
-    utilisateur?.role_code === 'directeur_parc' ? t : { ...t, probleme: undefined };
+    ['directeur_parc', 'technicien', 'chef_maintenance'].includes(utilisateur?.role_code ?? '') ? t : { ...t, probleme: undefined };
 
   // Valideurs (et suppression) : chef d'équipe, direction, admin IT, directeurs de parc
   // Onglet « À valider » : valideurs, et managers en lecture (tout ce qui se passe dans leur parc)

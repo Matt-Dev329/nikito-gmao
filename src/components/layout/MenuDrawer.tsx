@@ -15,6 +15,7 @@ interface MenuDrawerProps {
 
 const menuItems: { to: string; label: string; icon: string; roles?: string[]; proprietaireSeul?: boolean }[] = [
   { to: '/gmao', label: 'Tableau de bord', icon: '📊', proprietaireSeul: true },
+  { to: '/gmao/stats', label: 'Stats', icon: '📈', proprietaireSeul: true },
   { to: '/tech/controles', label: 'Contrôles', icon: '✅' },
   { to: '/gmao/historique-tickets', label: 'Historique des tickets', icon: '🗂️', roles: ROLES_HISTORIQUES },
   { to: '/gmao/historique-commandes', label: 'Historique des commandes', icon: '📦', roles: ROLES_HISTORIQUE_COMMANDES },

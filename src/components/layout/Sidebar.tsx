@@ -68,6 +68,7 @@ const sections: { titre: string; items: NavItem[] }[] = [
     titre: 'Pilotage',
     items: [
       { to: '/gmao', label: 'Tableau de bord', featureCode: 'tableau_bord', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'admin_it'], proprietaireSeul: true, end: true },
+      { to: '/gmao/stats', label: 'Stats', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'admin_it'], proprietaireSeul: true },
       { to: '/gmao/mon-parc', label: 'Mon parc', roles: ['manager_parc'] },
       { to: '/gmao/operations', label: 'Opérations', featureCode: 'interventions', badgeKey: 'operations', badgeTone: 'red', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'technicien', 'manager_parc', 'admin_it'] },
       { to: '/gmao/historique-tickets', label: 'Historique des tickets', roles: ROLES_HISTORIQUES },

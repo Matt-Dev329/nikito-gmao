@@ -245,6 +245,7 @@ export function IconConformite({ className = s }: { className?: string }) {
 
 const iconMap: Record<string, (props: { className?: string }) => JSX.Element> = {
   'Tableau de bord': IconTableauBord,
+  Stats: IconTableauBord,
   'Mon parc': IconParc,
   'Opérations': IconOperations,
   'Rapports de réparation': IconRapports,

@@ -22,6 +22,7 @@ const ResetPassword = page(() => import('@/pages/auth/ResetPassword'), 'ResetPas
 const AcceptationInvitation = page(() => import('@/pages/auth/AcceptationInvitation'), 'AcceptationInvitation');
 const SelectParcPage = page(() => import('@/pages/auth/SelectParcPage'), 'SelectParcPage');
 const TableauDeBord = page(() => import('@/pages/direction/TableauDeBord'), 'TableauDeBord');
+const PageStats = page(() => import('@/pages/stats/PageStats'), 'PageStats');
 const Recurrences = page(() => import('@/pages/ryad/Recurrences'), 'Recurrences');
 const Operations = page(() => import('@/pages/technicien/Operations'), 'Operations');
 const PagePlans = page(() => import('@/pages/documentation/PageDocumentsTechniques'), 'PagePlans');
@@ -142,6 +143,7 @@ export function App() {
         >
           <Route index element={<AccueilParRole />} />
           <Route path="operations" element={<Operations />} />
+          <Route path="stats" element={<PageStats />} />
           <Route path="operations/:btNumero" element={<Intervention />} />
           <Route path="rapports" element={<PageRapportsReparation />} />
           <Route path="bons" element={<PageBonsIntervention />} />
