@@ -71,7 +71,8 @@ async function creerAlerte(
         est_vacances: estVacances,
         sms_envoye: false,
       },
-      { onConflict: 'parc_id,date_controle,type_alerte' }
+      // Alerte déjà créée (autre appareil) : on ne la réécrit pas (pas de droit de modification)
+      { onConflict: 'parc_id,date_controle,type_alerte', ignoreDuplicates: true }
     );
   if (error) {
     console.error(`[ControlesManquantsCheck] Erreur création alerte ${type} pour parc ${parcId}:`, error);
