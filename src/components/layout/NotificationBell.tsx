@@ -1,105 +1,28 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
-import { useSidebarBadges } from '@/hooks/queries/useSidebarBadges';
+import { useAlertesVues } from '@/hooks/useAlertesVues';
 import { useNotificationsConformite, useMarkNotificationRead } from '@/hooks/queries/useConformite';
 import { useAuth } from '@/hooks/useAuth';
-
-const STORAGE_KEY = 'notif_bell_seen';
-
-function getSeenSnapshot(): Record<string, number> {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : {};
-  } catch {
-    return {};
-  }
-}
-
-function persistSeenSnapshot(snapshot: Record<string, number>) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(snapshot));
-}
 
 interface Props {
   compact?: boolean;
   onNavClick?: () => void;
 }
 
-interface NotifItem {
-  label: string;
-  count: number;
-  tone: 'red' | 'amber';
-  to: string;
-  key: string;
-}
-
-function buildItems(badges: {
-  controlesManquants: number;
-  operations: number;
-  recurrences: number;
-  cinqPourquoi: number;
-  notificationsIA: number;
-  invitationsPending: number;
-  interventionsEnCours: number;
-  commandesATraiter: number;
-}): NotifItem[] {
-  const items: NotifItem[] = [];
-  if (badges.controlesManquants > 0)
-    items.push({ key: 'controlesManquants', label: 'Controles manquants', count: badges.controlesManquants, tone: 'red', to: '/staff/controle-ouverture' });
-  if (badges.operations > 0)
-    items.push({ key: 'operations', label: 'Incidents ouverts', count: badges.operations, tone: 'red', to: '/gmao/operations' });
-  if (badges.interventionsEnCours > 0)
-    items.push({ key: 'interventionsEnCours', label: 'Interventions en cours', count: badges.interventionsEnCours, tone: 'red', to: '/gmao/operations' });
-  if (badges.commandesATraiter > 0)
-    items.push({ key: 'commandesATraiter', label: 'Commandes à traiter', count: badges.commandesATraiter, tone: 'amber', to: '/gmao/commander?onglet=a_traiter' });
-  if (badges.recurrences > 0)
-    items.push({ key: 'recurrences', label: 'Recurrences detectees', count: badges.recurrences, tone: 'red', to: '/gmao/recurrences' });
-  if (badges.cinqPourquoi > 0)
-    items.push({ key: 'cinqPourquoi', label: 'Fiches 5P ouvertes', count: badges.cinqPourquoi, tone: 'amber', to: '/gmao/cinq-pourquoi' });
-  if (badges.invitationsPending > 0)
-    items.push({ key: 'invitationsPending', label: 'Invitations en attente', count: badges.invitationsPending, tone: 'amber', to: '/gmao/utilisateurs' });
-  return items;
-}
-
-function computeUnseenCount(items: NotifItem[], seen: Record<string, number>): number {
-  let unseen = 0;
-  for (const item of items) {
-    const delta = item.count - (seen[item.key] ?? 0);
-    if (delta > 0) unseen += delta;
-  }
-  return unseen;
-}
-
 export function NotificationBell({ compact, onNavClick }: Props) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
-  const { data: badges } = useSidebarBadges();
   const { utilisateur } = useAuth();
   const { data: notifsConformite } = useNotificationsConformite(utilisateur?.id);
   const markRead = useMarkNotificationRead();
   const navigate = useNavigate();
-  const [seenSnapshot, setSeenSnapshot] = useState(getSeenSnapshot);
-
-  const items = badges ? buildItems(badges) : [];
+  // Seules les nouveautés : toucher une alerte la retire, elle revient si le nombre augmente
+  const { nouvelles: items, totalNouveau, marquerVue, toutMarquerVu } = useAlertesVues();
   const conformiteCount = notifsConformite?.length ?? 0;
-  const unseenCount = computeUnseenCount(items, seenSnapshot) + conformiteCount;
+  const unseenCount = totalNouveau + conformiteCount;
 
-  const markAsSeen = useCallback(() => {
-    const snapshot: Record<string, number> = {};
-    for (const item of items) {
-      snapshot[item.key] = item.count;
-    }
-    persistSeenSnapshot(snapshot);
-    setSeenSnapshot(snapshot);
-  }, [items]);
-
-  const handleToggle = useCallback(() => {
-    const willOpen = !open;
-    setOpen(willOpen);
-    if (willOpen) {
-      markAsSeen();
-    }
-  }, [open, markAsSeen]);
+  const handleToggle = useCallback(() => setOpen((o) => !o), []);
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
@@ -138,28 +61,43 @@ export function NotificationBell({ compact, onNavClick }: Props) {
           'absolute z-50 bg-bg-card border border-white/[0.08] rounded-xl shadow-2xl py-2 min-w-[260px]',
           compact ? 'left-full top-0 ml-2' : 'left-0 top-full mt-1.5'
         )}>
-          <div className="px-3 py-1.5 text-[10px] text-faint uppercase tracking-wider">
-            Notifications
+          <div className="px-3 py-1.5 flex items-center gap-2">
+            <span className="text-[10px] text-faint uppercase tracking-wider flex-1">Notifications</span>
+            {unseenCount > 0 && (
+              <button
+                onClick={() => {
+                  toutMarquerVu();
+                  (notifsConformite ?? []).forEach((n) => markRead.mutate(n.id));
+                }}
+                className="text-[11px] text-nikito-cyan hover:underline"
+              >
+                ✓ Tout marquer comme vu
+              </button>
+            )}
           </div>
           {items.length === 0 && conformiteCount === 0 ? (
             <div className="px-3 py-4 text-[12px] text-dim text-center">
-              Aucune notification
+              Aucune nouvelle notification
             </div>
           ) : (
             <>
               {items.map((item) => (
                 <button
                   key={item.key}
-                  onClick={() => handleNav(item.to)}
+                  onClick={() => {
+                    marquerVue(item.key);
+                    handleNav(item.to);
+                  }}
                   className="flex items-center gap-2.5 w-full px-3 py-2 text-[12px] text-dim hover:text-text hover:bg-white/[0.04] transition-colors"
                 >
                   <span className={cn(
                     'flex-shrink-0 text-[10px] font-bold px-1.5 py-0.5 rounded text-bg-app min-w-[22px] text-center',
                     item.tone === 'red' ? 'bg-red' : 'bg-amber'
                   )}>
-                    {item.count}
+                    {item.nouveau}
                   </span>
                   <span className="truncate">{item.label}</span>
+                  {item.nouveau < item.total && <span className="ml-auto text-[10px] text-faint">nouveaux</span>}
                 </button>
               ))}
               {notifsConformite && notifsConformite.length > 0 && (

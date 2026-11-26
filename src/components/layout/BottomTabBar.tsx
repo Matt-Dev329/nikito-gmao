@@ -4,6 +4,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useSidebarBadges } from '@/hooks/queries/useSidebarBadges';
 import { canSignaler } from '@/lib/signaler';
+import { useAlertesVues } from '@/hooks/useAlertesVues';
 import type { RoleUtilisateur } from '@/types/database';
 
 interface BottomTabBarProps {
@@ -139,15 +140,8 @@ export function BottomTabBar({ roleCode, onAlertsClick, onMoreClick, alertsOpen,
   const tabs = getTabsForRole(roleCode, isTablet, voitTableauDeBord(utilisateur));
   const hasSignaler = tabs.some((t) => t.id === 'signaler');
 
-  const totalAlerts = badges
-    ? badges.controlesManquants +
-      badges.operations +
-      badges.recurrences +
-      badges.cinqPourquoi +
-      badges.invitationsPending +
-      // (interventions en cours déjà comptées dans les tickets ouverts)
-      badges.commandesATraiter
-    : 0;
+  // Badge « Alertes » : seulement les nouveautés (retirées une fois vues)
+  const { totalNouveau: totalAlerts } = useAlertesVues();
 
   const operationsBadge = badges?.operations ?? 0;
 

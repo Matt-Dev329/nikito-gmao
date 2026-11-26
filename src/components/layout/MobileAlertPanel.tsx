@@ -1,23 +1,16 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
-import { useSidebarBadges } from '@/hooks/queries/useSidebarBadges';
+import { useAlertesVues } from '@/hooks/useAlertesVues';
 
 interface MobileAlertPanelProps {
   open: boolean;
   onClose: () => void;
 }
 
-interface AlertRow {
-  key: string;
-  label: string;
-  count: number;
-  tone: 'red' | 'amber';
-  to: string;
-}
-
 export function MobileAlertPanel({ open, onClose }: MobileAlertPanelProps) {
-  const { data: badges } = useSidebarBadges();
+  // Seules les nouveautés : toucher une alerte la retire, elle revient si le nombre augmente
+  const { nouvelles: items, marquerVue, toutMarquerVu } = useAlertesVues();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -30,24 +23,6 @@ export function MobileAlertPanel({ open, onClose }: MobileAlertPanelProps) {
       document.body.style.overflow = '';
     };
   }, [open]);
-
-  const items: AlertRow[] = [];
-  if (badges) {
-    if (badges.controlesManquants > 0)
-      items.push({ key: 'cm', label: 'Controles manquants', count: badges.controlesManquants, tone: 'red', to: '/staff/controle-ouverture' });
-    if (badges.operations > 0)
-      items.push({ key: 'ops', label: 'Incidents ouverts', count: badges.operations, tone: 'red', to: '/gmao/operations' });
-    if (badges.interventionsEnCours > 0)
-      items.push({ key: 'int', label: 'Interventions en cours', count: badges.interventionsEnCours, tone: 'red', to: '/gmao/operations' });
-    if (badges.commandesATraiter > 0)
-      items.push({ key: 'cmd', label: 'Commandes à traiter', count: badges.commandesATraiter, tone: 'amber', to: '/gmao/commander?onglet=a_traiter' });
-    if (badges.recurrences > 0)
-      items.push({ key: 'rec', label: 'Recurrences detectees', count: badges.recurrences, tone: 'red', to: '/gmao/recurrences' });
-    if (badges.cinqPourquoi > 0)
-      items.push({ key: '5p', label: 'Fiches 5P ouvertes', count: badges.cinqPourquoi, tone: 'amber', to: '/gmao/cinq-pourquoi' });
-    if (badges.invitationsPending > 0)
-      items.push({ key: 'inv', label: 'Invitations en attente', count: badges.invitationsPending, tone: 'amber', to: '/gmao/utilisateurs' });
-  }
 
   const handleNav = (to: string) => {
     onClose();
@@ -75,21 +50,29 @@ export function MobileAlertPanel({ open, onClose }: MobileAlertPanelProps) {
           <div className="w-10 h-1 rounded-full bg-white/20" />
         </div>
 
-        <div className="px-4 pb-1">
-          <div className="text-[13px] font-semibold text-text mb-1">Notifications</div>
+        <div className="px-4 pb-1 flex items-center gap-2">
+          <div className="text-[13px] font-semibold text-text mb-1 flex-1">Notifications</div>
+          {items.length > 0 && (
+            <button onClick={toutMarquerVu} className="text-[12px] text-nikito-cyan min-h-[40px] px-1">
+              ✓ Tout marquer comme vu
+            </button>
+          )}
         </div>
 
         <div className="flex-1 overflow-y-auto overscroll-contain px-4 pb-4">
           {items.length === 0 ? (
             <div className="py-10 text-center text-dim text-[13px]">
-              Aucune alerte en cours
+              Aucune nouvelle alerte
             </div>
           ) : (
             <div className="flex flex-col gap-1.5">
               {items.map((item) => (
                 <button
                   key={item.key}
-                  onClick={() => handleNav(item.to)}
+                  onClick={() => {
+                    marquerVue(item.key);
+                    handleNav(item.to);
+                  }}
                   className="flex items-center gap-3 w-full px-3 min-h-[48px] rounded-lg text-dim hover:text-text hover:bg-white/[0.05] transition-colors"
                 >
                   <span
@@ -98,9 +81,10 @@ export function MobileAlertPanel({ open, onClose }: MobileAlertPanelProps) {
                       item.tone === 'red' ? 'bg-red' : 'bg-amber'
                     )}
                   >
-                    {item.count}
+                    {item.nouveau}
                   </span>
                   <span className="text-[14px]">{item.label}</span>
+                  {item.nouveau < item.total && <span className="ml-auto text-[11px] text-faint">nouveaux</span>}
                 </button>
               ))}
             </div>
