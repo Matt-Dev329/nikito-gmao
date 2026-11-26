@@ -13,6 +13,8 @@ export function FondAnime() {
         muted
         loop
         playsInline
+        disablePictureInPicture
+        tabIndex={-1}
         className="w-full h-full object-contain landscape:object-cover motion-reduce:hidden"
       />
       <img src="/logo-anime.jpg" alt="" className="w-full h-full object-contain landscape:object-cover hidden motion-reduce:block" />

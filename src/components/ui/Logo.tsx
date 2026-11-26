@@ -4,14 +4,14 @@ interface LogoProps {
   size?: 'sm' | 'md' | 'lg';
   withText?: boolean;
   subtitle?: string;
-  /** Logo animé Nikito Maintenance (vidéo) à la place de l'icône */
+  /** Logo complet NIKITO | MAINTENANCE (net, fond transparent) à la place de l'icône */
   anime?: boolean;
 }
 
 const sizes = {
-  sm: { mark: 'w-8 h-8', video: 'w-[96px]' },
-  md: { mark: 'w-9 h-9', video: 'w-[128px]' },
-  lg: { mark: 'w-14 h-14', video: 'w-[180px]' },
+  sm: { mark: 'w-8 h-8', bandeau: 'w-[150px]' },
+  md: { mark: 'w-9 h-9', bandeau: 'w-[200px]' },
+  lg: { mark: 'w-14 h-14', bandeau: 'w-[260px]' },
 };
 
 /** Logo animé Nikito Maintenance (en boucle, sans son ; image fixe si animations réduites) */
@@ -24,6 +24,8 @@ export function LogoAnime({ className }: { className?: string }) {
       muted
       loop
       playsInline
+      disablePictureInPicture
+      controlsList="nodownload nofullscreen noremoteplayback"
       aria-label="Nikito Maintenance"
       className={cn('rounded-lg aspect-video object-cover bg-fond-nuit-haut motion-reduce:hidden', className)}
     />
@@ -39,9 +41,14 @@ export function Logo({ size = 'md', withText = true, subtitle, anime = false }: 
   const s = sizes[size];
   if (anime) {
     return (
-      <div className="flex flex-col gap-1">
-        <LogoAnime className={s.video} />
-        <img src="/logo-anime.jpg" alt="Nikito Maintenance" className={cn('rounded-lg aspect-video object-cover hidden motion-reduce:block', s.video)} />
+      <div className="flex flex-col gap-1.5">
+        {/* Menu (avec sous-titre) : logo sur deux lignes ; en-têtes : logo sur une ligne */}
+        <img
+          src={subtitle && size !== 'sm' ? '/logo-bandeau.png' : '/logo-bandeau-ligne.png'}
+          alt="Nikito Maintenance"
+          className={cn('h-auto select-none', subtitle && size !== 'sm' ? 'w-[190px]' : s.bandeau)}
+          draggable={false}
+        />
         {subtitle && <div className="text-[10px] text-dim tracking-widest uppercase">{subtitle}</div>}
       </div>
     );

@@ -30,7 +30,7 @@ export default defineConfig({
       registerType: 'autoUpdate',
       // Enregistrement fait par l'appli (src/lib/miseAJour.ts) pour vérifier les mises à jour
       injectRegister: false,
-      includeAssets: ['favicon.png', 'apple-touch-icon.png', 'logo-perceuse.png', 'logo-anime.jpg'],
+      includeAssets: ['favicon.png', 'apple-touch-icon.png', 'logo-perceuse.png', 'logo-anime.jpg', 'logo-bandeau.png', 'logo-bandeau-ligne.png'],
       manifest: {
         name: 'ALBA by Nikito',
         short_name: 'ALBA',
