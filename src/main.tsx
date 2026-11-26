@@ -6,6 +6,7 @@ import * as Sentry from '@sentry/react';
 import { AuthProvider } from './hooks/useAuth';
 import { ErrorBoundary } from './components/ui/ErrorBoundary';
 import { OfflineBanner } from './components/ui/OfflineBanner';
+import { BandeauMiseAJour } from './components/ui/BandeauMiseAJour';
 import { TirerPourRafraichir } from './components/ui/TirerPourRafraichir';
 import { initialiserMisesAJour } from './lib/miseAJour';
 import { ToastProvider } from './components/ui/ToastProvider';
@@ -49,6 +50,7 @@ createRoot(document.getElementById('root')!).render(
         <BrowserRouter>
           <AuthProvider>
             <OfflineBanner />
+            <BandeauMiseAJour />
             <TirerPourRafraichir />
             <ToastProvider>
               <App />

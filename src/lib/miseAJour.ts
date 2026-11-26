@@ -38,10 +38,18 @@ async function nouvelleVersionPubliee(): Promise<boolean> {
   }
 }
 
+/** Événement affiché par le bandeau « Nouvelle version » (BandeauMiseAJour) */
+export const EVT_NOUVELLE_VERSION = 'alba:nouvelle-version';
+export const nouvelleVersionDisponible = () => nouvelleVersionEnLigne;
+
 async function appliquerSiNouvelleVersion(immediat: boolean): Promise<void> {
-  if (!nouvelleVersionEnLigne) nouvelleVersionEnLigne = await nouvelleVersionPubliee();
+  if (!nouvelleVersionEnLigne) {
+    nouvelleVersionEnLigne = await nouvelleVersionPubliee();
+    if (nouvelleVersionEnLigne) window.dispatchEvent(new Event(EVT_NOUVELLE_VERSION));
+  }
   if (!nouvelleVersionEnLigne) return;
-  const inactif = Date.now() - derniereActivite > 2 * 60 * 1000;
+  // Mise à jour d'office dès 45 s sans toucher l'écran (saisies gardées en brouillon)
+  const inactif = Date.now() - derniereActivite > 45 * 1000;
   if (!immediat && !inactif) return;
   // Garde-fou : une seule tentative toutes les 10 minutes (évite une boucle de rechargements)
   try {
@@ -61,7 +69,12 @@ function surveillerNouvelleVersion(): void {
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') void appliquerSiNouvelleVersion(true);
   });
-  window.setInterval(() => void appliquerSiNouvelleVersion(false), 5 * 60 * 1000);
+  // Vérification toutes les 2 minutes ; une fois la nouvelle version repérée,
+  // essai toutes les 15 s jusqu'à ce que l'écran soit inactif
+  window.setInterval(() => void appliquerSiNouvelleVersion(false), 2 * 60 * 1000);
+  window.setInterval(() => {
+    if (nouvelleVersionEnLigne) void appliquerSiNouvelleVersion(false);
+  }, 15 * 1000);
   void appliquerSiNouvelleVersion(false);
 }
 
