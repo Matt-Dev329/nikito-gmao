@@ -1,8 +1,10 @@
-/** Écran de chargement : logo Nikito Maintenance sur le fond étoilé */
+/**
+ * Écran de chargement Nikito Maintenance (fourgon-fusée sur fond étoilé) :
+ * version verticale sur téléphone, horizontale sur ordinateur et tablette en largeur.
+ */
 export function EcranChargement() {
   return (
-    <div className="min-h-screen bg-transparent flex flex-col items-center justify-center gap-5 px-4">
-      <img src="/logo-nikito-maintenance.jpg" alt="Nikito Maintenance" className="w-[min(78vw,420px)] rounded-3xl" />
+    <div className="fixed inset-0 z-[400] bg-fond-nuit-haut bg-cover bg-center bg-no-repeat bg-[url('/chargement-portrait.webp')] landscape:bg-[url('/chargement-paysage.webp')] flex items-end justify-center pb-[max(env(safe-area-inset-bottom),32px)]">
       <div className="text-dim text-sm animate-pulse">Chargement…</div>
     </div>
   );

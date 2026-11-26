@@ -12,13 +12,16 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <title>ALBA by Nikito</title>
     <meta name="description" content="ALBA — Gestion de maintenance des parcs Nikito. On prot&#232;ge les familles d&#232;s l'aube." />
+    <style>
+      /* Écran de démarrage (avant le chargement de l'appli) */
+      .alba-demarrage { position: fixed; inset: 0; background: #0A0B26 url('/chargement-portrait.webp') center / cover no-repeat; }
+      @media (orientation: landscape) { .alba-demarrage { background-image: url('/chargement-paysage.webp'); } }
+    </style>
   </head>
   <body>
     <div id="root">
       <!-- Écran de démarrage : remplacé par l'application dès qu'elle est chargée -->
-      <div style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:url('/fond-etoiles.png') 0 0/900px 900px repeat,linear-gradient(180deg,#0A0B26 0%,#0C1938 100%);">
-        <img src="/logo-nikito-maintenance.jpg" alt="Nikito Maintenance" style="width:min(78vw,420px);border-radius:24px;" />
-      </div>
+      <div class="alba-demarrage"></div>
     </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
