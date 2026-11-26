@@ -1,4 +1,5 @@
 import { cn } from '@/lib/utils';
+import { VideoFond } from '@/components/ui/VideoFond';
 
 interface LogoProps {
   size?: 'sm' | 'md' | 'lg';
@@ -14,20 +15,14 @@ const sizes = {
   lg: { mark: 'w-14 h-14', bandeau: 'w-[260px]' },
 };
 
-/** Logo animé Nikito Maintenance (en boucle, sans son ; image fixe si animations réduites) */
+/** Logo animé Nikito Maintenance (en boucle, sans son ni bouton) */
 export function LogoAnime({ className }: { className?: string }) {
   return (
-    <video
+    <VideoFond
       src="/logo-anime-petit.mp4"
       poster="/logo-anime.jpg"
-      autoPlay
-      muted
-      loop
-      playsInline
-      disablePictureInPicture
-      controlsList="nodownload nofullscreen noremoteplayback"
-      aria-label="Nikito Maintenance"
-      className={cn('rounded-lg aspect-video object-cover bg-fond-nuit-haut motion-reduce:hidden', className)}
+      alt="Nikito Maintenance"
+      className={cn('rounded-lg aspect-video object-cover bg-fond-nuit-haut', className)}
     />
   );
 }
@@ -73,7 +68,6 @@ export function AlbaLoginHero() {
   return (
     <div className="flex flex-col items-center gap-3">
       <LogoAnime className="w-[300px] max-w-full rounded-2xl" />
-      <img src="/logo-anime.jpg" alt="Nikito Maintenance" className="w-[300px] max-w-full rounded-2xl hidden motion-reduce:block" />
       <div className="text-center">
         <div className="text-[13px] text-dim tracking-wide">ALBA by Nikito</div>
         <div className="text-[14px] text-nikito-cyan italic mt-1">« On protège les familles dès l'aube. »</div>

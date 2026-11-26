@@ -19,6 +19,15 @@
     background: transparent;
   }
   /* Fond : logo animé (FondAnime), fixé derrière le contenu */
+  /* Vidéos décoratives : jamais de bouton lecture / commandes du navigateur */
+  video.video-sans-bouton::-webkit-media-controls,
+  video.video-sans-bouton::-webkit-media-controls-panel,
+  video.video-sans-bouton::-webkit-media-controls-overlay-play-button,
+  video.video-sans-bouton::-webkit-media-controls-start-playback-button {
+    display: none !important;
+    -webkit-appearance: none;
+    opacity: 0;
+  }
   /* Disable text selection on UI surfaces (tablette terrain) */
   button, .nav-item {
     user-select: none;
