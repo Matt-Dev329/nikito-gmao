@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { Fragment, useMemo, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
@@ -12,6 +12,9 @@ import { cn } from '@/lib/utils';
  * comptes). Par compte : tickets ouverts / clôturés, interventions et temps
  * passé, contrôles et temps passé, bons d'intervention, connexions.
  */
+/** Ordre des postes dans les Stats */
+const ORDRE_POSTES = ['direction', 'chef_maintenance', 'admin_it', 'directeur_parc', 'manager_parc', 'technicien', 'consultation_arcade', 'staff_operationnel'];
+
 interface LigneStat {
   utilisateur_id: string;
   prenom: string;
@@ -174,7 +177,14 @@ function ContenuStats() {
       m.set(g, [...(m.get(g) ?? []), l]);
     });
     const rang = (g: string) => (g === 'Siège' ? 0 : g === 'Plusieurs parcs' ? 2 : g === 'Sans parc' ? 3 : 1);
-    return [...m.entries()].sort((a, b) => rang(a[0]) - rang(b[0]) || a[0].localeCompare(b[0], 'fr'));
+    // Dans chaque parc : rangés par poste, puis selon le tri choisi
+    const rangPoste = (r: string) => {
+      const i = ORDRE_POSTES.indexOf(r);
+      return i === -1 ? ORDRE_POSTES.length : i;
+    };
+    return [...m.entries()]
+      .sort((a, b) => rang(a[0]) - rang(b[0]) || a[0].localeCompare(b[0], 'fr'))
+      .map(([g, liste]) => [g, [...liste].sort((x, y) => rangPoste(x.role_code) - rangPoste(y.role_code))] as [string, LigneStat[]]);
   }, [lignes, parc, parcs]);
 
   const totaux = useMemo(
@@ -319,8 +329,16 @@ function ContenuStats() {
                     </span>
                   </td>
                 </tr>
-              {liste.map((l) => (
-                <tr key={l.utilisateur_id} className={cn('border-b border-white/[0.04]', !l.actif && 'opacity-50')}>
+              {liste.map((l, i) => (
+                <Fragment key={l.utilisateur_id}>
+                {(i === 0 || liste[i - 1].role_code !== l.role_code) && (
+                  <tr>
+                    <td colSpan={COLONNES.length + 1} className="px-3 pt-2.5 pb-1 text-[11px] text-dim uppercase tracking-wider">
+                      {roleLabels[l.role_code as keyof typeof roleLabels] ?? l.role_code}
+                    </td>
+                  </tr>
+                )}
+                <tr className={cn('border-b border-white/[0.04]', !l.actif && 'opacity-50')}>
                   <td className="px-3 py-2.5">
                     <div className="font-medium">
                       {l.prenom} {l.nom}
@@ -351,6 +369,7 @@ function ContenuStats() {
                   <td className="px-3 py-2.5 text-right">{l.connexions || '—'}</td>
                   <td className="px-3 py-2.5 text-right whitespace-nowrap text-dim">{depuis(l.derniere_connexion)}</td>
                 </tr>
+                </Fragment>
               ))}
               </tbody>
             ))}
