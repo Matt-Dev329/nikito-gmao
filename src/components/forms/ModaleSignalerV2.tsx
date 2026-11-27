@@ -1121,16 +1121,16 @@ function EtapePhoto({
 
 /** Niveaux de ticket (règle de Ryad) */
 const NIVEAUX_PROBLEME = [
-  { code: 'bloquant', titre: 'BLOQUANT', detail: 'L’activité est bloquée, ne fonctionne pas et/ou est à l’arrêt' },
-  { code: 'majeur', titre: 'MAJEUR', detail: 'L’activité fonctionne, mais avec des problèmes' },
-  { code: 'mineur', titre: 'MINEUR', detail: 'L’activité fonctionne sans problème technique : c’est un souci de réglage ou visuel' },
+  { code: 'bloquant', titre: 'BLOQUANT', detail: 'Activité à l’arrêt ou hors service : exploitation impossible' },
+  { code: 'majeur', titre: 'MAJEUR', detail: 'Activité en service, en fonctionnement dégradé : le défaut perturbe l’exploitation' },
+  { code: 'mineur', titre: 'MINEUR', detail: 'Activité pleinement fonctionnelle : défaut de réglage ou esthétique, sans impact technique' },
 ] as const;
 
 /** Questions posées pour trouver le niveau ; « Oui » donne le niveau, « Non » passe à la question suivante */
 const QUESTIONS_NIVEAU = [
-  { question: 'L’activité est-elle bloquée, à l’arrêt, ou ne fonctionne-t-elle pas ?', siOui: 'bloquant' },
-  { question: 'L’activité fonctionne-t-elle, mais avec des problèmes ?', siOui: 'majeur' },
-  { question: 'L’activité fonctionne sans problème technique, et c’est un souci de réglage ou visuel ?', siOui: 'mineur' },
+  { question: 'L’activité est-elle à l’arrêt ou hors service ?', siOui: 'bloquant' },
+  { question: 'L’activité fonctionne-t-elle en mode dégradé (panne partielle, fonctionnement perturbé) ?', siOui: 'majeur' },
+  { question: 'S’agit-il uniquement d’un défaut de réglage ou esthétique, sans impact sur le fonctionnement ?', siOui: 'mineur' },
 ] as const;
 
 function QuestionsNiveau({
