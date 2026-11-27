@@ -61,6 +61,8 @@ interface SignalementState {
   mediaVideo: boolean;
   prioriteEscaladee: boolean;
   prioriteOverride: string | null;
+  /** Niveau choisi par le déclarant (obligatoire) : bloquant / majeur / mineur */
+  prioriteChoisie: string | null;
   technicienAssigneId: string | null;
   echeanceSouhaitee: string | null;
 }
@@ -76,6 +78,7 @@ const INITIAL_STATE: SignalementState = {
   mediaVideo: false,
   prioriteEscaladee: false,
   prioriteOverride: null,
+  prioriteChoisie: null,
   technicienAssigneId: null,
   echeanceSouhaitee: null,
 };
@@ -271,6 +274,7 @@ export function ModaleSignalerV2({ open, onClose, via, parcId: propParcId, modeE
       symptome_libre: state.symptomeLibre,
       photo_url: state.photoUrl,
       priorite_escaladee: state.prioriteEscaladee,
+      priorite_choisie: state.prioriteChoisie,
       equipement_manquant_label: state.equipementManquantLabel,
       declare_par_id: userCtx.userId,
       via,
@@ -296,7 +300,7 @@ export function ModaleSignalerV2({ open, onClose, via, parcId: propParcId, modeE
           );
           setResultBt(null);
           setResultPriorite(
-            state.prioriteOverride ?? (state.prioriteEscaladee ? 'bloquant' : (state.categorie.criticite_defaut ?? 'mineur'))
+            state.prioriteOverride ?? state.prioriteChoisie ?? (state.prioriteEscaladee ? 'bloquant' : (state.categorie.criticite_defaut ?? 'mineur'))
           );
           setResultValidation('hors_ligne');
           setEtape('succes');
@@ -336,9 +340,6 @@ export function ModaleSignalerV2({ open, onClose, via, parcId: propParcId, modeE
       </div>
     );
   }
-
-  const prioriteCode = state.prioriteOverride
-    ?? (state.prioriteEscaladee ? 'bloquant' : (state.categorie?.criticite_defaut ?? 'mineur'));
 
   const stepTitle: Record<Etape, string> = {
     parc: 'Pour quel parc ?',
@@ -431,12 +432,10 @@ export function ModaleSignalerV2({ open, onClose, via, parcId: propParcId, modeE
           {etape === 'recap' && (
             <EtapeRecap
               state={state}
-              prioriteCode={prioriteCode}
               isStaff={userCtx.isStaff}
               modeExpert={modeExpert}
               parcId={parcId}
-              onEscalade={() => update({ prioriteEscaladee: true })}
-              onPrioriteOverride={(code) => update({ prioriteOverride: code })}
+              onPrioriteChoisie={(code) => update({ prioriteChoisie: code })}
               onTechnicienAssigne={(id) => update({ technicienAssigneId: id })}
               onEcheance={(date) => update({ echeanceSouhaitee: date })}
               onModifier={goBack}
@@ -1120,16 +1119,107 @@ function EtapePhoto({
   );
 }
 
+/** Niveaux de ticket (règle de Ryad) */
+const NIVEAUX_PROBLEME = [
+  { code: 'bloquant', titre: 'BLOQUANT', detail: 'L’activité est bloquée, ne fonctionne pas et/ou est à l’arrêt' },
+  { code: 'majeur', titre: 'MAJEUR', detail: 'L’activité fonctionne, mais avec des problèmes' },
+  { code: 'mineur', titre: 'MINEUR', detail: 'L’activité fonctionne sans problème technique : c’est un souci de réglage ou visuel' },
+] as const;
+
+/** Questions posées pour trouver le niveau ; « Oui » donne le niveau, « Non » passe à la question suivante */
+const QUESTIONS_NIVEAU = [
+  { question: 'L’activité est-elle bloquée, à l’arrêt, ou ne fonctionne-t-elle pas ?', siOui: 'bloquant' },
+  { question: 'L’activité fonctionne-t-elle, mais avec des problèmes ?', siOui: 'majeur' },
+  { question: 'L’activité fonctionne sans problème technique, et c’est un souci de réglage ou visuel ?', siOui: 'mineur' },
+] as const;
+
+function QuestionsNiveau({
+  valeur,
+  onChange,
+  couleurs,
+}: {
+  valeur: string | null;
+  onChange: (code: string) => void;
+  couleurs: Record<string, string>;
+}) {
+  const [etape, setEtape] = useState(0);
+  const [manuel, setManuel] = useState(false);
+  const niveau = NIVEAUX_PROBLEME.find((n) => n.code === valeur);
+
+  if (niveau && !manuel) {
+    return (
+      <div>
+        <div className={cn('rounded-xl border px-3.5 py-3', couleurs[niveau.code])}>
+          <div className="text-[12px] font-bold">{niveau.titre}</div>
+          <div className="text-[12px] mt-0.5 text-white">{niveau.detail}</div>
+        </div>
+        <button
+          type="button"
+          onClick={() => { setEtape(0); setManuel(false); onChange(''); }}
+          className="mt-2 text-[12px] text-nikito-cyan min-h-[40px]"
+        >
+          ↺ Refaire les questions
+        </button>
+      </div>
+    );
+  }
+
+  if (manuel || etape >= QUESTIONS_NIVEAU.length) {
+    return (
+      <div className="flex flex-col gap-2">
+        <div className="text-[12px] text-dim mb-1">Choisis le niveau qui correspond :</div>
+        {NIVEAUX_PROBLEME.map((n) => (
+          <button
+            key={n.code}
+            type="button"
+            onClick={() => { setManuel(false); onChange(n.code); }}
+            className="text-left rounded-xl border border-white/[0.08] text-dim px-3.5 py-3 min-h-[56px]"
+          >
+            <div className="text-[12px] font-bold">{n.titre}</div>
+            <div className="text-[12px] mt-0.5">{n.detail}</div>
+          </button>
+        ))}
+      </div>
+    );
+  }
+
+  const q = QUESTIONS_NIVEAU[etape];
+  return (
+    <div>
+      <div className="text-[11px] text-dim mb-1">Question {etape + 1} sur {QUESTIONS_NIVEAU.length}</div>
+      <div className="text-[14px] text-white font-semibold mb-3">{q.question}</div>
+      <div className="grid grid-cols-2 gap-2">
+        <button
+          type="button"
+          onClick={() => onChange(q.siOui)}
+          className="rounded-xl border border-white/[0.12] bg-white/[0.04] text-white text-[14px] font-semibold min-h-[48px]"
+        >
+          Oui
+        </button>
+        <button
+          type="button"
+          onClick={() => setEtape(etape + 1)}
+          className="rounded-xl border border-white/[0.12] bg-white/[0.04] text-white text-[14px] font-semibold min-h-[48px]"
+        >
+          Non
+        </button>
+      </div>
+      <button type="button" onClick={() => setManuel(true)} className="mt-2 text-[12px] text-dim underline min-h-[40px]">
+        Je choisis moi-même
+      </button>
+      <div className="mt-1 text-[11px] text-[#FFB547]">Réponds aux questions avant d’envoyer</div>
+    </div>
+  );
+}
+
 // ─── Step 5: Recap ─────────────────────────────────────────────
 
 function EtapeRecap({
   state,
-  prioriteCode,
   isStaff,
   modeExpert,
   parcId,
-  onEscalade,
-  onPrioriteOverride,
+  onPrioriteChoisie,
   onTechnicienAssigne,
   onEcheance,
   onModifier,
@@ -1138,12 +1228,10 @@ function EtapeRecap({
   error,
 }: {
   state: SignalementState;
-  prioriteCode: string;
   isStaff: boolean;
   modeExpert: boolean;
   parcId: string | null;
-  onEscalade: () => void;
-  onPrioriteOverride: (code: string) => void;
+  onPrioriteChoisie: (code: string) => void;
   onTechnicienAssigne: (id: string | null) => void;
   onEcheance: (date: string | null) => void;
   onModifier: () => void;
@@ -1219,23 +1307,8 @@ function EtapeRecap({
       </div>
 
       <div className="bg-[#131836] rounded-xl p-4 mb-3 border border-white/[0.06]">
-        <div className="text-[10px] text-dim uppercase tracking-wider mb-1.5">Priorite deduite</div>
-        <div className="flex items-center gap-2.5">
-          <span className={cn('text-xs font-bold px-3 py-1.5 rounded-lg border', prioriteColors[prioriteCode] ?? prioriteColors.mineur)}>
-            {prioriteCode.toUpperCase()}
-          </span>
-        </div>
-        {!state.prioriteEscaladee && !state.prioriteOverride && prioriteCode !== 'bloquant' && (
-          <button
-            onClick={onEscalade}
-            className="mt-3 w-full bg-[#FF4D6D]/10 border border-[#FF4D6D]/25 rounded-xl py-3 text-[#FF4D6D] text-[12px] font-semibold active:bg-[#FF4D6D]/20 min-h-[48px]"
-          >
-            C'est plus grave qu'il n'y parait
-          </button>
-        )}
-        {state.prioriteEscaladee && !state.prioriteOverride && (
-          <div className="mt-2 text-[10px] text-[#FF4D6D]">Priorite escaladee manuellement</div>
-        )}
+        <div className="text-[10px] text-dim uppercase tracking-wider mb-2">Niveau du problème *</div>
+        <QuestionsNiveau valeur={state.prioriteChoisie} onChange={onPrioriteChoisie} couleurs={prioriteColors} />
       </div>
 
       {isStaff && (
@@ -1259,26 +1332,6 @@ function EtapeRecap({
           ) : (
             <div className="bg-[#131836] border border-[#5DE5FF]/20 rounded-xl p-4 space-y-4">
               <div className="text-[10px] text-[#5DE5FF] uppercase tracking-wider font-semibold mb-2">Mode expert</div>
-
-              <div>
-                <div className="text-[11px] text-dim mb-2">Override priorite</div>
-                <div className="grid grid-cols-3 gap-2">
-                  {(['bloquant', 'majeur', 'mineur'] as const).map((p) => (
-                    <button
-                      key={p}
-                      onClick={() => onPrioriteOverride(p)}
-                      className={cn(
-                        'py-2.5 rounded-lg text-[11px] font-bold border transition-colors min-h-[40px]',
-                        state.prioriteOverride === p
-                          ? prioriteColors[p]
-                          : 'border-white/[0.08] text-dim hover:border-white/20'
-                      )}
-                    >
-                      {p.toUpperCase()}
-                    </button>
-                  ))}
-                </div>
-              </div>
 
               {techniciens.length > 0 && (
                 <div>
@@ -1322,7 +1375,7 @@ function EtapeRecap({
         </button>
         <button
           onClick={onEnvoyer}
-          disabled={submitting || !state.photoUrl}
+          disabled={submitting || !state.photoUrl || !state.prioriteChoisie}
           className={cn(
             'flex-[2] rounded-xl py-3.5 text-sm font-bold min-h-[56px]',
             submitting || !state.photoUrl ? 'bg-white/10 text-dim' : 'bg-gradient-to-r from-[#E85A9B] to-[#5DE5FF] text-white active:scale-[0.98]'

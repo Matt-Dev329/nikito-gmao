@@ -31,6 +31,9 @@ interface Payload {
   /** Plusieurs médias (photos / vidéos) */
   medias?: string[] | null;
   priorite_escaladee: boolean;
+  /** Niveau choisi par le déclarant : bloquant (activité arrêtée), majeur (fonctionne avec des problèmes),
+   *  mineur (fonctionne, souci de réglage ou visuel) */
+  priorite_choisie?: string | null;
   equipement_manquant_label: string | null;
   declare_par_id: string;
   via?: string;
@@ -118,7 +121,9 @@ Deno.serve(async (req: Request) => {
     // Ticket karting du staff autorisé : envoyé directement aux techniciens
     const needsManagerApproval = false;
 
+    const prioriteChoisie = ["bloquant", "majeur", "mineur"].includes(body.priorite_choisie ?? "") ? body.priorite_choisie! : null;
     const criticiteCode = body.mode_expert?.priorite_override
+      ?? prioriteChoisie
       ?? (body.priorite_escaladee ? "bloquant" : (categorie?.criticite_defaut ?? "mineur"));
 
     const { data: priorite } = await supabase
@@ -177,6 +182,7 @@ Deno.serve(async (req: Request) => {
           categorie_id: body.categorie_id,
           symptome_id: body.symptome_id,
           priorite_escaladee: body.priorite_escaladee,
+          priorite_choisie: prioriteChoisie,
           priorite_initiale: categorie?.criticite_defaut ?? "mineur",
           equipement_manquant_saisi: !!body.equipement_manquant_label,
           declarant_role: roleCode,
