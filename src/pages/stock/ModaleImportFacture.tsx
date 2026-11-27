@@ -7,6 +7,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useCatalogueCommandes } from '@/hooks/queries/useCommandes';
 import { useParcs } from '@/hooks/queries/useReferentiel';
 import { useToast } from '@/components/ui/ToastProvider';
+import { ChampQuantite } from '@/components/ui/ChampQuantite';
 
 interface LigneFacture {
   reference: string;
@@ -276,14 +277,7 @@ export function ModaleImportFacture({ onClose }: { onClose: () => void }) {
                   <div className="grid grid-cols-2 sm:grid-cols-[90px_120px_1fr_1fr] gap-2">
                     <label className="grid gap-0.5">
                       <span className="text-[10px] text-dim">Quantité</span>
-                      <input
-                        type="number"
-                        inputMode="numeric"
-                        min={1}
-                        value={l.quantite}
-                        onChange={(e) => modifier(i, { quantite: Math.max(1, Number(e.target.value) || 1) })}
-                        className={champ}
-                      />
+                      <ChampQuantite valeur={l.quantite} onChange={(n) => modifier(i, { quantite: n })} className={champ} />
                     </label>
                     <label className="grid gap-0.5">
                       <span className="text-[10px] text-dim">Prix unitaire HT</span>

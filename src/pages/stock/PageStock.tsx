@@ -522,6 +522,7 @@ function ModaleCreerPiece({
   const [nom, setNom] = useState('');
   const [fournisseurId, setFournisseurId] = useState('');
   const [stockMin, setStockMin] = useState(1);
+  const [quantite, setQuantite] = useState(0);
   const [prixHt, setPrixHt] = useState('');
   const [emplacement, setEmplacement] = useState('');
   const [parcId, setParcId] = useState(parcIdDefaut);
@@ -534,7 +535,7 @@ function ModaleCreerPiece({
         reference: reference.trim(),
         nom: nom.trim(),
         fournisseur_id: fournisseurId || null,
-        stock_actuel: 0,
+        stock_actuel: quantite,
         stock_min: stockMin,
         prix_unitaire_ht: prixHt ? parseFloat(prixHt) : null,
         emplacement: emplacement.trim() || null,
@@ -575,8 +576,11 @@ function ModaleCreerPiece({
             </select>
           </Field>
           <div className="grid grid-cols-2 gap-2.5">
+            <Field label="Quantité à rentrer">
+              <ChampQuantite valeur={quantite} onChange={setQuantite} min={0} className={CLASSE_CHAMP} />
+            </Field>
             <Field label="Stock min">
-              <input type="number" min={0} value={stockMin} onChange={(e) => setStockMin(parseInt(e.target.value) || 0)} className="w-full bg-bg-deep border border-white/[0.08] rounded-[10px] p-3 text-text text-[13px] outline-none focus:border-nikito-cyan min-h-[44px]" />
+              <ChampQuantite valeur={stockMin} onChange={setStockMin} min={0} className={CLASSE_CHAMP} />
             </Field>
             <Field label="Prix HT (EUR)">
               <input type="text" value={prixHt} onChange={(e) => setPrixHt(e.target.value)} placeholder="0.00" className="w-full bg-bg-deep border border-white/[0.08] rounded-[10px] p-3 text-text text-[13px] outline-none focus:border-nikito-cyan min-h-[44px]" />
