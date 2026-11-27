@@ -2,6 +2,8 @@ import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useAlertesVues } from '@/hooks/useAlertesVues';
+import { useTachesAValider } from '@/hooks/useTachesAValider';
+import { TachesAValider } from '@/components/TachesAValider';
 
 interface MobileAlertPanelProps {
   open: boolean;
@@ -12,6 +14,7 @@ export function MobileAlertPanel({ open, onClose }: MobileAlertPanelProps) {
   // Seules les nouveautés : toucher une alerte la retire, elle revient si le nombre augmente
   const { nouvelles: items, marquerVue, toutMarquerVu } = useAlertesVues();
   const navigate = useNavigate();
+  const nbTaches = useTachesAValider().data?.length ?? 0;
 
   useEffect(() => {
     if (open) {
@@ -60,7 +63,8 @@ export function MobileAlertPanel({ open, onClose }: MobileAlertPanelProps) {
         </div>
 
         <div className="flex-1 overflow-y-auto overscroll-contain px-4 pb-4">
-          {items.length === 0 ? (
+          <TachesAValider />
+          {items.length === 0 && nbTaches > 0 ? null : items.length === 0 ? (
             <div className="py-10 text-center text-dim text-[13px]">
               Aucune nouvelle alerte
             </div>

@@ -15,6 +15,7 @@ import { ModaleClotureRapide } from '@/components/tickets/ModaleClotureRapide';
 import { useTechnicienKartingEffectif } from '@/hooks/useViewAs';
 import { peutValiderTicket, voitDemandesPrestataires, voitToutLeParc } from '@/lib/acces';
 import { useAuth } from '@/hooks/useAuth';
+import { TachesAValider } from '@/components/TachesAValider';
 import { useParcs } from '@/hooks/queries/useReferentiel';
 import { useToast } from '@/components/ui/ToastProvider';
 import { useSignedUrls } from '@/hooks/useSignedUrl';
@@ -382,6 +383,11 @@ export function Operations() {
         user={utilisateur ? { initiales, prenom: utilisateur.prenom } : undefined}
         enService={!!utilisateur}
       />
+
+      {/* Tâches récurrentes à valider (ex. envoi de pièce du laser game le vendredi) */}
+      <div className="px-3 md:px-[18px] pt-3 bg-bg-deep empty:hidden">
+        <TachesAValider variante="bandeau" />
+      </div>
 
       {parcsVisibles.length > 1 && (
         <div className="px-3 md:px-[18px] pt-3 bg-bg-deep flex gap-2 overflow-x-auto pb-1">

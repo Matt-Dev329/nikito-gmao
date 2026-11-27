@@ -4,6 +4,8 @@ import { cn } from '@/lib/utils';
 import { useAlertesVues } from '@/hooks/useAlertesVues';
 import { useNotificationsConformite, useMarkNotificationRead } from '@/hooks/queries/useConformite';
 import { useAuth } from '@/hooks/useAuth';
+import { useTachesAValider } from '@/hooks/useTachesAValider';
+import { TachesAValider } from '@/components/TachesAValider';
 
 interface Props {
   compact?: boolean;
@@ -20,7 +22,9 @@ export function NotificationBell({ compact, onNavClick }: Props) {
   // Seules les nouveautés : toucher une alerte la retire, elle revient si le nombre augmente
   const { nouvelles: items, totalNouveau, marquerVue, toutMarquerVu } = useAlertesVues();
   const conformiteCount = notifsConformite?.length ?? 0;
-  const unseenCount = totalNouveau + conformiteCount;
+  const { data: taches } = useTachesAValider();
+  const nbTaches = taches?.length ?? 0;
+  const unseenCount = totalNouveau + conformiteCount + nbTaches;
 
   const handleToggle = useCallback(() => setOpen((o) => !o), []);
 
@@ -75,10 +79,13 @@ export function NotificationBell({ compact, onNavClick }: Props) {
               </button>
             )}
           </div>
+          <TachesAValider />
           {items.length === 0 && conformiteCount === 0 ? (
+            nbTaches > 0 ? null : (
             <div className="px-3 py-4 text-[12px] text-dim text-center">
               Aucune nouvelle notification
             </div>
+            )
           ) : (
             <>
               {items.map((item) => (

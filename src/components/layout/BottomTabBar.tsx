@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils';
 import { useSidebarBadges } from '@/hooks/queries/useSidebarBadges';
 import { canSignaler } from '@/lib/signaler';
 import { useAlertesVues } from '@/hooks/useAlertesVues';
+import { useTachesAValider } from '@/hooks/useTachesAValider';
 import type { RoleUtilisateur } from '@/types/database';
 
 interface BottomTabBarProps {
@@ -141,7 +142,8 @@ export function BottomTabBar({ roleCode, onAlertsClick, onMoreClick, alertsOpen,
   const hasSignaler = tabs.some((t) => t.id === 'signaler');
 
   // Badge « Alertes » : seulement les nouveautés (retirées une fois vues)
-  const { totalNouveau: totalAlerts } = useAlertesVues();
+  const { totalNouveau } = useAlertesVues();
+  const totalAlerts = totalNouveau + (useTachesAValider().data?.length ?? 0);
 
   const operationsBadge = badges?.operations ?? 0;
 
