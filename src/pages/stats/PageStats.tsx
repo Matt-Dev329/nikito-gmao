@@ -6,6 +6,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { voitTableauDeBord } from '@/lib/acces';
 import { roleLabels } from '@/lib/tokens';
 import { cn } from '@/lib/utils';
+import { FichePersonne, type PersonneStat } from './FichePersonne';
 
 /**
  * Stats de l'équipe (Ryad uniquement, discret : invisible pour les autres
@@ -96,6 +97,7 @@ function ContenuStats() {
   const [recherche, setRecherche] = useState('');
   const [tri, setTri] = useState<Tri>('tickets_clotures');
   const [actifsSeuls, setActifsSeuls] = useState(true);
+  const [ouverte, setOuverte] = useState<PersonneStat | null>(null);
 
   const jours = PERIODES.find((p) => p.code === periode)?.jours ?? 30;
   const { data, isLoading, error } = useQuery({
@@ -338,7 +340,11 @@ function ContenuStats() {
                     </td>
                   </tr>
                 )}
-                <tr className={cn('border-b border-white/[0.04]', !l.actif && 'opacity-50')}>
+                <tr
+                  onClick={() => setOuverte(l)}
+                  title="Voir le détail"
+                  className={cn('border-b border-white/[0.04] cursor-pointer hover:bg-white/[0.03]', !l.actif && 'opacity-50')}
+                >
                   <td className="px-3 py-2.5">
                     <div className="font-medium">
                       {l.prenom} {l.nom}
@@ -385,8 +391,9 @@ function ContenuStats() {
           </table>
         </div>
       )}
+      {ouverte && <FichePersonne personne={ouverte} jours={jours} onFermer={() => setOuverte(null)} />}
       <p className="text-[11px] text-dim bg-bg-card/90 rounded-lg px-3 py-2 border border-white/[0.06]">
-        Connexions : comptées depuis le 26/11/2026 (au plus une toutes les 30 min). Temps de réparation : interventions démarrées et
+        Clique sur une personne pour voir le détail de ses tickets, réparations, contrôles, bons et connexions. Connexions : comptées depuis le 26/11/2026 (au plus une toutes les 30 min). Temps de réparation : interventions démarrées et
         clôturées ; temps de contrôles : du démarrage à la validation.
       </p>
     </div>
