@@ -6,7 +6,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { ViewAsSelector } from './ViewAsSelector';
 import { useTechnicienKartingEffectif } from '@/hooks/useViewAs';
 import { ROLES_BLESSES } from '@/lib/blesses';
-import { ROLES_PILOTAGE, ROLES_BONS, ROLES_DIRECTION_PARC, ROLES_DEMANDES_PRESTA, ROLES_HISTORIQUES, ROLES_HISTORIQUE_COMMANDES, aAcces, cheminOuvertTechnicienKarting, rolesSimulables, voitDemandesPrestataires, voitTableauDeBord } from '@/lib/acces';
+import { ROLES_PILOTAGE, ROLES_BONS_LECTURE, ROLES_DIRECTION_PARC, ROLES_DEMANDES_PRESTA, ROLES_HISTORIQUES, ROLES_HISTORIQUE_COMMANDES, aAcces, cheminOuvertTechnicienKarting, rolesSimulables, voitDemandesPrestataires, voitTableauDeBord } from '@/lib/acces';
 
 interface MenuDrawerProps {
   open: boolean;
@@ -20,7 +20,7 @@ const menuItems: { to: string; label: string; icon: string; roles?: string[]; pr
   { to: '/gmao/historique-tickets', label: 'Historique des tickets', icon: '🗂️', roles: ROLES_HISTORIQUES },
   { to: '/gmao/historique-commandes', label: 'Historique des commandes', icon: '📦', roles: ROLES_HISTORIQUE_COMMANDES },
   { to: '/tech/rapports', label: 'Rapports de réparation', icon: '📋' },
-  { to: '/tech/bons', label: "Bons d'intervention", icon: '🧾', roles: ROLES_BONS },
+  { to: '/tech/bons', label: "Bons d'intervention", icon: '🧾', roles: ROLES_BONS_LECTURE },
   { to: '/tech/plans', label: 'Plans', icon: '🗺️' },
   { to: '/tech/manuels', label: 'Manuels', icon: '📘' },
   { to: '/tech/prestataires', label: 'Rapports prestataires', icon: '🧯', roles: ROLES_PILOTAGE },

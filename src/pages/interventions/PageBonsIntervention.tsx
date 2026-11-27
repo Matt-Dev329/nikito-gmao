@@ -18,7 +18,7 @@ import { useToast } from '@/components/ui/ToastProvider';
 import { Pill } from '@/components/ui/Pill';
 import { ZoneSignature } from '@/components/ui/ZoneSignature';
 import { BoutonTelecharger } from '@/components/ui/BoutonTelecharger';
-import { ROLES_BONS, voitTableauDeBord } from '@/lib/acces';
+import { ROLES_BONS, ROLES_BONS_LECTURE, voitTableauDeBord } from '@/lib/acces';
 import { SectionUrgences } from './InterventionsUrgence';
 import { BUCKET_BONS, exportBonPDF, formatDuree, type BonIntervention } from './exportBonPDF';
 import { useFiltreParc } from '@/hooks/useParcCourant';
@@ -106,7 +106,7 @@ function useBons(jours: number) {
 /** Bons d'intervention : réparations réalisées hors ticket, remplies et signées sur place. */
 export function PageBonsIntervention() {
   const { utilisateur } = useAuth();
-  if (utilisateur && !ROLES_BONS.includes(utilisateur.role_code)) return <Navigate to="/" replace />;
+  if (utilisateur && !ROLES_BONS_LECTURE.includes(utilisateur.role_code)) return <Navigate to="/" replace />;
   return <ContenuBons />;
 }
 
@@ -114,7 +114,9 @@ function ContenuBons() {
   const [nouveau, setNouveau] = useState(false);
   // Bon commencé puis page quittée : on rouvre le formulaire avec la saisie conservée
   const { utilisateur } = useAuth();
-  const { hasDraft } = useDraftPersistence(utilisateur ? cleBrouillonBon(utilisateur.id) : null);
+  // Directeurs de parc et managers : consultation seule (pas de création)
+  const peutCreer = !!utilisateur && ROLES_BONS.includes(utilisateur.role_code);
+  const { hasDraft } = useDraftPersistence(utilisateur && peutCreer ? cleBrouillonBon(utilisateur.id) : null);
   useEffect(() => {
     if (hasDraft) setNouveau(true);
   }, [hasDraft]);
@@ -196,7 +198,7 @@ function ContenuBons() {
             Réparations hors ticket signées sur place, et tickets en cours ou en attente de pièce
           </p>
         </div>
-        {!nouveau && (
+        {!nouveau && peutCreer && (
           <button
             onClick={() => setNouveau(true)}
             className="bg-gradient-cta text-text px-5 py-2.5 rounded-[10px] text-[13px] font-bold min-h-[44px]"
@@ -206,7 +208,7 @@ function ContenuBons() {
         )}
       </div>
 
-      {nouveau && <FormulaireBon onFini={() => setNouveau(false)} />}
+      {nouveau && peutCreer && <FormulaireBon onFini={() => setNouveau(false)} />}
 
       {/* Interventions d'urgence : Ryad uniquement (verrou aussi en base) */}
       {voitTableauDeBord(utilisateur) && <SectionUrgences />}

@@ -155,6 +155,18 @@ function ContenuStats() {
       });
   }, [data, actifsSeuls, role, parc, recherche, tri]);
 
+  // Rangement par parc : un seul parc → ce parc ; plusieurs → « Plusieurs parcs » (ou le parc filtré) ; aucun → « Sans parc »
+  const groupes = useMemo(() => {
+    const m = new Map<string, LigneStat[]>();
+    lignes.forEach((l) => {
+      const ps = (l.parcs ?? '').split(', ').filter(Boolean);
+      const g = ps.length === 1 ? ps[0] : ps.length === 0 ? 'Sans parc' : parc !== 'tous' ? parc : 'Plusieurs parcs';
+      m.set(g, [...(m.get(g) ?? []), l]);
+    });
+    const rang = (g: string) => (g === 'Plusieurs parcs' ? 1 : g === 'Sans parc' ? 2 : 0);
+    return [...m.entries()].sort((a, b) => rang(a[0]) - rang(b[0]) || a[0].localeCompare(b[0], 'fr'));
+  }, [lignes, parc]);
+
   const totaux = useMemo(
     () =>
       lignes.reduce(
@@ -286,8 +298,18 @@ function ContenuStats() {
                 ))}
               </tr>
             </thead>
-            <tbody>
-              {lignes.map((l) => (
+            {groupes.map(([nomGroupe, liste]) => (
+              <tbody key={nomGroupe}>
+                <tr className="bg-white/[0.03] border-b border-white/[0.06]">
+                  <td colSpan={COLONNES.length + 1} className="px-3 py-2 text-[12px] font-semibold text-nikito-cyan uppercase tracking-wider">
+                    {nomGroupe}
+                    <span className="text-dim font-normal normal-case tracking-normal">
+                      {' '}
+                      · {liste.length} compte{liste.length > 1 ? 's' : ''} · {liste.reduce((t, l) => t + Number(l.tickets_clotures), 0)} tickets clôturés
+                    </span>
+                  </td>
+                </tr>
+              {liste.map((l) => (
                 <tr key={l.utilisateur_id} className={cn('border-b border-white/[0.04]', !l.actif && 'opacity-50')}>
                   <td className="px-3 py-2.5">
                     <div className="font-medium">
@@ -320,6 +342,9 @@ function ContenuStats() {
                   <td className="px-3 py-2.5 text-right whitespace-nowrap text-dim">{depuis(l.derniere_connexion)}</td>
                 </tr>
               ))}
+              </tbody>
+            ))}
+            <tbody>
               {lignes.length === 0 && (
                 <tr>
                   <td colSpan={COLONNES.length + 1} className="px-3 py-8 text-center text-dim">

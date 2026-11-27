@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils';
 import { getNavIcon } from './NavIcons';
 import type { RoleUtilisateur } from '@/types/database';
 import { useAccesCommandes } from '@/hooks/queries/useCommandes';
-import { ROLES_STOCK, ROLES_PILOTAGE, ROLES_DIRECTION_PARC, ROLES_DEMANDES_PRESTA, ROLES_ANALYSE_CAUSES, ROLES_BONS, ROLES_HISTORIQUES, ROLES_HISTORIQUE_COMMANDES, cheminOuvertTechnicienKarting, estManagerPrincipal, rolesSimulables, voitTableauDeBord } from '@/lib/acces';
+import { ROLES_STOCK, ROLES_PILOTAGE, ROLES_DIRECTION_PARC, ROLES_DEMANDES_PRESTA, ROLES_ANALYSE_CAUSES, ROLES_BONS_LECTURE, ROLES_HISTORIQUES, ROLES_HISTORIQUE_COMMANDES, cheminOuvertTechnicienKarting, estManagerPrincipal, rolesSimulables, voitTableauDeBord } from '@/lib/acces';
 import { useAuth } from '@/hooks/useAuth';
 import { useFeatureFlags } from '@/hooks/useFeatureFlags';
 import { ViewAsSelector } from './ViewAsSelector';
@@ -38,7 +38,7 @@ const pilotageItems: DrawerItem[] = [
   { to: '/gmao/historique-commandes', label: 'Historique des commandes', iconLabel: 'Historique des commandes', roles: ROLES_HISTORIQUE_COMMANDES },
   { to: '/gmao/controles', label: 'Contrôles', iconLabel: 'Contrôles', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'technicien', 'manager_parc', 'admin_it'] },
   { to: '/gmao/rapports', label: 'Rapports de réparation', iconLabel: 'Rapports de réparation', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'technicien', 'manager_parc', 'admin_it'] },
-  { to: '/gmao/bons', label: "Bons d'intervention", iconLabel: "Bons d'intervention", roles: ROLES_BONS },
+  { to: '/gmao/bons', label: "Bons d'intervention", iconLabel: "Bons d'intervention", roles: ROLES_BONS_LECTURE },
   { to: '/gmao/plans', label: 'Plans', iconLabel: 'Plans', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'technicien', 'manager_parc', 'admin_it'] },
   { to: '/gmao/manuels', label: 'Manuels', iconLabel: 'Manuels', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'technicien', 'manager_parc', 'admin_it'] },
   { to: '/gmao/prestataires', label: 'Rapports prestataires', iconLabel: 'Rapports prestataires', roles: ROLES_PILOTAGE },

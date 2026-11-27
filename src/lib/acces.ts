@@ -66,6 +66,9 @@ export const ROLES_HISTORIQUE_COMMANDES: string[] = ['chef_maintenance', 'direct
 /** Bons d'intervention : techniciens et chef d'équipe (direction et admin IT compris) */
 export const ROLES_BONS: RoleUtilisateur[] = ['direction', 'chef_maintenance', 'technicien', 'admin_it'];
 
+/** Consultation des bons d'intervention : en plus, directeurs de parc et managers (leurs parcs, en lecture) */
+export const ROLES_BONS_LECTURE: RoleUtilisateur[] = [...ROLES_BONS, 'directeur_parc', 'manager_parc'];
+
 /** Récurrences et 5 Pourquoi : chef d'équipe, direction et admin IT */
 export const ROLES_ANALYSE_CAUSES: string[] = ['direction', 'chef_maintenance', 'admin_it'];
 

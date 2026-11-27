@@ -15,7 +15,7 @@ import { useTechnicienKartingEffectif, useViewAs } from '@/hooks/useViewAs';
 import { useParcCourant } from '@/hooks/useParcCourant';
 import { useFeatureFlags } from '@/hooks/useFeatureFlags';
 import { useAccesCommandes } from '@/hooks/queries/useCommandes';
-import { ROLES_STOCK, ROLES_PILOTAGE, ROLES_DIRECTION_PARC, ROLES_DEMANDES_PRESTA, ROLES_ANALYSE_CAUSES, ROLES_BONS, ROLES_HISTORIQUES, ROLES_HISTORIQUE_COMMANDES, cheminOuvertTechnicienKarting, estManagerPrincipal, estTechnicienArcade, rolesAttribuables, voitTableauDeBord } from '@/lib/acces';
+import { ROLES_STOCK, ROLES_PILOTAGE, ROLES_DIRECTION_PARC, ROLES_DEMANDES_PRESTA, ROLES_ANALYSE_CAUSES, ROLES_BONS_LECTURE, ROLES_HISTORIQUES, ROLES_HISTORIQUE_COMMANDES, cheminOuvertTechnicienKarting, estManagerPrincipal, estTechnicienArcade, rolesAttribuables, voitTableauDeBord } from '@/lib/acces';
 import type { RoleUtilisateur } from '@/types/database';
 
 const TOUR_KEYS: Record<string, string> = {
@@ -74,7 +74,7 @@ const sections: { titre: string; items: NavItem[] }[] = [
       { to: '/gmao/historique-tickets', label: 'Historique des tickets', roles: ROLES_HISTORIQUES },
       { to: '/gmao/historique-commandes', label: 'Historique des commandes', roles: ROLES_HISTORIQUE_COMMANDES },
       { to: '/gmao/rapports', label: 'Rapports de réparation', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'technicien', 'manager_parc', 'admin_it'] },
-      { to: '/gmao/bons', label: "Bons d'intervention", roles: ROLES_BONS },
+      { to: '/gmao/bons', label: "Bons d'intervention", roles: ROLES_BONS_LECTURE },
       { to: '/gmao/plans', label: 'Plans', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'technicien', 'manager_parc', 'admin_it'] },
       { to: '/gmao/manuels', label: 'Manuels', roles: ['direction', 'chef_maintenance', 'directeur_parc', 'technicien', 'manager_parc', 'admin_it'] },
       { to: '/gmao/prestataires', label: 'Rapports prestataires', roles: ROLES_PILOTAGE },
