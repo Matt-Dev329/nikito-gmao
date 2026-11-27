@@ -155,17 +155,27 @@ function ContenuStats() {
       });
   }, [data, actifsSeuls, role, parc, recherche, tri]);
 
-  // Rangement par parc : un seul parc → ce parc ; plusieurs → « Plusieurs parcs » (ou le parc filtré) ; aucun → « Sans parc »
+  // Rangement par parc : rattaché à tous les parcs → « Siège » ; un seul parc → ce parc ;
+  // plusieurs → « Plusieurs parcs » (ou le parc filtré) ; aucun → « Sans parc »
   const groupes = useMemo(() => {
     const m = new Map<string, LigneStat[]>();
     lignes.forEach((l) => {
       const ps = (l.parcs ?? '').split(', ').filter(Boolean);
-      const g = ps.length === 1 ? ps[0] : ps.length === 0 ? 'Sans parc' : parc !== 'tous' ? parc : 'Plusieurs parcs';
+      const siege = parcs.length > 1 && parcs.every((p) => ps.includes(p));
+      const g = siege
+        ? 'Siège'
+        : ps.length === 1
+          ? ps[0]
+          : ps.length === 0
+            ? 'Sans parc'
+            : parc !== 'tous'
+              ? parc
+              : 'Plusieurs parcs';
       m.set(g, [...(m.get(g) ?? []), l]);
     });
-    const rang = (g: string) => (g === 'Plusieurs parcs' ? 1 : g === 'Sans parc' ? 2 : 0);
+    const rang = (g: string) => (g === 'Siège' ? 0 : g === 'Plusieurs parcs' ? 2 : g === 'Sans parc' ? 3 : 1);
     return [...m.entries()].sort((a, b) => rang(a[0]) - rang(b[0]) || a[0].localeCompare(b[0], 'fr'));
-  }, [lignes, parc]);
+  }, [lignes, parc, parcs]);
 
   const totaux = useMemo(
     () =>
